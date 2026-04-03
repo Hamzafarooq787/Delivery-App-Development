@@ -2,23 +2,45 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Package, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { signIn } from "@/app/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const result = await signIn(new FormData(e.currentTarget))
-    if (result?.error) {
-      setError(result.error)
+
+    const fd = new FormData(e.currentTarget)
+    const email = fd.get("email") as string
+    const password = fd.get("password") as string
+
+    const supabase = createClient()
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (authError) {
+      setError("Invalid email or password. Please try again.")
       setLoading(false)
+      return
     }
+
+    // Fetch role for redirect
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", data.user.id)
+      .single()
+
+    const role = profile?.role ?? "customer"
+    if (role === "admin") router.push("/admin")
+    else if (role === "driver") router.push("/driver")
+    else router.push("/customer")
   }
 
   return (

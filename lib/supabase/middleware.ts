@@ -1,4 +1,2 @@
-// This file is intentionally empty.
-// Session handling is done directly in middleware.ts using next/server only.
-// There are no @supabase/ssr imports anywhere in this project.
+// No @supabase/ssr. Session handling lives entirely in middleware.ts.
 export {}

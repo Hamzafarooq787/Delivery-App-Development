@@ -11,10 +11,11 @@ export async function middleware(request: NextRequest) {
   const projectRef =
     process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] ?? ''
 
+  const cookieName = `sb-${projectRef}-auth-token`
   const hasSession =
-    !!request.cookies.get(`sb-${projectRef}-auth-token`)?.value ||
-    !!request.cookies.get(`sb-${projectRef}-auth-token.0`)?.value ||
-    !!request.cookies.get(`sb-${projectRef}-auth-token.1`)?.value ||
+    !!request.cookies.get(cookieName)?.value ||
+    !!request.cookies.get(`${cookieName}.0`)?.value ||
+    !!request.cookies.get(`${cookieName}.1`)?.value ||
     !!request.cookies.get('sb-access-token')?.value
 
   // Protect dashboard routes — redirect to /login if no session

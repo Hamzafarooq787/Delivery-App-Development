@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Package, AlertCircle, CheckCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { signUp } from "@/app/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 
 export default function SignupPage() {
   const [role, setRole] = useState<"customer" | "driver">("customer")
@@ -18,15 +18,41 @@ export default function SignupPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+
     const fd = new FormData(e.currentTarget)
-    fd.set("role", role)
-    const result = await signUp(fd)
-    if (result?.error) {
-      setError(result.error)
+    const email = fd.get("email") as string
+    const password = fd.get("password") as string
+    const full_name = `${fd.get("first_name")} ${fd.get("last_name")}`.trim()
+    const phone = (fd.get("phone") as string) || null
+
+    const supabase = createClient()
+    const { data, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name, role, phone } },
+    })
+
+    if (authError) {
+      if (authError.message.toLowerCase().includes("already")) {
+        setError("An account with this email already exists.")
+      } else if (authError.message.toLowerCase().includes("password")) {
+        setError("Password is too weak. Use at least 8 characters.")
+      } else {
+        setError(authError.message)
+      }
       setLoading(false)
-    } else {
-      setSuccess(true)
+      return
     }
+
+    // Insert / update the users row created by the DB trigger
+    if (data.user) {
+      await supabase
+        .from("users")
+        .upsert({ id: data.user.id, full_name, role, phone }, { onConflict: "id" })
+    }
+
+    setSuccess(true)
+    setLoading(false)
   }
 
   if (success) {
