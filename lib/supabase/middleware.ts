@@ -1,31 +1,25 @@
-// Cookie-based session detection — no @supabase/ssr dependency
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Read the Supabase auth token cookie (set by @supabase/ssr on sign-in)
-  const accessToken =
-    request.cookies.get('sb-access-token')?.value ??
-    request.cookies.get(
-      `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token`,
-    )?.value
+  // Detect auth session via Supabase cookie (written by createBrowserClient on sign-in)
+  const projectRef =
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] ?? ''
+  const hasSession =
+    !!request.cookies.get('sb-access-token')?.value ||
+    !!request.cookies.get(`sb-${projectRef}-auth-token`)?.value
 
-  // A session exists if the cookie is present and non-empty
-  const hasSession = !!accessToken
-
-  // Protected route groups — redirect unauthenticated users to /login
+  // Protect dashboard routes
   const protectedPrefixes = ['/customer', '/driver', '/admin']
-  const isProtected = protectedPrefixes.some((prefix) =>
-    pathname.startsWith(prefix),
-  )
+  const isProtected = protectedPrefixes.some((p) => pathname.startsWith(p))
   if (isProtected && !hasSession) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Redirect already-logged-in users away from auth pages
+  // Redirect authenticated users away from auth pages
   const authPages = ['/login', '/signup', '/forgot-password', '/reset-password']
   if (hasSession && authPages.includes(pathname)) {
     const url = request.nextUrl.clone()
@@ -35,4 +29,3 @@ export async function updateSession(request: NextRequest) {
 
   return NextResponse.next({ request })
 }
-

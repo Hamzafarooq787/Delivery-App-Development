@@ -1,8 +1,33 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
-import { Package } from "lucide-react"
+import { Package, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { resetPassword } from "@/app/actions/auth"
 
 export default function ResetPasswordPage() {
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    const fd = new FormData(e.currentTarget)
+    const password = fd.get("password") as string
+    const confirm = fd.get("confirm") as string
+    if (password !== confirm) {
+      setError("Passwords do not match.")
+      return
+    }
+    setLoading(true)
+    const result = await resetPassword(fd)
+    if (result?.error) {
+      setError(result.error)
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">
@@ -17,25 +42,27 @@ export default function ResetPasswordPage() {
           <p className="mt-1.5 text-sm text-muted-foreground">Choose a strong, unique password.</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <div className="space-y-4">
+          {error && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">New Password</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <input name="password" type="password" required minLength={8} placeholder="Min. 8 characters"
+                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">Confirm Password</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <input name="confirm" type="password" required minLength={8} placeholder="••••••••"
+                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
-            <Button className="w-full" size="sm">Reset Password</Button>
-          </div>
+            <Button className="w-full" size="sm" type="submit" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reset Password"}
+            </Button>
+          </form>
         </div>
       </div>
     </div>

@@ -14,7 +14,9 @@ import {
   AlertTriangle,
   DollarSign,
   X,
+  LogOut,
 } from "lucide-react"
+import { signOut } from "@/app/actions/auth"
 
 const navItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -30,9 +32,10 @@ const navItems = [
 
 interface AdminSidebarProps {
   onClose?: () => void
+  user?: { full_name?: string; email?: string }
 }
 
-export function AdminSidebar({ onClose }: AdminSidebarProps) {
+export function AdminSidebar({ onClose, user }: AdminSidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -75,16 +78,25 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
           })}
         </nav>
       </div>
-      <div className="border-t border-sidebar-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center">
+      <div className="border-t border-sidebar-border px-4 py-4 space-y-3">
+        <div className="flex items-center gap-3 px-2">
+          <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
             <Users className="h-4 w-4 text-sidebar-accent-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-sidebar-primary truncate">Admin</p>
-            <p className="text-xs text-sidebar-foreground/50 truncate">admin@swiftdeliver.com</p>
+            <p className="text-xs font-medium text-sidebar-primary truncate">{user?.full_name ?? "Admin"}</p>
+            <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email ?? ""}</p>
           </div>
         </div>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            Sign Out
+          </button>
+        </form>
       </div>
     </aside>
   )

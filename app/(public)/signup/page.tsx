@@ -1,8 +1,53 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
-import { Package } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Package, AlertCircle, CheckCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { signUp } from "@/app/actions/auth"
 
 export default function SignupPage() {
+  const [role, setRole] = useState<"customer" | "driver">("customer")
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    const fd = new FormData(e.currentTarget)
+    fd.set("role", role)
+    const result = await signUp(fd)
+    if (result?.error) {
+      setError(result.error)
+      setLoading(false)
+    } else {
+      setSuccess(true)
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
+        <div className="w-full max-w-sm text-center">
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+              <CheckCircle className="h-6 w-6 text-foreground" />
+            </div>
+          </div>
+          <h1 className="text-xl font-semibold text-foreground mb-2">Check your email</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            We sent a confirmation link to your email. Please click it to activate your account before signing in.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => router.push("/login")}>Go to Sign In</Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">
@@ -18,59 +63,69 @@ export default function SignupPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <div className="mb-4 grid grid-cols-2 rounded-lg border border-border p-1 gap-1">
-            <button className="rounded-md bg-foreground py-2 text-xs font-medium text-background">Customer</button>
-            <button className="rounded-md py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">Driver</button>
+            <button
+              type="button"
+              onClick={() => setRole("customer")}
+              className={`rounded-md py-2 text-xs font-medium transition-colors ${role === "customer" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Customer
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole("driver")}
+              className={`rounded-md py-2 text-xs font-medium transition-colors ${role === "driver" ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Driver
+            </button>
           </div>
-          <div className="space-y-4">
+          {error && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">First Name</label>
-                <input
-                  type="text"
-                  placeholder="John"
-                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+                <input name="first_name" type="text" required placeholder="John"
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Last Name</label>
-                <input
-                  type="text"
-                  placeholder="Doe"
-                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+                <input name="last_name" type="text" required placeholder="Doe"
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">Email</label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <input name="email" type="email" required placeholder="you@example.com"
+                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">Phone</label>
+              <input name="phone" type="tel" placeholder="+1 (555) 000-0000"
+                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">Password</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <input name="password" type="password" required placeholder="Min. 8 characters" minLength={8}
+                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
-            <Button className="w-full" size="sm">Create Account</Button>
-          </div>
+            <Button className="w-full" size="sm" type="submit" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
+            </Button>
+          </form>
           <div className="mt-4 text-center">
             <p className="text-xs text-muted-foreground">
               Already have an account?{" "}
-              <Link href="/login" className="text-foreground font-medium hover:underline">
-                Sign in
-              </Link>
+              <Link href="/login" className="text-foreground font-medium hover:underline">Sign in</Link>
             </p>
           </div>
         </div>
         <p className="mt-4 text-center text-xs text-muted-foreground">
           By creating an account, you agree to our{" "}
-          <Link href="/terms" className="underline">Terms of Service</Link>{" "}
-          and{" "}
+          <Link href="/terms" className="underline">Terms of Service</Link>{" "}and{" "}
           <Link href="/privacy-policy" className="underline">Privacy Policy</Link>.
         </p>
       </div>
