@@ -3,16 +3,21 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Detect auth session via Supabase cookie
+  // Detect a Supabase session by checking known cookie name patterns.
+  // Supabase stores the session in cookies named:
+  //   sb-<project-ref>-auth-token        (full token, compact sessions)
+  //   sb-<project-ref>-auth-token.0/.1   (chunked tokens)
+  //   sb-access-token                    (legacy)
   const projectRef =
     process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] ?? ''
+
   const hasSession =
-    !!request.cookies.get('sb-access-token')?.value ||
     !!request.cookies.get(`sb-${projectRef}-auth-token`)?.value ||
     !!request.cookies.get(`sb-${projectRef}-auth-token.0`)?.value ||
-    !!request.cookies.get(`sb-${projectRef}-auth-token.1`)?.value
+    !!request.cookies.get(`sb-${projectRef}-auth-token.1`)?.value ||
+    !!request.cookies.get('sb-access-token')?.value
 
-  // Protect dashboard routes
+  // Protect dashboard routes — redirect to /login if no session
   const protectedPrefixes = ['/customer', '/driver', '/admin']
   const isProtected = protectedPrefixes.some((p) => pathname.startsWith(p))
   if (isProtected && !hasSession) {
@@ -29,11 +34,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  return NextResponse.next({ request })
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
