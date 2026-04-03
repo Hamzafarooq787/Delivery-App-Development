@@ -26,11 +26,10 @@ export default function SignupPage() {
     const phone = (fd.get("phone") as string) || null
 
     const supabase = createClient()
-    const { data, error: authError } = await supabase.auth.signUp({
+    const { error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name, role, phone },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
@@ -45,13 +44,6 @@ export default function SignupPage() {
       }
       setLoading(false)
       return
-    }
-
-    // Insert / update the users row created by the DB trigger
-    if (data.user) {
-      await supabase
-        .from("users")
-        .upsert({ id: data.user.id, full_name, role, phone }, { onConflict: "id" })
     }
 
     setSuccess(true)
