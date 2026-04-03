@@ -1,4 +1,5 @@
 import { Mail, Phone, MapPin, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export default function ContactPage() {
   return (
@@ -15,23 +16,31 @@ export default function ContactPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="h-4 w-16 rounded bg-secondary"></div>
-                <div className="h-10 rounded-lg border border-border bg-background"></div>
+                <label className="text-xs font-medium text-foreground">First Name</label>
+                <input type="text" placeholder="John" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div className="space-y-1.5">
-                <div className="h-4 w-16 rounded bg-secondary"></div>
-                <div className="h-10 rounded-lg border border-border bg-background"></div>
+                <label className="text-xs font-medium text-foreground">Last Name</label>
+                <input type="text" placeholder="Doe" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <div className="h-4 w-16 rounded bg-secondary"></div>
-              <div className="h-10 rounded-lg border border-border bg-background"></div>
+              <label className="text-xs font-medium text-foreground">Email</label>
+              <input type="email" placeholder="you@example.com" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
             <div className="space-y-1.5">
-              <div className="h-4 w-16 rounded bg-secondary"></div>
-              <div className="h-32 rounded-lg border border-border bg-background"></div>
+              <label className="text-xs font-medium text-foreground">Subject</label>
+              <input type="text" placeholder="How can we help?" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
-            <div className="h-10 w-32 rounded-lg bg-foreground"></div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">Message</label>
+              <textarea
+                rows={5}
+                placeholder="Describe your issue or question in detail..."
+                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              />
+            </div>
+            <Button size="sm">Send Message</Button>
           </div>
         </div>
         <div className="flex flex-col gap-4">

@@ -1,3 +1,4 @@
+// Route protection middleware — no external dependencies required
 import { updateSession } from '@/lib/supabase/middleware'
 import { type NextRequest } from 'next/server'
 

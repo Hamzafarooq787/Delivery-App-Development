@@ -1,3 +1,4 @@
+// Cookie-based session detection — no @supabase/ssr dependency
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {

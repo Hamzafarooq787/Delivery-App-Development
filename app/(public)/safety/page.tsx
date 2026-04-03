@@ -1,4 +1,5 @@
 import { Shield, CheckCircle, AlertTriangle, Lock } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const safetyFeatures = [
   { icon: Shield, title: "Driver Background Checks", description: "All drivers undergo thorough background and criminal checks before joining the platform." },
@@ -30,12 +31,26 @@ export default function SafetyPage() {
         ))}
       </div>
       <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Report an Incident</h2>
-        <div className="space-y-3">
-          <div className="h-10 rounded-lg bg-secondary"></div>
-          <div className="h-10 rounded-lg bg-secondary"></div>
-          <div className="h-24 rounded-lg bg-secondary"></div>
-          <div className="h-10 w-32 rounded-lg bg-foreground"></div>
+        <h2 className="text-lg font-semibold text-foreground mb-2">Report an Incident</h2>
+        <p className="text-sm text-muted-foreground mb-5">If you experienced a safety concern during a delivery, please let us know immediately.</p>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground">Order / Tracking Number</label>
+            <input type="text" placeholder="e.g. ORD-001234" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground">Your Email</label>
+            <input type="email" placeholder="you@example.com" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground">Describe the Incident</label>
+            <textarea
+              rows={4}
+              placeholder="Please provide as much detail as possible..."
+              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
+          </div>
+          <Button size="sm">Submit Report</Button>
         </div>
       </div>
     </div>

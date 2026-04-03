@@ -41,7 +41,7 @@ export default function OrderDetailPage({ params }: { params: { orderId: string 
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">Pickup</p>
-                  <div className="h-4 w-48 rounded bg-secondary"></div>
+                  <p className="text-sm font-medium text-foreground">Loading pickup address...</p>
                 </div>
               </div>
               <div className="ml-4 border-l-2 border-dashed border-border h-4"></div>
@@ -51,7 +51,7 @@ export default function OrderDetailPage({ params }: { params: { orderId: string 
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">Delivery</p>
-                  <div className="h-4 w-48 rounded bg-secondary"></div>
+                  <p className="text-sm font-medium text-foreground">Loading delivery address...</p>
                 </div>
               </div>
             </div>
@@ -61,10 +61,17 @@ export default function OrderDetailPage({ params }: { params: { orderId: string 
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-foreground mb-4">Package Details</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {["Package Type", "Weight", "Service", "Total Amount", "Tracking ID", "Date"].map((field) => (
-                <div key={field}>
-                  <p className="text-xs text-muted-foreground mb-1">{field}</p>
-                  <div className="h-4 rounded bg-secondary w-20"></div>
+              {[
+                { label: "Package Type", value: "—" },
+                { label: "Weight", value: "—" },
+                { label: "Service", value: "—" },
+                { label: "Total Amount", value: "—" },
+                { label: "Tracking ID", value: params.orderId },
+                { label: "Date", value: "—" },
+              ].map((field) => (
+                <div key={field.label}>
+                  <p className="text-xs text-muted-foreground mb-1">{field.label}</p>
+                  <p className="text-sm font-medium text-foreground">{field.value}</p>
                 </div>
               ))}
             </div>
@@ -78,8 +85,8 @@ export default function OrderDetailPage({ params }: { params: { orderId: string 
                 <User className="h-6 w-6 text-muted-foreground" />
               </div>
               <div className="flex-1">
-                <div className="h-4 w-32 rounded bg-secondary mb-1.5"></div>
-                <div className="h-3.5 w-24 rounded bg-secondary"></div>
+                <p className="text-sm font-medium text-foreground">Awaiting driver assignment</p>
+                <p className="text-xs text-muted-foreground">Driver details will appear here once assigned</p>
               </div>
               <Button variant="outline" size="sm">
                 <Phone className="h-4 w-4 mr-1.5" />Contact
