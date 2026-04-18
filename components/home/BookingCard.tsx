@@ -1,6 +1,6 @@
 export default function BookingCard() {
   return (
-    <div className="glass-card p-8 rounded-[2rem] border border-[#494847]/15 shadow-2xl">
+    <div className="glass-card p-6 sm:p-8 rounded-[2rem] border border-[#494847]/15 shadow-2xl w-full">
       <h3 className="text-xl font-bold font-headline mb-6 flex items-center">
         <span className="material-symbols-outlined text-[#a3a6ff] mr-2">bolt</span>
         Quick Book
@@ -11,12 +11,12 @@ export default function BookingCard() {
           <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 ml-4">
             Pickup Point
           </label>
-          <div className="flex items-center bg-black/50 rounded-xl p-4 border border-[#494847]/10 focus-within:border-[#a3a6ff]/50 transition-colors">
-            <span className="material-symbols-outlined text-[#a3a6ff] mr-3" style={{ fontSize: '18px' }}>
+          <div className="flex items-center bg-black/50 rounded-xl p-3 sm:p-4 border border-[#494847]/10 focus-within:border-[#a3a6ff]/50 transition-colors">
+            <span className="material-symbols-outlined text-[#a3a6ff] mr-3 shrink-0" style={{ fontSize: '18px' }}>
               location_on
             </span>
             <input
-              className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-[#adaaaa]"
+              className="bg-transparent border-none outline-none text-sm text-white w-full min-w-0 placeholder:text-[#adaaaa]"
               placeholder="Enter origin address"
               type="text"
             />
@@ -35,12 +35,12 @@ export default function BookingCard() {
           <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 ml-4">
             Drop-off Point
           </label>
-          <div className="flex items-center bg-black/50 rounded-xl p-4 border border-[#494847]/10 focus-within:border-[#a3a6ff]/50 transition-colors">
-            <span className="material-symbols-outlined text-[#c180ff] mr-3" style={{ fontSize: '18px' }}>
+          <div className="flex items-center bg-black/50 rounded-xl p-3 sm:p-4 border border-[#494847]/10 focus-within:border-[#a3a6ff]/50 transition-colors">
+            <span className="material-symbols-outlined text-[#c180ff] mr-3 shrink-0" style={{ fontSize: '18px' }}>
               flag
             </span>
             <input
-              className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-[#adaaaa]"
+              className="bg-transparent border-none outline-none text-sm text-white w-full min-w-0 placeholder:text-[#adaaaa]"
               placeholder="Enter destination"
               type="text"
             />
@@ -48,18 +48,18 @@ export default function BookingCard() {
         </div>
 
         {/* Service tier + CTA */}
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          <div className="bg-black/50 rounded-xl p-4 border border-[#494847]/10">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-6">
+          <div className="bg-black/50 rounded-xl p-3 sm:p-4 border border-[#494847]/10 min-w-0">
             <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1">
               Service Tier
             </label>
-            <select className="bg-transparent border-none outline-none text-sm text-white w-full p-0 cursor-pointer">
+            <select className="bg-transparent border-none outline-none text-xs sm:text-sm text-white w-full p-0 cursor-pointer">
               <option className="bg-[#0e0e0e]">Quantum (Instant)</option>
               <option className="bg-[#0e0e0e]">Flash (2-Hour)</option>
               <option className="bg-[#0e0e0e]">Standard</option>
             </select>
           </div>
-          <button className="milled-gradient rounded-xl font-bold text-[#0f00a4] shadow-md hover:brightness-110 transition-all cursor-pointer">
+          <button className="milled-gradient rounded-xl font-bold text-[#0f00a4] shadow-md hover:brightness-110 transition-all cursor-pointer text-sm sm:text-base py-3 sm:py-0">
             Get Quote
           </button>
         </div>
