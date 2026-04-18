@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import BookingCard from "@/components/home/BookingCard"
 import Footer from "@/components/layout/Footer"
+import Header from "@/components/layout/Header"
 
 export const metadata: Metadata = {
   title: "Kinetic Void | Premium Logistics",
@@ -11,6 +12,9 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] text-white overflow-x-hidden">
+      {/* Header */}
+      <Header />
+
       {/* Hero Section */}
       <section className="relative min-h-[100svh] lg:min-h-[921px] flex items-center px-4 sm:px-8 py-24 lg:py-20 overflow-hidden">
         <div className="absolute inset-0 z-0">
