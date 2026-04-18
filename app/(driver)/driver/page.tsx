@@ -31,7 +31,7 @@ export default async function DriverDashboard() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Driver Dashboard" description="Your delivery performance at a glance." />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Jobs" icon={Briefcase} value={String(jobs.length)} description="All time" />
         <StatCard title="Active Jobs" icon={Clock} value={String(activeJobs)} description="In progress" />
         <StatCard title="Total Earnings" icon={DollarSign} value={`$${totalEarnings.toFixed(2)}`} description="All time" />

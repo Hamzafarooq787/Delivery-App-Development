@@ -23,9 +23,9 @@ const footerLinks = {
 
 export function PublicFooter() {
   return (
-    <footer className="bg-[#000000] border-t border-[#494847]/15 w-full py-16 px-8 md:px-12">
+    <footer className="bg-[#000000] border-t border-[#494847]/15 w-full py-12 sm:py-16 px-4 sm:px-8 md:px-12">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 mb-12 sm:mb-16">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 mb-5">

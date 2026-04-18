@@ -41,7 +41,7 @@ export default async function CustomerDashboard() {
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Orders" icon={Package} value={String(deliveries.length)} description="All time" />
         <StatCard title="Active Orders" icon={Clock} value={String(activeOrders)} description="In progress" />
         <StatCard title="Saved Addresses" icon={MapPin} value={String(addressCount)} description="Locations" />

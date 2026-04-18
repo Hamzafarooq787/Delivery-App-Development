@@ -73,43 +73,43 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] text-white">
       {/* Hero */}
-      <section className="text-center pt-32 pb-20 px-6 relative overflow-hidden">
+      <section className="text-center pt-28 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,rgba(163,166,255,0.08),transparent_60%)] pointer-events-none" />
         <div className="relative z-10 max-w-3xl mx-auto">
           <span className="inline-block px-4 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-xs font-bold tracking-widest uppercase mb-6">
             Transparent Pricing
           </span>
-          <h1 className="text-5xl md:text-7xl font-black font-headline tracking-tighter mb-6 text-balance">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black font-headline tracking-tighter mb-4 sm:mb-6 text-balance">
             Choose Your Tier of <span className="text-[#a3a6ff] italic">Supremacy</span>
           </h1>
-          <p className="text-lg text-[#adaaaa] max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg text-[#adaaaa] max-w-2xl mx-auto leading-relaxed">
             From on-demand deliveries to enterprise-grade logistical architecture, Kinetic Void scales with your ambition.
           </p>
         </div>
       </section>
 
       {/* Pricing Cards */}
-      <section className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-start">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative bg-[#1a1919] rounded-3xl p-8 border flex flex-col ${plan.popular ? plan.glow : "border-[#494847]/15"}`}
+              className={`relative bg-[#1a1919] rounded-3xl p-6 sm:p-8 border flex flex-col ${plan.popular ? plan.glow : "border-[#494847]/15"}`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1 bg-[#a3a6ff] text-[#0f00a4] text-xs font-black uppercase tracking-widest rounded-full whitespace-nowrap">
                   Most Popular
                 </div>
               )}
-              <div className="mb-8">
+              <div className="mb-6 sm:mb-8">
                 <h3 className={`text-3xl font-headline font-black mb-1 ${plan.color}`}>{plan.name}</h3>
                 <p className="text-sm text-[#adaaaa]">{plan.tagline}</p>
               </div>
-              <div className="mb-8">
-                <span className="text-5xl font-black font-headline text-white">{plan.price}</span>
+              <div className="mb-6 sm:mb-8">
+                <span className="text-4xl sm:text-5xl font-black font-headline text-white">{plan.price}</span>
                 <span className="text-[#adaaaa] text-sm ml-2">{plan.sub}</span>
               </div>
-              <ul className="space-y-3 mb-10 flex-1">
+              <ul className="space-y-3 mb-8 sm:mb-10 flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className={`flex items-start gap-3 text-sm text-white`}>
                     <span className={`mt-0.5 text-base ${plan.color}`}>✓</span>
@@ -135,9 +135,9 @@ export default function PricingPage() {
       </section>
 
       {/* Add-Ons */}
-      <section className="max-w-7xl mx-auto px-6 py-24">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-black font-headline tracking-tight">Mission-Critical Add-Ons</h2>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+        <div className="text-center mb-10 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-black font-headline tracking-tight">Mission-Critical Add-Ons</h2>
           <p className="text-[#adaaaa] mt-2">Extend any plan with precision-engineered upgrades.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -149,8 +149,8 @@ export default function PricingPage() {
             { icon: "🔐", colorClass: "text-[#a3a6ff] bg-[#a3a6ff]/10", title: "Quantum Encryption", desc: "Post-quantum cryptographic security for ultra-sensitive cargo.", price: "+$199/mo", priceColor: "text-[#a3a6ff]" },
             { icon: "📞", colorClass: "text-[#c180ff] bg-[#c180ff]/10", title: "White-Glove Service", desc: "Personal logistics concierge available 24/7 via direct line.", price: "+$299/mo", priceColor: "text-[#c180ff]" },
           ].map((addon) => (
-            <div key={addon.title} className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/10 hover:border-[#494847]/30 transition-colors flex gap-5">
-              <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-xl ${addon.colorClass}`}>
+            <div key={addon.title} className="bg-[#1a1919] p-5 sm:p-6 rounded-2xl border border-[#494847]/10 hover:border-[#494847]/30 transition-colors flex gap-4 sm:gap-5">
+              <div className={`flex-shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-xl ${addon.colorClass}`}>
                 {addon.icon}
               </div>
               <div className="flex-1 min-w-0">
@@ -166,8 +166,8 @@ export default function PricingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="max-w-4xl mx-auto px-6 pb-32">
-        <h2 className="text-3xl font-black font-headline text-center mb-12 tracking-tight">FAQ: Eliminating Ambiguity</h2>
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 pb-20 sm:pb-32">
+        <h2 className="text-2xl sm:text-3xl font-black font-headline text-center mb-8 sm:mb-12 tracking-tight">FAQ: Eliminating Ambiguity</h2>
         <div className="space-y-4">
           {[
             { q: "Can I upgrade or downgrade at any time?", a: "Yes. Your tier can be modified at any billing cycle boundary with no lock-in penalties. Kinetic Void believes in logistical freedom at every level." },
@@ -176,11 +176,11 @@ export default function PricingPage() {
             { q: "How does the SLA-backed guarantee work on Quantum?", a: "If we miss a committed delivery window, you receive a service credit of 100% of the delivery cost. Our network maintains 99.9% on-time performance globally." },
           ].map((item) => (
             <details key={item.q} className="bg-[#1a1919] rounded-xl border border-[#494847]/10 group open:border-[#a3a6ff]/30 transition-colors">
-              <summary className="p-6 cursor-pointer flex justify-between items-center font-semibold list-none">
-                <span>{item.q}</span>
-                <span className="text-[#a3a6ff] transition-transform group-open:rotate-45 text-xl leading-none">+</span>
+              <summary className="p-5 sm:p-6 cursor-pointer flex justify-between items-center font-semibold list-none gap-4">
+                <span className="text-sm sm:text-base">{item.q}</span>
+                <span className="text-[#a3a6ff] transition-transform group-open:rotate-45 text-xl leading-none flex-shrink-0">+</span>
               </summary>
-              <p className="px-6 pb-6 text-sm text-[#adaaaa] leading-relaxed">{item.a}</p>
+              <p className="px-5 sm:px-6 pb-5 sm:pb-6 text-sm text-[#adaaaa] leading-relaxed">{item.a}</p>
             </details>
           ))}
         </div>

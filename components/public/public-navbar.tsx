@@ -17,7 +17,7 @@ export function PublicNavbar() {
 
   return (
     <header className="fixed top-0 left-0 w-full h-16 z-40 bg-[#0e0e0e]/80 backdrop-blur-xl border-b border-[#494847]/15 shadow-2xl shadow-black/20">
-      <div className="flex items-center justify-between h-full px-6 lg:px-12">
+      <div className="flex items-center justify-between h-full px-4 sm:px-6 lg:px-12">
         {/* Logo + Search */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5">

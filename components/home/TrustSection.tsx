@@ -21,9 +21,9 @@ const features = [
 
 export default function TrustSection() {
   return (
-    <section className="px-8 py-24 relative overflow-hidden">
+    <section className="px-4 sm:px-8 py-16 sm:py-24 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-1/2 h-full bg-[#a3a6ff]/5 blur-[120px] rounded-full -translate-y-1/2 pointer-events-none" />
-      <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-center">
         {/* Image */}
         <div className="relative aspect-square rounded-[3rem] overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -33,7 +33,7 @@ export default function TrustSection() {
             alt="High-tech data server rack with glowing indicator lights"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent" />
-          <div className="absolute bottom-10 left-10 right-10 glass-card p-6 rounded-2xl border border-[#494847]/20">
+          <div className="absolute bottom-4 sm:bottom-10 left-4 sm:left-10 right-4 sm:right-10 glass-card p-4 sm:p-6 rounded-2xl border border-[#494847]/20">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-[#c180ff] rounded-full text-[#33005b]">
                 <span className="material-symbols-outlined">verified_user</span>
@@ -48,7 +48,7 @@ export default function TrustSection() {
 
         {/* Copy */}
         <div>
-          <h2 className="text-4xl font-black font-headline tracking-tight mb-8">
+          <h2 className="text-3xl sm:text-4xl font-black font-headline tracking-tight mb-6 sm:mb-8 text-balance">
             Fortress-Grade Security
           </h2>
           <ul className="space-y-8">

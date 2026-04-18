@@ -9,25 +9,25 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] text-white">
       {/* Hero */}
-      <section className="pt-32 pb-16 px-6 text-center relative overflow-hidden">
+      <section className="pt-28 sm:pt-32 pb-12 sm:pb-16 px-4 sm:px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,rgba(163,166,255,0.06),transparent_60%)] pointer-events-none" />
         <div className="relative z-10 max-w-2xl mx-auto">
           <span className="inline-block px-4 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-xs font-bold tracking-widest uppercase mb-6">
             Mission Control
           </span>
-          <h1 className="text-5xl md:text-6xl font-black font-headline tracking-tighter mb-6 text-balance">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black font-headline tracking-tighter mb-4 sm:mb-6 text-balance">
             Contact the <span className="text-[#a3a6ff] italic">Operations Center</span>
           </h1>
-          <p className="text-lg text-[#adaaaa] leading-relaxed">
+          <p className="text-base sm:text-lg text-[#adaaaa] leading-relaxed">
             Our team is deployed globally, ready to handle your most critical logistical requirements. Send a signal.
           </p>
         </div>
       </section>
 
       {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-6 pb-32 grid lg:grid-cols-3 gap-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 sm:pb-32 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form */}
-        <div className="lg:col-span-2 bg-[#1a1919] rounded-3xl p-8 md:p-12 border border-[#494847]/15">
+        <div className="lg:col-span-2 bg-[#1a1919] rounded-3xl p-6 sm:p-8 md:p-12 border border-[#494847]/15">
           <h2 className="text-2xl font-bold font-headline mb-8">Transmit a Message</h2>
           <form className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

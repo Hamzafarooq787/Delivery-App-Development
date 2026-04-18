@@ -10,7 +10,7 @@ export default function HowItWorksPage() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] text-white">
       {/* Hero */}
-      <section className="relative h-[819px] flex items-center justify-center overflow-hidden bg-[#131313]">
+      <section className="relative min-h-[60vh] sm:h-[819px] flex items-center justify-center overflow-hidden bg-[#131313]">
         <div className="absolute inset-0 z-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -20,18 +20,18 @@ export default function HowItWorksPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0e0e0e]/80 to-[#0e0e0e]" />
         </div>
-        <div className="relative z-10 text-center px-6 max-w-4xl">
-          <h1 className="font-headline text-5xl md:text-7xl font-black text-white tracking-tighter mb-6">
+        <div className="relative z-10 text-center px-4 sm:px-6 max-w-4xl">
+          <h1 className="font-headline text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 text-balance">
             ENGINEERED FOR <span className="text-[#a3a6ff] italic">VELOCITY</span>
           </h1>
-          <p className="text-lg md:text-xl text-[#adaaaa] max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-[#adaaaa] max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">
             Kinetic Void is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.
           </p>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <Link href="/signup" className="bg-[#a3a6ff] text-[#0f00a4] font-headline font-bold px-8 py-4 rounded-lg flex items-center gap-2 kinetic-glow transition-transform active:scale-95">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+            <Link href="/signup" className="w-full sm:w-auto bg-[#a3a6ff] text-[#0f00a4] font-headline font-bold px-8 py-4 rounded-lg flex items-center justify-center gap-2 kinetic-glow transition-transform active:scale-95">
               INITIALIZE NETWORK ⚡
             </Link>
-            <button className="border border-[#494847] text-white hover:bg-[#201f1f] font-headline font-bold px-8 py-4 rounded-lg transition-colors">
+            <button className="w-full sm:w-auto border border-[#494847] text-white hover:bg-[#201f1f] font-headline font-bold px-8 py-4 rounded-lg transition-colors">
               VIEW LIVE STATUS
             </button>
           </div>
@@ -39,15 +39,15 @@ export default function HowItWorksPage() {
       </section>
 
       {/* The 3-Step Visualization */}
-      <section className="max-w-7xl mx-auto px-6 md:px-12 py-24 space-y-32">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-16 sm:py-24 space-y-20 sm:space-y-32">
         {/* Step 1: Request */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           <div className="order-2 md:order-1">
             <div className="inline-block px-3 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-[10px] tracking-[0.2em] uppercase mb-6">
               Phase 01
             </div>
-            <h3 className="font-headline text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">The Void Signal</h3>
-            <p className="text-[#adaaaa] text-lg leading-relaxed mb-8">
+            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">The Void Signal</h3>
+            <p className="text-[#adaaaa] text-base sm:text-lg leading-relaxed mb-8">
               Every journey begins as a digital resonance. Your request is ingested into our core, where it is instantly parsed for destination, density, and urgency. We don&apos;t just record orders; we manifest a delivery path.
             </p>
             <ul className="space-y-4">
@@ -79,8 +79,8 @@ export default function HowItWorksPage() {
         </div>
 
         {/* Step 2: Dispatch */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-          <div className="md:col-span-7 relative h-[500px] rounded-2xl overflow-hidden border border-[#494847]/15">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-8 items-center">
+          <div className="md:col-span-7 relative h-[280px] sm:h-[400px] md:h-[500px] rounded-2xl overflow-hidden border border-[#494847]/15">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="w-full h-full object-cover"
@@ -102,8 +102,8 @@ export default function HowItWorksPage() {
             <div className="inline-block px-3 py-1 rounded-full bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-[10px] tracking-[0.2em] uppercase mb-6">
               Phase 02
             </div>
-            <h3 className="font-headline text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Kinetic Routing</h3>
-            <p className="text-[#adaaaa] text-lg leading-relaxed mb-8">
+            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">Kinetic Routing</h3>
+            <p className="text-[#adaaaa] text-base sm:text-lg leading-relaxed mb-8">
               The Kinetic engine never sleeps. It processes millions of variables—traffic entropy, atmospheric conditions, and fleet availability—to dispatch the exact resource needed.
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -122,13 +122,13 @@ export default function HowItWorksPage() {
         </div>
 
         {/* Step 3: Delivery */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           <div>
             <div className="inline-block px-3 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-[10px] tracking-[0.2em] uppercase mb-6">
               Phase 03
             </div>
-            <h3 className="font-headline text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">The Final Handshake</h3>
-            <p className="text-[#adaaaa] text-lg leading-relaxed mb-8">
+            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">The Final Handshake</h3>
+            <p className="text-[#adaaaa] text-base sm:text-lg leading-relaxed mb-8">
               The void closes. Delivery is finalized with biometric precision. Our agents bridge the gap between the digital ether and the physical world with a secure, verified completion protocol.
             </p>
             <div className="space-y-6">
@@ -161,14 +161,14 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Bento Grid Feature Set */}
-      <section className="py-24 bg-[#131313]">
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          <div className="mb-16 text-center">
+      <section className="py-16 sm:py-24 bg-[#131313]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
+          <div className="mb-10 sm:mb-16 text-center">
             <h2 className="font-headline text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">THE CORE STACK</h2>
             <p className="text-[#adaaaa] uppercase tracking-[0.3em] text-xs">Proprietary Logistics Technologies</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[600px]">
-            <div className="md:col-span-2 md:row-span-2 bg-[#1a1919] p-10 rounded-2xl border border-[#494847]/15 relative overflow-hidden flex flex-col justify-end group">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[600px] auto-rows-auto md:auto-rows-fr">
+            <div className="md:col-span-2 md:row-span-2 bg-[#1a1919] p-7 sm:p-10 rounded-2xl border border-[#494847]/15 relative overflow-hidden flex flex-col justify-end group min-h-[280px] md:min-h-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="absolute inset-0 w-full h-full object-cover opacity-20 grayscale group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxY2pI22h6pQ7i3zo3HXqoO9Bt4fxlWH9ph1vJFdsoCHQ6MxvLk5dP_7sFCgpalfHrV5xVE2g0shX8yS3nycQMUBBGOKbh-T2hrRWzxgvVgu9DuDha7pb33I33nP8vBvXqnNlKwBHK_42j1V5wIRSUK8OnvTM71ubJss_VEE_RPK-JP9Xjvr6hOD0L1gmDs_w65KdBDpbOQI_703PUui-B9qDWR3pXnCV7s5Fw31xhEG97mSS8-yANQsi5H6I9_nisH5K3CNqdqw" alt="Void Analytics" />
               <div className="relative z-10">
@@ -199,8 +199,8 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-32 px-6 text-center">
-        <h2 className="font-headline text-4xl md:text-6xl font-black mb-8 tracking-tighter">
+      <section className="py-20 sm:py-32 px-4 sm:px-6 text-center">
+        <h2 className="font-headline text-3xl sm:text-4xl md:text-6xl font-black mb-6 sm:mb-8 tracking-tighter text-balance">
           READY TO <span className="text-[#a3a6ff]">ENTER THE VOID?</span>
         </h2>
         <p className="text-[#adaaaa] text-lg max-w-xl mx-auto mb-12">Join the global leaders who trust Kinetic Void for their most critical logistics missions.</p>

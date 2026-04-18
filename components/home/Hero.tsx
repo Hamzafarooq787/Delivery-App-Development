@@ -2,7 +2,7 @@ import BookingCard from './BookingCard'
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[921px] flex items-center px-8 py-20 overflow-hidden">
+    <section className="relative min-h-[100svh] lg:min-h-[921px] flex items-center px-4 sm:px-8 py-24 lg:py-20 overflow-hidden">
       {/* Background image */}
       <div className="absolute inset-0 z-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -14,25 +14,25 @@ export default function Hero() {
         <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e] via-[#0e0e0e]/80 to-transparent"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center w-full">
+      <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center w-full">
         {/* Left: copy */}
         <div>
           <span className="inline-block px-4 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-xs font-bold tracking-widest uppercase mb-6">
             Ultra-Fast Deployment
           </span>
-          <h1 className="text-5xl lg:text-7xl font-black font-headline text-white leading-tight tracking-tighter mb-8">
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black font-headline text-white leading-tight tracking-tighter mb-6 lg:mb-8 text-balance">
             The Future of{' '}
             <span className="text-[#a3a6ff] italic">Kinetic</span> Logistics.
           </h1>
-          <p className="text-lg text-[#adaaaa] max-w-md leading-relaxed mb-10">
+          <p className="text-base sm:text-lg text-[#adaaaa] max-w-md leading-relaxed mb-8 lg:mb-10">
             Experience precision-engineered delivery solutions. From microscopic components to
             industrial fleets, we bridge the void with absolute speed.
           </p>
-          <div className="flex flex-wrap gap-4">
-            <button className="px-8 py-4 milled-gradient rounded-full text-[#0f00a4] font-bold shadow-lg glow-primary active:scale-95 transition-transform cursor-pointer">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
+            <button className="w-full sm:w-auto px-8 py-4 milled-gradient rounded-full text-[#0f00a4] font-bold shadow-lg glow-primary active:scale-95 transition-transform cursor-pointer">
               Initiate Transit
             </button>
-            <button className="px-8 py-4 bg-[#262626] border border-[#494847]/30 rounded-full text-white font-semibold hover:bg-[#262626]/80 transition-colors cursor-pointer">
+            <button className="w-full sm:w-auto px-8 py-4 bg-[#262626] border border-[#494847]/30 rounded-full text-white font-semibold hover:bg-[#262626]/80 transition-colors cursor-pointer">
               View Fleet
             </button>
           </div>

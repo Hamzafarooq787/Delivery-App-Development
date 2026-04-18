@@ -82,7 +82,7 @@ export default function OurFleetPage() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] text-white">
       {/* Hero */}
-      <section className="relative h-[614px] flex items-center px-8 md:px-12 overflow-hidden">
+      <section className="relative min-h-[480px] sm:h-[614px] flex items-center px-4 sm:px-8 md:px-12 overflow-hidden">
         <div className="absolute inset-0 z-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -93,10 +93,10 @@ export default function OurFleetPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e] via-[#0e0e0e]/80 to-transparent" />
         </div>
         <div className="relative z-10 max-w-3xl pt-20">
-          <h1 className="font-headline text-6xl font-extrabold tracking-tighter mb-6 leading-tight">
+          <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter mb-4 sm:mb-6 leading-tight text-balance">
             THE FUTURE OF <span className="text-[#a3a6ff]">KINETIC</span> MOTION
           </h1>
-          <p className="text-[#adaaaa] text-xl max-w-xl font-light leading-relaxed mb-8">
+          <p className="text-[#adaaaa] text-base sm:text-xl max-w-xl font-light leading-relaxed mb-6 sm:mb-8">
             Precision-engineered autonomous fleet designed for zero-latency logistics. From hyper-local delivery to heavy continental freight.
           </p>
           <div className="flex gap-4">
@@ -111,14 +111,14 @@ export default function OurFleetPage() {
       </section>
 
       {/* Fleet Grid */}
-      <section className="px-8 md:px-12 py-24 bg-[#131313]">
-        <div className="mb-16 flex justify-between items-end max-w-screen-2xl mx-auto">
+      <section className="px-4 sm:px-8 md:px-12 py-16 sm:py-24 bg-[#131313]">
+        <div className="mb-10 sm:mb-16 flex justify-between items-end max-w-screen-2xl mx-auto">
           <div>
             <h2 className="font-headline text-3xl font-bold tracking-tight mb-2">Vehicle Tiers</h2>
             <p className="text-[#adaaaa]">Optimized for every node of the supply chain.</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-screen-2xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-screen-2xl mx-auto">
           {vehicles.map((v) => (
             <div
               key={v.name}
@@ -153,10 +153,10 @@ export default function OurFleetPage() {
       </section>
 
       {/* Ecosystem Intelligence */}
-      <section className="py-24 px-8 md:px-12 bg-[#0e0e0e]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center max-w-screen-2xl mx-auto">
+      <section className="py-16 sm:py-24 px-4 sm:px-8 md:px-12 bg-[#0e0e0e]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-screen-2xl mx-auto">
           <div>
-            <h2 className="font-headline text-4xl font-bold mb-8 tracking-tight">Ecosystem Intelligence</h2>
+            <h2 className="font-headline text-3xl sm:text-4xl font-bold mb-6 sm:mb-8 tracking-tight text-balance">Ecosystem Intelligence</h2>
             <div className="space-y-8">
               {ecosystemFeatures.map((f) => (
                 <div key={f.title} className="flex gap-6">
@@ -189,11 +189,11 @@ export default function OurFleetPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-32 px-8 md:px-12 text-center bg-[#131313] overflow-hidden relative">
+      <section className="py-20 sm:py-32 px-4 sm:px-8 md:px-12 text-center bg-[#131313] overflow-hidden relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#a3a6ff]/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="relative z-10 max-w-2xl mx-auto">
-          <h2 className="font-headline text-5xl font-extrabold mb-6 tracking-tighter">Ready to optimize your velocity?</h2>
-          <p className="text-[#adaaaa] text-lg mb-10">Join the network of thousands of businesses scaling their logistics through the Kinetic Void ecosystem.</p>
+          <h2 className="font-headline text-3xl sm:text-5xl font-extrabold mb-4 sm:mb-6 tracking-tighter text-balance">Ready to optimize your velocity?</h2>
+          <p className="text-[#adaaaa] text-base sm:text-lg mb-8 sm:mb-10">Join the network of thousands of businesses scaling their logistics through the Kinetic Void ecosystem.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/contact" className="bg-[#a3a6ff] text-[#0f00a4] font-bold px-10 py-4 rounded-lg active:scale-95 transition-all text-lg">
               Book Now

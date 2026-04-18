@@ -24,10 +24,10 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section className="px-8 py-24 bg-[#131313]">
+    <section className="px-4 sm:px-8 py-16 sm:py-24 bg-[#131313]">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-16">
-          <h2 className="text-3xl font-black font-headline tracking-tight mb-4">
+        <div className="mb-10 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl font-black font-headline tracking-tight mb-4">
             Operational Protocol
           </h2>
           <p className="text-[#adaaaa]">Three phases to total logistical dominance.</p>
@@ -36,7 +36,7 @@ export default function HowItWorks() {
           {steps.map((step) => (
             <div
               key={step.title}
-              className={`bg-[#1a1919] p-10 rounded-[2rem] border border-[#494847]/5 transition-all group ${
+              className={`bg-[#1a1919] p-7 sm:p-10 rounded-[2rem] border border-[#494847]/5 transition-all group ${
                 step.color === 'primary'
                   ? 'hover:border-[#a3a6ff]/20'
                   : 'hover:border-[#c180ff]/20'

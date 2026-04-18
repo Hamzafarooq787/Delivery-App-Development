@@ -43,19 +43,19 @@ const fleetItems = [
 
 export default function FleetSection() {
   return (
-    <section className="px-8 py-24 bg-[#131313]">
+    <section className="px-4 sm:px-8 py-16 sm:py-24 bg-[#131313]">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-black font-headline tracking-tight mb-4">
+        <div className="text-center mb-10 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl font-black font-headline tracking-tight mb-4 text-balance">
             The Kinetic Global Fleet
           </h2>
           <p className="text-[#adaaaa]">Strategically positioned to respond in milliseconds.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {fleetItems.map((item) => (
             <div
               key={item.title}
-              className={`group relative h-[400px] rounded-[2rem] overflow-hidden${
+              className={`group relative h-[320px] sm:h-[400px] rounded-[2rem] overflow-hidden${
                 item.offset ? ' lg:mt-12' : ''
               }`}
             >
