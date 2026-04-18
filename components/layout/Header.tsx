@@ -1,8 +1,10 @@
+import Link from 'next/link'
+
 export default function Header() {
   return (
     <nav className="fixed top-0 left-0 w-full h-16 z-40 bg-[#0e0e0e]/80 backdrop-blur-xl border-b border-[#494847]/15 flex items-center justify-between px-8 shadow-2xl shadow-black/20">
       <div className="flex items-center gap-4">
-        <span className="text-lg font-bold text-white font-headline">Kinetic Void</span>
+        <Link href="/" className="text-lg font-bold text-white font-headline">Kinetic Void</Link>
         <div className="hidden lg:flex items-center bg-[#262626] px-4 py-1.5 rounded-full border border-[#494847]/10 focus-within:ring-1 focus-within:ring-[#a3a6ff]/30">
           <span className="material-symbols-outlined text-[#adaaaa] text-sm mr-2" style={{ fontSize: '16px' }}>
             search
@@ -17,15 +19,21 @@ export default function Header() {
 
       <div className="flex items-center gap-6">
         <div className="hidden md:flex gap-6">
-          <a className="text-white font-semibold font-inter text-sm cursor-pointer transition-colors duration-200" href="#">
-            Solutions
-          </a>
-          <a className="text-[#adaaaa] hover:text-white font-inter text-sm cursor-pointer transition-colors duration-200" href="#">
+          <Link href="/how-it-works" className="text-[#adaaaa] hover:text-white font-inter text-sm cursor-pointer transition-colors duration-200">
+            How It Works
+          </Link>
+          <Link href="/our-fleet" className="text-[#adaaaa] hover:text-white font-inter text-sm cursor-pointer transition-colors duration-200">
             Fleet
-          </a>
-          <a className="text-[#adaaaa] hover:text-white font-inter text-sm cursor-pointer transition-colors duration-200" href="#">
-            Support
-          </a>
+          </Link>
+          <Link href="/safety" className="text-[#adaaaa] hover:text-white font-inter text-sm cursor-pointer transition-colors duration-200">
+            Safety
+          </Link>
+          <Link href="/about" className="text-[#adaaaa] hover:text-white font-inter text-sm cursor-pointer transition-colors duration-200">
+            About
+          </Link>
+          <Link href="/contact" className="text-[#adaaaa] hover:text-white font-inter text-sm cursor-pointer transition-colors duration-200">
+            Contact
+          </Link>
         </div>
         <div className="flex items-center gap-4 border-l border-[#494847]/20 pl-6">
           <span className="material-symbols-outlined text-[#adaaaa] hover:text-white cursor-pointer">
