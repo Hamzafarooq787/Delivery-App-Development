@@ -1,124 +1,182 @@
+import type { Metadata } from "next"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Package, Truck, Shield, Clock, MapPin, ArrowRight, ChevronRight } from "lucide-react"
 
-const features = [
-  {
-    icon: Clock,
-    title: "Real-Time Tracking",
-    description: "Track your delivery from pickup to drop-off with live updates.",
-  },
-  {
-    icon: Shield,
-    title: "Fully Insured",
-    description: "All deliveries are covered with comprehensive insurance protection.",
-  },
-  {
-    icon: Truck,
-    title: "Verified Drivers",
-    description: "Every driver is background-checked, trained, and certified.",
-  },
-  {
-    icon: MapPin,
-    title: "Wide Coverage",
-    description: "We operate across major cities with expanding coverage areas.",
-  },
-]
-
-const steps = [
-  { step: "01", title: "Book a Delivery", description: "Enter pickup and drop-off details in seconds." },
-  { step: "02", title: "Driver Assigned", description: "A verified driver accepts and heads to pickup." },
-  { step: "03", title: "Track Live", description: "Monitor your delivery in real time on the map." },
-  { step: "04", title: "Delivered", description: "Receive confirmation once the parcel is delivered." },
-]
+export const metadata: Metadata = {
+  title: "Kinetic Void | Premium Logistics",
+  description: "Experience precision-engineered delivery solutions. From microscopic components to industrial fleets, we bridge the void with absolute speed.",
+}
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col">
-      {/* Hero */}
-      <section className="flex flex-col items-center justify-center py-24 px-4 text-center bg-background border-b border-border">
-        <div className="max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-xs text-muted-foreground mb-8">
-            <span className="h-1.5 w-1.5 rounded-full bg-foreground"></span>
-            Fast &amp; Reliable Delivery Platform
-          </div>
-          <h1 className="text-4xl md:text-5xl font-semibold text-foreground text-balance leading-tight mb-6">
-            Deliver Anything,<br />Anywhere
-          </h1>
-          <p className="text-base md:text-lg text-muted-foreground text-pretty leading-relaxed mb-10 max-w-lg mx-auto">
-            Connect with trusted drivers for fast, safe, and affordable delivery of your parcels and packages.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button size="lg" asChild>
-              <Link href="/signup">Get Started <ArrowRight className="ml-2 h-4 w-4" /></Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild>
-              <Link href="/how-it-works">How It Works</Link>
-            </Button>
-          </div>
+    <div className="min-h-screen bg-[#0e0e0e] text-white overflow-x-hidden">
+      {/* Hero Section */}
+      <section className="relative min-h-[921px] flex items-center px-8 py-20 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="w-full h-full object-cover opacity-40"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbp_tdB9_mx8K3LMYJ9Dan4fK8pyGM9VXngSN3R6JcoaV0e3kau9IZrx4WiAmziCaQxUOcL-MuOELG0pZNeUlCJlcGSLBI2bvwLGBfBsIZbRDBLFVFY-mi4ZUjPZmjkLIEhGIOVqhji7-VAVGqT4YvonSSyhdvUpfRkDjdpvvGRqoVlxIPCYc1SXscy0dR5hjEu4n9hV-TQx4iYvarL9wsp3oWc5QXGY9ThK2-9aKUyLXI6Ihrb2tIYvhuKa21szWEadhDRhZu8g"
+            alt="Kinetic logistics fleet"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e] via-[#0e0e0e]/80 to-transparent" />
         </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-20 px-4 bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl font-semibold text-foreground text-balance mb-3">Why Choose SwiftDeliver?</h2>
-            <p className="text-sm text-muted-foreground text-pretty max-w-md mx-auto leading-relaxed">
-              Built with reliability and security at its core for every delivery.
+        <div className="relative z-10 max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center w-full">
+          <div>
+            <span className="inline-block px-4 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-xs font-bold tracking-widest uppercase mb-6">
+              Ultra-Fast Deployment
+            </span>
+            <h1 className="text-5xl lg:text-7xl font-black font-headline text-white leading-tight tracking-tighter mb-8">
+              The Future of <span className="text-[#a3a6ff] italic">Kinetic</span> Logistics.
+            </h1>
+            <p className="text-lg text-[#adaaaa] max-w-md leading-relaxed mb-10">
+              Experience precision-engineered delivery solutions. From microscopic components to industrial fleets, we bridge the void with absolute speed.
             </p>
+            <div className="flex flex-wrap gap-4">
+              <Link href="/signup" className="px-8 py-4 milled-gradient rounded-full text-[#0f00a4] font-bold shadow-lg glow-primary active:scale-95 transition-transform">
+                Initiate Transit
+              </Link>
+              <Link href="/our-fleet" className="px-8 py-4 bg-[#262626] border border-[#494847]/30 rounded-full text-white font-semibold hover:bg-[#262626]/80 transition-colors">
+                View Fleet
+              </Link>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((f) => (
-              <div key={f.title} className="rounded-xl border border-border bg-background p-6 shadow-sm">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary mb-4">
-                  <f.icon className="h-5 w-5 text-foreground" />
+
+          {/* Quick Book Widget */}
+          <div className="glass-card p-8 rounded-[2rem] border border-[#494847]/15 shadow-2xl">
+            <h3 className="text-xl font-bold font-headline mb-6 flex items-center gap-2 text-white">
+              <span className="text-[#a3a6ff]">⚡</span> Quick Book
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 ml-4">Pickup Point</label>
+                <div className="flex items-center bg-black/50 rounded-xl p-4 border border-[#494847]/10 focus-within:border-[#a3a6ff]/50 transition-colors">
+                  <span className="text-[#a3a6ff] mr-3 text-sm">📍</span>
+                  <input className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-[#adaaaa]/50" placeholder="Enter origin address" type="text" />
                 </div>
-                <h3 className="text-sm font-semibold text-foreground mb-2">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+              </div>
+              <div className="flex justify-center">
+                <div className="w-10 h-10 bg-[#a3a6ff] rounded-full flex items-center justify-center text-[#0f00a4] shadow-lg cursor-pointer hover:scale-110 transition-transform">
+                  ⇅
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 ml-4">Drop-off Point</label>
+                <div className="flex items-center bg-black/50 rounded-xl p-4 border border-[#494847]/10 focus-within:border-[#a3a6ff]/50 transition-colors">
+                  <span className="text-[#c180ff] mr-3 text-sm">🏁</span>
+                  <input className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-[#adaaaa]/50" placeholder="Enter destination" type="text" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                <div className="bg-black/50 rounded-xl p-4 border border-[#494847]/10">
+                  <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1">Service Tier</label>
+                  <select className="bg-transparent border-none outline-none text-sm text-white w-full p-0">
+                    <option className="bg-[#0e0e0e]">Quantum (Instant)</option>
+                    <option className="bg-[#0e0e0e]">Flash (2-Hour)</option>
+                    <option className="bg-[#0e0e0e]">Standard</option>
+                  </select>
+                </div>
+                <button className="milled-gradient rounded-xl font-bold text-[#0f00a4] shadow-md hover:brightness-110 transition-all active:scale-95">
+                  Get Quote
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it Works: Bento Grid */}
+      <section className="px-8 py-24 bg-[#131313]">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-16">
+            <h2 className="text-3xl font-black font-headline tracking-tight mb-4">Operational Protocol</h2>
+            <p className="text-[#adaaaa]">Three phases to total logistical dominance.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { icon: "👆", color: "[#a3a6ff]", bg: "[#a3a6ff]/10", borderHover: "primary", title: "Digital Request", desc: "System-wide synchronization begins the moment you confirm your order. Our AI optimizes routes in real-time." },
+              { icon: "📦", color: "[#c180ff]", bg: "[#c180ff]/10", borderHover: "secondary", title: "Secure Induction", desc: "Our kinetic agents arrive within 15 minutes for pickup, utilizing biometric verification for all transfers." },
+              { icon: "🚀", color: "[#a3a6ff]", bg: "[#a3a6ff]/10", borderHover: "primary", title: "Final Delivery", desc: "Real-time GPS tracking and instant proof-of-delivery ensure your assets reach the destination flawlessly." },
+            ].map((item) => (
+              <div key={item.title} className="bg-[#1a1919] p-10 rounded-[2rem] border border-[#494847]/5 hover:border-[#a3a6ff]/20 transition-all group">
+                <div className={`w-14 h-14 bg-${item.bg} rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform text-2xl`}>
+                  {item.icon}
+                </div>
+                <h4 className="text-xl font-bold mb-4">{item.title}</h4>
+                <p className="text-[#adaaaa] text-sm leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-20 px-4 bg-background border-b border-border">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl font-semibold text-foreground text-balance mb-3">How It Works</h2>
-            <p className="text-sm text-muted-foreground text-pretty leading-relaxed">
-              Four simple steps to get your delivery done.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map((s) => (
-              <div key={s.step} className="flex flex-col gap-3">
-                <span className="text-3xl font-bold text-border">{s.step}</span>
-                <h3 className="text-sm font-semibold text-foreground">{s.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{s.description}</p>
+      {/* Trust & Security */}
+      <section className="px-8 py-24 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-[#a3a6ff]/5 blur-[120px] rounded-full -translate-y-1/2 pointer-events-none" />
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
+          <div className="relative aspect-square rounded-[3rem] overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="w-full h-full object-cover"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCreGwQQ9snl-rqtptjDHd7Rl9amQgi1iyhP3iFJdCJfFUfdzLNdh7IWvvDJVV-BR40a7V-c_xUHjJN-lr7UOqzjJgOv0pmT4z0nCwc1DsNaBmUmeRIO3lHJtfXrq6AEh9S3Qt8aZU2D_l5MuFyTwJ8U8HBWSq3My5oAgF47rdw-Mb7nm8yY8qeUfTW_V4OtIuVKbjCTX6xovkutblwpmw6JNWczrBn8UL-CGFgLV0UpfYjUyJJjgO4Dj9EUh_SiA2G6yxDTPGNPA"
+              alt="Encrypted custody"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent" />
+            <div className="absolute bottom-10 left-10 right-10 glass-card p-6 rounded-2xl border border-[#494847]/20">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-[#c180ff] rounded-full text-[#33005b]">🔒</div>
+                <div>
+                  <h5 className="font-bold">Encrypted Custody</h5>
+                  <p className="text-xs text-[#adaaaa]">Full liability insurance up to $500k</p>
+                </div>
               </div>
-            ))}
+            </div>
+          </div>
+          <div>
+            <h2 className="text-4xl font-black font-headline tracking-tight mb-8">Fortress-Grade Security</h2>
+            <ul className="space-y-8">
+              {[
+                { icon: "🔐", title: "End-to-End Encryption", desc: "Every shipment is tracked via an encrypted ledger, ensuring data integrity from origin to destination." },
+                { icon: "👆", title: "Identity Verification", desc: "Couriers undergo multi-factor biometric authentication at every transition point in the journey." },
+                { icon: "🌡️", title: "Climate Control", desc: "Our premium fleet features active environmental monitoring for sensitive pharmaceutical and tech cargo." },
+              ].map((item) => (
+                <li key={item.title} className="flex gap-6">
+                  <span className="text-[#a3a6ff] text-xl mt-1">{item.icon}</span>
+                  <div>
+                    <h6 className="font-bold mb-1">{item.title}</h6>
+                    <p className="text-sm text-[#adaaaa]">{item.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 px-4 bg-foreground">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl font-semibold text-background text-balance mb-4">
-            Ready to get started?
-          </h2>
-          <p className="text-sm text-background/60 mb-8 leading-relaxed">
-            Join thousands of customers and drivers using SwiftDeliver every day.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button size="lg" variant="secondary" asChild>
-              <Link href="/signup">Create an Account <ChevronRight className="ml-1 h-4 w-4" /></Link>
-            </Button>
-            <Button size="lg" variant="outline" className="border-background/20 text-background hover:bg-background/10 hover:text-background" asChild>
-              <Link href="/track/demo">Track a Package</Link>
-            </Button>
+      {/* Global Fleet Section */}
+      <section className="px-8 py-24 bg-[#131313]">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-black font-headline tracking-tight mb-4">The Kinetic Global Fleet</h2>
+            <p className="text-[#adaaaa]">Strategically positioned to respond in milliseconds.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: "Ground Unit", tier: "[#a3a6ff]", name: "Stealth Runner", desc: "Agile city-navigation", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCVVk9QV_vBG7xfICXQ259DaN2Jj3AMol0grVXQQHgi5pAPENx9mn_825laj0AIFjaqyvn4YjaPPsUtgvpRwdK_Jmt4CO2SqwrBRLR_k8Xxlb_Z-B4hrkGfPPlXDzDJypTkGejsk17q7i-E80a2-rfqnupRzYXDNgrtvCFLiZi59aRKXBqzGP13OrbHTRk2pxH0ih0qJ_SA-7Ot7SwrwMA3xbTVQ23pDACQ0uLgiXfLhKxy1mQTlg4sIOPuxzDcksDuiWZ_zzGyKQ", offset: "" },
+              { label: "Heavy Transit", tier: "[#c180ff]", name: "Titan Carrier", desc: "Bulk industrial logistics", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCPkpY080fdCq9JZSqOGDwk3yi93pyRBFRSVNYCzpO5hRSkemTrJWcv_ynmwrddvUFI45FarTyOxb393sXJLtgIj0i9WKA49EnkeGQ2X_q04r-NNm-3fopxQ6U04jnjuUwNZC659bYSnYMIVNXHFAknMw-J6_5mFGHpaRltUQnndkEoU84778mm6UuTpHp6gTQ23FjhcszOtI78DENFYA7oPGYsu4xHW5pZXg3IeeLhsKBP7ChNu6PzK0qWfavHhO89-y2-HY0EuQ", offset: "lg:mt-12" },
+              { label: "Airborne", tier: "[#a3a6ff]", name: "Aero-Drone V2", desc: "Instant short-range drop", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCeN46UzNkG4RJ6i1sQOW8eogNnhnraBQnHjQKjLwt6PIPFklTZ4XEvh14HT73GZpyQQZXh6hn9A6zQ2IfxdgQAXWHoozkurktVaa6vBk_lwWmVgqXOeBq10EO0msUudNdDVcXQmGnpghHvmDJxLqNRMLgy3Fnf1L1B1k9z7ORjE20rofHj1PKX6dBALAYNoDbZz3TS3r2v3t8p-RKo9GOunEaUNBXe1z2nDsI5hsyuvBOgqBuxYl41f4pA7Zssf49jvGe19DDK0Q", offset: "" },
+              { label: "Hyper-Local", tier: "[#c180ff]", name: "Velocity Bike", desc: "Zero-emission precision", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAEK71nwZrjCR5ABm0FlIlqYYQ0vKUuUoBmCk7ZfJWuFxjD6lnBELw_fB59msqxTVBJZkHroJEMN4NPwR-u2maKUi8CWkHfHO3FC8yVwRs5Y-d2YjVmvoPSbmuSbjw5HpfzrqlfFBY_r9DZCkBzATDEOeO666Y3yeqzIst5Qd06Gp86EPWkwxTR2BYN8WBJu5LEXEslIIuPwjtIDVEj9DEPzCG7BE_fSJtR1RoR7K7Ujr7wZf7Mo21og1OqWUGVNMbF9tusXK8gDA", offset: "lg:mt-12" },
+            ].map((card) => (
+              <div key={card.name} className={`group relative h-[400px] rounded-[2rem] overflow-hidden ${card.offset}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src={card.img} alt={card.name} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+                <div className="absolute bottom-0 left-0 p-8">
+                  <span className={`text-[10px] uppercase font-bold tracking-widest text-${card.tier} mb-2 block`}>{card.label}</span>
+                  <h5 className="text-xl font-bold">{card.name}</h5>
+                  <p className="text-xs text-gray-400 mt-2">{card.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
