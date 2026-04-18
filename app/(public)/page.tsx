@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import BookingCard from "@/components/home/BookingCard"
+import Footer from "@/components/layout/Footer"
 
 export const metadata: Metadata = {
   title: "Kinetic Void | Premium Logistics",
@@ -143,6 +144,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }
