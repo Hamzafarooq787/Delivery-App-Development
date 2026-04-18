@@ -10,25 +10,26 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] text-white">
       {/* Hero Section */}
-      <section className="relative min-h-[70vh] sm:h-[80vh] sm:min-h-[600px] flex items-center overflow-hidden">
+      <section className="relative min-h-[70vh] w-full flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e] via-[#0e0e0e]/60 to-transparent z-10" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             className="w-full h-full object-cover grayscale opacity-40"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuAM_lVE4nkV8cerifRH__12c_48VhA2ytu0SAjlDo38VEwv1FRlRrQStOh3jcWl8SvGgb4UgA_zkIm5cChTvSWMOmxLjedjjrOLJfojpzylOkn5Zt0n5y6GoPBYUX4yfLPkvYltj9YsSJ0AKRqrfrUE6c1ouA4ZdIUZFS-qJJHyPjum7zS1MV5SExTR2YupSyIbKDMT_1yA6646cXGh-P48rcCIvgPV8McYPajZBv820RJWP3ACnE3rkrn4Zfysz_NUzE7a9ev5Nw"
             alt="Kinetic Void logistics"
           />
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent" />
         </div>
-        <div className="relative z-20 px-4 sm:px-8 md:px-16 max-w-7xl mx-auto w-full">
-          <div className="max-w-4xl">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-28 sm:py-36">
+          <div className="w-full max-w-4xl">
             <span className="text-[#a3a6ff] font-headline font-bold tracking-widest text-xs uppercase mb-4 block">Our Mission</span>
-            <h1 className="text-4xl sm:text-5xl md:text-8xl font-black font-headline text-white leading-[0.9] tracking-tighter mb-6 sm:mb-8 text-balance">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black font-headline text-white leading-tight tracking-tighter mb-6 sm:mb-8 text-balance break-words">
               Filling the{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#a3a6ff] to-[#c180ff]">Void</span>{" "}
               of Global Inefficiency.
             </h1>
-            <p className="text-[#adaaaa] text-base sm:text-lg md:text-2xl max-w-2xl font-light leading-relaxed">
+            <p className="text-[#adaaaa] text-base sm:text-lg md:text-xl max-w-2xl font-light leading-relaxed">
               Kinetic Void was born from a singular obsession: that movement should be invisible. We are re-engineering the world&apos;s logistical backbone through autonomous coordination and hyper-predictive analytics.
             </p>
             <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">

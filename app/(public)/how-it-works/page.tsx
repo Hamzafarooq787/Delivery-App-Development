@@ -10,7 +10,7 @@ export default function HowItWorksPage() {
   return (
     <div className="min-h-screen bg-[#0e0e0e] text-white">
       {/* Hero */}
-      <section className="relative min-h-[60vh] sm:h-[819px] flex items-center justify-center overflow-hidden bg-[#131313]">
+      <section className="relative min-h-[70vh] w-full flex items-center justify-center overflow-hidden bg-[#131313]">
         <div className="absolute inset-0 z-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -18,16 +18,17 @@ export default function HowItWorksPage() {
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-g29a55dZuQD_mtN8IbGXYjpn579HD7D1BLJGU9aM2iUbkElTwh9ZlM28od6d3mbI6H-uMgvTx8lKcBFH3tUOfU39VlzsGhbQlsECBHR2T2I-ueYpNsUQ_MFSA7F_kzSnTbdI6rweXzJzX7Q8kBJMwXoJrc4dNEuUESMkVJmVnw6qEj4QjJkff-ldkAKqJLfcFZravdauuu2-ONfgF_fRxX_bYRgOSUtw9g1YwhQ-U6W4QZLeyzxhETxlnaI64FC7ujkSU1vRiA"
             alt="Kinetic Void network"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0e0e0e]/80 to-[#0e0e0e]" />
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0e0e0e]/60 to-[#0e0e0e]" />
         </div>
-        <div className="relative z-10 text-center px-4 sm:px-6 max-w-4xl">
-          <h1 className="font-headline text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 text-balance">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 flex flex-col items-center text-center">
+          <h1 className="font-headline text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 text-balance break-words w-full">
             ENGINEERED FOR <span className="text-[#a3a6ff] italic">VELOCITY</span>
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-[#adaaaa] max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">
             Kinetic Void is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
             <Link href="/signup" className="w-full sm:w-auto bg-[#a3a6ff] text-[#0f00a4] font-headline font-bold px-8 py-4 rounded-lg flex items-center justify-center gap-2 kinetic-glow transition-transform active:scale-95">
               INITIALIZE NETWORK ⚡
             </Link>
