@@ -1,32 +1,24 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Manrope, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const _jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const manrope = Manrope({
+  subsets: ['latin'],
+  weight: ['200', '400', '600', '800'],
+  variable: '--font-manrope',
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
-  title: 'SwiftDeliver — Fast & Reliable Delivery',
-  description: 'SwiftDeliver connects customers with drivers for fast, safe, and reliable delivery services.',
-  generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+  title: 'Kinetic Void | Premium Logistics',
+  description:
+    'Experience precision-engineered delivery solutions. From microscopic components to industrial fleets, we bridge the void with absolute speed.',
 }
 
 export default function RootLayout({
@@ -35,8 +27,14 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${_inter.variable} ${_jetbrainsMono.variable}`}>
-      <body className="font-sans antialiased">
+    <html lang="en" className={`dark ${manrope.variable} ${inter.variable}`}>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="bg-[#0e0e0e] font-inter text-white overflow-x-hidden antialiased">
         {children}
         <Analytics />
       </body>
