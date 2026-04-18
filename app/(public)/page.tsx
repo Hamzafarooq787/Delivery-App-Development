@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import BookingCard from "@/components/home/BookingCard"
 
 export const metadata: Metadata = {
   title: "Kinetic Void | Premium Logistics",
@@ -42,45 +43,7 @@ export default function HomePage() {
           </div>
 
           {/* Quick Book Widget */}
-          <div className="glass-card p-8 rounded-[2rem] border border-[#494847]/15 shadow-2xl">
-            <h3 className="text-xl font-bold font-headline mb-6 flex items-center gap-2 text-white">
-              <span className="text-[#a3a6ff]">⚡</span> Quick Book
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 ml-4">Pickup Point</label>
-                <div className="flex items-center bg-black/50 rounded-xl p-4 border border-[#494847]/10 focus-within:border-[#a3a6ff]/50 transition-colors">
-                  <span className="text-[#a3a6ff] mr-3 text-sm">📍</span>
-                  <input className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-[#adaaaa]/50" placeholder="Enter origin address" type="text" />
-                </div>
-              </div>
-              <div className="flex justify-center">
-                <div className="w-10 h-10 bg-[#a3a6ff] rounded-full flex items-center justify-center text-[#0f00a4] shadow-lg cursor-pointer hover:scale-110 transition-transform">
-                  ⇅
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 ml-4">Drop-off Point</label>
-                <div className="flex items-center bg-black/50 rounded-xl p-4 border border-[#494847]/10 focus-within:border-[#a3a6ff]/50 transition-colors">
-                  <span className="text-[#c180ff] mr-3 text-sm">🏁</span>
-                  <input className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-[#adaaaa]/50" placeholder="Enter destination" type="text" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mt-6">
-                <div className="bg-black/50 rounded-xl p-4 border border-[#494847]/10">
-                  <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1">Service Tier</label>
-                  <select className="bg-transparent border-none outline-none text-sm text-white w-full p-0">
-                    <option className="bg-[#0e0e0e]">Quantum (Instant)</option>
-                    <option className="bg-[#0e0e0e]">Flash (2-Hour)</option>
-                    <option className="bg-[#0e0e0e]">Standard</option>
-                  </select>
-                </div>
-                <button className="milled-gradient rounded-xl font-bold text-[#0f00a4] shadow-md hover:brightness-110 transition-all active:scale-95">
-                  Get Quote
-                </button>
-              </div>
-            </div>
-          </div>
+          <BookingCard />
         </div>
       </section>
 
