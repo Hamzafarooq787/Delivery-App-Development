@@ -1,11 +1,35 @@
+import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { createServerClient } from "@supabase/ssr"
 
 export async function middleware(request: NextRequest) {
+  const response = NextResponse.next()
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return request.cookies.get(name)?.value
+        },
+        set(name, value, options) {
+          response.cookies.set(name, value, options)
+        },
+        remove(name, options) {
+          response.cookies.set(name, "", options)
+        },
+      },
+    }
+  )
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   const { pathname } = request.nextUrl
 
-  // 1. PUBLIC ROUTES → ALWAYS ALLOW (no auth check, no redirect)
+  // PUBLIC ROUTES - always allow access
   if (
     pathname === "/" ||
     pathname.startsWith("/about") ||
@@ -16,51 +40,24 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/signup") ||
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname.includes(".")
+    pathname.startsWith("/api")
   ) {
-    return NextResponse.next()
+    return response
   }
 
-  // 2. PROTECT ONLY DASHBOARD ROUTES
+  // PROTECTED ROUTES - require authentication
   if (pathname.startsWith("/dashboard")) {
-    // Create Supabase client for auth check
-    let supabaseResponse = NextResponse.next({ request })
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value)
-            )
-            supabaseResponse = NextResponse.next({ request })
-            cookiesToSet.forEach(({ name, value, options }) =>
-              supabaseResponse.cookies.set(name, value, options)
-            )
-          },
-        },
-      }
-    )
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
     if (!user) {
       return NextResponse.redirect(new URL("/login", request.url))
     }
-
-    return supabaseResponse
   }
 
-  // 3. DEFAULT → ALLOW
-  return NextResponse.next()
+  // REDIRECT LOGGED-IN USERS FROM AUTH PAGES
+  if (user && (pathname.startsWith("/login") || pathname.startsWith("/signup"))) {
+    return NextResponse.redirect(new URL("/dashboard/customer", request.url))
+  }
+
+  return response
 }
 
 export const config = {
