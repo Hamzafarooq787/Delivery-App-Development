@@ -13,18 +13,18 @@ export default function UnauthorizedPage() {
         </div>
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            401 — Unauthorized
+            Unauthorized
           </h1>
           <p className="text-muted-foreground text-balance">
-            You need to be signed in to access this page. Please log in and try again.
+            You do not have access to this page. If you believe this is a mistake, please contact support.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/login">
-            <Button>Sign In</Button>
+          <Link href="/dashboard">
+            <Button>Go to my dashboard</Button>
           </Link>
           <Link href="/">
-            <Button variant="outline">Go Home</Button>
+            <Button variant="outline">Back to home</Button>
           </Link>
         </div>
       </div>
