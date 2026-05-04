@@ -1,28 +1,32 @@
 import { createClient } from "@/lib/supabase/server"
+import { DeliveriesLedger } from "@/components/admin/deliveries-ledger"
 
 export default async function AdminOrdersPage() {
   const supabase = await createClient()
 
-  const [ordersRes, activeRes, successRes] = await Promise.all([
+  const [initialDeliveriesRes, activeRes, successRes] = await Promise.all([
     supabase
       .from("delivery_requests")
-      .select("id, tracking_number, status, price, created_at, customer_id")
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("delivery_requests")
-      .select("id", { count: "exact" })
-      .in("status", ["pending", "in_transit", "accepted"]),
+      .select("*")
+      .order("created_at", { ascending: false }),
     supabase
       .from("delivery_requests")
       .select("id", { count: "exact" })
-      .eq("status", "completed"),
+      .in("status", ["requested", "accepted", "collected", "in_transit"]),
+    supabase
+      .from("delivery_requests")
+      .select("id", { count: "exact" })
+      .eq("status", "delivered"),
   ])
 
-  const orders = ordersRes.data ?? []
+  if (initialDeliveriesRes.error) {
+    console.error("[v0] Failed to fetch deliveries:", initialDeliveriesRes.error)
+  }
+
+  const initialDeliveries = initialDeliveriesRes.data ?? []
   const activeCount = activeRes.count ?? 0
   const successCount = successRes.count ?? 0
-  const total = orders.length
+  const total = initialDeliveries.length
 
   const successRate =
     successCount + total > 0
@@ -107,106 +111,7 @@ export default async function AdminOrdersPage() {
         </div>
       </div>
 
-      <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl overflow-hidden">
-        <div className="p-6 bg-[#1a1919]/50 flex justify-between items-center border-b border-[#494847]/10">
-          <h3 className="font-headline font-bold text-lg text-white">Active Ledger</h3>
-          <div className="flex gap-2">
-            <button className="p-2 text-[#adaaaa] hover:text-white transition-colors">
-              <span className="material-symbols-outlined">download</span>
-            </button>
-            <button className="p-2 text-[#adaaaa] hover:text-white transition-colors">
-              <span className="material-symbols-outlined">refresh</span>
-            </button>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left border-collapse">
-            <thead>
-              <tr className="bg-[#131313]">
-                {["Delivery ID", "Customer", "Driver", "Route", "Status", "Price", "Date"].map((h, i) => (
-                  <th
-                    key={h}
-                    className={`px-6 py-4 text-[11px] uppercase tracking-widest font-bold text-[#adaaaa] ${i === 5 || i === 6 ? "text-right" : ""}`}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#494847]/5">
-              {orders.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center text-[#adaaaa] text-sm">
-                    No deliveries found
-                  </td>
-                </tr>
-              ) : (
-                orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-[#201f1f]/40 transition-colors group">
-                    <td className="px-6 py-5 font-mono text-sm text-[#a3a6ff]">
-                      {order.tracking_number ?? `#KV-${order.id.slice(0, 5).toUpperCase()}`}
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-[#262626] flex items-center justify-center text-xs font-bold text-white">
-                          {String(order.customer_id ?? "?").slice(0, 2).toUpperCase()}
-                        </div>
-                        <span className="text-sm font-semibold text-white">Customer</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-sm text-[#adaaaa]">Assigned</td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-white">Origin</span>
-                        <span className="material-symbols-outlined text-[12px] text-[#adaaaa]">arrow_forward</span>
-                        <span className="text-white">Destination</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <DeliveryStatusPill status={order.status} />
-                    </td>
-                    <td className="px-6 py-5 text-sm font-mono text-right text-white">
-                      ${(order.price ?? 0).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-5 text-xs text-[#adaaaa] text-right whitespace-nowrap">
-                      {new Date(order.created_at).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-6 py-4 bg-[#1a1919]/30 flex justify-between items-center">
-          <span className="text-xs text-[#adaaaa]">Showing {orders.length} entries</span>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">Prev</button>
-            <button className="px-3 py-1 text-xs bg-[#a3a6ff] text-[#0f00a4] rounded font-bold">1</button>
-            <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">Next</button>
-          </div>
-        </div>
-      </div>
+      <DeliveriesLedger initialDeliveries={initialDeliveries} />
     </div>
-  )
-}
-
-function DeliveryStatusPill({ status }: { status: string }) {
-  const map: Record<string, { label: string; className: string }> = {
-    in_transit: { label: "In Transit", className: "bg-[#a3a6ff]/10 text-[#a3a6ff] border-[#a3a6ff]/20" },
-    pending: { label: "Requested", className: "bg-[#c180ff]/10 text-[#c180ff] border-[#c180ff]/20" },
-    completed: { label: "Delivered", className: "bg-[#ffa5d9]/10 text-[#ffa5d9] border-[#ffa5d9]/20" },
-    cancelled: { label: "Cancelled", className: "bg-[#ff6e84]/10 text-[#ff6e84] border-[#ff6e84]/20" },
-    accepted: { label: "Accepted", className: "bg-[#a3a6ff]/10 text-[#a3a6ff] border-[#a3a6ff]/20" },
-  }
-  const config = map[status] ?? { label: status, className: "bg-[#262626] text-[#adaaaa] border-transparent" }
-  return (
-    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${config.className}`}>
-      {config.label}
-    </span>
   )
 }
