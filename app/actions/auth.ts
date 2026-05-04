@@ -14,40 +14,52 @@ export async function signIn(formData: FormData) {
     return { error: error.message }
   }
 
-  // Fetch role to redirect correctly
+  // STEP 1 — FULL LOGGING
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Sign in failed. Please try again." }
+  console.log("[v0] AUTH USER:", user)
 
-  console.log("[v0] Server action - User ID:", user.id)
+  if (!user) {
+    console.error("[v0] NO AUTH USER")
+    return { error: "Sign in failed. Please try again." }
+  }
 
-  const { data: profile, error: profileError } = await supabase
+  // STEP 4 — VERIFY MATCHING ID
+  console.log("[v0] AUTH ID:", user.id)
+
+  // Fetch the FULL row (not just role) to see exactly what's stored
+  const { data, error: fetchError } = await supabase
     .from("users")
-    .select("role")
+    .select("*")
     .eq("id", user.id)
     .maybeSingle()
 
-  console.log("[v0] Server action - Profile data:", profile)
-  console.log("[v0] Server action - Profile error:", profileError)
+  console.log("[v0] FULL USER ROW:", data)
+  console.log("[v0] ROLE:", data?.role)
+  console.log("[v0] ERROR:", fetchError)
 
-  // Log error for debugging but don't block login
-  if (profileError) {
-    console.error("Role fetch error:", profileError)
+  // STEP 2 — REMOVE FALLBACK TEMPORARILY
+  if (!data) {
+    console.error("[v0] NO USER ROW FOUND")
+    return { error: "No user row found in public.users" }
   }
 
-  // Fallback to customer role if fetch fails or no data
-  const role = profile?.role || "customer"
-  console.log("[v0] Server action - Resolved role:", role)
+  const role = data.role
 
+  // STEP 3 — FORCE HARD REDIRECT TEST (log only, no redirect yet)
   if (role === "admin") {
-    console.log("[v0] Server action - Redirecting to /dashboard/admin")
-    redirect("/dashboard/admin")
+    console.log("[v0] REDIRECT ADMIN")
   }
   if (role === "driver") {
-    console.log("[v0] Server action - Redirecting to /dashboard/driver")
-    redirect("/dashboard/driver")
+    console.log("[v0] REDIRECT DRIVER")
   }
-  console.log("[v0] Server action - Redirecting to /dashboard/customer")
-  redirect("/dashboard/customer")
+  if (role === "customer") {
+    console.log("[v0] REDIRECT CUSTOMER")
+  }
+
+  // Return the diagnostic result to the client so we can also see it in the browser
+  return {
+    error: `DIAGNOSTIC: authId=${user.id} | rowId=${data.id} | role=${role} | match=${user.id === data.id}`,
+  }
 }
 
 export async function signUp(formData: FormData) {
