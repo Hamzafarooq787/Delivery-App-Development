@@ -8,7 +8,7 @@ import { LogoutButton } from "@/components/auth/logout-button"
 const navItems = [
   { label: "Dashboard", href: "/dashboard/driver", icon: "dashboard" },
   { label: "Available Jobs", href: "/dashboard/driver/jobs/available", icon: "work" },
-  { label: "Active Jobs", href: "/dashboard/driver/jobs/active", icon: "local_shipping" },
+  { label: "Active Jobs", href: "/dashboard/driver/active-jobs", icon: "local_shipping" },
   { label: "Completed Jobs", href: "/dashboard/driver/jobs/completed", icon: "task_alt" },
   { label: "Earnings", href: "/dashboard/driver/earnings", icon: "payments" },
   { label: "Payouts", href: "/dashboard/driver/payouts", icon: "account_balance_wallet" },

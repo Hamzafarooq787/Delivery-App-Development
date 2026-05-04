@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 
-const timelineSteps = [
+const defaultTimelineSteps = [
   { label: 'Requested', detail: 'Oct 12, 09:30 AM', done: true, active: false },
   { label: 'Accepted', detail: 'Oct 12, 09:45 AM', done: true, active: false },
   { label: 'Collected', detail: 'Oct 12, 11:20 AM', done: true, active: false },
@@ -14,6 +15,24 @@ const timelineSteps = [
 
 export default function LiveTrackingPage() {
   const [showModal, setShowModal] = useState(false)
+  const [shipment, setShipment] = useState<any>(null)
+  const [timelineSteps, setTimelineSteps] = useState(defaultTimelineSteps)
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data, error } = await supabase.from('delivery_requests').select('id,tracking_number,status,pickup_address,delivery_address').eq('customer_id', user.id).in('status', ['requested','accepted','collected','in_transit']).order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (error) { console.error('[v0] tracking fetch error', error); return }
+      if (!data) return
+      setShipment(data)
+      const steps = ['requested','accepted','collected','in_transit','delivered']
+      const current = steps.indexOf((data.status || 'requested').toLowerCase())
+      setTimelineSteps(steps.map((st, idx) => ({ label: st.replace('_',' ').replace(/\b\w/g, c=>c.toUpperCase()), detail: data.tracking_number || 'Live', done: idx < current, active: idx === current })))
+    }
+    load()
+  }, [supabase])
 
   return (
     <>
@@ -57,7 +76,7 @@ export default function LiveTrackingPage() {
                     Estimated Arrival
                   </p>
                   <h2 className="text-4xl font-extrabold font-headline text-on-surface tracking-tighter">
-                    14:45
+                    {shipment?.status === "in_transit" ? "LIVE" : "--:--"}
                   </h2>
                 </div>
                 <div className="bg-primary/10 p-2 rounded-lg">
@@ -180,14 +199,14 @@ export default function LiveTrackingPage() {
                   <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold mb-1">
                     Shipment ID
                   </p>
-                  <p className="text-sm font-headline font-black text-on-surface">KV-9920-X</p>
+                  <p className="text-sm font-headline font-black text-on-surface">{shipment?.tracking_number || "—"}</p>
                 </div>
                 <div className="h-8 w-px bg-outline-variant/30 hidden sm:block" />
                 <div>
                   <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold mb-1">
                     Current Sector
                   </p>
-                  <p className="text-sm font-headline font-bold text-on-surface">North Harbor Junction</p>
+                  <p className="text-sm font-headline font-bold text-on-surface">{shipment?.delivery_address || "—"}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
