@@ -22,7 +22,31 @@ export default function AuthCallbackPage() {
         return
       }
 
-      router.push("/customer")
+      // Fetch the user's role to redirect to the correct dashboard
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        setError(true)
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single()
+
+      const role = profile?.role ?? "customer"
+
+      if (role === "admin") {
+        router.push("/dashboard/admin")
+      } else if (role === "driver") {
+        router.push("/dashboard/driver")
+      } else {
+        router.push("/dashboard/customer")
+      }
     }
 
     handleCallback()

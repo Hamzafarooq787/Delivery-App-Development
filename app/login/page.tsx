@@ -26,7 +26,41 @@ export default function LoginPage() {
       return
     }
 
-    router.push("/dashboard/customer")
+    // Get the logged-in user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      setError("Sign in failed. Please try again.")
+      setLoading(false)
+      return
+    }
+
+    // Fetch role from database
+    const { data: profile, error: profileError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+
+    if (profileError) {
+      setError("Unable to load your account. Please try again.")
+      setLoading(false)
+      return
+    }
+
+    // Redirect based on role (with null safety — default to customer)
+    const role = profile?.role ?? "customer"
+
+    if (role === "admin") {
+      router.push("/dashboard/admin")
+    } else if (role === "driver") {
+      router.push("/dashboard/driver")
+    } else {
+      router.push("/dashboard/customer")
+    }
+
     router.refresh()
   }
 

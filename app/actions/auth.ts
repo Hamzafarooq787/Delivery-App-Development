@@ -26,9 +26,9 @@ export async function signIn(formData: FormData) {
 
   const role = profile?.role ?? "customer"
 
-  if (role === "admin") redirect("/admin")
-  if (role === "driver") redirect("/driver")
-  redirect("/customer")
+  if (role === "admin") redirect("/dashboard/admin")
+  if (role === "driver") redirect("/dashboard/driver")
+  redirect("/dashboard/customer")
 }
 
 export async function signUp(formData: FormData) {
