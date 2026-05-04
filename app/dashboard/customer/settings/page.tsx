@@ -89,18 +89,25 @@ export default function SettingsPage() {
     if (!userId || saving) return
     setSaving(true)
     setSaveMessage(null)
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('users')
       .update({ full_name: fullName, phone })
       .eq('id', userId)
+      .select('full_name, phone')
+      .single()
     setSaving(false)
     if (error) {
       console.error('[v0] settings save error', error)
       setSaveMessage({ type: 'error', text: error.message || 'Failed to save profile.' })
       return
     }
-    setInitialFullName(fullName)
-    setInitialPhone(phone)
+    // Sync state to exactly what the DB returned
+    const savedName = updated?.full_name ?? fullName
+    const savedPhone = updated?.phone ?? phone
+    setFullName(savedName)
+    setPhone(savedPhone)
+    setInitialFullName(savedName)
+    setInitialPhone(savedPhone)
     setSaveMessage({ type: 'success', text: 'Profile updated.' })
   }
 

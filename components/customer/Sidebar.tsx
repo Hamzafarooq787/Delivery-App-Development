@@ -32,12 +32,15 @@ export default function Sidebar() {
   const [role, setRole] = useState<string>('CUSTOMER')
   const [email, setEmail] = useState<string>('')
 
+  const [userId, setUserId] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || cancelled) return
       setEmail(user.email ?? '')
+      setUserId(user.id)
       const { data, error } = await supabase
         .from('users')
         .select('full_name, role')
@@ -51,6 +54,24 @@ export default function Sidebar() {
     load()
     return () => { cancelled = true }
   }, [supabase])
+
+  // Realtime: re-fetch name whenever the user's row changes (e.g. after Settings saves)
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel(`sidebar-user-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as { full_name?: string | null; role?: string | null }
+          if (row.full_name !== undefined) setName(row.full_name ?? '')
+          if (row.role) setRole(String(row.role).toUpperCase())
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase, userId])
 
   const displayName = name || (email ? email.split('@')[0] : 'Account')
 
