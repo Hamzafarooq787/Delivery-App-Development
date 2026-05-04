@@ -61,8 +61,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // REDIRECT LOGGED-IN USERS FROM AUTH PAGES
+  // Note: We redirect to a generic /dashboard path and let the dashboard page
+  // handle role-based routing since middleware can't easily fetch from DB
   if (user && (pathname.startsWith("/login") || pathname.startsWith("/signup"))) {
-    return NextResponse.redirect(new URL("/dashboard/customer", request.url))
+    return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
   return response

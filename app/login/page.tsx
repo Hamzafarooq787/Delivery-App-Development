@@ -54,6 +54,10 @@ function LoginPageContent() {
       .eq("id", user.id)
       .maybeSingle()
 
+    console.log("[v0] User ID:", user.id)
+    console.log("[v0] Profile data:", profile)
+    console.log("[v0] Profile error:", profileError)
+
     // Log error for debugging but don't block login
     if (profileError) {
       console.error("Role fetch error:", profileError)
@@ -61,16 +65,21 @@ function LoginPageContent() {
 
     // Fallback to customer role if fetch fails or no data
     const role = profile?.role || "customer"
+    console.log("[v0] Resolved role:", role)
 
     if (role === "admin") {
+      console.log("[v0] Redirecting to /dashboard/admin")
       router.push("/dashboard/admin")
+      return
     } else if (role === "driver") {
+      console.log("[v0] Redirecting to /dashboard/driver")
       router.push("/dashboard/driver")
+      return
     } else {
+      console.log("[v0] Redirecting to /dashboard/customer")
       router.push("/dashboard/customer")
+      return
     }
-
-    router.refresh()
   }
 
   return (
