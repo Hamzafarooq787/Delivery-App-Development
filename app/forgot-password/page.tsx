@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Package, AlertCircle, CheckCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { forgotPassword } from "@/app/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 
 export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null)
@@ -15,12 +15,27 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const result = await forgotPassword(new FormData(e.currentTarget))
-    if (result?.error) {
-      setError(result.error)
+
+    const fd = new FormData(e.currentTarget)
+    const email = String(fd.get("email") ?? "").trim()
+
+    if (!email) {
+      setError("Please enter your email address.")
+      setLoading(false)
+      return
+    }
+
+    const supabase = createClient()
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+
+    if (resetError) {
+      setError(resetError.message)
       setLoading(false)
     } else {
       setSuccess(true)
+      setLoading(false)
     }
   }
 

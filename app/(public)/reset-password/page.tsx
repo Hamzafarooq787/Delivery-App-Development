@@ -2,11 +2,13 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Package, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { resetPassword } from "@/app/actions/auth"
+import { createClient } from "@/lib/supabase/client"
 
 export default function ResetPasswordPage() {
+  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -21,11 +23,19 @@ export default function ResetPasswordPage() {
       return
     }
     setLoading(true)
-    const result = await resetPassword(fd)
-    if (result?.error) {
-      setError(result.error)
+
+    const supabase = createClient()
+    const { error: updateError } = await supabase.auth.updateUser({ password })
+
+    if (updateError) {
+      setError(updateError.message)
       setLoading(false)
+      return
     }
+
+    // Sign out the recovery session so the user must log in with the new password
+    await supabase.auth.signOut()
+    router.push("/login?reset=success")
   }
 
   return (

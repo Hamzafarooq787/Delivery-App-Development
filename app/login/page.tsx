@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const resetSuccess = searchParams.get("reset") === "success"
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -90,6 +92,13 @@ export default function LoginPage() {
         <div className="glass-card rounded-2xl border border-[#262626] p-8">
           <h2 className="font-headline text-xl font-bold text-white mb-1">Welcome back</h2>
           <p className="text-[#adaaaa] text-sm mb-8">Sign in to your account to continue</p>
+
+          {resetSuccess && !error && (
+            <div className="mb-6 flex items-center gap-2 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-sm rounded-xl px-4 py-3">
+              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              Password reset successfully. Please sign in with your new password.
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 flex items-center gap-2 bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] text-sm rounded-xl px-4 py-3">
