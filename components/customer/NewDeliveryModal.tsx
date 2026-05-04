@@ -1,16 +1,103 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast, Toaster } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 interface NewDeliveryModalProps {
   onClose: () => void
 }
 
+const PAYLOAD_OPTIONS = [
+  { icon: 'package_2', label: 'Standard Box' },
+  { icon: 'pallet', label: 'Heavy Pallet' },
+  { icon: 'precision_manufacturing', label: 'Fragile Core' },
+] as const
+
 export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
+  const router = useRouter()
   const [step, setStep] = useState(1)
+
+  // Origin (pickup) fields
+  const [pickupStreet, setPickupStreet] = useState('')
+  const [pickupCity, setPickupCity] = useState('')
+  const [pickupPostal, setPickupPostal] = useState('')
+
+  // Destination (delivery) fields
+  const [deliveryStreet, setDeliveryStreet] = useState('')
+  const [deliveryCity, setDeliveryCity] = useState('')
+  const [deliveryPostal, setDeliveryPostal] = useState('')
+
+  // Item description (selected payload type)
+  const [selectedPayload, setSelectedPayload] = useState<string>(PAYLOAD_OPTIONS[0].label)
+
+  const [submitting, setSubmitting] = useState(false)
+
+  const buildAddress = (street: string, city: string, postal: string) => {
+    return [street, city, postal].map((p) => p.trim()).filter(Boolean).join(', ')
+  }
+
+  async function handleSubmit() {
+    if (submitting) return
+
+    const pickup_address = buildAddress(pickupStreet, pickupCity, pickupPostal)
+    const delivery_address = buildAddress(deliveryStreet, deliveryCity, deliveryPostal)
+
+    if (!pickup_address) {
+      toast.error('Please enter a pickup address.')
+      return
+    }
+    if (!delivery_address) {
+      toast.error('Please enter a delivery address.')
+      return
+    }
+
+    setSubmitting(true)
+
+    try {
+      const supabase = createClient()
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast.error('You must be signed in to create a delivery.')
+        setSubmitting(false)
+        return
+      }
+
+      const { error } = await supabase.from('delivery_requests').insert({
+        customer_id: user.id,
+        pickup_address,
+        delivery_address,
+        item_description: selectedPayload,
+        status: 'requested',
+      })
+
+      if (error) {
+        toast.error(error.message || 'Failed to create delivery request.')
+        setSubmitting(false)
+        return
+      }
+
+      toast.success('Delivery request created.')
+      // Allow the toast to render briefly before navigating away.
+      setTimeout(() => {
+        router.push('/dashboard/customer/active-deliveries')
+        router.refresh()
+      }, 600)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unexpected error.'
+      toast.error(message)
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <Toaster position="top-center" richColors />
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -91,17 +178,23 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                         className="w-full bg-surface-container-highest border border-outline-variant/10 focus:border-primary rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none text-sm"
                         placeholder="Street Address"
                         type="text"
+                        value={pickupStreet}
+                        onChange={(e) => setPickupStreet(e.target.value)}
                       />
                       <div className="grid grid-cols-2 gap-3">
                         <input
                           className="w-full bg-surface-container-highest border border-outline-variant/10 focus:border-primary rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none text-sm"
                           placeholder="City / Zone"
                           type="text"
+                          value={pickupCity}
+                          onChange={(e) => setPickupCity(e.target.value)}
                         />
                         <input
                           className="w-full bg-surface-container-highest border border-outline-variant/10 focus:border-primary rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none text-sm"
                           placeholder="Postal Code"
                           type="text"
+                          value={pickupPostal}
+                          onChange={(e) => setPickupPostal(e.target.value)}
                         />
                       </div>
                     </div>
@@ -128,17 +221,23 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                         className="w-full bg-surface-container-highest border border-outline-variant/10 focus:border-secondary rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none text-sm"
                         placeholder="Enter target coordinates..."
                         type="text"
+                        value={deliveryStreet}
+                        onChange={(e) => setDeliveryStreet(e.target.value)}
                       />
                       <div className="grid grid-cols-2 gap-3">
                         <input
                           className="w-full bg-surface-container-highest border border-outline-variant/10 focus:border-secondary rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none text-sm"
                           placeholder="City / Zone"
                           type="text"
+                          value={deliveryCity}
+                          onChange={(e) => setDeliveryCity(e.target.value)}
                         />
                         <input
                           className="w-full bg-surface-container-highest border border-outline-variant/10 focus:border-secondary rounded-xl py-3 px-4 text-on-surface placeholder:text-on-surface-variant/40 transition-all outline-none text-sm"
                           placeholder="000-000"
                           type="text"
+                          value={deliveryPostal}
+                          onChange={(e) => setDeliveryPostal(e.target.value)}
                         />
                       </div>
                     </div>
@@ -146,7 +245,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                 </div>
               </section>
 
-              {/* Step 2: Payload Specs (dimmed preview) */}
+              {/* Step 2: Payload Specs */}
               <section className="glass-card rounded-2xl p-8 opacity-60 border border-outline-variant/10">
                 <div className="flex items-start justify-between mb-6">
                   <div>
@@ -158,21 +257,26 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                   <span className="material-symbols-outlined text-on-surface-variant">inventory_2</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                  {[
-                    { icon: 'package_2', label: 'Standard Box' },
-                    { icon: 'pallet', label: 'Heavy Pallet' },
-                    { icon: 'precision_manufacturing', label: 'Fragile Core' },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="bg-surface-container-highest/40 p-4 rounded-xl border border-outline-variant/10 flex flex-col items-center justify-center space-y-2"
-                    >
-                      <span className="material-symbols-outlined text-on-surface-variant">
-                        {item.icon}
-                      </span>
-                      <span className="text-xs font-bold">{item.label}</span>
-                    </div>
-                  ))}
+                  {PAYLOAD_OPTIONS.map((item) => {
+                    const isSelected = selectedPayload === item.label
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => setSelectedPayload(item.label)}
+                        className={`p-4 rounded-xl border flex flex-col items-center justify-center space-y-2 transition-all ${
+                          isSelected
+                            ? 'bg-primary/10 border-primary text-primary'
+                            : 'bg-surface-container-highest/40 border-outline-variant/10 text-on-surface'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-on-surface-variant">
+                          {item.icon}
+                        </span>
+                        <span className="text-xs font-bold">{item.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </section>
             </div>
@@ -213,8 +317,13 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                     <span className="text-on-surface-variant text-xs">USD</span>
                   </div>
                 </div>
-                <button className="w-full bg-primary hover:brightness-110 text-on-primary font-black py-4 rounded-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(163,166,255,0.4)] flex items-center justify-center space-x-3 text-sm">
-                  <span>Confirm &amp; Pay</span>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="w-full bg-primary hover:brightness-110 text-on-primary font-black py-4 rounded-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(163,166,255,0.4)] flex items-center justify-center space-x-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <span>{submitting ? 'Dispatching...' : 'Confirm & Pay'}</span>
                   <span className="material-symbols-outlined">bolt</span>
                 </button>
                 <div className="mt-6 p-4 bg-surface-container-low rounded-lg border border-outline-variant/10">
