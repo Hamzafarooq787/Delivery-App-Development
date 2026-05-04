@@ -18,22 +18,18 @@ function LoginPageContent() {
   const resetSuccess = searchParams.get("reset") === "success"
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [debug, setDebug] = useState<unknown>(null)
 
   async function handleLogin(formData: FormData) {
     setLoading(true)
     setError(null)
-    setDebug(null)
 
     const result = await signIn(formData)
 
     if (result?.error) {
       setError(result.error)
+      setLoading(false)
     }
-    if (result?.debug) {
-      setDebug(result.debug)
-    }
-    setLoading(false)
+    // On success the server action redirects, no need to reset loading
   }
 
   return (
@@ -76,26 +72,6 @@ function LoginPageContent() {
               {error}
             </div>
           )}
-
-          {debug ? (
-            <pre
-              style={{
-                color: "red",
-                fontSize: "12px",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-all",
-                background: "#1a1919",
-                border: "1px solid #262626",
-                borderRadius: "12px",
-                padding: "12px",
-                marginBottom: "24px",
-                maxHeight: "300px",
-                overflow: "auto",
-              }}
-            >
-              {JSON.stringify(debug, null, 2)}
-            </pre>
-          ) : null}
 
           <form action={handleLogin} className="flex flex-col gap-5">
             {/* Email */}

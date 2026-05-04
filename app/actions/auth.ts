@@ -14,25 +14,21 @@ export async function signIn(formData: FormData) {
     return { error: error.message }
   }
 
-  // DIAGNOSTIC MODE — return debug data to the UI (no redirect)
+  // Fetch role and redirect based on it
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Sign in failed. Please try again." }
 
-  const { data, error: fetchError } = await supabase
+  const { data: profile } = await supabase
     .from("users")
-    .select("*")
-    .eq("id", user?.id ?? "")
+    .select("role")
+    .eq("id", user.id)
     .maybeSingle()
 
-  return {
-    success: false,
-    debug: {
-      authUser: user,
-      authId: user?.id ?? null,
-      userRow: data,
-      role: data?.role ?? null,
-      error: fetchError?.message || null,
-    },
-  }
+  const role = profile?.role || "customer"
+
+  if (role === "admin") redirect("/dashboard/admin")
+  if (role === "driver") redirect("/dashboard/driver")
+  redirect("/dashboard/customer")
 }
 
 export async function signUp(formData: FormData) {
