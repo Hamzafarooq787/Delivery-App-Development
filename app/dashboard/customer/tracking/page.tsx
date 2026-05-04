@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
@@ -16,7 +16,7 @@ const defaultTimelineSteps = [
 
 type Driver = { full_name: string | null } | null
 
-export default function LiveTrackingPage() {
+function LiveTrackingPageInner() {
   const [showModal, setShowModal] = useState(false)
   const [shipment, setShipment] = useState<any>(null)
   const [driver, setDriver] = useState<Driver>(null)
@@ -284,5 +284,13 @@ export default function LiveTrackingPage() {
 
       {showModal && <NewDeliveryModal onClose={() => setShowModal(false)} />}
     </>
+  )
+}
+
+export default function LiveTrackingPage() {
+  return (
+    <Suspense fallback={null}>
+      <LiveTrackingPageInner />
+    </Suspense>
   )
 }
