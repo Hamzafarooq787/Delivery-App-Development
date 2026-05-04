@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { LogoutButton } from '@/components/auth/logout-button'
 
 const navItems = [
   { href: '/dashboard/customer', icon: 'dashboard', label: 'Command Center' },
@@ -46,7 +47,7 @@ export default function Sidebar() {
           )
         })}
       </nav>
-      <div className="px-6 mt-auto">
+      <div className="px-6 mt-auto space-y-3">
         <div className="flex items-center p-3 rounded-xl bg-surface-container">
           <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary font-bold font-headline">
             AV
@@ -56,6 +57,10 @@ export default function Sidebar() {
             <p className="text-[10px] text-on-surface-variant font-label">ADMIN PANEL</p>
           </div>
         </div>
+        <LogoutButton className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-on-surface-variant hover:text-white hover:bg-surface-container rounded-lg transition-colors disabled:opacity-60">
+          <span className="material-symbols-outlined text-base">logout</span>
+          <span className="font-headline tracking-tight">Sign Out</span>
+        </LogoutButton>
       </div>
     </aside>
   )

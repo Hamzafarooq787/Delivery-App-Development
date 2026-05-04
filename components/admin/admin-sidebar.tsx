@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { signOut } from "@/app/actions/auth"
+import { LogoutButton } from "@/components/auth/logout-button"
 
 const navItems = [
   { label: "Overview", href: "/dashboard/admin", icon: "dashboard" },
@@ -66,15 +66,10 @@ export function AdminSidebar({ onClose, user }: AdminSidebarProps) {
           <span className="material-symbols-outlined text-base">add_circle</span>
           <span className="text-xs uppercase tracking-widest">New Shipment</span>
         </button>
-        <form action={signOut} className="mt-4">
-          <button
-            type="submit"
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#adaaaa] hover:text-white hover:bg-[#201f1f] rounded-lg transition-colors"
-          >
-            <span className="material-symbols-outlined text-base">logout</span>
-            <span className="font-headline tracking-tight">Sign Out</span>
-          </button>
-        </form>
+        <LogoutButton className="mt-4 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#adaaaa] hover:text-white hover:bg-[#201f1f] rounded-lg transition-colors disabled:opacity-60">
+          <span className="material-symbols-outlined text-base">logout</span>
+          <span className="font-headline tracking-tight">Sign Out</span>
+        </LogoutButton>
       </div>
     </aside>
   )
