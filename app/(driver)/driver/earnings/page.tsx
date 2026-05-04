@@ -35,7 +35,7 @@ export default function EarningsPage() {
   return (
     <div className="pt-2 pb-12 px-2">
       {/* Header & Tabs */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">
             Earnings
@@ -58,7 +58,7 @@ export default function EarningsPage() {
       </div>
 
       {/* Summary Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
         {/* Today Card */}
         <div
           className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden group border border-[#494847]/10 shadow-lg"
@@ -73,7 +73,7 @@ export default function EarningsPage() {
             </span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-black font-headline text-white">
+            <span className="text-3xl md:text-4xl font-black font-headline text-white">
               $284.50
             </span>
           </div>
@@ -99,7 +99,7 @@ export default function EarningsPage() {
             </span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-black font-headline text-white">
+            <span className="text-3xl md:text-4xl font-black font-headline text-white">
               $1,420.00
             </span>
           </div>
@@ -125,7 +125,7 @@ export default function EarningsPage() {
             </span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-black font-headline text-white">
+            <span className="text-3xl md:text-4xl font-black font-headline text-white">
               $5,892.15
             </span>
           </div>
@@ -155,53 +155,53 @@ export default function EarningsPage() {
           </div>
         <div className="bg-[#1a1919] rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-          <div className="min-w-[520px]">
-          <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#494847]/10 text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
-            <div className="col-span-5">Job Details</div>
-            <div className="col-span-3">Status</div>
-            <div className="col-span-2">Date/Time</div>
-            <div className="col-span-2 text-right">Amount</div>
-            </div>
-            <div className="divide-y divide-[#494847]/5">
-              {transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-[#201f1f] transition-colors cursor-pointer"
-                >
-                  <div className="col-span-5 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center">
-                      <span
-                        className={`material-symbols-outlined ${tx.iconColor}`}
-                      >
-                        {tx.icon}
+            <div className="min-w-[520px]">
+              <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#494847]/10 text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
+                <div className="col-span-5">Job Details</div>
+                <div className="col-span-3">Status</div>
+                <div className="col-span-2">Date/Time</div>
+                <div className="col-span-2 text-right">Amount</div>
+              </div>
+              <div className="divide-y divide-[#494847]/5">
+                {transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-[#201f1f] transition-colors cursor-pointer"
+                  >
+                    <div className="col-span-5 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center shrink-0">
+                        <span className={`material-symbols-outlined ${tx.iconColor}`}>
+                          {tx.icon}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-white truncate">{tx.name}</p>
+                        <p className="text-xs text-[#adaaaa]">
+                          ID: {tx.id} • {tx.sub}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="col-span-3">
+                      <span className="px-2 py-1 bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px] font-bold rounded uppercase">
+                        Completed
                       </span>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{tx.name}</p>
-                      <p className="text-xs text-[#adaaaa]">
-                        ID: {tx.id} • {tx.sub}
-                      </p>
+                    <div className="col-span-2">
+                      <p className="text-xs text-white font-medium">{tx.date}</p>
+                      <p className="text-[10px] text-[#adaaaa]">{tx.time}</p>
+                    </div>
+                    <div className="col-span-2 text-right">
+                      <p className="text-sm font-black text-white">{tx.amount}</p>
                     </div>
                   </div>
-                  <div className="col-span-3">
-                    <span className="px-2 py-1 bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px] font-bold rounded uppercase">
-                      Completed
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-xs text-white font-medium">{tx.date}</p>
-                    <p className="text-[10px] text-[#adaaaa]">{tx.time}</p>
-                  </div>
-                  <div className="col-span-2 text-right">
-                    <p className="text-sm font-black text-white">{tx.amount}</p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              <button className="w-full py-4 text-xs font-bold text-[#adaaaa] hover:text-white hover:bg-[#201f1f] transition-all">
+                View All 156 Transactions
+              </button>
             </div>
-            <button className="w-full py-4 text-xs font-bold text-[#adaaaa] hover:text-white hover:bg-[#201f1f] transition-all">
-              View All 156 Transactions
-            </button>
           </div>
+        </div>
         </div>
 
         {/* Financial Insights (4 cols) */}

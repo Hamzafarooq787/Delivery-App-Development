@@ -4,8 +4,8 @@ export default function VerificationPage() {
   return (
     <div className="pt-2 pb-12 px-2">
       {/* Header */}
-      <div className="mb-10">
-        <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-white mb-2">
+      <div className="mb-8 md:mb-10">
+        <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white mb-2">
           Driver Verification
         </h2>
         <p className="text-[#adaaaa] max-w-2xl leading-relaxed">
@@ -24,7 +24,7 @@ export default function VerificationPage() {
               Overall Status
             </p>
             <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-black font-headline text-white">
+              <span className="text-4xl md:text-5xl font-black font-headline text-white">
                 66%
               </span>
               <span className="text-[#adaaaa]">Complete</span>
@@ -44,7 +44,7 @@ export default function VerificationPage() {
         </div>
 
         {/* Identity Verification – Large */}
-        <div className="md:col-span-8 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-8 rounded-xl flex flex-col md:flex-row gap-8 items-center overflow-hidden relative border border-[#494847]/15">
+        <div className="md:col-span-8 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-5 md:p-8 rounded-xl flex flex-col md:flex-row gap-6 md:gap-8 items-start md:items-center overflow-hidden relative border border-[#494847]/15">
           <div className="flex-1 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff]">
@@ -90,7 +90,7 @@ export default function VerificationPage() {
         </div>
 
         {/* Insurance Policy */}
-        <div className="md:col-span-6 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-8 rounded-xl space-y-6 border border-[#494847]/15">
+        <div className="md:col-span-6 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-5 md:p-8 rounded-xl space-y-5 md:space-y-6 border border-[#494847]/15">
           <div className="flex justify-between items-start">
             <div className="w-12 h-12 rounded-xl bg-[#6f00be]/20 flex items-center justify-center text-[#c180ff]">
               <span className="material-symbols-outlined">shield</span>
@@ -122,7 +122,7 @@ export default function VerificationPage() {
         </div>
 
         {/* Vehicle Registration */}
-        <div className="md:col-span-6 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-8 rounded-xl space-y-6 border border-[#494847]/15">
+        <div className="md:col-span-6 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-5 md:p-8 rounded-xl space-y-5 md:space-y-6 border border-[#494847]/15">
           <div className="flex justify-between items-start">
             <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff]">
               <span className="material-symbols-outlined">commute</span>
@@ -166,7 +166,7 @@ export default function VerificationPage() {
         <div className="md:col-span-12 mt-4">
           <div className="relative overflow-hidden rounded-2xl bg-[#1a1919] border border-[#494847]/10 p-1">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#a3a6ff]/10 blur-[80px] -mr-32 -mt-32 rounded-full pointer-events-none" />
-            <div className="relative flex flex-col md:flex-row items-center justify-between p-8 gap-6">
+            <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between p-5 md:p-8 gap-5 md:gap-6">
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 rounded-full bg-[#201f1f] flex items-center justify-center">
                   <span className="material-symbols-outlined text-[#a3a6ff] text-3xl">

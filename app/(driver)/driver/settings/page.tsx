@@ -4,21 +4,21 @@ export default function DriverSettingsPage() {
   return (
     <div className="pt-2 pb-12 px-2">
       {/* Header */}
-      <div className="flex justify-between items-end mb-10">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8 md:mb-10">
         <div>
-          <h2 className="text-4xl font-extrabold tracking-tighter font-headline text-white">
+          <h2 className="text-2xl md:text-4xl font-extrabold tracking-tighter font-headline text-white">
             Account Settings
           </h2>
           <p className="text-[#adaaaa] mt-2">
             Manage your profile, vehicle status, and operational availability.
           </p>
         </div>
-        <div className="flex gap-3">
-          <button className="px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[#262626] text-white hover:bg-[#2c2c2c] transition-all">
-            Discard Changes
+        <div className="flex gap-3 self-start sm:self-auto">
+          <button className="px-4 md:px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[#262626] text-white hover:bg-[#2c2c2c] transition-all">
+            Discard
           </button>
           <button
-            className="px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[#a3a6ff] text-[#0f00a4] transition-all"
+            className="px-4 md:px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[#a3a6ff] text-[#0f00a4] transition-all"
             style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.2)" }}
           >
             Save Profile
@@ -26,11 +26,11 @@ export default function DriverSettingsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
         {/* Profile Section (8 cols) */}
-        <section className="col-span-12 lg:col-span-8 space-y-8">
+        <section className="lg:col-span-8 space-y-6 md:space-y-8">
           {/* Profile Information */}
-          <div className="bg-[#1a1919] rounded-xl p-8 border border-[#494847]/5">
+          <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 bg-[#a3a6ff]/10 rounded-lg flex items-center justify-center">
                 <span className="material-symbols-outlined text-[#a3a6ff]">
@@ -41,7 +41,7 @@ export default function DriverSettingsPage() {
                 Profile Information
               </h3>
             </div>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-5 md:gap-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">
                   Full Name
@@ -86,7 +86,7 @@ export default function DriverSettingsPage() {
           </div>
 
           {/* Vehicle Details */}
-          <div className="bg-[#1a1919] rounded-xl p-8 border border-[#494847]/5">
+          <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 bg-[#c180ff]/10 rounded-lg flex items-center justify-center">
                 <span className="material-symbols-outlined text-[#c180ff]">
@@ -97,8 +97,8 @@ export default function DriverSettingsPage() {
                 Vehicle Details
               </h3>
             </div>
-            <div className="grid grid-cols-3 gap-6">
-              <div className="col-span-2 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+              <div className="sm:col-span-2 space-y-2">
                 <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">
                   Model &amp; Year
                 </label>
@@ -153,9 +153,9 @@ export default function DriverSettingsPage() {
         </section>
 
         {/* Sidebar (4 cols) */}
-        <aside className="col-span-12 lg:col-span-4 space-y-8">
+        <aside className="lg:col-span-4 space-y-6 md:space-y-8">
           {/* Availability Toggle */}
-          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-2xl p-8 flex flex-col items-center text-center border border-[#494847]/15">
+          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-2xl p-5 md:p-8 flex flex-col items-center text-center border border-[#494847]/15">
             <div className="mb-6 relative">
               <div className="w-24 h-24 rounded-full border-4 border-[#a3a6ff]/20 flex items-center justify-center bg-[#a3a6ff]/5">
                 <span
@@ -193,7 +193,7 @@ export default function DriverSettingsPage() {
           </div>
 
           {/* Safety & Support */}
-          <div className="bg-[#1a1919] rounded-xl p-8 border border-[#494847]/5">
+          <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
             <h3 className="text-lg font-bold font-headline text-white mb-6">
               Safety &amp; Support
             </h3>

@@ -124,7 +124,7 @@ export default async function AdminOrdersPage() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[640px] text-left border-collapse">
             <thead>
               <tr className="bg-[#131313]">
                 {["Delivery ID", "Customer", "Driver", "Route", "Status", "Price", "Date"].map((h, i) => (

@@ -109,15 +109,15 @@ export default async function AdminPaymentsPage() {
       {/* Transactions Table */}
       <div className="bg-[#1a1919] rounded-xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[600px] text-left border-collapse">
             <thead>
               <tr className="bg-[#201f1f] text-[#adaaaa] text-[10px] uppercase tracking-[0.2em] font-bold">
-                <th className="px-8 py-4">Payment ID</th>
-                <th className="px-8 py-4">User / Recipient</th>
-                <th className="px-8 py-4">Amount</th>
-                <th className="px-8 py-4">Status</th>
-                <th className="px-8 py-4">Date &amp; Time</th>
-                <th className="px-8 py-4 text-right">Actions</th>
+                <th className="px-5 md:px-8 py-4">Payment ID</th>
+                <th className="px-5 md:px-8 py-4">User / Recipient</th>
+                <th className="px-5 md:px-8 py-4">Amount</th>
+                <th className="px-5 md:px-8 py-4">Status</th>
+                <th className="px-5 md:px-8 py-4">Date &amp; Time</th>
+                <th className="px-5 md:px-8 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-transparent">
@@ -170,26 +170,26 @@ function PaymentRow({ payment }: { payment: any }) {
 
   return (
     <tr className="hover:bg-[#201f1f] transition-all group">
-      <td className="px-8 py-5">
+      <td className="px-5 md:px-8 py-4 md:py-5">
         <span className="font-mono text-xs text-[#a3a6ff]">{shortId}</span>
       </td>
-      <td className="px-8 py-5">
+      <td className="px-5 md:px-8 py-4 md:py-5">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-[#262626] flex items-center justify-center text-[#a3a6ff] font-bold text-xs">
+          <div className="h-8 w-8 rounded-full bg-[#262626] flex items-center justify-center text-[#a3a6ff] font-bold text-xs shrink-0">
             {(payment.user_id ?? "U").slice(0, 2).toUpperCase()}
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-white">Customer</p>
             <p className="text-[10px] text-[#adaaaa]">user@kinetic.io</p>
           </div>
         </div>
       </td>
-      <td className="px-8 py-5">
+      <td className="px-5 md:px-8 py-4 md:py-5">
         <span className="text-sm font-bold text-white">
           ${(payment.amount ?? 0).toFixed(2)}
         </span>
       </td>
-      <td className="px-8 py-5">
+      <td className="px-5 md:px-8 py-4 md:py-5">
         <span
           className={`px-2 py-1 ${config.bgClass} ${config.textClass} text-[10px] font-bold uppercase rounded tracking-wider flex items-center w-fit gap-1`}
         >
@@ -197,11 +197,11 @@ function PaymentRow({ payment }: { payment: any }) {
           {config.label}
         </span>
       </td>
-      <td className="px-8 py-5 text-sm text-[#adaaaa]">
+      <td className="px-5 md:px-8 py-4 md:py-5 text-sm text-[#adaaaa]">
         {dateStr}{" "}
         <span className="text-[10px] opacity-50 ml-1">{timeStr}</span>
       </td>
-      <td className="px-8 py-5 text-right">
+      <td className="px-5 md:px-8 py-4 md:py-5 text-right">
         <button className="material-symbols-outlined text-[#adaaaa] hover:text-white transition-colors">
           more_vert
         </button>
