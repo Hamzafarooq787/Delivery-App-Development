@@ -1,55 +1,86 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { createClient } from '@/lib/supabase/client'
 
-const transactions = [
-  {
-    icon: 'local_shipping',
-    iconColor: 'text-primary',
-    hoverBg: 'group-hover:bg-primary group-hover:text-on-primary',
-    title: 'Dispatch Settle: #VO-8812',
-    date: 'Oct 24, 2023 • 14:32',
-    amount: '-$1,240.00',
-    status: 'Completed',
-    statusColor: 'text-primary',
-  },
-  {
-    icon: 'bolt',
-    iconColor: 'text-secondary',
-    hoverBg: 'group-hover:bg-secondary group-hover:text-on-secondary',
-    title: 'Dynamic Routing Surcharge',
-    date: 'Oct 22, 2023 • 09:15',
-    amount: '-$45.20',
-    status: 'Completed',
-    statusColor: 'text-primary',
-  },
-  {
-    icon: 'warning',
-    iconColor: 'text-error',
-    hoverBg: 'group-hover:bg-error group-hover:text-on-error',
-    title: 'Fuel Surcharge Adjustment',
-    date: 'Oct 21, 2023 • 18:44',
-    amount: '-$312.00',
-    status: 'Refund Pending',
-    statusColor: 'text-error',
-  },
-  {
-    icon: 'inventory_2',
-    iconColor: 'text-on-surface-variant',
-    hoverBg: 'group-hover:bg-on-surface-variant group-hover:text-surface',
-    title: 'Warehouse Lease Extension',
-    date: 'Oct 19, 2023 • 11:20',
-    amount: '-$4,500.00',
-    status: 'Completed',
-    statusColor: 'text-primary',
-  },
-]
+type PaymentRow = {
+  id: string
+  amount: number | null
+  status: string | null
+  created_at: string | null
+  delivery_id: string | null
+  delivery_requests: { tracking_number: string | null } | null
+}
+
+const PAYMENT_STATUS_STYLE: Record<string, { label: string; color: string; dot: string }> = {
+  pending: { label: 'Pending', color: 'text-secondary', dot: 'bg-secondary' },
+  paid: { label: 'Paid', color: 'text-primary', dot: 'bg-primary' },
+  released: { label: 'Released', color: 'text-primary', dot: 'bg-primary' },
+  failed: { label: 'Failed', color: 'text-error', dot: 'bg-error' },
+}
+
+function formatTxDate(iso: string | null) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} • ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
+}
+
+function formatAmount(value: number | null) {
+  if (value == null) return '—'
+  return `-${value.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}`
+}
 
 export default function PaymentsPage() {
   const [showModal, setShowModal] = useState(false)
   const [autoReload] = useState(true)
+  const supabase = useMemo(() => createClient(), [])
+  const [transactions, setTransactions] = useState<PaymentRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+
+      const { data: deliveries, error: dErr } = await supabase
+        .from('delivery_requests')
+        .select('id')
+        .eq('customer_id', user.id)
+
+      if (dErr) {
+        console.error('[v0] payments deliveries fetch error', dErr)
+        if (!cancelled) { setTransactions([]); setLoading(false) }
+        return
+      }
+
+      const ids = (deliveries ?? []).map((d: any) => d.id)
+      if (ids.length === 0) {
+        if (!cancelled) { setTransactions([]); setLoading(false) }
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('payments')
+        .select('id, amount, status, created_at, delivery_id, delivery_requests(tracking_number)')
+        .in('delivery_id', ids)
+        .order('created_at', { ascending: false })
+
+      if (cancelled) return
+      if (error) {
+        console.error('[v0] payments fetch error', error)
+        setTransactions([])
+      } else {
+        setTransactions((data ?? []) as unknown as PaymentRow[])
+      }
+      setLoading(false)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [supabase])
 
   return (
     <>
@@ -160,31 +191,42 @@ export default function PaymentsPage() {
                 </h3>
                 <div className="bg-surface-container rounded-xl overflow-hidden">
                   <div className="p-6 space-y-4">
-                    {transactions.map((tx) => (
-                      <div
-                        key={tx.title}
-                        className="flex items-center justify-between p-4 bg-surface-container-low rounded-lg hover:bg-surface-container-high transition-colors group"
-                      >
-                        <div className="flex items-center space-x-4">
+                    {loading ? (
+                      <p className="p-6 text-center text-xs text-on-surface-variant uppercase tracking-widest">Loading transactions...</p>
+                    ) : transactions.length === 0 ? (
+                      <p className="p-6 text-center text-sm text-on-surface-variant">No payment transactions yet.</p>
+                    ) : (
+                      transactions.map((tx) => {
+                        const statusKey = (tx.status || 'pending').toLowerCase()
+                        const meta = PAYMENT_STATUS_STYLE[statusKey] ?? { label: statusKey, color: 'text-on-surface-variant', dot: 'bg-on-surface-variant' }
+                        const trackingLabel = tx.delivery_requests?.tracking_number
+                          ? `Dispatch Settle: #${tx.delivery_requests.tracking_number}`
+                          : 'Dispatch Settle'
+                        return (
                           <div
-                            className={`w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center ${tx.iconColor} ${tx.hoverBg} transition-all`}
+                            key={tx.id}
+                            className="flex items-center justify-between p-4 bg-surface-container-low rounded-lg hover:bg-surface-container-high transition-colors group"
                           >
-                            <span className="material-symbols-outlined">{tx.icon}</span>
+                            <div className="flex items-center space-x-4">
+                              <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all">
+                                <span className="material-symbols-outlined">local_shipping</span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-on-surface">{trackingLabel}</p>
+                                <p className="text-xs text-on-surface-variant">{formatTxDate(tx.created_at)}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-on-surface">{formatAmount(tx.amount)}</p>
+                              <p className={`text-[10px] ${meta.color} flex items-center justify-end`}>
+                                <span className={`w-1 h-1 rounded-full mr-1 ${meta.dot}`} />
+                                {meta.label}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-bold text-on-surface">{tx.title}</p>
-                            <p className="text-xs text-on-surface-variant">{tx.date}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-on-surface">{tx.amount}</p>
-                          <p className={`text-[10px] ${tx.statusColor} flex items-center justify-end`}>
-                            <span className={`w-1 h-1 rounded-full mr-1 ${tx.statusColor === 'text-primary' ? 'bg-primary' : 'bg-error'}`} />
-                            {tx.status}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                        )
+                      })
+                    )}
                     <button className="w-full mt-6 py-3 border border-outline-variant/20 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all text-xs font-bold tracking-widest uppercase rounded-lg">
                       Load Complete Ledger
                     </button>

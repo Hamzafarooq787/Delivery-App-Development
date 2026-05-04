@@ -1,50 +1,116 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { createClient } from '@/lib/supabase/client'
 
-const recentDeliveries = [
-  {
-    id: 'KV-98234-LX',
-    route: 'Los Angeles, CA → Austin, TX',
-    icon: 'package_2',
-    iconColor: 'text-primary',
-    bg: 'bg-surface-container-highest',
-    label: 'Scheduled for',
-    detail: 'Oct 24, 14:00',
-    status: 'IN TRANSIT',
-    statusClass: 'bg-primary/10 text-primary border border-primary/20',
-  },
-  {
-    id: 'KV-77210-BC',
-    route: 'Seattle, WA → Portland, OR',
-    icon: 'inventory_2',
-    iconColor: 'text-secondary',
-    bg: 'bg-surface-container-highest',
-    label: 'Completed on',
-    detail: 'Oct 21, 09:30',
-    status: 'DELIVERED',
-    statusClass: 'bg-outline-variant/20 text-on-surface-variant',
-  },
-  {
-    id: 'KV-11204-DP',
-    route: 'Miami, FL → New York, NY',
-    icon: 'warning',
-    iconColor: 'text-error',
-    bg: 'bg-surface-container-highest',
-    label: 'Delayed by',
-    detail: 'Weather Event',
-    detailClass: 'text-error',
-    status: 'DELAYED',
-    statusClass: 'bg-error/10 text-error border border-error/20',
-  },
-]
+type DeliveryRow = {
+  id: string
+  tracking_number: string | null
+  pickup_address: string | null
+  delivery_address: string | null
+  item_description: string | null
+  price: number | null
+  status: string | null
+  created_at: string | null
+}
+
+const STATUS_DISPLAY: Record<string, { label: string; cls: string }> = {
+  requested: { label: 'REQUESTED', cls: 'bg-secondary/10 text-secondary border border-secondary/20' },
+  accepted: { label: 'ACCEPTED', cls: 'bg-secondary/10 text-secondary border border-secondary/20' },
+  collected: { label: 'COLLECTED', cls: 'bg-tertiary/10 text-tertiary border border-tertiary/20' },
+  in_transit: { label: 'IN TRANSIT', cls: 'bg-primary/10 text-primary border border-primary/20' },
+  delivered: { label: 'DELIVERED', cls: 'bg-outline-variant/20 text-on-surface-variant' },
+  cancelled: { label: 'CANCELLED', cls: 'bg-error/10 text-error border border-error/20' },
+}
+
+function trackingId(d: DeliveryRow) {
+  return d.tracking_number || `KV-${d.id.slice(0, 8).toUpperCase()}`
+}
+
+function formatRoute(d: DeliveryRow) {
+  const from = d.pickup_address?.split(',')[0]?.trim() || '—'
+  const to = d.delivery_address?.split(',')[0]?.trim() || '—'
+  return `${from} → ${to}`
+}
+
+function formatDateTime(iso: string | null) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 export default function CustomerDashboardPage() {
   const [showModal, setShowModal] = useState(false)
   const [activeTab, setActiveTab] = useState('Overview')
   const tabs = ['Overview', 'Quick Book', 'Active Tracking', 'History']
+
+  const supabase = useMemo(() => createClient(), [])
+  const [recent, setRecent] = useState<DeliveryRow[]>([])
+  const [activeCount, setActiveCount] = useState(0)
+  const [completedThisMonth, setCompletedThisMonth] = useState(0)
+  const [totalSpent, setTotalSpent] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const startOfMonth = new Date()
+      startOfMonth.setDate(1)
+      startOfMonth.setHours(0, 0, 0, 0)
+
+      const [recentRes, activeRes, monthRes, deliveredRes] = await Promise.all([
+        supabase
+          .from('delivery_requests')
+          .select('id, tracking_number, pickup_address, delivery_address, item_description, price, status, created_at')
+          .eq('customer_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('delivery_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('customer_id', user.id)
+          .neq('status', 'delivered'),
+        supabase
+          .from('delivery_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('customer_id', user.id)
+          .eq('status', 'delivered')
+          .gte('created_at', startOfMonth.toISOString()),
+        supabase
+          .from('delivery_requests')
+          .select('price')
+          .eq('customer_id', user.id)
+          .eq('status', 'delivered'),
+      ])
+
+      if (cancelled) return
+
+      if (recentRes.error) console.error('[v0] dashboard recent error', recentRes.error)
+      else setRecent((recentRes.data ?? []) as DeliveryRow[])
+
+      if (activeRes.error) console.error('[v0] dashboard active error', activeRes.error)
+      else setActiveCount(activeRes.count ?? 0)
+
+      if (monthRes.error) console.error('[v0] dashboard month error', monthRes.error)
+      else setCompletedThisMonth(monthRes.count ?? 0)
+
+      if (deliveredRes.error) console.error('[v0] dashboard spend error', deliveredRes.error)
+      else setTotalSpent((deliveredRes.data ?? []).reduce((s, r: any) => s + (Number(r.price) || 0), 0))
+    }
+    load()
+    return () => { cancelled = true }
+  }, [supabase])
+
+  const formattedSpent = totalSpent.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
   return (
     <>
@@ -97,7 +163,7 @@ export default function CustomerDashboardPage() {
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-1">
                     Active Deliveries
                   </p>
-                  <h3 className="font-headline text-4xl font-extrabold text-on-surface">24</h3>
+                  <h3 className="font-headline text-4xl font-extrabold text-on-surface">{activeCount}</h3>
                 </div>
                 <div className="bg-primary/10 p-2 rounded-lg">
                   <span
@@ -126,7 +192,7 @@ export default function CustomerDashboardPage() {
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-1">
                     Completed MTD
                   </p>
-                  <h3 className="font-headline text-4xl font-extrabold text-on-surface">1,482</h3>
+                  <h3 className="font-headline text-4xl font-extrabold text-on-surface">{completedThisMonth.toLocaleString()}</h3>
                 </div>
                 <div className="bg-secondary/10 p-2 rounded-lg">
                   <span
@@ -155,7 +221,7 @@ export default function CustomerDashboardPage() {
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-1">
                     Total Spent (USD)
                   </p>
-                  <h3 className="font-headline text-4xl font-extrabold text-on-surface">$12.4k</h3>
+                  <h3 className="font-headline text-4xl font-extrabold text-on-surface">{formattedSpent}</h3>
                 </div>
                 <div className="bg-tertiary/10 p-2 rounded-lg">
                   <span
@@ -186,40 +252,48 @@ export default function CustomerDashboardPage() {
                 </button>
               </div>
               <div className="space-y-2">
-                {recentDeliveries.map((delivery) => (
-                  <div
-                    key={delivery.id}
-                    className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container-high transition-colors group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`w-12 h-12 ${delivery.bg} rounded-full flex items-center justify-center ${delivery.iconColor}`}
-                      >
-                        <span className="material-symbols-outlined">{delivery.icon}</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-on-surface">{delivery.id}</p>
-                        <p className="text-xs text-on-surface-variant">{delivery.route}</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-6">
-                      <div className="hidden md:block">
-                        <p className="text-xs text-on-surface-variant">{delivery.label}</p>
-                        <p className={`text-xs font-medium ${delivery.detailClass ?? ''}`}>
-                          {delivery.detail}
-                        </p>
-                      </div>
-                      <span
-                        className={`text-[10px] font-bold px-3 py-1 rounded-full ${delivery.statusClass}`}
-                      >
-                        {delivery.status}
-                      </span>
-                      <span className="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">
-                        chevron_right
-                      </span>
-                    </div>
+                {recent.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <p className="text-sm text-on-surface-variant">No deliveries yet.</p>
                   </div>
-                ))}
+                ) : (
+                  recent.map((delivery) => {
+                    const statusKey = (delivery.status || 'requested').toLowerCase()
+                    const statusMeta = STATUS_DISPLAY[statusKey] ?? {
+                      label: statusKey.replace(/_/g, ' ').toUpperCase(),
+                      cls: 'bg-surface-container-highest text-on-surface-variant',
+                    }
+                    const isDelivered = statusKey === 'delivered'
+                    return (
+                      <div
+                        key={delivery.id}
+                        className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container-high transition-colors group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-surface-container-highest rounded-full flex items-center justify-center text-primary">
+                            <span className="material-symbols-outlined">package_2</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-on-surface">{trackingId(delivery)}</p>
+                            <p className="text-xs text-on-surface-variant">{formatRoute(delivery)}</p>
+                          </div>
+                        </div>
+                        <div className="text-right flex items-center gap-6">
+                          <div className="hidden md:block">
+                            <p className="text-xs text-on-surface-variant">{isDelivered ? 'Completed on' : 'Created'}</p>
+                            <p className="text-xs font-medium">{formatDateTime(delivery.created_at)}</p>
+                          </div>
+                          <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${statusMeta.cls}`}>
+                            {statusMeta.label}
+                          </span>
+                          <span className="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">
+                            chevron_right
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
 
