@@ -47,21 +47,20 @@ function LoginPageContent() {
       return
     }
 
-    // Fetch role from database
+    // Fetch role from database (using maybeSingle to avoid 500 errors if no row exists)
     const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("role")
       .eq("id", user.id)
-      .single()
+      .maybeSingle()
 
+    // Log error for debugging but don't block login
     if (profileError) {
-      setError("Unable to load your account. Please try again.")
-      setLoading(false)
-      return
+      console.error("Role fetch error:", profileError)
     }
 
-    // Redirect based on role (with null safety — default to customer)
-    const role = profile?.role ?? "customer"
+    // Fallback to customer role if fetch fails or no data
+    const role = profile?.role || "customer"
 
     if (role === "admin") {
       router.push("/dashboard/admin")

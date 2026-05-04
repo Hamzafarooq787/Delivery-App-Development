@@ -32,13 +32,19 @@ export default function AuthCallbackPage() {
         return
       }
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("users")
         .select("role")
         .eq("id", user.id)
-        .single()
+        .maybeSingle()
 
-      const role = profile?.role ?? "customer"
+      // Log error for debugging but don't block login
+      if (profileError) {
+        console.error("Role fetch error:", profileError)
+      }
+
+      // Fallback to customer role if fetch fails or no data
+      const role = profile?.role || "customer"
 
       if (role === "admin") {
         router.push("/dashboard/admin")
