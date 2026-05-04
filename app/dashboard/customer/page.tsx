@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { createClient } from '@/lib/supabase/client'
@@ -247,9 +248,12 @@ export default function CustomerDashboardPage() {
             <div className="col-span-12 lg:col-span-8 bg-surface-container p-6 rounded-2xl shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h4 className="font-headline text-lg font-bold text-on-surface">Recent Deliveries</h4>
-                <button className="text-primary text-xs font-bold uppercase tracking-widest hover:underline">
+                <Link
+                  href="/dashboard/customer/active-deliveries"
+                  className="text-primary text-xs font-bold uppercase tracking-widest hover:underline"
+                >
                   View All
-                </button>
+                </Link>
               </div>
               <div className="space-y-2">
                 {recent.length === 0 ? (

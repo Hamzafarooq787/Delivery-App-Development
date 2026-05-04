@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { createClient } from '@/lib/supabase/client'
@@ -45,6 +46,7 @@ export default function ActiveDeliveriesPage() {
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([])
   const [loading, setLoading] = useState(true)
 
+  const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
   // Initial fetch
@@ -273,7 +275,11 @@ export default function ActiveDeliveriesPage() {
                           </p>
                         </div>
                       </div>
-                      <button className="bg-primary text-on-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(163,166,255,0.2)]">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
+                        className="bg-primary text-on-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(163,166,255,0.2)]"
+                      >
                         Track
                       </button>
                     </div>
