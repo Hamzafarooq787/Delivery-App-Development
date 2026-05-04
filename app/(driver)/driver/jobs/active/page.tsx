@@ -13,7 +13,7 @@ export default function ActiveJobsPage() {
             </span>
             <span className="text-[#a3a6ff]">Current Mission</span>
           </nav>
-          <h2 className="text-4xl font-black font-headline tracking-tighter text-white">
+          <h2 className="text-2xl md:text-4xl font-black font-headline tracking-tighter text-white">
             Active Delivery #KV-8829
           </h2>
         </div>
@@ -27,12 +27,12 @@ export default function ActiveJobsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
-        {/* Left Column */}
-        <div className="col-span-12 lg:col-span-8 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+
+        <div className="lg:col-span-8 space-y-6 md:space-y-8">
           {/* Main Workflow Card */}
           <section
-            className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-8 border border-[#494847]/10"
+            className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-4 md:p-8 border border-[#494847]/10"
             style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.15)" }}
           >
             {/* Progress */}
@@ -188,7 +188,7 @@ export default function ActiveJobsPage() {
           </section>
 
           {/* Proof of Delivery */}
-          <section className="bg-[#1a1919] rounded-xl p-8 border border-[#494847]/10">
+          <section className="bg-[#1a1919] rounded-xl p-4 md:p-8 border border-[#494847]/10">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="text-xl font-bold font-headline text-white">
@@ -202,7 +202,7 @@ export default function ActiveJobsPage() {
                 Required
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
               <div className="aspect-video rounded-xl border-2 border-dashed border-[#494847]/30 flex flex-col items-center justify-center gap-3 hover:bg-[#201f1f] transition-all cursor-pointer group">
                 <div className="w-10 h-10 rounded-full bg-[#131313] flex items-center justify-center text-[#adaaaa] group-hover:text-[#a3a6ff] transition-colors">
                   <span className="material-symbols-outlined">
@@ -247,7 +247,7 @@ export default function ActiveJobsPage() {
         </div>
 
         {/* Right Column */}
-        <div className="col-span-12 lg:col-span-4 space-y-8">
+        <div className="lg:col-span-4 space-y-6 md:space-y-8">
           {/* Map Card */}
           <section className="h-80 rounded-xl overflow-hidden relative border border-[#494847]/10 shadow-xl">
             <Image

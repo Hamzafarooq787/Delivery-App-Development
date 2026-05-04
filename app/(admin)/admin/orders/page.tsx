@@ -30,11 +30,11 @@ export default async function AdminOrdersPage() {
       : "99.8"
 
   return (
-    <div className="px-8 py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
       {/* Header */}
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
-          <h2 className="text-3xl font-extrabold font-headline tracking-tight text-white">
+          <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-white">
             Deliveries Management
           </h2>
           <p className="text-[#adaaaa] mt-1 text-sm">
@@ -44,19 +44,19 @@ export default async function AdminOrdersPage() {
         <div className="flex gap-3">
           <button className="flex items-center gap-2 px-4 py-2 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
             <span className="material-symbols-outlined text-sm">filter_list</span>
-            Filters
+            <span className="hidden sm:inline">Filters</span>
           </button>
           <button className="flex items-center gap-2 px-4 py-2 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
             <span className="material-symbols-outlined text-sm">calendar_month</span>
-            Date Range
+            <span className="hidden sm:inline">Date Range</span>
           </button>
         </div>
       </div>
 
       {/* Analytics Quick View */}
-      <div className="grid grid-cols-12 gap-6 mb-8">
-        <div className="col-span-12 lg:col-span-8 bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 p-6 rounded-xl flex items-center justify-between">
-          <div className="flex gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-8">
+        <div className="col-span-1 lg:col-span-8 bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 p-5 md:p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-6 sm:gap-12">
             <div>
               <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Active Shipments</p>
               <div className="flex items-baseline gap-2">
@@ -94,7 +94,7 @@ export default async function AdminOrdersPage() {
             ))}
           </div>
         </div>
-        <div className="col-span-12 lg:col-span-4 bg-[#a3a6ff] text-[#0f00a4] p-6 rounded-xl relative overflow-hidden group">
+        <div className="col-span-1 lg:col-span-4 bg-[#a3a6ff] text-[#0f00a4] p-6 rounded-xl relative overflow-hidden group">
           <div className="relative z-10">
             <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-80">Premium Logistics</p>
             <h3 className="text-2xl font-bold font-headline leading-tight">

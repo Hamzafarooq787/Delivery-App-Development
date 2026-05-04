@@ -50,18 +50,18 @@ const jobs = [
 
 export default function AvailableJobsPage() {
   return (
-    <div className="pt-2 pb-12 px-2">
-      {/* Header */}
-      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-white mb-2 font-headline">
-            Available Jobs
-          </h1>
-          <p className="text-[#adaaaa] font-medium">
-            14 active delivery opportunities in your current sector.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+  <div className="pt-2 pb-12 px-2">
+    {/* Header */}
+    <div className="mb-8 md:mb-10 flex flex-col gap-4 md:flex-row md:items-end justify-between md:gap-6">
+      <div>
+        <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white mb-2 font-headline">
+          Available Jobs
+        </h1>
+        <p className="text-[#adaaaa] font-medium">
+          14 active delivery opportunities in your current sector.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
           <div className="bg-[#201f1f] rounded-full px-4 py-2 flex items-center gap-3 border border-[#494847]/10">
             <span className="text-xs font-semibold text-[#adaaaa]">
               Distance:
@@ -95,7 +95,7 @@ export default function AvailableJobsPage() {
       {/* Bento Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Map Preview */}
-        <div className="lg:col-span-4 lg:row-span-2 rounded-xl overflow-hidden bg-[#1a1919] relative group min-h-[400px]">
+        <div className="lg:col-span-4 lg:row-span-2 rounded-xl overflow-hidden bg-[#1a1919] relative group min-h-[260px] md:min-h-[400px]">
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent to-transparent z-10" />
           <div className="absolute top-6 left-6 z-20">
             <div className="bg-[#0e0e0e]/80 backdrop-blur-md p-3 rounded-xl border border-[#494847]/10">

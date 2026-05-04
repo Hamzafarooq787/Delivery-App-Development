@@ -1,18 +1,18 @@
 export default function AdminSettingsPage() {
   return (
-    <div className="px-8 py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-headline font-black tracking-tight text-white">Platform Config</h1>
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-3xl md:text-4xl font-headline font-black tracking-tight text-white">Platform Config</h1>
         <p className="text-[#adaaaa] mt-2 text-sm">
           Global controls — pricing, operations, integrations, and notifications.
         </p>
       </div>
 
-      <div className="grid grid-cols-12 gap-6 max-w-5xl">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 max-w-5xl">
         {/* Left Nav */}
-        <div className="col-span-3">
-          <nav className="space-y-1">
+        <div className="col-span-1 md:col-span-3">
+          <nav className="flex md:flex-col flex-wrap gap-1">
             {[
               { label: "General", icon: "tune", active: true },
               { label: "Pricing & Fees", icon: "payments", active: false },
@@ -40,9 +40,9 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Settings Panels */}
-        <div className="col-span-9 space-y-6">
+        <div className="col-span-1 md:col-span-9 space-y-6">
           {/* General */}
-          <div className="bg-[#1a1919] rounded-xl p-6">
+          <div className="bg-[#1a1919] rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-6">
               <span className="material-symbols-outlined text-[#a3a6ff]">tune</span>
               <h3 className="text-base font-bold text-white font-headline">General Settings</h3>
@@ -78,7 +78,7 @@ export default function AdminSettingsPage() {
               <span className="material-symbols-outlined text-[#c180ff]">payments</span>
               <h3 className="text-base font-bold text-white font-headline">Pricing &amp; Fees</h3>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { label: "Base Fare ($)", placeholder: "5.00" },
                 { label: "Per Mile Rate ($)", placeholder: "1.20" },

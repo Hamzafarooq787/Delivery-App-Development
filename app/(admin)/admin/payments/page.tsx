@@ -20,21 +20,21 @@ export default async function AdminPaymentsPage() {
   const payments = recentRes.data ?? []
 
   return (
-    <div className="px-8 py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
       {/* Page Header */}
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
           <h3 className="text-2xl font-bold font-headline text-white mb-1">Transactions</h3>
           <p className="text-[#adaaaa] text-sm">Detailed log of all financial movements.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-[#1a1919] px-4 py-2 rounded-lg border border-[#494847]/10 text-sm">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-2 bg-[#1a1919] px-3 py-2 rounded-lg border border-[#494847]/10 text-sm">
             <span className="material-symbols-outlined text-sm text-[#adaaaa]">filter_list</span>
-            <span className="text-white">Status: All</span>
+            <span className="text-white hidden sm:inline">Status: All</span>
           </div>
-          <div className="flex items-center gap-2 bg-[#1a1919] px-4 py-2 rounded-lg border border-[#494847]/10 text-sm">
+          <div className="flex items-center gap-2 bg-[#1a1919] px-3 py-2 rounded-lg border border-[#494847]/10 text-sm">
             <span className="material-symbols-outlined text-sm text-[#adaaaa]">calendar_today</span>
-            <span className="text-white">Last 30 Days</span>
+            <span className="text-white hidden sm:inline">Last 30 Days</span>
           </div>
           <button className="bg-[#262626] hover:bg-[#2c2c2c] px-4 py-2 rounded-lg transition-colors text-sm font-semibold text-white">
             Export CSV
@@ -43,9 +43,9 @@ export default async function AdminPaymentsPage() {
       </div>
 
       {/* Summary Bento Grid */}
-      <div className="grid grid-cols-12 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-8">
         {/* Large Focus Card */}
-        <div className="col-span-12 lg:col-span-6 bg-[#1a1919] p-8 rounded-xl relative overflow-hidden flex flex-col justify-between h-[200px]">
+        <div className="sm:col-span-2 lg:col-span-6 bg-[#1a1919] p-6 md:p-8 rounded-xl relative overflow-hidden flex flex-col justify-between min-h-[160px]">
           <div className="z-10">
             <p className="text-[#adaaaa] text-sm font-medium mb-1">Total Revenue (MTD)</p>
             <h2 className="text-5xl font-extrabold text-[#a3a6ff] font-headline tracking-tight">
@@ -65,7 +65,7 @@ export default async function AdminPaymentsPage() {
         </div>
 
         {/* Secondary Stats */}
-        <div className="col-span-12 lg:col-span-3 space-y-5">
+        <div className="col-span-1 lg:col-span-3 space-y-5">
           <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ height: "92px" }}>
             <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Pending Payouts</p>
             <div className="flex items-baseline gap-2">
@@ -85,7 +85,7 @@ export default async function AdminPaymentsPage() {
         </div>
 
         {/* Processing Volume Bar Chart */}
-        <div className="col-span-12 lg:col-span-3 bg-[#1a1919] p-6 rounded-xl flex flex-col justify-between">
+        <div className="col-span-1 lg:col-span-3 bg-[#1a1919] p-6 rounded-xl flex flex-col justify-between">
           <div>
             <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Processing Volume</p>
             <p className="text-xs text-[#adaaaa]">Real-time throughput</p>

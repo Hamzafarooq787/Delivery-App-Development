@@ -37,7 +37,7 @@ export default function EarningsPage() {
       {/* Header & Tabs */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
-          <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-white">
+          <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">
             Earnings
           </h2>
           <p className="text-[#adaaaa] mt-1">
@@ -153,12 +153,14 @@ export default function EarningsPage() {
               Download CSV
             </button>
           </div>
-          <div className="bg-[#1a1919] rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#494847]/10 text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
-              <div className="col-span-5">Job Details</div>
-              <div className="col-span-3">Status</div>
-              <div className="col-span-2">Date/Time</div>
-              <div className="col-span-2 text-right">Amount</div>
+        <div className="bg-[#1a1919] rounded-2xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+          <div className="min-w-[520px]">
+          <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#494847]/10 text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
+            <div className="col-span-5">Job Details</div>
+            <div className="col-span-3">Status</div>
+            <div className="col-span-2">Date/Time</div>
+            <div className="col-span-2 text-right">Amount</div>
             </div>
             <div className="divide-y divide-[#494847]/5">
               {transactions.map((tx) => (

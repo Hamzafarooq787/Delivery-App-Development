@@ -83,18 +83,18 @@ export default function AdminDriversPage() {
   const selected = DRIVERS.find((d) => d.id === selectedId) ?? DRIVERS[0]
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* Page header */}
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight font-sans">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-sans">
             Driver Onboarding
           </h2>
           <p className="text-[#adaaaa] mt-1 text-sm">
             Manage and verify new fleet operator applications.
           </p>
         </div>
-        <button className="bg-[#a3a6ff] text-[#0f00a4] px-5 py-2.5 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] active:scale-95 transition-all flex items-center gap-2">
+        <button className="self-start sm:self-auto bg-[#a3a6ff] text-[#0f00a4] px-5 py-2.5 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] active:scale-95 transition-all flex items-center gap-2">
           <span className="material-symbols-outlined text-sm">person_add</span>
           Manual Entry
         </button>
@@ -138,9 +138,9 @@ export default function AdminDriversPage() {
       </div>
 
       {/* Content grid */}
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         {/* Driver list */}
-        <div className="col-span-12 lg:col-span-8">
+        <div className="col-span-1 lg:col-span-8">
           <div className="space-y-3">
             {DRIVERS.map((driver) => {
               const isSelected = driver.id === selectedId
@@ -173,14 +173,14 @@ export default function AdminDriversPage() {
                     <p className="text-xs text-[#adaaaa]">{driver.email}</p>
                   </div>
 
-                  <div className="px-6 text-right">
+                  <div className="hidden sm:block px-4 lg:px-6 text-right">
                     <p className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold">
                       Signup Date
                     </p>
                     <p className="text-sm text-white">{driver.signupDate}</p>
                   </div>
 
-                  <div className="px-6">
+                  <div className="hidden sm:block px-4 lg:px-6">
                     <p className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 text-center">
                       Status
                     </p>
@@ -207,7 +207,7 @@ export default function AdminDriversPage() {
         </div>
 
         {/* Detail panel */}
-        <div className="col-span-12 lg:col-span-4">
+        <div className="col-span-1 lg:col-span-4">
           <div
             className="sticky top-24 rounded-2xl border border-[#494847]/15 overflow-hidden shadow-2xl"
             style={{ background: "rgba(38,38,38,0.6)", backdropFilter: "blur(40px)" }}

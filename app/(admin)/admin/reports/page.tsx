@@ -83,25 +83,25 @@ export default async function AdminReportsPage() {
   ]
 
   return (
-    <div className="px-8 py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
       {/* Header */}
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 md:mb-8">
         <div>
-          <h1 className="text-4xl font-headline font-black tracking-tight text-white">Platform Analytics</h1>
+          <h1 className="text-3xl md:text-4xl font-headline font-black tracking-tight text-white">Platform Analytics</h1>
           <p className="text-[#adaaaa] mt-2 text-sm">
             Live telemetry data — all insights since platform inception.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-[#1a1919] border border-[#494847]/20 px-5 py-2.5 rounded-xl hover:border-[#a3a6ff]/40 transition-colors">
+          <button className="flex items-center gap-2 bg-[#1a1919] border border-[#494847]/20 px-4 py-2.5 rounded-xl hover:border-[#a3a6ff]/40 transition-colors">
             <span className="material-symbols-outlined text-sm text-[#a3a6ff]">download</span>
-            <span className="text-white text-sm font-semibold">Export Report</span>
+            <span className="text-white text-sm font-semibold">Export</span>
           </button>
         </div>
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6 md:mb-8">
         {REPORTS.map((stat) => (
           <div key={stat.label} className="bg-[#1a1919] p-6 rounded-xl">
             <div className="flex items-start justify-between mb-4">
@@ -125,9 +125,9 @@ export default async function AdminReportsPage() {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-12 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 mb-6 md:mb-8">
         {/* Revenue Chart — 8 cols */}
-        <div className="col-span-12 lg:col-span-8 bg-[#1a1919] p-6 rounded-xl">
+        <div className="col-span-1 lg:col-span-8 bg-[#1a1919] p-5 md:p-6 rounded-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-white font-headline">Revenue Momentum</h3>
@@ -141,7 +141,7 @@ export default async function AdminReportsPage() {
         </div>
 
         {/* Status Donut — 4 cols */}
-        <div className="col-span-12 lg:col-span-4 bg-[#1a1919] p-6 rounded-xl">
+        <div className="col-span-1 lg:col-span-4 bg-[#1a1919] p-5 md:p-6 rounded-xl">
           <div className="mb-6">
             <h3 className="text-lg font-bold text-white font-headline">Delivery Status</h3>
             <p className="text-[#adaaaa] text-xs">Breakdown by state</p>

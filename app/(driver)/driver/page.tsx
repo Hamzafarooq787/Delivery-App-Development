@@ -30,21 +30,21 @@ export default async function DriverDashboard() {
   const recentActivity = jobs.slice(0, 3)
 
   return (
-    <div className="pt-2 pb-12 px-2">
-      {/* Header */}
-      <header className="mb-10">
-        <h2 className="text-3xl font-black font-headline tracking-tighter text-white">
-          Dashboard
-        </h2>
-        <p className="text-[#adaaaa] font-medium mt-1">
-          Real-time logistics performance and active ops.
-        </p>
-      </header>
+  <div className="pt-2 pb-12 px-2">
+    {/* Header */}
+    <header className="mb-8 md:mb-10">
+      <h2 className="text-2xl md:text-3xl font-black font-headline tracking-tighter text-white">
+        Dashboard
+      </h2>
+      <p className="text-[#adaaaa] font-medium mt-1">
+        Real-time logistics performance and active ops.
+      </p>
+    </header>
 
-      {/* Bento Grid */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Earnings Card */}
-        <div className="col-span-12 md:col-span-4 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-8 flex flex-col justify-between border border-[#494847]/15 hover:bg-[#201f1f] transition-all group">
+    {/* Bento Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+      {/* Earnings Card */}
+      <div className="md:col-span-4 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-5 md:p-8 flex flex-col justify-between border border-[#494847]/15 hover:bg-[#201f1f] transition-all group">
           <div>
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-bold uppercase tracking-widest text-[#a3a6ff]">
@@ -57,7 +57,7 @@ export default async function DriverDashboard() {
                 payments
               </span>
             </div>
-            <h3 className="text-5xl font-black font-headline tracking-tighter text-white mb-2">
+            <h3 className="text-4xl md:text-5xl font-black font-headline tracking-tighter text-white mb-2">
               ${totalEarnings > 0 ? totalEarnings.toFixed(2) : "0.00"}
             </h3>
             <p className="text-xs text-[#adaaaa] flex items-center gap-1">
@@ -78,8 +78,8 @@ export default async function DriverDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards Column */}
-        <div className="col-span-12 md:col-span-3 flex flex-col gap-6">
+      {/* Stats Cards Column */}
+      <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-1 gap-4 md:gap-6">
           <div className="flex-1 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-6 hover:bg-[#201f1f] transition-all border border-[#494847]/15">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-8 h-8 rounded-lg bg-[#c180ff]/10 flex items-center justify-center">
@@ -115,8 +115,8 @@ export default async function DriverDashboard() {
           </div>
         </div>
 
-        {/* Active Map Fragment */}
-        <div className="col-span-12 md:col-span-5 relative rounded-xl overflow-hidden bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/15 group min-h-[300px]">
+      {/* Active Map Fragment */}
+      <div className="md:col-span-5 relative rounded-xl overflow-hidden bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/15 group min-h-[220px] md:min-h-[300px]">
           <Image
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4gQyry9h81vqsFnspcq3X1Q1ZwbK-FtYMmFr8Rrz-kmla893fw9bVfdPAYDf7n72uazhdT5U5YSI26qz4WqU3lnTWcIUNeXOZIKvzZQOJYO8GtWEJMsKpfgSoVPCCO8qEBlUKXqubCinxsUnvV1PrigqkLl8nc49EnuGT_URTfeX7zscwERnv_yjv97J2_SpC_mAsmGoAjaCza0uzwJHs159VTU-srl7vTJyXlxGnRNkALdggwdng1fcXRDVVRkK7JXHrq6N5DA"
             alt="Active Job Map Tracking"
@@ -145,8 +145,8 @@ export default async function DriverDashboard() {
         </div>
 
         {/* Recent Activity List */}
-        <div className="col-span-12 lg:col-span-8 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-8 border border-[#494847]/15">
-          <div className="flex items-center justify-between mb-8">
+        <div className="lg:col-span-8 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-4 md:p-8 border border-[#494847]/15">
+          <div className="flex items-center justify-between mb-4 md:mb-8">
             <h4 className="text-lg font-bold font-headline text-white">
               Recent Activity
             </h4>
@@ -253,9 +253,9 @@ export default async function DriverDashboard() {
         </div>
 
         {/* Driver Performance Card */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+        <div className="lg:col-span-4 flex flex-col gap-4 md:gap-6">
           <div
-            className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-8 border-t-2 border-[#a3a6ff]"
+            className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-4 md:p-8 border-t-2 border-[#a3a6ff]"
             style={{
               background:
                 "linear-gradient(to bottom right, rgba(163,166,255,0.1), transparent)",
@@ -293,7 +293,7 @@ export default async function DriverDashboard() {
           </div>
 
           {/* CTA Promo */}
-          <div className="relative rounded-xl overflow-hidden min-h-[160px] flex items-center p-8">
+          <div className="relative rounded-xl overflow-hidden min-h-[140px] flex items-center p-5 md:p-8">
             <Image
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiGXMQQi74HOHj5uNpLYnRBdZYewqb-vyfLCHqcg9CPKGvF1PolF1Rkc_s6b8pylGknkPc8QNLt0DMzKe6CT3ULjlyAgwGCTz4C7RqK3gyS-ZAeKUKLrVgykWXvNazBEEqZZbUphl-ssiw39GArB2Moc8RU5JYb6ES8AX-bWLQ_bXkx9WKZpHNr32FnYGH9H0PpgFcMbWQ089I2GjcIeJrV14haGJHDWIDQxC8D7s7sYSmb69eVHbCW_dFwL529P45EvHbqmNwTw"
               alt="Fleet Upgrade"

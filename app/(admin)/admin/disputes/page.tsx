@@ -36,11 +36,11 @@ export default async function AdminDisputesPage() {
   const resolvedCount = rows.filter((d) => d.status === "resolved").length
 
   return (
-    <div className="px-8 py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
       {/* Header */}
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 md:mb-8">
         <div>
-          <h1 className="text-4xl font-headline font-black tracking-tight text-white">Dispute Resolution</h1>
+          <h1 className="text-3xl md:text-4xl font-headline font-black tracking-tight text-white">Dispute Resolution</h1>
           <p className="text-[#adaaaa] mt-2 text-sm">
             Active cases between clients and field agents — escalate or close each record.
           </p>
@@ -58,7 +58,7 @@ export default async function AdminDisputesPage() {
       </div>
 
       {/* Summary Row */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 md:mb-8">
         {[
           {
             label: "Open Cases",
@@ -139,7 +139,7 @@ export default async function AdminDisputesPage() {
             return (
               <div
                 key={dispute.id}
-                className="group bg-[#1a1919] hover:bg-[#201f1f] rounded-xl p-6 flex items-center gap-8 cursor-pointer transition-all"
+                className="group bg-[#1a1919] hover:bg-[#201f1f] rounded-xl p-4 md:p-6 flex items-center gap-4 md:gap-8 cursor-pointer transition-all"
               >
                 {/* Category Icon */}
                 <div className={`w-12 h-12 rounded-xl ${statusCfg.bg} flex items-center justify-center shrink-0`}>
@@ -172,7 +172,7 @@ export default async function AdminDisputesPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2 shrink-0 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     className={`px-3 py-1.5 rounded-lg ${statusCfg.bg} ${statusCfg.text} text-[10px] font-bold uppercase hover:scale-105 transition-transform`}
                   >

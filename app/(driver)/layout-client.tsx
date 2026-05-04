@@ -33,16 +33,16 @@ export function DriverLayoutClient({ children, user }: DriverLayoutClientProps) 
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-[#0e0e0e]/60 backdrop-blur-xl flex justify-between items-center px-8 z-40 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-          <div className="flex items-center gap-4 flex-1">
+        <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-[#0e0e0e]/60 backdrop-blur-xl flex justify-between items-center px-4 md:px-8 z-40 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="flex lg:hidden items-center justify-center h-8 w-8 text-[#adaaaa] hover:text-white"
+              className="flex lg:hidden shrink-0 items-center justify-center h-8 w-8 text-[#adaaaa] hover:text-white"
               aria-label="Toggle menu"
             >
               <span className="material-symbols-outlined text-xl">menu</span>
             </button>
-            <div className="relative w-full max-w-md">
+            <div className="relative w-full max-w-md hidden sm:block">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-sm">search</span>
               <input
                 className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[#a3a6ff]/30 text-white placeholder-[#adaaaa] outline-none"
@@ -51,11 +51,14 @@ export function DriverLayoutClient({ children, user }: DriverLayoutClientProps) 
               />
             </div>
           </div>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3 md:gap-5 shrink-0">
+            <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
+              <span className="material-symbols-outlined">search</span>
+            </button>
             <button className="text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Notifications">
               <span className="material-symbols-outlined">notifications</span>
             </button>
-            <button className="text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Help">
+            <button className="hidden md:block text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Help">
               <span className="material-symbols-outlined">help_outline</span>
             </button>
             <div className="h-8 w-8 rounded-full bg-[#262626] flex items-center justify-center border border-[#494847]/30">
