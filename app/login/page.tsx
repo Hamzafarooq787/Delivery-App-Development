@@ -1,9 +1,9 @@
 "use client"
 
 import { Suspense, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
+import { signIn } from "@/app/actions/auth"
 
 export default function LoginPage() {
   return (
@@ -14,72 +14,22 @@ export default function LoginPage() {
 }
 
 function LoginPageContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const resetSuccess = searchParams.get("reset") === "success"
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleLogin(formData: FormData) {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (authError) {
-      setError(authError.message)
+    const result = await signIn(formData)
+    
+    if (result?.error) {
+      setError(result.error)
       setLoading(false)
-      return
     }
-
-    // Get the logged-in user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      setError("Sign in failed. Please try again.")
-      setLoading(false)
-      return
-    }
-
-    // Fetch role from database (using maybeSingle to avoid 500 errors if no row exists)
-    const { data: profile, error: profileError } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle()
-
-    console.log("[v0] User ID:", user.id)
-    console.log("[v0] Profile data:", profile)
-    console.log("[v0] Profile error:", profileError)
-
-    // Log error for debugging but don't block login
-    if (profileError) {
-      console.error("Role fetch error:", profileError)
-    }
-
-    // Fallback to customer role if fetch fails or no data
-    const role = profile?.role || "customer"
-    console.log("[v0] Resolved role:", role)
-
-    if (role === "admin") {
-      console.log("[v0] Redirecting to /dashboard/admin")
-      router.push("/dashboard/admin")
-      return
-    } else if (role === "driver") {
-      console.log("[v0] Redirecting to /dashboard/driver")
-      router.push("/dashboard/driver")
-      return
-    } else {
-      console.log("[v0] Redirecting to /dashboard/customer")
-      router.push("/dashboard/customer")
-      return
-    }
+    // If no error, the server action will redirect
   }
 
   return (
@@ -123,7 +73,7 @@ function LoginPageContent() {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-5">
+          <form action={handleLogin} className="flex flex-col gap-5">
             {/* Email */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="email" className="text-xs font-semibold text-[#adaaaa] uppercase tracking-widest">
@@ -135,10 +85,9 @@ function LoginPageContent() {
                 </span>
                 <input
                   id="email"
+                  name="email"
                   type="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
                 />
@@ -161,10 +110,9 @@ function LoginPageContent() {
                 </span>
                 <input
                   id="password"
+                  name="password"
                   type="password"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
                 />

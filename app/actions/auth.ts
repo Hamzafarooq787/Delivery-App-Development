@@ -18,11 +18,16 @@ export async function signIn(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Sign in failed. Please try again." }
 
+  console.log("[v0] Server action - User ID:", user.id)
+
   const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("role")
     .eq("id", user.id)
     .maybeSingle()
+
+  console.log("[v0] Server action - Profile data:", profile)
+  console.log("[v0] Server action - Profile error:", profileError)
 
   // Log error for debugging but don't block login
   if (profileError) {
@@ -31,9 +36,17 @@ export async function signIn(formData: FormData) {
 
   // Fallback to customer role if fetch fails or no data
   const role = profile?.role || "customer"
+  console.log("[v0] Server action - Resolved role:", role)
 
-  if (role === "admin") redirect("/dashboard/admin")
-  if (role === "driver") redirect("/dashboard/driver")
+  if (role === "admin") {
+    console.log("[v0] Server action - Redirecting to /dashboard/admin")
+    redirect("/dashboard/admin")
+  }
+  if (role === "driver") {
+    console.log("[v0] Server action - Redirecting to /dashboard/driver")
+    redirect("/dashboard/driver")
+  }
+  console.log("[v0] Server action - Redirecting to /dashboard/customer")
   redirect("/dashboard/customer")
 }
 
