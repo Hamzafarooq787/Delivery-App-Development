@@ -22,7 +22,7 @@ export async function createDeliveryRequest(formData: FormData) {
     item_value: parseFloat(formData.get("item_value") as string) || 0,
     price: parseFloat(formData.get("price") as string) || 0,
     is_safe_confirmed: formData.get("is_safe_confirmed") === "true",
-    status: "pending",
+    status: "requested",
     tracking_number: `TRK-${Date.now()}`,
   }
 
@@ -106,7 +106,7 @@ export async function getAvailableDeliveries() {
   const { data, error } = await supabase
     .from("delivery_requests")
     .select("*")
-    .eq("status", "pending")
+    .eq("status", "requested")
     .is("driver_id", null)
     .order("created_at", { ascending: false })
 
@@ -119,15 +119,41 @@ export async function acceptDelivery(deliveryId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const { error } = await supabase
+  const { data: delivery, error: fetchError } = await supabase
+    .from("delivery_requests")
+    .select("id, status, driver_id")
+    .eq("id", deliveryId)
+    .single()
+
+  if (fetchError) {
+    console.error("[acceptDelivery] fetch error:", fetchError)
+    return { error: fetchError.message }
+  }
+
+  if (delivery.status !== "requested" || delivery.driver_id) {
+    return { error: "This job is no longer available to accept." }
+  }
+
+  const { data: updatedDelivery, error } = await supabase
     .from("delivery_requests")
     .update({ driver_id: user.id, status: "accepted" })
     .eq("id", deliveryId)
-    .eq("status", "pending")
+    .eq("status", "requested")
+    .is("driver_id", null)
+    .select("id")
+    .maybeSingle()
 
-  if (error) return { error: error.message }
-  revalidatePath("/driver/jobs/available")
-  revalidatePath("/driver/jobs/active")
+  if (error) {
+    console.error("[acceptDelivery] update error:", error)
+    return { error: error.message }
+  }
+
+  if (!updatedDelivery) {
+    return { error: "This job was already accepted by another driver." }
+  }
+
+  revalidatePath("/dashboard/driver/jobs/available")
+  revalidatePath("/dashboard/driver/jobs/active")
   return { success: true }
 }
 
