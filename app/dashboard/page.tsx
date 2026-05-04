@@ -19,12 +19,13 @@ export default async function DashboardPage() {
   
   const role = profile?.role || "customer"
   
-  // Redirect to the appropriate dashboard based on role
+  // Determine the redirect path based on role
+  let redirectPath = "/dashboard/customer"
   if (role === "admin") {
-    redirect("/dashboard/admin")
+    redirectPath = "/dashboard/admin"
   } else if (role === "driver") {
-    redirect("/dashboard/driver")
-  } else {
-    redirect("/dashboard/customer")
+    redirectPath = "/dashboard/driver"
   }
+  
+  redirect(redirectPath)
 }
