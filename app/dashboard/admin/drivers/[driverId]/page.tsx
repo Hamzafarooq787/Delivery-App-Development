@@ -15,7 +15,7 @@ export default async function AdminDriverDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/admin/drivers">
+        <Link href="/dashboard/admin/drivers">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -28,7 +28,6 @@ export default async function AdminDriverDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Profile */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -46,7 +45,6 @@ export default async function AdminDriverDetailPage({
             </CardContent>
           </Card>
 
-          {/* Vehicle */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -55,18 +53,15 @@ export default async function AdminDriverDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {['Type', 'Make & Model', 'Year', 'Registration', 'Insurance Expiry', 'MOT Expiry'].map(
-                (label) => (
-                  <div key={label}>
-                    <p className="text-muted-foreground">{label}</p>
-                    <p className="font-medium text-muted-foreground/50">—</p>
-                  </div>
-                ),
-              )}
+              {['Type', 'Make & Model', 'Year', 'Registration', 'Insurance Expiry', 'MOT Expiry'].map((label) => (
+                <div key={label}>
+                  <p className="text-muted-foreground">{label}</p>
+                  <p className="font-medium text-muted-foreground/50">—</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
-          {/* Documents */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -85,19 +80,13 @@ export default async function AdminDriverDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {['Driving Licence', 'Insurance', 'MOT Certificate', 'Profile Photo'].map(
-                      (doc) => (
-                        <tr key={doc} className="border-b last:border-0">
-                          <td className="py-3 pr-4">{doc}</td>
-                          <td className="py-3 pr-4">
-                            <StatusBadge status="pending" />
-                          </td>
-                          <td className="py-3">
-                            <Button variant="ghost" size="sm">Review</Button>
-                          </td>
-                        </tr>
-                      ),
-                    )}
+                    {['Driving Licence', 'Insurance', 'MOT Certificate', 'Profile Photo'].map((doc) => (
+                      <tr key={doc} className="border-b last:border-0">
+                        <td className="py-3 pr-4">{doc}</td>
+                        <td className="py-3 pr-4"><StatusBadge status="pending" /></td>
+                        <td className="py-3"><Button variant="ghost" size="sm">Review</Button></td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -105,7 +94,6 @@ export default async function AdminDriverDetailPage({
           </Card>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
           <Card>
             <CardHeader>

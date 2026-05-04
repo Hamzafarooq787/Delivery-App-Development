@@ -6,16 +6,16 @@ import { cn } from "@/lib/utils"
 import { signOut } from "@/app/actions/auth"
 
 const navItems = [
-  { label: "Dashboard", href: "/driver", icon: "dashboard" },
-  { label: "Available Jobs", href: "/driver/jobs/available", icon: "work" },
-  { label: "Active Jobs", href: "/driver/jobs/active", icon: "local_shipping" },
-  { label: "Completed Jobs", href: "/driver/jobs/completed", icon: "task_alt" },
-  { label: "Earnings", href: "/driver/earnings", icon: "payments" },
-  { label: "Payouts", href: "/driver/payouts", icon: "account_balance_wallet" },
-  { label: "Verification", href: "/driver/verification", icon: "verified_user" },
-  { label: "Profile", href: "/driver/profile", icon: "person" },
-  { label: "Settings", href: "/driver/settings", icon: "settings" },
-  { label: "Support", href: "/driver/support", icon: "headset_mic" },
+  { label: "Dashboard", href: "/dashboard/driver", icon: "dashboard" },
+  { label: "Available Jobs", href: "/dashboard/driver/jobs/available", icon: "work" },
+  { label: "Active Jobs", href: "/dashboard/driver/jobs/active", icon: "local_shipping" },
+  { label: "Completed Jobs", href: "/dashboard/driver/jobs/completed", icon: "task_alt" },
+  { label: "Earnings", href: "/dashboard/driver/earnings", icon: "payments" },
+  { label: "Payouts", href: "/dashboard/driver/payouts", icon: "account_balance_wallet" },
+  { label: "Verification", href: "/dashboard/driver/verification", icon: "verified_user" },
+  { label: "Profile", href: "/dashboard/driver/profile", icon: "person" },
+  { label: "Settings", href: "/dashboard/driver/settings", icon: "settings" },
+  { label: "Support", href: "/dashboard/driver/support", icon: "headset_mic" },
 ]
 
 interface DriverSidebarProps {
@@ -37,7 +37,7 @@ export function DriverSidebar({ onClose, user }: DriverSidebarProps) {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/driver" && pathname.startsWith(item.href))
+            (item.href !== "/dashboard/driver" && pathname.startsWith(item.href))
           return (
             <Link
               key={item.href}

@@ -18,7 +18,7 @@ export default function JobDetailPage({ params }: { params: { jobId: string } })
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/driver/jobs/available"><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
+          <Link href="/dashboard/driver/jobs/available"><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
         </Button>
       </div>
       <PageHeader title={`Job ${params.jobId}`} description="Job details and delivery progress">

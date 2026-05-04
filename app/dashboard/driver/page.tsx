@@ -135,7 +135,7 @@ export default async function DriverDashboard() {
               </p>
             </div>
             <Link
-              href="/driver/jobs/active"
+              href="/dashboard/driver/jobs/active"
               className="bg-[#a3a6ff] text-[#0f00a4] px-4 py-2 rounded font-bold text-xs"
               style={{ boxShadow: "0px 0px 10px rgba(163,166,255,0.4)" }}
             >
@@ -151,7 +151,7 @@ export default async function DriverDashboard() {
               Recent Activity
             </h4>
             <Link
-              href="/driver/jobs/active"
+              href="/dashboard/driver/jobs/active"
               className="text-xs font-bold text-[#a3a6ff] hover:underline"
             >
               View History

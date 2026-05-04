@@ -84,7 +84,6 @@ export default function AdminDriversPage() {
 
   return (
     <div className="p-4 md:p-8">
-      {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-sans">
@@ -100,46 +99,30 @@ export default function AdminDriversPage() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-8 mb-6 border-b border-[#494847]/20">
-        <button
-          onClick={() => setActiveTab("pending")}
-          className={`pb-4 text-sm font-semibold transition-all ${
-            activeTab === "pending"
-              ? "border-b-2 border-[#a3a6ff] text-white"
-              : "text-[#adaaaa] hover:text-white"
-          }`}
-        >
-          Pending Approval{" "}
-          <span className="ml-1 px-1.5 py-0.5 rounded bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px]">
-            12
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab("approved")}
-          className={`pb-4 text-sm font-medium transition-all ${
-            activeTab === "approved"
-              ? "border-b-2 border-[#a3a6ff] text-white"
-              : "text-[#adaaaa] hover:text-white"
-          }`}
-        >
-          Approved
-        </button>
-        <button
-          onClick={() => setActiveTab("rejected")}
-          className={`pb-4 text-sm font-medium transition-all ${
-            activeTab === "rejected"
-              ? "border-b-2 border-[#a3a6ff] text-white"
-              : "text-[#adaaaa] hover:text-white"
-          }`}
-        >
-          Rejected
-        </button>
+        {(["pending", "approved", "rejected"] as Tab[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-4 text-sm font-semibold transition-all capitalize ${
+              activeTab === tab
+                ? "border-b-2 border-[#a3a6ff] text-white"
+                : "text-[#adaaaa] hover:text-white"
+            }`}
+          >
+            {tab === "pending" ? (
+              <>
+                Pending Approval{" "}
+                <span className="ml-1 px-1.5 py-0.5 rounded bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px]">12</span>
+              </>
+            ) : (
+              tab.charAt(0).toUpperCase() + tab.slice(1)
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-        {/* Driver list */}
         <div className="col-span-1 lg:col-span-8">
           <div className="space-y-3">
             {DRIVERS.map((driver) => {
@@ -158,46 +141,30 @@ export default function AdminDriversPage() {
                     <img
                       src={driver.avatar}
                       alt={driver.name}
-                      className={`w-12 h-12 rounded-full object-cover ${
-                        driver.id === "3" ? "grayscale" : ""
-                      }`}
+                      className={`w-12 h-12 rounded-full object-cover ${driver.id === "3" ? "grayscale" : ""}`}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-[#6f00be]/20 flex items-center justify-center text-[#c180ff] font-bold text-sm">
                       {driver.initials}
                     </div>
                   )}
-
                   <div className="ml-4 flex-1">
                     <h4 className="font-bold text-white text-sm">{driver.name}</h4>
                     <p className="text-xs text-[#adaaaa]">{driver.email}</p>
                   </div>
-
                   <div className="hidden sm:block px-4 lg:px-6 text-right">
-                    <p className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold">
-                      Signup Date
-                    </p>
+                    <p className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold">Signup Date</p>
                     <p className="text-sm text-white">{driver.signupDate}</p>
                   </div>
-
                   <div className="hidden sm:block px-4 lg:px-6">
-                    <p className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 text-center">
-                      Status
-                    </p>
+                    <p className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-1 text-center">Status</p>
                     <div className="flex gap-1 justify-center">
                       {driver.docs.map((dot, i) => (
                         <DocDot key={i} status={dot} />
                       ))}
                     </div>
                   </div>
-
-                  <span
-                    className={`material-symbols-outlined transition-colors ${
-                      isSelected
-                        ? "text-[#a3a6ff]"
-                        : "text-[#adaaaa] group-hover:text-[#a3a6ff]"
-                    }`}
-                  >
+                  <span className={`material-symbols-outlined transition-colors ${isSelected ? "text-[#a3a6ff]" : "text-[#adaaaa] group-hover:text-[#a3a6ff]"}`}>
                     chevron_right
                   </span>
                 </div>
@@ -206,13 +173,11 @@ export default function AdminDriversPage() {
           </div>
         </div>
 
-        {/* Detail panel */}
         <div className="col-span-1 lg:col-span-4">
           <div
             className="sticky top-24 rounded-2xl border border-[#494847]/15 overflow-hidden shadow-2xl"
             style={{ background: "rgba(38,38,38,0.6)", backdropFilter: "blur(40px)" }}
           >
-            {/* Header image area */}
             <div className="relative h-32 bg-gradient-to-br from-[#262626] to-[#0e0e0e]">
               {selected.avatar ? (
                 <img
@@ -226,9 +191,7 @@ export default function AdminDriversPage() {
                 </div>
               )}
             </div>
-
             <div className="p-6 pt-12">
-              {/* Name + actions */}
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-xl font-bold text-white">{selected.name}</h3>
@@ -243,26 +206,14 @@ export default function AdminDriversPage() {
                   </button>
                 </div>
               </div>
-
               <div className="mt-8 space-y-6">
-                {/* Documents */}
                 <div>
-                  <h5 className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-3">
-                    Verification Documents
-                  </h5>
+                  <h5 className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-3">Verification Documents</h5>
                   <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: "ID_DRV_882.PDF" },
-                      { label: "INS_POL_2023.PDF" },
-                    ].map(({ label }) => (
-                      <div
-                        key={label}
-                        className="group relative rounded-xl overflow-hidden bg-[#000000] border border-[#494847]/10 cursor-zoom-in"
-                      >
+                    {["ID_DRV_882.PDF", "INS_POL_2023.PDF"].map((label) => (
+                      <div key={label} className="group relative rounded-xl overflow-hidden bg-[#000000] border border-[#494847]/10 cursor-zoom-in">
                         <div className="aspect-video bg-[#262626] flex items-center justify-center">
-                          <span className="material-symbols-outlined text-3xl text-[#494847]">
-                            description
-                          </span>
+                          <span className="material-symbols-outlined text-3xl text-[#494847]">description</span>
                         </div>
                         <div className="absolute bottom-0 left-0 right-0 p-2 bg-[#1a1919]/90 text-[10px] font-bold text-center text-white">
                           {label}
@@ -271,8 +222,6 @@ export default function AdminDriversPage() {
                     ))}
                   </div>
                 </div>
-
-                {/* Stats */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-[#0e0e0e] p-3 rounded-lg border border-[#494847]/10">
                     <p className="text-[10px] text-[#adaaaa] uppercase font-bold">Experience</p>
@@ -283,8 +232,6 @@ export default function AdminDriversPage() {
                     <p className="text-sm font-semibold text-white">{selected.vehicleClass}</p>
                   </div>
                 </div>
-
-                {/* Action buttons */}
                 <div className="pt-4 flex gap-3">
                   <button className="flex-1 bg-[#a70138] text-[#ffb2b9] hover:bg-[#a70138]/80 py-3 rounded-xl font-bold text-sm transition-all active:scale-95">
                     Reject Driver

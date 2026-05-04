@@ -31,7 +31,6 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-white">
@@ -53,7 +52,6 @@ export default async function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* Analytics Quick View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-8">
         <div className="col-span-1 lg:col-span-8 bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 p-5 md:p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex flex-wrap gap-6 sm:gap-12">
@@ -80,7 +78,6 @@ export default async function AdminOrdersPage() {
               </div>
             </div>
           </div>
-          {/* Sparkline */}
           <div className="hidden xl:flex items-end gap-1 h-16">
             {[67, 50, 75, 40, 80, 100].map((h, i) => (
               <div
@@ -110,7 +107,6 @@ export default async function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* Data Table */}
       <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl overflow-hidden">
         <div className="p-6 bg-[#1a1919]/50 flex justify-between items-center border-b border-[#494847]/10">
           <h3 className="font-headline font-bold text-lg text-white">Active Ledger</h3>
@@ -189,13 +185,9 @@ export default async function AdminOrdersPage() {
         <div className="px-6 py-4 bg-[#1a1919]/30 flex justify-between items-center">
           <span className="text-xs text-[#adaaaa]">Showing {orders.length} entries</span>
           <div className="flex gap-1">
-            <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">
-              Prev
-            </button>
+            <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">Prev</button>
             <button className="px-3 py-1 text-xs bg-[#a3a6ff] text-[#0f00a4] rounded font-bold">1</button>
-            <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">
-              Next
-            </button>
+            <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">Next</button>
           </div>
         </div>
       </div>

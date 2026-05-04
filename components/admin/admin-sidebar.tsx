@@ -6,14 +6,14 @@ import { cn } from "@/lib/utils"
 import { signOut } from "@/app/actions/auth"
 
 const navItems = [
-  { label: "Overview", href: "/admin", icon: "dashboard" },
-  { label: "Deliveries", href: "/admin/orders", icon: "local_shipping" },
-  { label: "Drivers", href: "/admin/drivers", icon: "badge" },
-  { label: "Customers", href: "/admin/customers", icon: "group" },
-  { label: "Payments", href: "/admin/payments", icon: "payments" },
-  { label: "Disputes", href: "/admin/disputes", icon: "gavel" },
-  { label: "Reports", href: "/admin/reports", icon: "analytics" },
-  { label: "Settings", href: "/admin/settings", icon: "settings" },
+  { label: "Overview", href: "/dashboard/admin", icon: "dashboard" },
+  { label: "Deliveries", href: "/dashboard/admin/orders", icon: "local_shipping" },
+  { label: "Drivers", href: "/dashboard/admin/drivers", icon: "badge" },
+  { label: "Customers", href: "/dashboard/admin/customers", icon: "group" },
+  { label: "Payments", href: "/dashboard/admin/payments", icon: "payments" },
+  { label: "Disputes", href: "/dashboard/admin/disputes", icon: "gavel" },
+  { label: "Reports", href: "/dashboard/admin/reports", icon: "analytics" },
+  { label: "Settings", href: "/dashboard/admin/settings", icon: "settings" },
 ]
 
 interface AdminSidebarProps {
@@ -42,7 +42,7 @@ export function AdminSidebar({ onClose, user }: AdminSidebarProps) {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/admin" && pathname.startsWith(item.href))
+            (item.href !== "/dashboard/admin" && pathname.startsWith(item.href))
           return (
             <Link
               key={item.href}

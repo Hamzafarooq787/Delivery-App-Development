@@ -154,7 +154,7 @@ export default async function AdminReportsPage() {
       <div className="bg-[#1a1919] rounded-xl overflow-hidden">
         <div className="px-8 py-5 border-b border-[#494847]/10 flex items-center justify-between">
           <h3 className="text-base font-bold text-white font-headline">Top Field Agents</h3>
-          <a href="/admin/drivers" className="text-xs text-[#a3a6ff] hover:underline">
+          <a href="/dashboard/admin/drivers" className="text-xs text-[#a3a6ff] hover:underline">
             View All
           </a>
         </div>

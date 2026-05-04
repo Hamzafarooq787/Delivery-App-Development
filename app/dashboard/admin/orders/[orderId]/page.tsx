@@ -16,7 +16,7 @@ export default async function AdminOrderDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/admin/orders">
+        <Link href="/dashboard/admin/orders">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -28,7 +28,6 @@ export default async function AdminOrderDetailPage({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
@@ -41,14 +40,7 @@ export default async function AdminOrderDetailPage({
               </div>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {[
-                'Package Type',
-                'Weight',
-                'Dimensions',
-                'Declared Value',
-                'Special Instructions',
-                'Created At',
-              ].map((label) => (
+              {['Package Type', 'Weight', 'Dimensions', 'Declared Value', 'Special Instructions', 'Created At'].map((label) => (
                 <div key={label}>
                   <p className="text-muted-foreground">{label}</p>
                   <p className="font-medium text-muted-foreground/50">—</p>
@@ -86,7 +78,6 @@ export default async function AdminOrderDetailPage({
           </Card>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
           <Card>
             <CardHeader>

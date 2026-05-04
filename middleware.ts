@@ -52,6 +52,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // REDIRECT OLD ROUTES: /admin → /dashboard/admin, /driver → /dashboard/driver
+  if (pathname.startsWith("/admin")) {
+    return NextResponse.redirect(new URL(pathname.replace("/admin", "/dashboard/admin"), request.url))
+  }
+  if (pathname.startsWith("/driver")) {
+    return NextResponse.redirect(new URL(pathname.replace("/driver", "/dashboard/driver"), request.url))
+  }
+
   // REDIRECT LOGGED-IN USERS FROM AUTH PAGES
   if (user && (pathname.startsWith("/login") || pathname.startsWith("/signup"))) {
     return NextResponse.redirect(new URL("/dashboard/customer", request.url))

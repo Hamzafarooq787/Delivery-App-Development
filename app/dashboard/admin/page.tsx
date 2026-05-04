@@ -103,7 +103,6 @@ export default async function AdminDashboardPage() {
                 <span className="material-symbols-outlined">{stat.icon}</span>
               </div>
             </div>
-            {/* Subtle area chart */}
             <div className="absolute bottom-0 left-0 w-full h-16 opacity-20 pointer-events-none">
               <svg className="w-full h-full" viewBox="0 0 400 60" preserveAspectRatio="none">
                 <path
@@ -120,7 +119,7 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left column */}
         <div className="col-span-1 lg:col-span-8 space-y-6">
-          {/* Revenue Velocity (Mock Bar Chart) */}
+          {/* Revenue Velocity */}
           <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 relative overflow-hidden">
             <div className="flex items-center justify-between mb-8">
               <div>

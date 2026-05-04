@@ -39,7 +39,7 @@ export default function CompletedJobsPage() {
                   <td className="px-5 py-3.5 text-sm text-foreground">{job.earnings}</td>
                   <td className="px-5 py-3.5">
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/driver/jobs/${job.id}`}>View</Link>
+                      <Link href={`/dashboard/driver/jobs/${job.id}`}>View</Link>
                     </Button>
                   </td>
                 </tr>
