@@ -84,6 +84,16 @@ export default function AddressesPage() {
     setDbAddresses((prev) => [data as any, ...prev])
   }
 
+  async function handleDeleteAddress(id: string) {
+    const ok = window.confirm('Delete this address?')
+    if (!ok) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error } = await supabase.from('addresses').delete().eq('id', id).eq('user_id', user.id)
+    if (error) { console.error('[v0] delete address error', error); return }
+    setDbAddresses((prev) => prev.filter((a) => a.id !== id))
+  }
+
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} />
@@ -131,7 +141,8 @@ export default function AddressesPage() {
               address: a.address,
               footer: null,
               span: "",
-            })), ...staticAddresses].map((addr) => (
+              isSaved: true,
+            })), ...staticAddresses.map((s) => ({ ...s, isSaved: false }))].map((addr) => (
               <div
                 key={addr.id}
                 className={`glass-card p-6 rounded-xl relative group overflow-hidden transition-all hover:-translate-y-1 border border-white/5 ${addr.span}`}
@@ -152,7 +163,11 @@ export default function AddressesPage() {
                     <button className="p-2 hover:bg-white/10 rounded-lg text-on-surface-variant transition-colors">
                       <span className="material-symbols-outlined text-sm">edit</span>
                     </button>
-                    <button className="p-2 hover:bg-error/10 hover:text-error rounded-lg text-on-surface-variant transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => addr.isSaved && handleDeleteAddress(addr.id)}
+                      className="p-2 hover:bg-error/10 hover:text-error rounded-lg text-on-surface-variant transition-colors"
+                    >
                       <span className="material-symbols-outlined text-sm">delete</span>
                     </button>
                   </div>

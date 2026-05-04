@@ -1,14 +1,79 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SettingsPage() {
   const [showModal, setShowModal] = useState(false)
   const [emailAlerts, setEmailAlerts] = useState(true)
   const [smsAlerts, setSmsAlerts] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(false)
+
+  const supabase = useMemo(() => createClient(), [])
+  const [userId, setUserId] = useState<string | null>(null)
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [initialFullName, setInitialFullName] = useState('')
+  const [initialPhone, setInitialPhone] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      if (cancelled) return
+      setUserId(user.id)
+      setEmail(user.email ?? '')
+      const { data, error } = await supabase
+        .from('users')
+        .select('full_name, phone')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (cancelled) return
+      if (error) {
+        console.error('[v0] settings load error', error)
+        return
+      }
+      const nm = data?.full_name ?? ''
+      const ph = data?.phone ?? ''
+      setFullName(nm)
+      setPhone(ph)
+      setInitialFullName(nm)
+      setInitialPhone(ph)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [supabase])
+
+  async function handleSaveProfile() {
+    if (!userId || saving) return
+    setSaving(true)
+    setSaveMessage(null)
+    const { error } = await supabase
+      .from('users')
+      .update({ full_name: fullName, phone })
+      .eq('id', userId)
+    setSaving(false)
+    if (error) {
+      console.error('[v0] settings save error', error)
+      setSaveMessage({ type: 'error', text: error.message || 'Failed to save profile.' })
+      return
+    }
+    setInitialFullName(fullName)
+    setInitialPhone(phone)
+    setSaveMessage({ type: 'success', text: 'Profile updated.' })
+  }
+
+  function handleDiscardProfile() {
+    setFullName(initialFullName)
+    setPhone(initialPhone)
+    setSaveMessage(null)
+  }
 
   return (
     <>
@@ -43,7 +108,8 @@ export default function SettingsPage() {
                       <input
                         className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface"
                         type="text"
-                        defaultValue="Alexander Sterling"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
@@ -62,9 +128,11 @@ export default function SettingsPage() {
                       Email Address
                     </label>
                     <input
-                      className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface"
+                      className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface disabled:opacity-70"
                       type="email"
-                      defaultValue="a.sterling@kinetic-void.io"
+                      value={email}
+                      readOnly
+                      disabled
                     />
                   </div>
                   <div className="space-y-2">
@@ -74,21 +142,31 @@ export default function SettingsPage() {
                     <input
                       className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface"
                       type="tel"
-                      defaultValue="+1 (555) 012-3456"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                     />
                   </div>
-                  <div className="pt-4 flex justify-end gap-4">
+                  <div className="pt-4 flex justify-end items-center gap-4">
+                    {saveMessage && (
+                      <span className={`text-xs font-medium ${saveMessage.type === 'success' ? 'text-primary' : 'text-error'}`}>
+                        {saveMessage.text}
+                      </span>
+                    )}
                     <button
                       type="button"
-                      className="px-6 py-2 bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors rounded-lg text-sm font-bold border border-outline-variant/15"
+                      onClick={handleDiscardProfile}
+                      disabled={saving}
+                      className="px-6 py-2 bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors rounded-lg text-sm font-bold border border-outline-variant/15 disabled:opacity-60"
                     >
                       Discard
                     </button>
                     <button
                       type="button"
-                      className="px-8 py-2 bg-primary text-on-primary hover:brightness-110 transition-colors rounded-lg text-sm font-extrabold shadow-[0_0_15px_rgba(163,166,255,0.2)]"
+                      onClick={handleSaveProfile}
+                      disabled={saving || !userId}
+                      className="px-8 py-2 bg-primary text-on-primary hover:brightness-110 transition-colors rounded-lg text-sm font-extrabold shadow-[0_0_15px_rgba(163,166,255,0.2)] disabled:opacity-60"
                     >
-                      Update Profile
+                      {saving ? 'Saving...' : 'Update Profile'}
                     </button>
                   </div>
                 </form>
