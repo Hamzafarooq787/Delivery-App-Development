@@ -1,14 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
-import { StatCard } from "@/components/shared/stat-card"
-import { PageHeader } from "@/components/shared/page-header"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { Button } from "@/components/ui/button"
-import { Briefcase, DollarSign, Star, Clock } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 
 export default async function DriverDashboard() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const [jobsRes, earningsRes] = await Promise.all([
     supabase
@@ -23,86 +21,300 @@ export default async function DriverDashboard() {
   ])
 
   const jobs = jobsRes.data ?? []
-  const totalEarnings = earningsRes.data?.reduce((sum, e) => sum + (e.amount ?? 0), 0) ?? 0
-  const activeJobs = jobs.filter((j) => ["accepted", "picked_up", "in_transit"].includes(j.status)).length
-  const recentJobs = jobs.slice(0, 5)
+  const totalEarnings =
+    earningsRes.data?.reduce((sum, e) => sum + (e.amount ?? 0), 0) ?? 0
+  const activeJobs = jobs.filter((j) =>
+    ["accepted", "picked_up", "in_transit"].includes(j.status)
+  ).length
+  const completedJobs = jobs.filter((j) => j.status === "delivered").length
+  const recentActivity = jobs.slice(0, 3)
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Driver Dashboard" description="Your delivery performance at a glance." />
+    <div className="pt-2 pb-12 px-2">
+      {/* Header */}
+      <header className="mb-10">
+        <h2 className="text-3xl font-black font-headline tracking-tighter text-white">
+          Dashboard
+        </h2>
+        <p className="text-[#adaaaa] font-medium mt-1">
+          Real-time logistics performance and active ops.
+        </p>
+      </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Jobs" icon={Briefcase} value={String(jobs.length)} description="All time" />
-        <StatCard title="Active Jobs" icon={Clock} value={String(activeJobs)} description="In progress" />
-        <StatCard title="Total Earnings" icon={DollarSign} value={`$${totalEarnings.toFixed(2)}`} description="All time" />
-        <StatCard title="Rating" icon={Star} value="—" description="Average" />
-      </div>
-
-      {/* Online toggle */}
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Availability Status</p>
-          <p className="text-xs text-muted-foreground">Toggle to accept new delivery jobs</p>
-        </div>
-        <button
-          className="relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent bg-secondary transition-colors"
-          role="switch"
-          aria-checked="false"
-        >
-          <span className="pointer-events-none inline-block h-5 w-5 rounded-full bg-background shadow transform transition-transform translate-x-0" />
-        </button>
-      </div>
-
-      <div className="rounded-xl border border-border bg-card shadow-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold text-foreground">Recent Jobs</h2>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/driver/jobs/active">View all</Link>
-          </Button>
-        </div>
-        {recentJobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Briefcase className="h-8 w-8 text-muted-foreground/40 mb-3" />
-            <p className="text-sm font-medium text-foreground">No jobs yet</p>
-            <p className="text-xs text-muted-foreground mt-1 mb-4">Browse available jobs to get started.</p>
-            <Button size="sm" asChild>
-              <Link href="/driver/jobs/available">Browse Jobs</Link>
-            </Button>
+      {/* Bento Grid */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Earnings Card */}
+        <div className="col-span-12 md:col-span-4 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-8 flex flex-col justify-between border border-[#494847]/15 hover:bg-[#201f1f] transition-all group">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#a3a6ff]">
+                Revenue Today
+              </span>
+              <span
+                className="material-symbols-outlined text-[#a3a6ff]"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                payments
+              </span>
+            </div>
+            <h3 className="text-5xl font-black font-headline tracking-tighter text-white mb-2">
+              ${totalEarnings > 0 ? totalEarnings.toFixed(2) : "0.00"}
+            </h3>
+            <p className="text-xs text-[#adaaaa] flex items-center gap-1">
+              <span className="text-[#a3a6ff] font-bold">All time earnings</span>
+            </p>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="px-5 py-3 text-left text-xs font-medium text-muted-foreground">Tracking #</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-muted-foreground">Pickup</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-muted-foreground">Delivery</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-muted-foreground">Date</th>
-                  <th className="px-5 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentJobs.map((job) => (
-                  <tr key={job.id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
-                    <td className="px-5 py-3.5 text-sm font-mono font-medium text-foreground">{job.tracking_number}</td>
-                    <td className="px-5 py-3.5 text-sm text-muted-foreground max-w-[140px] truncate">{job.pickup_address}</td>
-                    <td className="px-5 py-3.5 text-sm text-muted-foreground max-w-[140px] truncate">{job.delivery_address}</td>
-                    <td className="px-5 py-3.5"><StatusBadge status={job.status} /></td>
-                    <td className="px-5 py-3.5 text-sm text-muted-foreground whitespace-nowrap">
-                      {new Date(job.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/driver/jobs/active`}>View</Link>
-                      </Button>
-                    </td>
-                  </tr>
+          <div className="mt-8 h-12 w-full bg-black/30 rounded flex items-end gap-1 p-2">
+            <div className="flex-1 bg-[#a3a6ff]/20 h-4 rounded-sm"></div>
+            <div className="flex-1 bg-[#a3a6ff]/20 h-6 rounded-sm"></div>
+            <div className="flex-1 bg-[#a3a6ff]/20 h-3 rounded-sm"></div>
+            <div className="flex-1 bg-[#a3a6ff]/20 h-8 rounded-sm"></div>
+            <div className="flex-1 bg-[#a3a6ff]/40 h-10 rounded-sm"></div>
+            <div className="flex-1 bg-[#a3a6ff]/60 h-7 rounded-sm"></div>
+            <div
+              className="flex-1 bg-[#a3a6ff] h-9 rounded-sm"
+              style={{ boxShadow: "0px 0px 10px rgba(163,166,255,0.4)" }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Stats Cards Column */}
+        <div className="col-span-12 md:col-span-3 flex flex-col gap-6">
+          <div className="flex-1 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-6 hover:bg-[#201f1f] transition-all border border-[#494847]/15">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[#c180ff]/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[#c180ff] text-lg">
+                  local_shipping
+                </span>
+              </div>
+              <span className="text-xs font-bold text-[#adaaaa]">
+                Completed Jobs
+              </span>
+            </div>
+            <div className="text-4xl font-black font-headline text-white">
+              {String(completedJobs).padStart(2, "0")}
+            </div>
+          </div>
+          <div className="flex-1 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-6 hover:bg-[#201f1f] transition-all border-l-4 border-[#c180ff]">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[#c180ff]/20 flex items-center justify-center">
+                <span
+                  className="material-symbols-outlined text-[#c180ff] text-lg animate-pulse"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  radar
+                </span>
+              </div>
+              <span className="text-xs font-bold text-[#c180ff]">
+                Active Jobs
+              </span>
+            </div>
+            <div className="text-4xl font-black font-headline text-white">
+              {String(activeJobs).padStart(2, "0")}
+            </div>
+          </div>
+        </div>
+
+        {/* Active Map Fragment */}
+        <div className="col-span-12 md:col-span-5 relative rounded-xl overflow-hidden bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/15 group min-h-[300px]">
+          <Image
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4gQyry9h81vqsFnspcq3X1Q1ZwbK-FtYMmFr8Rrz-kmla893fw9bVfdPAYDf7n72uazhdT5U5YSI26qz4WqU3lnTWcIUNeXOZIKvzZQOJYO8GtWEJMsKpfgSoVPCCO8qEBlUKXqubCinxsUnvV1PrigqkLl8nc49EnuGT_URTfeX7zscwERnv_yjv97J2_SpC_mAsmGoAjaCza0uzwJHs159VTU-srl7vTJyXlxGnRNkALdggwdng1fcXRDVVRkK7JXHrq6N5DA"
+            alt="Active Job Map Tracking"
+            fill
+            className="object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700 scale-105 group-hover:scale-100"
+            unoptimized
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent to-transparent" />
+          <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-[#adaaaa] mb-1">
+                Current Route
+              </p>
+              <p className="text-sm font-bold text-white">
+                Sector 7 → Port Terminal B
+              </p>
+            </div>
+            <Link
+              href="/driver/jobs/active"
+              className="bg-[#a3a6ff] text-[#0f00a4] px-4 py-2 rounded font-bold text-xs"
+              style={{ boxShadow: "0px 0px 10px rgba(163,166,255,0.4)" }}
+            >
+              Open Maps
+            </Link>
+          </div>
+        </div>
+
+        {/* Recent Activity List */}
+        <div className="col-span-12 lg:col-span-8 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-8 border border-[#494847]/15">
+          <div className="flex items-center justify-between mb-8">
+            <h4 className="text-lg font-bold font-headline text-white">
+              Recent Activity
+            </h4>
+            <Link
+              href="/driver/jobs/active"
+              className="text-xs font-bold text-[#a3a6ff] hover:underline"
+            >
+              View History
+            </Link>
+          </div>
+          <div className="space-y-4">
+            {recentActivity.length === 0 ? (
+              <>
+                {[
+                  {
+                    label: "Delivery Completed",
+                    sub: "Oakland Distribution Hub • KV-8821",
+                    amount: "+$42.00",
+                    time: "14:22 PM",
+                    icon: "check_circle",
+                    color: "text-[#a3a6ff]",
+                  },
+                  {
+                    label: "Delivery Completed",
+                    sub: "South Pier Warehouse • KV-8819",
+                    amount: "+$28.50",
+                    time: "12:15 PM",
+                    icon: "check_circle",
+                    color: "text-[#a3a6ff]",
+                  },
+                  {
+                    label: "New Job Assigned",
+                    sub: "Priority Express: Sector 7",
+                    amount: "Awaiting",
+                    time: "09:45 AM",
+                    icon: "info",
+                    color: "text-[#c180ff]",
+                    amountColor: "text-[#c180ff]",
+                  },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-4 rounded-lg bg-[#1a1919]/50 hover:bg-[#1a1919] transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-[#1a1919] flex items-center justify-center">
+                        <span
+                          className={`material-symbols-outlined ${item.color}`}
+                        >
+                          {item.icon}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          {item.label}
+                        </p>
+                        <p className="text-xs text-[#adaaaa]">{item.sub}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className={`text-sm font-bold ${item.amountColor ?? "text-white"}`}
+                      >
+                        {item.amount}
+                      </p>
+                      <p className="text-[10px] text-[#adaaaa]">{item.time}</p>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </>
+            ) : (
+              recentActivity.map((job) => (
+                <div
+                  key={job.id}
+                  className="flex items-center justify-between p-4 rounded-lg bg-[#1a1919]/50 hover:bg-[#1a1919] transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-[#1a1919] flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[#a3a6ff]">
+                        local_shipping
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        {job.tracking_number}
+                      </p>
+                      <p className="text-xs text-[#adaaaa]">
+                        {job.pickup_address}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-white capitalize">
+                      {job.status}
+                    </p>
+                    <p className="text-[10px] text-[#adaaaa]">
+                      {new Date(job.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Driver Performance Card */}
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+          <div
+            className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-8 border-t-2 border-[#a3a6ff]"
+            style={{
+              background:
+                "linear-gradient(to bottom right, rgba(163,166,255,0.1), transparent)",
+            }}
+          >
+            <h4 className="text-xs font-bold text-[#a3a6ff] uppercase tracking-widest mb-6">
+              Driver Tier: Elite
+            </h4>
+            <div className="flex items-end justify-between mb-2">
+              <span className="text-sm font-bold text-white">
+                Reliability Score
+              </span>
+              <span className="text-2xl font-black text-white">98%</span>
+            </div>
+            <div className="w-full bg-[#1a1919] h-2 rounded-full mb-8">
+              <div
+                className="bg-[#a3a6ff] h-full w-[98%] rounded-full"
+                style={{ boxShadow: "0px 0px 10px rgba(163,166,255,0.4)" }}
+              ></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-[#1a1919]/30 rounded">
+                <p className="text-[10px] text-[#adaaaa] font-bold uppercase">
+                  Avg Transit
+                </p>
+                <p className="text-lg font-bold text-white">24 min</p>
+              </div>
+              <div className="p-3 bg-[#1a1919]/30 rounded">
+                <p className="text-[10px] text-[#adaaaa] font-bold uppercase">
+                  Rating
+                </p>
+                <p className="text-lg font-bold text-white">4.96</p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Promo */}
+          <div className="relative rounded-xl overflow-hidden min-h-[160px] flex items-center p-8">
+            <Image
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiGXMQQi74HOHj5uNpLYnRBdZYewqb-vyfLCHqcg9CPKGvF1PolF1Rkc_s6b8pylGknkPc8QNLt0DMzKe6CT3ULjlyAgwGCTz4C7RqK3gyS-ZAeKUKLrVgykWXvNazBEEqZZbUphl-ssiw39GArB2Moc8RU5JYb6ES8AX-bWLQ_bXkx9WKZpHNr32FnYGH9H0PpgFcMbWQ089I2GjcIeJrV14haGJHDWIDQxC8D7s7sYSmb69eVHbCW_dFwL529P45EvHbqmNwTw"
+              alt="Fleet Upgrade"
+              fill
+              className="object-cover"
+              unoptimized
+            />
+            <div className="absolute inset-0 bg-[#c180ff]/80 mix-blend-multiply" />
+            <div className="relative z-10">
+              <p className="text-xs font-black uppercase tracking-tighter text-white mb-1">
+                Fleet Upgrade Available
+              </p>
+              <h5 className="text-xl font-black text-white leading-tight mb-4">
+                Master the Void. Unlock Class-A hauls.
+              </h5>
+              <button className="bg-white text-[#9c48ea] px-6 py-2 rounded-full font-bold text-xs transition-transform active:scale-95">
+                Upgrade Now
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
