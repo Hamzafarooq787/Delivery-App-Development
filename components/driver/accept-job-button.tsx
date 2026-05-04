@@ -16,7 +16,7 @@ export function AcceptJobButton({ deliveryId }: { deliveryId: string }) {
         alert(`Could not accept job: ${result.error}`)
         return
       }
-      router.push("/dashboard/driver/jobs/active")
+      router.push("/dashboard/driver/active-jobs")
       router.refresh()
     })
   }

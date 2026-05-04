@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 
-const addresses = [
+const staticAddresses = [
   {
     id: 'hq',
     title: 'Main Headquarters',
@@ -59,6 +60,29 @@ const addresses = [
 
 export default function AddressesPage() {
   const [showModal, setShowModal] = useState(false)
+  const [dbAddresses, setDbAddresses] = useState<{id:string,address:string,created_at:string|null}[]>([])
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data, error } = await supabase.from('addresses').select('id,address,created_at').eq('user_id', user.id).order('created_at', { ascending: false })
+      if (error) { console.error('[v0] addresses fetch error', error); return }
+      setDbAddresses((data ?? []) as any)
+    }
+    load()
+  }, [supabase])
+
+  async function handleAddAddress() {
+    const value = window.prompt('Enter new address')
+    if (!value?.trim()) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data, error } = await supabase.from('addresses').insert({ user_id: user.id, address: value.trim() }).select('id,address,created_at').single()
+    if (error) { console.error('[v0] add address error', error); return }
+    setDbAddresses((prev) => [data as any, ...prev])
+  }
 
   return (
     <>
@@ -86,7 +110,8 @@ export default function AddressesPage() {
           {/* Address Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Add New Card */}
-            <div className="group relative flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed border-outline-variant/30 hover:border-primary/50 transition-all cursor-pointer bg-surface-container hover:bg-surface-container-high">
+            <div onClick={handleAddAddress}
+              className="group relative flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed border-outline-variant/30 hover:border-primary/50 transition-all cursor-pointer bg-surface-container hover:bg-surface-container-high">
               <div className="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-primary text-3xl">add_location_alt</span>
               </div>
@@ -95,7 +120,18 @@ export default function AddressesPage() {
             </div>
 
             {/* Address Cards */}
-            {addresses.map((addr) => (
+            {[...dbAddresses.map((a, idx) => ({
+              id: a.id,
+              title: `Saved Address ${idx + 1}`,
+              tag: "Saved",
+              tagColor: "text-primary",
+              icon: "location_on",
+              iconBg: "bg-primary/20",
+              iconColor: "text-primary",
+              address: a.address,
+              footer: null,
+              span: "",
+            })), ...staticAddresses].map((addr) => (
               <div
                 key={addr.id}
                 className={`glass-card p-6 rounded-xl relative group overflow-hidden transition-all hover:-translate-y-1 border border-white/5 ${addr.span}`}
