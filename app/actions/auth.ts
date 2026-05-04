@@ -14,51 +14,24 @@ export async function signIn(formData: FormData) {
     return { error: error.message }
   }
 
-  // STEP 1 — FULL LOGGING
+  // DIAGNOSTIC MODE — return debug data to the UI (no redirect)
   const { data: { user } } = await supabase.auth.getUser()
-  console.log("[v0] AUTH USER:", user)
 
-  if (!user) {
-    console.error("[v0] NO AUTH USER")
-    return { error: "Sign in failed. Please try again." }
-  }
-
-  // STEP 4 — VERIFY MATCHING ID
-  console.log("[v0] AUTH ID:", user.id)
-
-  // Fetch the FULL row (not just role) to see exactly what's stored
   const { data, error: fetchError } = await supabase
     .from("users")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", user?.id ?? "")
     .maybeSingle()
 
-  console.log("[v0] FULL USER ROW:", data)
-  console.log("[v0] ROLE:", data?.role)
-  console.log("[v0] ERROR:", fetchError)
-
-  // STEP 2 — REMOVE FALLBACK TEMPORARILY
-  if (!data) {
-    console.error("[v0] NO USER ROW FOUND")
-    return { error: "No user row found in public.users" }
-  }
-
-  const role = data.role
-
-  // STEP 3 — FORCE HARD REDIRECT TEST (log only, no redirect yet)
-  if (role === "admin") {
-    console.log("[v0] REDIRECT ADMIN")
-  }
-  if (role === "driver") {
-    console.log("[v0] REDIRECT DRIVER")
-  }
-  if (role === "customer") {
-    console.log("[v0] REDIRECT CUSTOMER")
-  }
-
-  // Return the diagnostic result to the client so we can also see it in the browser
   return {
-    error: `DIAGNOSTIC: authId=${user.id} | rowId=${data.id} | role=${role} | match=${user.id === data.id}`,
+    success: false,
+    debug: {
+      authUser: user,
+      authId: user?.id ?? null,
+      userRow: data,
+      role: data?.role ?? null,
+      error: fetchError?.message || null,
+    },
   }
 }
 
