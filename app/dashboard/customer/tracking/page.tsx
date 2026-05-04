@@ -1,38 +1,94 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 
 const defaultTimelineSteps = [
-  { label: 'Requested', detail: 'Oct 12, 09:30 AM', done: true, active: false },
-  { label: 'Accepted', detail: 'Oct 12, 09:45 AM', done: true, active: false },
-  { label: 'Collected', detail: 'Oct 12, 11:20 AM', done: true, active: false },
-  { label: 'In Transit', detail: 'En route via Sector 42', done: false, active: true },
-  { label: 'Delivered', detail: 'Pending arrival', done: false, active: false },
+  { label: 'Requested', detail: '—', done: false, active: false },
+  { label: 'Accepted', detail: '—', done: false, active: false },
+  { label: 'Collected', detail: '—', done: false, active: false },
+  { label: 'In Transit', detail: '—', done: false, active: false },
+  { label: 'Delivered', detail: '—', done: false, active: false },
 ]
+
+type Driver = { full_name: string | null } | null
 
 export default function LiveTrackingPage() {
   const [showModal, setShowModal] = useState(false)
   const [shipment, setShipment] = useState<any>(null)
+  const [driver, setDriver] = useState<Driver>(null)
   const [timelineSteps, setTimelineSteps] = useState(defaultTimelineSteps)
   const supabase = useMemo(() => createClient(), [])
+  const searchParams = useSearchParams()
+  const requestedId = searchParams.get('id')
 
   useEffect(() => {
+    let cancelled = false
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data, error } = await supabase.from('delivery_requests').select('id,tracking_number,status,pickup_address,delivery_address').eq('customer_id', user.id).in('status', ['requested','accepted','collected','in_transit']).order('created_at', { ascending: false }).limit(1).maybeSingle()
+
+      let query = supabase
+        .from('delivery_requests')
+        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at')
+        .eq('customer_id', user.id)
+
+      if (requestedId) {
+        query = query.eq('id', requestedId)
+      } else {
+        query = query
+          .in('status', ['requested', 'accepted', 'collected', 'in_transit'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+      }
+
+      const { data, error } = await query.maybeSingle()
+      if (cancelled) return
       if (error) { console.error('[v0] tracking fetch error', error); return }
-      if (!data) return
+      if (!data) {
+        setShipment(null)
+        setDriver(null)
+        setTimelineSteps(defaultTimelineSteps)
+        return
+      }
       setShipment(data)
-      const steps = ['requested','accepted','collected','in_transit','delivered']
+
+      const steps = ['requested', 'accepted', 'collected', 'in_transit', 'delivered']
       const current = steps.indexOf((data.status || 'requested').toLowerCase())
-      setTimelineSteps(steps.map((st, idx) => ({ label: st.replace('_',' ').replace(/\b\w/g, c=>c.toUpperCase()), detail: data.tracking_number || 'Live', done: idx < current, active: idx === current })))
+      setTimelineSteps(steps.map((st, idx) => ({
+        label: st.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        detail: data.tracking_number || 'Live',
+        done: current === -1 ? false : idx < current,
+        active: idx === current,
+      })))
+
+      if (data.driver_id) {
+        const { data: drv, error: drvErr } = await supabase
+          .from('users')
+          .select('full_name')
+          .eq('id', data.driver_id)
+          .maybeSingle()
+        if (cancelled) return
+        if (drvErr) { console.error('[v0] driver fetch error', drvErr); return }
+        setDriver(drv as Driver)
+      } else {
+        setDriver(null)
+      }
     }
     load()
-  }, [supabase])
+    return () => { cancelled = true }
+  }, [supabase, requestedId])
+
+  function driverInitials(d: Driver) {
+    const n = d?.full_name?.trim()
+    if (!n) return 'NA'
+    const parts = n.split(/\s+/).filter(Boolean)
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
 
   return (
     <>
@@ -135,14 +191,14 @@ export default function LiveTrackingPage() {
               <div className="flex items-center space-x-4 mb-4">
                 <div className="relative">
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold font-headline text-lg">
-                    ET
+                    {driverInitials(driver)}
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-surface rounded-full flex items-center justify-center">
                     <span className="material-symbols-outlined text-[10px] text-white">verified</span>
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-sm font-bold text-on-surface">Elias Thorne</h4>
+                  <h4 className="text-sm font-bold text-on-surface">{driver?.full_name || (shipment?.driver_id ? 'Driver assigned' : 'Awaiting driver')}</h4>
                   <div className="flex items-center space-x-1">
                     <span
                       className="material-symbols-outlined text-xs text-tertiary"
