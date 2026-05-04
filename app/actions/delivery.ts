@@ -153,7 +153,7 @@ export async function acceptDelivery(deliveryId: string) {
   }
 
   revalidatePath("/dashboard/driver/jobs/available")
-  revalidatePath("/dashboard/driver/jobs/active")
+  revalidatePath("/dashboard/driver/active-jobs")
   return { success: true }
 }
 
