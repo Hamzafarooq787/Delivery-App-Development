@@ -43,14 +43,14 @@ export default function SettingsPage() {
         .from('users')
         .select('full_name, phone')
         .eq('id', user.id)
-        .maybeSingle()
+        .single()
       if (cancelled) return
       if (error) {
-        console.error('[v0] settings load error', error)
+        console.error('[v0] settings load error — code:', error.code, error.message)
         return
       }
-      const nm = data?.full_name ?? ''
-      const ph = data?.phone ?? ''
+      const nm = data.full_name ?? ''
+      const ph = data.phone ?? ''
       setFullName(nm)
       setPhone(ph)
       setInitialFullName(nm)
@@ -94,21 +94,21 @@ export default function SettingsPage() {
       .update({ full_name: fullName, phone })
       .eq('id', userId)
       .select('full_name, phone')
-      .single()
+      .maybeSingle()           // maybeSingle avoids PGRST116 when RLS allows UPDATE but not RETURNING
     setSaving(false)
     if (error) {
-      console.error('[v0] settings save error', error)
+      console.error('[v0] settings save error — code:', error.code, error.message)
       setSaveMessage({ type: 'error', text: error.message || 'Failed to save profile.' })
       return
     }
-    // Sync state to exactly what the DB returned
+    // Sync state to DB-confirmed values; fall back to local values if RETURNING was empty
     const savedName = updated?.full_name ?? fullName
     const savedPhone = updated?.phone ?? phone
     setFullName(savedName)
     setPhone(savedPhone)
     setInitialFullName(savedName)
     setInitialPhone(savedPhone)
-    setSaveMessage({ type: 'success', text: 'Profile updated.' })
+    setSaveMessage({ type: 'success', text: 'Profile updated successfully.' })
   }
 
   function handleDiscardProfile() {
