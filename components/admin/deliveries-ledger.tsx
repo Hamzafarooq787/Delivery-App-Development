@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { AssignDriverDropdown, type DriverOption } from "@/components/admin/assign-driver-dropdown"
 
 type DeliveryRequest = {
   id: string
@@ -22,10 +23,14 @@ type DeliveryRequest = {
   created_at: string
 }
 
+const FINAL_STATUSES = new Set(["delivered", "cancelled"])
+
 export function DeliveriesLedger({
   initialDeliveries,
+  drivers = [],
 }: {
   initialDeliveries: DeliveryRequest[]
+  drivers?: DriverOption[]
 }) {
   const [deliveries, setDeliveries] = useState<DeliveryRequest[]>(initialDeliveries)
 
@@ -84,15 +89,15 @@ export function DeliveriesLedger({
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left border-collapse">
+        <table className="w-full min-w-[820px] text-left border-collapse">
           <thead>
             <tr className="bg-[#131313]">
-              {["Pickup Address", "Delivery Address", "Item Description", "Status", "Created At"].map(
+              {["Pickup", "Delivery", "Item", "Status", "Assigned Driver", "Date"].map(
                 (h, i) => (
                   <th
                     key={h}
-                    className={`px-6 py-4 text-[11px] uppercase tracking-widest font-bold text-[#adaaaa] ${
-                      i === 4 ? "text-right" : ""
+                    className={`px-5 py-4 text-[11px] uppercase tracking-widest font-bold text-[#adaaaa] ${
+                      i === 5 ? "text-right" : ""
                     }`}
                   >
                     {h}
@@ -104,32 +109,40 @@ export function DeliveriesLedger({
           <tbody className="divide-y divide-[#494847]/5">
             {deliveries.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-16 text-center text-[#adaaaa] text-sm">
+                <td colSpan={6} className="py-16 text-center text-[#adaaaa] text-sm">
                   No deliveries found
                 </td>
               </tr>
             ) : (
               deliveries.map((delivery) => (
                 <tr key={delivery.id} className="hover:bg-[#201f1f]/40 transition-colors group">
-                  <td className="px-6 py-5 text-sm text-white max-w-xs">
+                  <td className="px-5 py-4 text-sm text-white max-w-[160px]">
                     <span className="block truncate" title={delivery.pickup_address ?? ""}>
                       {delivery.pickup_address ?? "—"}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-sm text-white max-w-xs">
+                  <td className="px-5 py-4 text-sm text-white max-w-[160px]">
                     <span className="block truncate" title={delivery.delivery_address ?? ""}>
                       {delivery.delivery_address ?? "—"}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-sm text-[#adaaaa] max-w-xs">
+                  <td className="px-5 py-4 text-sm text-[#adaaaa] max-w-[120px]">
                     <span className="block truncate" title={delivery.item_description ?? ""}>
                       {delivery.item_description ?? "—"}
                     </span>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-5 py-4">
                     <DeliveryStatusPill status={delivery.status} />
                   </td>
-                  <td className="px-6 py-5 text-xs text-[#adaaaa] text-right whitespace-nowrap">
+                  <td className="px-5 py-4">
+                    <AssignDriverDropdown
+                      deliveryId={delivery.id}
+                      currentDriverId={delivery.driver_id}
+                      drivers={drivers}
+                      disabled={FINAL_STATUSES.has(delivery.status)}
+                    />
+                  </td>
+                  <td className="px-5 py-4 text-xs text-[#adaaaa] text-right whitespace-nowrap">
                     {new Date(delivery.created_at).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",

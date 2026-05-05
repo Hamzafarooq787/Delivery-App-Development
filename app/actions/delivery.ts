@@ -408,6 +408,25 @@ export async function adminRejectDriver(driverId: string) {
   return { success: true }
 }
 
+export async function adminAssignDriver(deliveryId: string, driverId: string | null) {
+  const admin = createAdminClient()
+
+  const update: Record<string, string | null> =
+    driverId
+      ? { driver_id: driverId, status: "accepted" }
+      : { driver_id: null, status: "requested" }
+
+  const { error } = await admin
+    .from("delivery_requests")
+    .update(update)
+    .eq("id", deliveryId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/orders")
+  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
+  return { success: true }
+}
+
 export async function adminGetCustomers() {
   const admin = createAdminClient()
 

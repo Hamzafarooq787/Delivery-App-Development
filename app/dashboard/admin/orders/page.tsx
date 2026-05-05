@@ -1,32 +1,47 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { DeliveriesLedger } from "@/components/admin/deliveries-ledger"
 
 export default async function AdminOrdersPage() {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const [initialDeliveriesRes, activeRes, successRes] = await Promise.all([
-    supabase
+  const [deliveriesRes, activeRes, successRes, driverProfilesRes] = await Promise.all([
+    admin
       .from("delivery_requests")
       .select("*")
       .order("created_at", { ascending: false }),
-    supabase
+    admin
       .from("delivery_requests")
       .select("id", { count: "exact" })
       .in("status", ["requested", "accepted", "collected", "in_transit"]),
-    supabase
+    admin
       .from("delivery_requests")
       .select("id", { count: "exact" })
       .eq("status", "delivered"),
+    // Fetch approved driver IDs
+    admin
+      .from("driver_profiles")
+      .select("id")
+      .eq("status", "approved"),
   ])
 
-  if (initialDeliveriesRes.error) {
-    console.error("[v0] Failed to fetch deliveries:", initialDeliveriesRes.error)
-  }
-
-  const initialDeliveries = initialDeliveriesRes.data ?? []
+  const initialDeliveries = deliveriesRes.data ?? []
   const activeCount = activeRes.count ?? 0
   const successCount = successRes.count ?? 0
   const total = initialDeliveries.length
+
+  // Resolve approved driver names from public.users
+  const approvedIds = (driverProfilesRes.data ?? []).map((p) => p.id)
+  let drivers: { id: string; full_name: string }[] = []
+  if (approvedIds.length > 0) {
+    const { data: driverUsers } = await admin
+      .from("users")
+      .select("id, full_name")
+      .in("id", approvedIds)
+    drivers = (driverUsers ?? []).map((u) => ({
+      id: u.id,
+      full_name: u.full_name ?? "Unknown Driver",
+    }))
+  }
 
   const successRate =
     successCount + total > 0
@@ -111,7 +126,7 @@ export default async function AdminOrdersPage() {
         </div>
       </div>
 
-      <DeliveriesLedger initialDeliveries={initialDeliveries} />
+      <DeliveriesLedger initialDeliveries={initialDeliveries} drivers={drivers} />
     </div>
   )
 }
