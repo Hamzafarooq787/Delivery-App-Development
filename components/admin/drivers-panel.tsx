@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
 
 type VerificationDot = "verified" | "pending"
@@ -36,6 +37,7 @@ function statusToDots(status: "pending" | "approved" | "rejected"): [Verificatio
 }
 
 export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("pending")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -46,15 +48,21 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
 
   function handleApprove() {
     if (!selected || isPending) return
+    const id = selected.id
     startTransition(async () => {
-      await adminApproveDriver(selected.id)
+      await adminApproveDriver(id)
+      setSelectedId(null)
+      router.refresh()
     })
   }
 
   function handleReject() {
     if (!selected || isPending) return
+    const id = selected.id
     startTransition(async () => {
-      await adminRejectDriver(selected.id)
+      await adminRejectDriver(id)
+      setSelectedId(null)
+      router.refresh()
     })
   }
 

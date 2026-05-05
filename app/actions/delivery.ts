@@ -294,23 +294,34 @@ export async function adminGetPayouts() {
 export async function adminGetDrivers() {
   const supabase = await createClient()
 
-  const [{ data: users, error }, { data: profiles }] = await Promise.all([
-    supabase
-      .from("users")
-      .select("id, full_name, email, phone, created_at")
-      .eq("role", "driver")
-      .order("created_at", { ascending: false }),
-    supabase.from("driver_profiles").select("id, status"),
-  ])
+  // driver_profiles is the source of truth — anyone with a row here is a driver
+  const { data: profiles, error } = await supabase
+    .from("driver_profiles")
+    .select("id, status, created_at")
+    .order("created_at", { ascending: false })
 
   if (error) return { error: error.message, data: [] }
+  if (!profiles || profiles.length === 0) return { data: [] }
 
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.status as "pending" | "approved" | "rejected"]))
+  const ids = profiles.map((p) => p.id)
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, full_name, email, phone, created_at")
+    .in("id", ids)
 
-  const drivers = (users ?? []).map((u) => ({
-    ...u,
-    status: profileMap.get(u.id) ?? ("pending" as "pending" | "approved" | "rejected"),
-  }))
+  const userMap = new Map((users ?? []).map((u) => [u.id, u]))
+
+  const drivers = profiles.map((p) => {
+    const u = userMap.get(p.id)
+    return {
+      id: p.id,
+      full_name: u?.full_name ?? "Unknown Driver",
+      email: u?.email ?? "",
+      phone: u?.phone ?? null,
+      created_at: u?.created_at ?? p.created_at,
+      status: p.status as "pending" | "approved" | "rejected",
+    }
+  })
 
   return { data: drivers }
 }
@@ -320,11 +331,11 @@ export async function adminApproveDriver(driverId: string) {
 
   const { error } = await supabase
     .from("driver_profiles")
-    .update({ status: "approved" })
-    .eq("id", driverId)
+    .upsert({ id: driverId, status: "approved" }, { onConflict: "id" })
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/drivers")
+  revalidatePath(`/dashboard/admin/drivers/${driverId}`)
   return { success: true }
 }
 
@@ -333,11 +344,11 @@ export async function adminRejectDriver(driverId: string) {
 
   const { error } = await supabase
     .from("driver_profiles")
-    .update({ status: "rejected" })
-    .eq("id", driverId)
+    .upsert({ id: driverId, status: "rejected" }, { onConflict: "id" })
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/drivers")
+  revalidatePath(`/dashboard/admin/drivers/${driverId}`)
   return { success: true }
 }
 

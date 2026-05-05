@@ -1,15 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
+import { signUp } from "@/app/actions/auth"
+
+type Role = "customer" | "driver"
 
 export default function SignupPage() {
-  const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [role, setRole] = useState<Role>("customer")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -19,15 +20,18 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name } },
-    })
+    const formData = new FormData()
+    const parts = name.trim().split(" ")
+    formData.set("first_name", parts[0] ?? name)
+    formData.set("last_name", parts.slice(1).join(" ") || (parts[0] ?? ""))
+    formData.set("email", email)
+    formData.set("password", password)
+    formData.set("role", role)
 
-    if (authError) {
-      setError(authError.message)
+    const result = await signUp(formData)
+
+    if (result?.error) {
+      setError(result.error)
       setLoading(false)
       return
     }
@@ -67,8 +71,14 @@ export default function SignupPage() {
               </div>
               <h2 className="font-headline text-xl font-bold text-white">Check your inbox</h2>
               <p className="text-[#adaaaa] text-sm leading-relaxed">
-                We sent a confirmation link to <span className="text-white font-medium">{email}</span>. Click it to activate your account.
+                We sent a confirmation link to{" "}
+                <span className="text-white font-medium">{email}</span>. Click it to activate your account.
               </p>
+              {role === "driver" && (
+                <p className="text-[#c180ff] text-xs leading-relaxed bg-[#c180ff]/10 border border-[#c180ff]/20 rounded-xl px-4 py-3">
+                  Your driver account will be reviewed by an admin before you can accept jobs.
+                </p>
+              )}
               <Link
                 href="/login"
                 className="mt-2 text-[#a3a6ff] hover:text-[#c180ff] font-semibold text-sm transition-colors"
@@ -79,7 +89,35 @@ export default function SignupPage() {
           ) : (
             <>
               <h2 className="font-headline text-xl font-bold text-white mb-1">Create account</h2>
-              <p className="text-[#adaaaa] text-sm mb-8">Join Kinetic Void to start shipping today</p>
+              <p className="text-[#adaaaa] text-sm mb-6">Join Kinetic Void to get started</p>
+
+              {/* Role Toggle */}
+              <div className="flex rounded-xl bg-[#1a1919] border border-[#262626] p-1 mb-6">
+                {(["customer", "driver"] as Role[]).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      role === r
+                        ? "bg-[#a3a6ff] text-[#0f00a4]"
+                        : "text-[#adaaaa] hover:text-white"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      {r === "customer" ? "person" : "local_shipping"}
+                    </span>
+                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              {role === "driver" && (
+                <div className="mb-6 flex items-start gap-2 bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-xs rounded-xl px-4 py-3">
+                  <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">info</span>
+                  Driver accounts require admin approval before you can accept jobs.
+                </div>
+              )}
 
               {error && (
                 <div className="mb-6 flex items-center gap-2 bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] text-sm rounded-xl px-4 py-3">
@@ -170,7 +208,7 @@ export default function SignupPage() {
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-[18px]">person_add</span>
-                      Create Account
+                      Create {role === "driver" ? "Driver" : "Customer"} Account
                     </>
                   )}
                 </button>
