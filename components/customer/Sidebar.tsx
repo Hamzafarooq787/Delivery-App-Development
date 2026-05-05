@@ -34,38 +34,44 @@ export default function Sidebar() {
 
   const [userId, setUserId] = useState<string | null>(null)
 
+  async function fetchProfile(uid: string, cancelled: { v: boolean }) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('full_name, role')
+      .eq('id', uid)
+      .maybeSingle()
+    if (cancelled.v) return
+    if (error) { console.error('[v0] sidebar user fetch error', error); return }
+    setName(data?.full_name ?? '')
+    if (data?.role) setRole(String(data.role).toUpperCase())
+  }
+
+  // Initial load — re-runs when pathname changes so sidebar stays fresh after Settings saves
   useEffect(() => {
-    let cancelled = false
+    const cancelled = { v: false }
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user || cancelled) return
+      if (!user || cancelled.v) return
       setEmail(user.email ?? '')
       setUserId(user.id)
-      const { data, error } = await supabase
-        .from('users')
-        .select('full_name, role')
-        .eq('id', user.id)
-        .maybeSingle()
-      if (cancelled) return
-      if (error) { console.error('[v0] sidebar user fetch error', error); return }
-      if (data?.full_name) setName(data.full_name)
-      if (data?.role) setRole(String(data.role).toUpperCase())
+      await fetchProfile(user.id, cancelled)
     }
     load()
-    return () => { cancelled = true }
-  }, [supabase])
+    return () => { cancelled.v = true }
+  }, [supabase, pathname]) // pathname dependency re-fetches on every page navigation
 
-  // Realtime: re-fetch name whenever the user's row changes (e.g. after Settings saves)
+  // Realtime: catch both INSERT and UPDATE on the user's row
   useEffect(() => {
     if (!userId) return
     const channel = supabase
       .channel(`sidebar-user-${userId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
+        { event: '*', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
         (payload) => {
           const row = payload.new as { full_name?: string | null; role?: string | null }
-          if (row.full_name !== undefined) setName(row.full_name ?? '')
+          if (!row) return
+          setName(row.full_name ?? '')
           if (row.role) setRole(String(row.role).toUpperCase())
         }
       )
