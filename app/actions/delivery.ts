@@ -290,3 +290,129 @@ export async function adminGetPayouts() {
   if (error) return { error: error.message, data: [] }
   return { data: data ?? [] }
 }
+
+export async function adminGetDrivers() {
+  const supabase = await createClient()
+
+  // driver_profiles is the source of truth — anyone with a row here is a driver
+  const { data: profiles, error } = await supabase
+    .from("driver_profiles")
+    .select("id, status, created_at")
+    .order("created_at", { ascending: false })
+
+  if (error) return { error: error.message, data: [] }
+  if (!profiles || profiles.length === 0) return { data: [] }
+
+  const ids = profiles.map((p) => p.id)
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, full_name, email, phone, created_at")
+    .in("id", ids)
+
+  const userMap = new Map((users ?? []).map((u) => [u.id, u]))
+
+  const drivers = profiles.map((p) => {
+    const u = userMap.get(p.id)
+    return {
+      id: p.id,
+      full_name: u?.full_name ?? "Unknown Driver",
+      email: u?.email ?? "",
+      phone: u?.phone ?? null,
+      created_at: u?.created_at ?? p.created_at,
+      status: p.status as "pending" | "approved" | "rejected",
+    }
+  })
+
+  return { data: drivers }
+}
+
+export async function adminApproveDriver(driverId: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("driver_profiles")
+    .upsert({ id: driverId, status: "approved" }, { onConflict: "id" })
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/drivers")
+  revalidatePath(`/dashboard/admin/drivers/${driverId}`)
+  return { success: true }
+}
+
+export async function adminRejectDriver(driverId: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("driver_profiles")
+    .upsert({ id: driverId, status: "rejected" }, { onConflict: "id" })
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/drivers")
+  revalidatePath(`/dashboard/admin/drivers/${driverId}`)
+  return { success: true }
+}
+
+export async function adminSaveSettings(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const { error } = await supabase
+    .from("users")
+    .update({
+      full_name: formData.get("full_name") as string,
+      phone: formData.get("phone") as string,
+    })
+    .eq("id", user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/settings")
+  return { success: true }
+}
+
+export async function updateDriverProfile(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const first = (formData.get("first_name") as string ?? "").trim()
+  const last = (formData.get("last_name") as string ?? "").trim()
+  const full_name = last ? `${first} ${last}` : first
+
+  const { error } = await supabase
+    .from("users")
+    .update({ full_name, phone: formData.get("phone") as string })
+    .eq("id", user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/driver/profile")
+  revalidatePath("/dashboard/driver/settings")
+  return { success: true }
+}
+
+export async function getDriverPayouts() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated", data: [] }
+
+  const { data, error } = await supabase
+    .from("payouts")
+    .select("*")
+    .eq("driver_id", user.id)
+    .order("created_at", { ascending: false })
+
+  if (error) return { error: error.message, data: [] }
+  return { data: data ?? [] }
+}
+
+export async function adminGetPayoutsWithDrivers() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("payouts")
+    .select("*, users(full_name, email)")
+    .order("created_at", { ascending: false })
+
+  if (error) return { error: error.message, data: [] }
+  return { data: data ?? [] }
+}

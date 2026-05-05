@@ -1,10 +1,14 @@
-import { PageHeader } from '@/components/shared/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/shared/status-badge'
-import { Timeline } from '@/components/shared/timeline'
-import { ArrowLeft, MapPin, Package, User, Car } from 'lucide-react'
-import Link from 'next/link'
+import { PageHeader } from "@/components/shared/page-header"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/shared/status-badge"
+import { Timeline } from "@/components/shared/timeline"
+import { ArrowLeft, MapPin, Package, User, Car } from "lucide-react"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
+import { notFound } from "next/navigation"
+
+const STATUS_ORDER = ["requested", "accepted", "collected", "in_transit", "delivered"]
 
 export default async function AdminOrderDetailPage({
   params,
@@ -12,6 +16,54 @@ export default async function AdminOrderDetailPage({
   params: Promise<{ orderId: string }>
 }) {
   const { orderId } = await params
+  const supabase = await createClient()
+
+  const { data: order, error } = await supabase
+    .from("delivery_requests")
+    .select("*")
+    .eq("id", orderId)
+    .single()
+
+  if (error || !order) notFound()
+
+  const [customerRes, driverRes, logsRes] = await Promise.all([
+    order.customer_id
+      ? supabase.from("users").select("full_name, email, phone").eq("id", order.customer_id).single()
+      : Promise.resolve({ data: null }),
+    order.driver_id
+      ? supabase.from("users").select("full_name, email").eq("id", order.driver_id).single()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("delivery_status_logs")
+      .select("status, created_at")
+      .eq("delivery_id", orderId)
+      .order("created_at", { ascending: true }),
+  ])
+
+  const customer = customerRes.data
+  const driver = driverRes.data
+  const logs: { status: string; created_at: string }[] = logsRes.data ?? []
+
+  const currentIdx = STATUS_ORDER.indexOf(order.status)
+  const timelineSteps = STATUS_ORDER.map((s, idx) => {
+    const log = logs.find((l) => l.status === s)
+    const status: "completed" | "active" | "upcoming" =
+      idx < currentIdx ? "completed" : idx === currentIdx ? "active" : "upcoming"
+    return {
+      label: s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      status,
+      time: log
+        ? new Date(log.created_at).toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : undefined,
+    }
+  })
+
+  const displayStatus = order.status === "delivered" ? "completed" : order.status === "requested" ? "pending" : order.status
 
   return (
     <div className="space-y-6">
@@ -22,7 +74,7 @@ export default async function AdminOrderDetailPage({
           </Button>
         </Link>
         <PageHeader
-          title={`Order #${orderId}`}
+          title={order.tracking_number ?? `Order #${orderId.slice(0, 8)}`}
           description="Full order details and status history."
         />
       </div>
@@ -36,16 +88,46 @@ export default async function AdminOrderDetailPage({
                   <Package className="h-4 w-4" />
                   Package Details
                 </CardTitle>
-                <StatusBadge status="pending" />
+                <StatusBadge status={displayStatus as Parameters<typeof StatusBadge>[0]["status"]} />
               </div>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {['Package Type', 'Weight', 'Dimensions', 'Declared Value', 'Special Instructions', 'Created At'].map((label) => (
-                <div key={label}>
-                  <p className="text-muted-foreground">{label}</p>
-                  <p className="font-medium text-muted-foreground/50">—</p>
-                </div>
-              ))}
+              <div>
+                <p className="text-muted-foreground">Item Description</p>
+                <p className="font-medium">{order.item_description ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Declared Value</p>
+                <p className="font-medium">
+                  {order.item_value != null ? `$${Number(order.item_value).toFixed(2)}` : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Price</p>
+                <p className="font-medium">
+                  {order.price != null ? `$${Number(order.price).toFixed(2)}` : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Tracking Number</p>
+                <p className="font-medium font-mono text-xs">{order.tracking_number ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Safe Item Confirmed</p>
+                <p className="font-medium">{order.is_safe_confirmed ? "Yes" : "No"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Created At</p>
+                <p className="font-medium">
+                  {new Date(order.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -59,11 +141,11 @@ export default async function AdminOrderDetailPage({
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
               <div className="space-y-1">
                 <p className="text-muted-foreground font-medium">Pickup</p>
-                <p className="text-muted-foreground/50">—</p>
+                <p>{order.pickup_address ?? "—"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-muted-foreground font-medium">Dropoff</p>
-                <p className="text-muted-foreground/50">—</p>
+                <p>{order.delivery_address ?? "—"}</p>
               </div>
             </CardContent>
           </Card>
@@ -73,7 +155,7 @@ export default async function AdminOrderDetailPage({
               <CardTitle className="text-base font-semibold">Order Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              <Timeline steps={[]} />
+              <Timeline steps={timelineSteps} />
             </CardContent>
           </Card>
         </div>
@@ -87,7 +169,21 @@ export default async function AdminOrderDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <p className="text-muted-foreground/50">—</p>
+              {customer ? (
+                <>
+                  <p className="font-medium">{customer.full_name}</p>
+                  <p className="text-muted-foreground">{customer.email}</p>
+                  {customer.phone && <p className="text-muted-foreground">{customer.phone}</p>}
+                  <Link
+                    href={`/dashboard/admin/customers/${order.customer_id}`}
+                    className="text-xs text-primary hover:underline block pt-1"
+                  >
+                    View profile →
+                  </Link>
+                </>
+              ) : (
+                <p className="text-muted-foreground">—</p>
+              )}
             </CardContent>
           </Card>
 
@@ -99,7 +195,20 @@ export default async function AdminOrderDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <p className="text-muted-foreground/50">No driver assigned</p>
+              {driver ? (
+                <>
+                  <p className="font-medium">{driver.full_name}</p>
+                  <p className="text-muted-foreground">{driver.email}</p>
+                  <Link
+                    href={`/dashboard/admin/drivers/${order.driver_id}`}
+                    className="text-xs text-primary hover:underline block pt-1"
+                  >
+                    View driver →
+                  </Link>
+                </>
+              ) : (
+                <p className="text-muted-foreground">No driver assigned</p>
+              )}
             </CardContent>
           </Card>
 
@@ -108,9 +217,15 @@ export default async function AdminOrderDetailPage({
               <CardTitle className="text-base font-semibold">Admin Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full" size="sm">Assign Driver</Button>
-              <Button variant="outline" className="w-full" size="sm">Cancel Order</Button>
-              <Button variant="outline" className="w-full" size="sm">Issue Refund</Button>
+              <Button variant="outline" className="w-full" size="sm">
+                Assign Driver
+              </Button>
+              <Button variant="outline" className="w-full" size="sm">
+                Cancel Order
+              </Button>
+              <Button variant="outline" className="w-full" size="sm">
+                Issue Refund
+              </Button>
             </CardContent>
           </Card>
         </div>

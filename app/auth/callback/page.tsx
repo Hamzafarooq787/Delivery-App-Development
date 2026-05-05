@@ -46,6 +46,13 @@ export default function AuthCallbackPage() {
       // Fallback to customer role if fetch fails or no data
       const role = profile?.role || "customer"
 
+      // Ensure driver_profiles row exists for drivers (handles re-confirmation)
+      if (role === "driver") {
+        await supabase
+          .from("driver_profiles")
+          .upsert({ id: user.id, status: "pending" }, { onConflict: "id" })
+      }
+
       if (role === "admin") {
         router.push("/dashboard/admin")
       } else if (role === "driver") {

@@ -1,8 +1,11 @@
-import { PageHeader } from '@/components/shared/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft, User, Package } from 'lucide-react'
-import Link from 'next/link'
+import { PageHeader } from "@/components/shared/page-header"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/shared/status-badge"
+import { ArrowLeft, User, Package } from "lucide-react"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
+import { notFound } from "next/navigation"
 
 export default async function AdminCustomerDetailPage({
   params,
@@ -10,6 +13,41 @@ export default async function AdminCustomerDetailPage({
   params: Promise<{ customerId: string }>
 }) {
   const { customerId } = await params
+  const supabase = await createClient()
+
+  const { data: customer, error } = await supabase
+    .from("users")
+    .select("id, full_name, email, phone, created_at")
+    .eq("id", customerId)
+    .single()
+
+  if (error || !customer) notFound()
+
+  const [ordersRes, disputeRes] = await Promise.all([
+    supabase
+      .from("delivery_requests")
+      .select("id, tracking_number, status, price, created_at")
+      .eq("customer_id", customerId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("disputes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", customerId)
+      .eq("status", "open"),
+  ])
+
+  const orders = ordersRes.data ?? []
+  const openDisputes = disputeRes.count ?? 0
+  const totalSpent = orders.reduce((sum, o) => sum + (o.price ?? 0), 0)
+
+  const statusMap: Record<string, Parameters<typeof StatusBadge>[0]["status"]> = {
+    delivered: "completed",
+    requested: "pending",
+    cancelled: "cancelled",
+    in_transit: "in_transit",
+    accepted: "active",
+    collected: "active",
+  }
 
   return (
     <div className="space-y-6">
@@ -20,7 +58,7 @@ export default async function AdminCustomerDetailPage({
           </Button>
         </Link>
         <PageHeader
-          title={`Customer #${customerId}`}
+          title={customer.full_name}
           description="Customer profile and order history."
         />
       </div>
@@ -35,12 +73,36 @@ export default async function AdminCustomerDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {['Full Name', 'Email', 'Phone', 'Joined', 'City', 'Postcode'].map((label) => (
-                <div key={label}>
-                  <p className="text-muted-foreground">{label}</p>
-                  <p className="font-medium text-muted-foreground/50">—</p>
-                </div>
-              ))}
+              <div>
+                <p className="text-muted-foreground">Full Name</p>
+                <p className="font-medium">{customer.full_name}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Email</p>
+                <p className="font-medium">{customer.email}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Phone</p>
+                <p className="font-medium">{customer.phone ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Joined</p>
+                <p className="font-medium">
+                  {new Date(customer.created_at).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">City</p>
+                <p className="font-medium text-muted-foreground/50">—</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Postcode</p>
+                <p className="font-medium text-muted-foreground/50">—</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -63,11 +125,39 @@ export default async function AdminCustomerDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td colSpan={4} className="py-10 text-center text-muted-foreground">
-                        No orders yet
-                      </td>
-                    </tr>
+                    {orders.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-10 text-center text-muted-foreground">
+                          No orders yet
+                        </td>
+                      </tr>
+                    ) : (
+                      orders.map((o) => (
+                        <tr key={o.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="py-3 pr-4 font-mono text-xs">
+                            <Link
+                              href={`/dashboard/admin/orders/${o.id}`}
+                              className="text-primary hover:underline"
+                            >
+                              {o.tracking_number ?? o.id.slice(0, 8)}
+                            </Link>
+                          </td>
+                          <td className="py-3 pr-4 text-muted-foreground">
+                            {new Date(o.created_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </td>
+                          <td className="py-3 pr-4">
+                            <StatusBadge status={statusMap[o.status] ?? "pending"} />
+                          </td>
+                          <td className="py-3">
+                            {o.price != null ? `$${Number(o.price).toFixed(2)}` : "—"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -81,9 +171,19 @@ export default async function AdminCustomerDetailPage({
               <CardTitle className="text-base font-semibold">Account Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full" size="sm">Send Message</Button>
-              <Button variant="outline" className="w-full" size="sm">Suspend Account</Button>
-              <Button variant="outline" className="w-full text-destructive border-destructive/30 hover:bg-destructive/5" size="sm">Delete Account</Button>
+              <Button variant="outline" className="w-full" size="sm">
+                Send Message
+              </Button>
+              <Button variant="outline" className="w-full" size="sm">
+                Suspend Account
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full text-destructive border-destructive/30 hover:bg-destructive/5"
+                size="sm"
+              >
+                Delete Account
+              </Button>
             </CardContent>
           </Card>
 
@@ -92,12 +192,22 @@ export default async function AdminCustomerDetailPage({
               <CardTitle className="text-base font-semibold">Stats</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {['Total Orders', 'Total Spent', 'Open Disputes', 'Last Active'].map((label) => (
-                <div key={label} className="flex justify-between">
-                  <span className="text-muted-foreground">{label}</span>
-                  <span className="font-medium text-muted-foreground/50">—</span>
-                </div>
-              ))}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Orders</span>
+                <span className="font-medium">{orders.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Spent</span>
+                <span className="font-medium">${totalSpent.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Open Disputes</span>
+                <span className="font-medium">{openDisputes}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Last Active</span>
+                <span className="font-medium text-muted-foreground/50">—</span>
+              </div>
             </CardContent>
           </Card>
         </div>

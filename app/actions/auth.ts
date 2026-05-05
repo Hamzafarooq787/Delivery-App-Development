@@ -56,6 +56,13 @@ export async function signUp(formData: FormData) {
       .from("users")
       .update({ full_name, role, phone })
       .eq("id", data.user.id)
+
+    // Create a pending driver_profiles entry for driver signups
+    if (role === "driver") {
+      await supabase
+        .from("driver_profiles")
+        .upsert({ id: data.user.id, status: "pending" }, { onConflict: "id" })
+    }
   }
 
   return { success: true }

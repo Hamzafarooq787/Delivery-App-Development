@@ -2,27 +2,93 @@ import { PageHeader } from "@/components/shared/page-header"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Timeline } from "@/components/shared/timeline"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, MapPin, Package, User, Phone, CheckCircle, XCircle } from "lucide-react"
+import { ArrowLeft, MapPin, Package, User, Phone, XCircle } from "lucide-react"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
+import { notFound } from "next/navigation"
+import { UpdateStatusButton } from "@/components/driver/update-status-button"
 
-const timelineSteps = [
-  { label: "Job Assigned", description: "Job was assigned to you.", status: "completed" as const, time: "—" },
-  { label: "En Route to Pickup", description: "Heading to pickup address.", status: "completed" as const, time: "—" },
-  { label: "Picked Up", description: "Package collected.", status: "active" as const, time: "—" },
-  { label: "En Route to Delivery", description: "Heading to delivery address.", status: "upcoming" as const },
-  { label: "Delivered", description: "Package delivered successfully.", status: "upcoming" as const },
-]
+const STATUS_ORDER = ["requested", "accepted", "collected", "in_transit", "delivered"]
+const STATUS_LABELS: Record<string, string> = {
+  requested: "Job Requested",
+  accepted: "Job Accepted",
+  collected: "Package Picked Up",
+  in_transit: "En Route to Delivery",
+  delivered: "Delivered",
+}
 
-export default function JobDetailPage({ params }: { params: { jobId: string } }) {
+const STATUS_BADGE_MAP: Record<string, "active" | "pending" | "completed" | "cancelled" | "in_transit"> = {
+  accepted: "active",
+  collected: "active",
+  in_transit: "in_transit",
+  delivered: "completed",
+  cancelled: "cancelled",
+  requested: "pending",
+}
+
+export default async function JobDetailPage({
+  params,
+}: {
+  params: Promise<{ jobId: string }>
+}) {
+  const { jobId } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: job, error } = await supabase
+    .from("delivery_requests")
+    .select("*")
+    .eq("id", jobId)
+    .eq("driver_id", user?.id ?? "")
+    .single()
+
+  if (error || !job) notFound()
+
+  const [customerRes, logsRes] = await Promise.all([
+    job.customer_id
+      ? supabase.from("users").select("full_name, phone, email").eq("id", job.customer_id).single()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("delivery_status_logs")
+      .select("status, created_at")
+      .eq("delivery_id", jobId)
+      .order("created_at", { ascending: true }),
+  ])
+
+  const customer = customerRes.data
+  const logs: { status: string; created_at: string }[] = logsRes.data ?? []
+  const currentIdx = STATUS_ORDER.indexOf(job.status)
+
+  const timelineSteps = STATUS_ORDER.filter((s) => s !== "requested").map((s, idx) => {
+    const log = logs.find((l) => l.status === s)
+    const realIdx = STATUS_ORDER.indexOf(s)
+    const status: "completed" | "active" | "upcoming" =
+      realIdx < currentIdx ? "completed" : realIdx === currentIdx ? "active" : "upcoming"
+    return {
+      label: STATUS_LABELS[s] ?? s,
+      status,
+      time: log
+        ? new Date(log.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+        : undefined,
+    }
+  })
+
+  const badgeStatus = STATUS_BADGE_MAP[job.status] ?? "pending"
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/dashboard/driver/jobs/available"><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
+          <Link href="/dashboard/driver/active-jobs">
+            <ArrowLeft className="h-4 w-4 mr-1" />Back
+          </Link>
         </Button>
       </div>
-      <PageHeader title={`Job ${params.jobId}`} description="Job details and delivery progress">
-        <StatusBadge status="active" />
+      <PageHeader
+        title={job.tracking_number ?? `Job #${jobId.slice(0, 8)}`}
+        description="Job details and delivery progress"
+      >
+        <StatusBadge status={badgeStatus} />
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -37,17 +103,17 @@ export default function JobDetailPage({ params }: { params: { jobId: string } })
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">Pickup Address</p>
-                  <div className="h-4 w-48 rounded bg-secondary"></div>
+                  <p className="text-sm font-medium text-foreground">{job.pickup_address ?? "—"}</p>
                 </div>
               </div>
-              <div className="ml-4 border-l-2 border-dashed border-border h-4"></div>
+              <div className="ml-4 border-l-2 border-dashed border-border h-4" />
               <div className="flex gap-3 items-start">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-foreground shrink-0">
                   <MapPin className="h-4 w-4" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5">Delivery Address</p>
-                  <div className="h-4 w-48 rounded bg-secondary"></div>
+                  <p className="text-sm font-medium text-foreground">{job.delivery_address ?? "—"}</p>
                 </div>
               </div>
             </div>
@@ -55,43 +121,69 @@ export default function JobDetailPage({ params }: { params: { jobId: string } })
 
           {/* Package */}
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-foreground mb-4">Package Info</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {["Type", "Weight", "Description", "Service", "Payout", "Customer"].map((f) => (
-                <div key={f}>
-                  <p className="text-xs text-muted-foreground mb-1">{f}</p>
-                  <div className="h-4 w-20 rounded bg-secondary"></div>
-                </div>
-              ))}
+            <h2 className="text-sm font-semibold text-foreground mb-4">
+              <Package className="h-4 w-4 inline mr-1.5" />Package Info
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Description</p>
+                <p className="font-medium">{job.item_description ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Declared Value</p>
+                <p className="font-medium">{job.item_value != null ? `$${Number(job.item_value).toFixed(2)}` : "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Payout</p>
+                <p className="font-medium">{job.price != null ? `$${Number(job.price).toFixed(2)}` : "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Tracking</p>
+                <p className="font-medium font-mono text-xs">{job.tracking_number ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Safe Item</p>
+                <p className="font-medium">{job.is_safe_confirmed ? "Confirmed" : "Not confirmed"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Status</p>
+                <p className="font-medium capitalize">{job.status.replace("_", " ")}</p>
+              </div>
             </div>
           </div>
 
-          {/* Sender Contact */}
+          {/* Customer Contact */}
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-foreground mb-4">Customer Contact</h2>
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center shrink-0">
                 <User className="h-6 w-6 text-muted-foreground" />
               </div>
               <div className="flex-1">
-                <div className="h-4 w-32 rounded bg-secondary mb-1.5"></div>
-                <div className="h-3.5 w-24 rounded bg-secondary"></div>
+                <p className="text-sm font-semibold text-foreground">{customer?.full_name ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">{customer?.email ?? "—"}</p>
               </div>
-              <Button variant="outline" size="sm">
-                <Phone className="h-4 w-4 mr-1.5" />Call
-              </Button>
+              {customer?.phone && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={`tel:${customer.phone}`}>
+                    <Phone className="h-4 w-4 mr-1.5" />Call
+                  </a>
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
-            <Button className="flex-1" size="sm">
-              <CheckCircle className="mr-1.5 h-4 w-4" />Mark as Delivered
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1">
-              <XCircle className="mr-1.5 h-4 w-4" />Report Issue
-            </Button>
-          </div>
+          {job.status !== "delivered" && job.status !== "cancelled" && (
+            <div className="flex gap-3">
+              <UpdateStatusButton jobId={jobId} currentStatus={job.status} />
+              <Button variant="outline" size="sm" className="flex-1" asChild>
+                <Link href="/dashboard/driver/support">
+                  <XCircle className="mr-1.5 h-4 w-4" />Report Issue
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm h-fit">
