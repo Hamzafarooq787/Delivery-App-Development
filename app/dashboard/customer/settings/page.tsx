@@ -43,14 +43,14 @@ export default function SettingsPage() {
         .from('users')
         .select('full_name, phone')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
       if (cancelled) return
       if (error) {
         console.error('[v0] settings load error — code:', error.code, error.message)
         return
       }
-      const nm = data.full_name ?? ''
-      const ph = data.phone ?? ''
+      const nm = data?.full_name ?? ''
+      const ph = data?.phone ?? ''
       setFullName(nm)
       setPhone(ph)
       setInitialFullName(nm)
@@ -89,19 +89,21 @@ export default function SettingsPage() {
     if (!userId || saving) return
     setSaving(true)
     setSaveMessage(null)
+    // upsert so it works whether the row already exists or not
     const { data: updated, error } = await supabase
       .from('users')
-      .update({ full_name: fullName, phone })
-      .eq('id', userId)
+      .upsert(
+        { id: userId, full_name: fullName, phone, role: 'customer' },
+        { onConflict: 'id' }
+      )
       .select('full_name, phone')
-      .maybeSingle()           // maybeSingle avoids PGRST116 when RLS allows UPDATE but not RETURNING
+      .maybeSingle()
     setSaving(false)
     if (error) {
       console.error('[v0] settings save error — code:', error.code, error.message)
       setSaveMessage({ type: 'error', text: error.message || 'Failed to save profile.' })
       return
     }
-    // Sync state to DB-confirmed values; fall back to local values if RETURNING was empty
     const savedName = updated?.full_name ?? fullName
     const savedPhone = updated?.phone ?? phone
     setFullName(savedName)
