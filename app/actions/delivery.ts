@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 
 // ── Customer actions ──────────────────────────────────────────────────────────
@@ -292,10 +293,10 @@ export async function adminGetPayouts() {
 }
 
 export async function adminGetDrivers() {
-  const supabase = await createClient()
+  // Use service-role client so RLS doesn't block the admin from reading all driver_profiles rows
+  const admin = createAdminClient()
 
-  // driver_profiles is the source of truth — anyone with a row here is a driver
-  const { data: profiles, error } = await supabase
+  const { data: profiles, error } = await admin
     .from("driver_profiles")
     .select("id, status, created_at")
     .order("created_at", { ascending: false })
@@ -304,10 +305,16 @@ export async function adminGetDrivers() {
   if (!profiles || profiles.length === 0) return { data: [] }
 
   const ids = profiles.map((p) => p.id)
-  const { data: users } = await supabase
+
+  // Pull profile data (full_name, phone) from public.users
+  const { data: users } = await admin
     .from("users")
-    .select("id, full_name, email, phone, created_at")
+    .select("id, full_name, phone, created_at")
     .in("id", ids)
+
+  // Pull emails from auth.users (email is not stored in public.users)
+  const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const emailMap = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]))
 
   const userMap = new Map((users ?? []).map((u) => [u.id, u]))
 
@@ -316,7 +323,7 @@ export async function adminGetDrivers() {
     return {
       id: p.id,
       full_name: u?.full_name ?? "Unknown Driver",
-      email: u?.email ?? "",
+      email: emailMap.get(p.id) ?? "",
       phone: u?.phone ?? null,
       created_at: u?.created_at ?? p.created_at,
       status: p.status as "pending" | "approved" | "rejected",
@@ -327,9 +334,9 @@ export async function adminGetDrivers() {
 }
 
 export async function adminApproveDriver(driverId: string) {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { error } = await supabase
+  const { error } = await admin
     .from("driver_profiles")
     .upsert({ id: driverId, status: "approved" }, { onConflict: "id" })
 
@@ -340,9 +347,9 @@ export async function adminApproveDriver(driverId: string) {
 }
 
 export async function adminRejectDriver(driverId: string) {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { error } = await supabase
+  const { error } = await admin
     .from("driver_profiles")
     .upsert({ id: driverId, status: "rejected" }, { onConflict: "id" })
 
