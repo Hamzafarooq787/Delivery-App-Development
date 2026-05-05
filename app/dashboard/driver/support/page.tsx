@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/shared/page-header"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
+import { LiveChat } from "@/components/driver/LiveChat"
 import { MessageSquare, Plus } from "lucide-react"
 
 const tickets = [
@@ -16,20 +17,32 @@ export default function DriverSupportPage() {
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {[
-          { title: "Driver FAQs", description: "Common questions about deliveries, payouts, and verification.", action: "Browse FAQs" },
-          { title: "Live Chat", description: "Connect with our driver support team instantly.", action: "Start Chat" },
-          { title: "Call Support", description: "Speak to a driver support representative.", action: "Call Now" },
-        ].map((item) => (
-          <div key={item.title} className="rounded-xl border border-border bg-card p-5 shadow-sm flex flex-col gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary">
-              <MessageSquare className="h-4 w-4 text-foreground" />
-            </div>
-            <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed flex-1">{item.description}</p>
-            <Button variant="outline" size="sm">{item.action}</Button>
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm flex flex-col gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary">
+            <MessageSquare className="h-4 w-4 text-foreground" />
           </div>
-        ))}
+          <h3 className="text-sm font-semibold text-foreground">Driver FAQs</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed flex-1">Common questions about deliveries, payouts, and verification.</p>
+          <Button variant="outline" size="sm">Browse FAQs</Button>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm flex flex-col gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary">
+            <MessageSquare className="h-4 w-4 text-foreground" />
+          </div>
+          <h3 className="text-sm font-semibold text-foreground">Live Chat</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed flex-1">Connect with our AI-powered driver support assistant instantly.</p>
+          <LiveChat />
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm flex flex-col gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary">
+            <MessageSquare className="h-4 w-4 text-foreground" />
+          </div>
+          <h3 className="text-sm font-semibold text-foreground">Call Support</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed flex-1">Speak to a driver support representative.</p>
+          <Button variant="outline" size="sm">Call Now</Button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card shadow-sm">
