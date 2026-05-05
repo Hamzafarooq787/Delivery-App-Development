@@ -369,3 +369,50 @@ export async function adminSaveSettings(formData: FormData) {
   revalidatePath("/dashboard/admin/settings")
   return { success: true }
 }
+
+export async function updateDriverProfile(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const first = (formData.get("first_name") as string ?? "").trim()
+  const last = (formData.get("last_name") as string ?? "").trim()
+  const full_name = last ? `${first} ${last}` : first
+
+  const { error } = await supabase
+    .from("users")
+    .update({ full_name, phone: formData.get("phone") as string })
+    .eq("id", user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/driver/profile")
+  revalidatePath("/dashboard/driver/settings")
+  return { success: true }
+}
+
+export async function getDriverPayouts() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated", data: [] }
+
+  const { data, error } = await supabase
+    .from("payouts")
+    .select("*")
+    .eq("driver_id", user.id)
+    .order("created_at", { ascending: false })
+
+  if (error) return { error: error.message, data: [] }
+  return { data: data ?? [] }
+}
+
+export async function adminGetPayoutsWithDrivers() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("payouts")
+    .select("*, users(full_name, email)")
+    .order("created_at", { ascending: false })
+
+  if (error) return { error: error.message, data: [] }
+  return { data: data ?? [] }
+}
