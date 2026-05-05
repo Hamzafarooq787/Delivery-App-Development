@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
+import { AddDriverModal } from "@/components/admin/add-driver-modal"
 
 type VerificationDot = "verified" | "pending"
 type Tab = "pending" | "approved" | "rejected"
@@ -41,6 +42,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
   const [activeTab, setActiveTab] = useState<Tab>("pending")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [showAddModal, setShowAddModal] = useState(false)
 
   const filtered = drivers.filter((d) => d.status === activeTab)
   const pendingCount = drivers.filter((d) => d.status === "pending").length
@@ -68,6 +70,8 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
 
   return (
     <div className="p-4 md:p-8">
+      {showAddModal && <AddDriverModal onClose={() => setShowAddModal(false)} />}
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-sans">
@@ -77,7 +81,10 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
             Manage and verify new fleet operator applications.
           </p>
         </div>
-        <button className="self-start sm:self-auto bg-[#a3a6ff] text-[#0f00a4] px-5 py-2.5 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] active:scale-95 transition-all flex items-center gap-2">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="self-start sm:self-auto bg-[#a3a6ff] text-[#0f00a4] px-5 py-2.5 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] active:scale-95 transition-all flex items-center gap-2"
+        >
           <span className="material-symbols-outlined text-sm">person_add</span>
           Manual Entry
         </button>
