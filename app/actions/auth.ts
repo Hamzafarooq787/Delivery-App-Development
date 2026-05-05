@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
 
 export async function signIn(formData: FormData) {
@@ -50,16 +51,16 @@ export async function signUp(formData: FormData) {
 
   if (error) return { error: error.message }
 
-  // Update the users row created by trigger with full_name, role, phone
+  // Use service-role client so these writes succeed before the user has a session
   if (data.user) {
-    await supabase
-      .from("users")
-      .update({ full_name, role, phone })
-      .eq("id", data.user.id)
+    const admin = createAdminClient()
 
-    // Create a pending driver_profiles entry for driver signups
+    await admin
+      .from("users")
+      .upsert({ id: data.user.id, full_name, role, phone }, { onConflict: "id" })
+
     if (role === "driver") {
-      await supabase
+      await admin
         .from("driver_profiles")
         .upsert({ id: data.user.id, status: "pending" }, { onConflict: "id" })
     }
