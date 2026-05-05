@@ -89,27 +89,26 @@ export default function SettingsPage() {
     if (!userId || saving) return
     setSaving(true)
     setSaveMessage(null)
-    // upsert so it works whether the row already exists or not
     const { data: updated, error } = await supabase
       .from('users')
-      .upsert(
-        { id: userId, full_name: fullName, phone, role: 'customer' },
-        { onConflict: 'id' }
-      )
+      .update({ full_name: fullName, phone })
+      .eq('id', userId)
       .select('full_name, phone')
-      .maybeSingle()
+      .single()
     setSaving(false)
     if (error) {
       console.error('[v0] settings save error — code:', error.code, error.message)
-      setSaveMessage({ type: 'error', text: error.message || 'Failed to save profile.' })
+      // PGRST116 = 0 rows matched — RLS is blocking the update
+      const msg = error.code === 'PGRST116'
+        ? 'Save blocked — RLS policy missing. Run the SQL fix in your Supabase dashboard.'
+        : error.message || 'Failed to save profile.'
+      setSaveMessage({ type: 'error', text: msg })
       return
     }
-    const savedName = updated?.full_name ?? fullName
-    const savedPhone = updated?.phone ?? phone
-    setFullName(savedName)
-    setPhone(savedPhone)
-    setInitialFullName(savedName)
-    setInitialPhone(savedPhone)
+    setFullName(updated.full_name ?? fullName)
+    setPhone(updated.phone ?? phone)
+    setInitialFullName(updated.full_name ?? fullName)
+    setInitialPhone(updated.phone ?? phone)
     setSaveMessage({ type: 'success', text: 'Profile updated successfully.' })
   }
 
