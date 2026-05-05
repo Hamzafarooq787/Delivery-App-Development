@@ -293,44 +293,96 @@ export async function adminGetPayouts() {
 }
 
 export async function adminGetDrivers() {
-  // Use service-role client so RLS doesn't block the admin from reading all driver_profiles rows
   const admin = createAdminClient()
 
-  const { data: profiles, error } = await admin
-    .from("driver_profiles")
-    .select("id, status, created_at")
-    .order("created_at", { ascending: false })
+  // Fetch both sources in parallel: driver_profiles rows AND users with role='driver'
+  const [profilesRes, driverUsersRes, authData] = await Promise.all([
+    admin.from("driver_profiles").select("id, status, created_at"),
+    admin.from("users").select("id, full_name, phone, created_at").eq("role", "driver"),
+    admin.auth.admin.listUsers({ perPage: 1000 }),
+  ])
 
-  if (error) return { error: error.message, data: [] }
-  if (!profiles || profiles.length === 0) return { data: [] }
+  const profiles = profilesRes.data ?? []
+  const driverUsers = driverUsersRes.data ?? []
+  const emailMap = new Map((authData.data?.users ?? []).map((u) => [u.id, u.email ?? ""]))
 
-  const ids = profiles.map((p) => p.id)
+  // Merge: start with all users who have role='driver', supplement with driver_profiles
+  const profileMap = new Map(profiles.map((p) => [p.id, p]))
+  const userMap = new Map(driverUsers.map((u) => [u.id, u]))
 
-  // Pull profile data (full_name, phone) from public.users
-  const { data: users } = await admin
-    .from("users")
-    .select("id, full_name, phone, created_at")
-    .in("id", ids)
+  // Collect every unique driver id from either source
+  const allIds = new Set([...profiles.map((p) => p.id), ...driverUsers.map((u) => u.id)])
 
-  // Pull emails from auth.users (email is not stored in public.users)
-  const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 })
-  const emailMap = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]))
+  // For users with role='driver' who have no driver_profiles row, create one now
+  const missingProfileIds = driverUsers
+    .filter((u) => !profileMap.has(u.id))
+    .map((u) => u.id)
 
-  const userMap = new Map((users ?? []).map((u) => [u.id, u]))
+  if (missingProfileIds.length > 0) {
+    await admin
+      .from("driver_profiles")
+      .upsert(
+        missingProfileIds.map((id) => ({ id, status: "pending" })),
+        { onConflict: "id" }
+      )
+    missingProfileIds.forEach((id) => profileMap.set(id, { id, status: "pending", created_at: new Date().toISOString() }))
+  }
 
-  const drivers = profiles.map((p) => {
-    const u = userMap.get(p.id)
+  const drivers = Array.from(allIds).map((id) => {
+    const u = userMap.get(id)
+    const p = profileMap.get(id)
     return {
-      id: p.id,
+      id,
       full_name: u?.full_name ?? "Unknown Driver",
-      email: emailMap.get(p.id) ?? "",
+      email: emailMap.get(id) ?? "",
       phone: u?.phone ?? null,
-      created_at: u?.created_at ?? p.created_at,
-      status: p.status as "pending" | "approved" | "rejected",
+      created_at: u?.created_at ?? p?.created_at ?? new Date().toISOString(),
+      status: (p?.status ?? "pending") as "pending" | "approved" | "rejected",
     }
   })
 
+  // Sort newest first
+  drivers.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
   return { data: drivers }
+}
+
+export async function adminCreateDriver(formData: FormData) {
+  const admin = createAdminClient()
+
+  const email = (formData.get("email") as string).trim()
+  const full_name = (formData.get("full_name") as string).trim()
+  const phone = ((formData.get("phone") as string) ?? "").trim() || null
+
+  if (!email || !full_name) return { error: "Name and email are required" }
+
+  // Check if user already exists in auth
+  const { data: authList } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const existing = authList?.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())
+
+  let userId: string
+
+  if (existing) {
+    userId = existing.id
+    // Update role to driver in case they were a customer
+    await admin.from("users").upsert({ id: userId, full_name, phone, role: "driver" }, { onConflict: "id" })
+  } else {
+    // Create new auth user with a temporary password they can reset
+    const { data: newUser, error: createError } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { full_name, role: "driver", phone },
+    })
+    if (createError || !newUser.user) return { error: createError?.message ?? "Failed to create user" }
+    userId = newUser.user.id
+    await admin.from("users").upsert({ id: userId, full_name, phone, role: "driver" }, { onConflict: "id" })
+  }
+
+  // Ensure driver_profiles row exists
+  await admin.from("driver_profiles").upsert({ id: userId, status: "pending" }, { onConflict: "id" })
+
+  revalidatePath("/dashboard/admin/drivers")
+  return { success: true }
 }
 
 export async function adminApproveDriver(driverId: string) {
