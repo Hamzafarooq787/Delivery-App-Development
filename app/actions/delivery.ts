@@ -290,3 +290,71 @@ export async function adminGetPayouts() {
   if (error) return { error: error.message, data: [] }
   return { data: data ?? [] }
 }
+
+export async function adminGetDrivers() {
+  const supabase = await createClient()
+
+  const [{ data: users, error }, { data: profiles }] = await Promise.all([
+    supabase
+      .from("users")
+      .select("id, full_name, email, phone, created_at")
+      .eq("role", "driver")
+      .order("created_at", { ascending: false }),
+    supabase.from("driver_profiles").select("id, status"),
+  ])
+
+  if (error) return { error: error.message, data: [] }
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.status as "pending" | "approved" | "rejected"]))
+
+  const drivers = (users ?? []).map((u) => ({
+    ...u,
+    status: profileMap.get(u.id) ?? ("pending" as "pending" | "approved" | "rejected"),
+  }))
+
+  return { data: drivers }
+}
+
+export async function adminApproveDriver(driverId: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("driver_profiles")
+    .update({ status: "approved" })
+    .eq("id", driverId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/drivers")
+  return { success: true }
+}
+
+export async function adminRejectDriver(driverId: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("driver_profiles")
+    .update({ status: "rejected" })
+    .eq("id", driverId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/drivers")
+  return { success: true }
+}
+
+export async function adminSaveSettings(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const { error } = await supabase
+    .from("users")
+    .update({
+      full_name: formData.get("full_name") as string,
+      phone: formData.get("phone") as string,
+    })
+    .eq("id", user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/settings")
+  return { success: true }
+}

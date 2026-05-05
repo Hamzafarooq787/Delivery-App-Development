@@ -1,9 +1,12 @@
-import { PageHeader } from '@/components/shared/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { StatusBadge } from '@/components/shared/status-badge'
-import { ArrowLeft, User, Car, FileText, DollarSign } from 'lucide-react'
-import Link from 'next/link'
+import { PageHeader } from "@/components/shared/page-header"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/shared/status-badge"
+import { ArrowLeft, User, Car, FileText, DollarSign } from "lucide-react"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
+import { notFound, redirect } from "next/navigation"
+import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
 
 export default async function AdminDriverDetailPage({
   params,
@@ -11,6 +14,45 @@ export default async function AdminDriverDetailPage({
   params: Promise<{ driverId: string }>
 }) {
   const { driverId } = await params
+  const supabase = await createClient()
+
+  const { data: user, error } = await supabase
+    .from("users")
+    .select("id, full_name, email, phone, created_at")
+    .eq("id", driverId)
+    .single()
+
+  if (error || !user) notFound()
+
+  const [profileRes, earningsRes, jobsRes] = await Promise.all([
+    supabase.from("driver_profiles").select("status, created_at").eq("id", driverId).single(),
+    supabase.from("driver_earnings").select("amount").eq("driver_id", driverId),
+    supabase
+      .from("delivery_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("driver_id", driverId)
+      .eq("status", "delivered"),
+  ])
+
+  const profile = profileRes.data
+  const driverStatus = (profile?.status ?? "pending") as "pending" | "approved" | "rejected"
+  const totalEarned = (earningsRes.data ?? []).reduce((sum, e) => sum + (e.amount ?? 0), 0)
+  const jobsCompleted = jobsRes.count ?? 0
+
+  const badgeStatus =
+    driverStatus === "approved" ? "verified" : driverStatus === "rejected" ? "cancelled" : "pending"
+
+  async function approve() {
+    "use server"
+    await adminApproveDriver(driverId)
+    redirect(`/dashboard/admin/drivers/${driverId}`)
+  }
+
+  async function reject() {
+    "use server"
+    await adminRejectDriver(driverId)
+    redirect(`/dashboard/admin/drivers/${driverId}`)
+  }
 
   return (
     <div className="space-y-6">
@@ -21,7 +63,7 @@ export default async function AdminDriverDetailPage({
           </Button>
         </Link>
         <PageHeader
-          title={`Driver #${driverId}`}
+          title={user.full_name}
           description="Driver profile, documents, and job history."
         />
       </div>
@@ -36,12 +78,36 @@ export default async function AdminDriverDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {['Full Name', 'Email', 'Phone', 'Joined', 'City', 'Postcode'].map((label) => (
-                <div key={label}>
-                  <p className="text-muted-foreground">{label}</p>
-                  <p className="font-medium text-muted-foreground/50">—</p>
-                </div>
-              ))}
+              <div>
+                <p className="text-muted-foreground">Full Name</p>
+                <p className="font-medium">{user.full_name}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Email</p>
+                <p className="font-medium">{user.email}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Phone</p>
+                <p className="font-medium">{user.phone ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Joined</p>
+                <p className="font-medium">
+                  {new Date(user.created_at).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">City</p>
+                <p className="font-medium text-muted-foreground/50">—</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Postcode</p>
+                <p className="font-medium text-muted-foreground/50">—</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -53,12 +119,14 @@ export default async function AdminDriverDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {['Type', 'Make & Model', 'Year', 'Registration', 'Insurance Expiry', 'MOT Expiry'].map((label) => (
-                <div key={label}>
-                  <p className="text-muted-foreground">{label}</p>
-                  <p className="font-medium text-muted-foreground/50">—</p>
-                </div>
-              ))}
+              {["Type", "Make & Model", "Year", "Registration", "Insurance Expiry", "MOT Expiry"].map(
+                (label) => (
+                  <div key={label}>
+                    <p className="text-muted-foreground">{label}</p>
+                    <p className="font-medium text-muted-foreground/50">—</p>
+                  </div>
+                )
+              )}
             </CardContent>
           </Card>
 
@@ -80,11 +148,17 @@ export default async function AdminDriverDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {['Driving Licence', 'Insurance', 'MOT Certificate', 'Profile Photo'].map((doc) => (
+                    {["Driving Licence", "Insurance", "MOT Certificate", "Profile Photo"].map((doc) => (
                       <tr key={doc} className="border-b last:border-0">
                         <td className="py-3 pr-4">{doc}</td>
-                        <td className="py-3 pr-4"><StatusBadge status="pending" /></td>
-                        <td className="py-3"><Button variant="ghost" size="sm">Review</Button></td>
+                        <td className="py-3 pr-4">
+                          <StatusBadge status="pending" />
+                        </td>
+                        <td className="py-3">
+                          <Button variant="ghost" size="sm">
+                            Review
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -100,11 +174,21 @@ export default async function AdminDriverDetailPage({
               <CardTitle className="text-base font-semibold">Verification Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <StatusBadge status="pending" />
+              <StatusBadge status={badgeStatus} />
               <div className="space-y-2 pt-2">
-                <Button className="w-full" size="sm">Approve Driver</Button>
-                <Button variant="outline" className="w-full" size="sm">Reject</Button>
-                <Button variant="outline" className="w-full" size="sm">Suspend Account</Button>
+                <form action={approve}>
+                  <Button className="w-full" size="sm" type="submit" disabled={driverStatus === "approved"}>
+                    Approve Driver
+                  </Button>
+                </form>
+                <form action={reject}>
+                  <Button variant="outline" className="w-full" size="sm" type="submit" disabled={driverStatus === "rejected"}>
+                    Reject
+                  </Button>
+                </form>
+                <Button variant="outline" className="w-full" size="sm">
+                  Suspend Account
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -117,12 +201,22 @@ export default async function AdminDriverDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {['Total Earned', 'Jobs Completed', 'Average Rating', 'Pending Payout'].map((label) => (
-                <div key={label} className="flex justify-between">
-                  <span className="text-muted-foreground">{label}</span>
-                  <span className="font-medium text-muted-foreground/50">—</span>
-                </div>
-              ))}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Earned</span>
+                <span className="font-medium">${totalEarned.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Jobs Completed</span>
+                <span className="font-medium">{jobsCompleted}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Average Rating</span>
+                <span className="font-medium text-muted-foreground/50">—</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Pending Payout</span>
+                <span className="font-medium text-muted-foreground/50">—</span>
+              </div>
             </CardContent>
           </Card>
         </div>

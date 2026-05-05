@@ -1,4 +1,20 @@
-export default function AdminSettingsPage() {
+import { createClient } from "@/lib/supabase/server"
+import { GeneralSettingsForm } from "@/components/admin/general-settings-form"
+
+export default async function AdminSettingsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let adminProfile = { full_name: "", email: "", phone: "" }
+  if (user) {
+    const { data } = await supabase
+      .from("users")
+      .select("full_name, email, phone")
+      .eq("id", user.id)
+      .single()
+    if (data) adminProfile = { full_name: data.full_name ?? "", email: data.email ?? "", phone: data.phone ?? "" }
+  }
+
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
       {/* Header */}
@@ -47,29 +63,11 @@ export default function AdminSettingsPage() {
               <span className="material-symbols-outlined text-[#a3a6ff]">tune</span>
               <h3 className="text-base font-bold text-white font-headline">General Settings</h3>
             </div>
-            <div className="space-y-4">
-              {[
-                { label: "Platform Name", placeholder: "Kinetic Velocity", type: "text" },
-                { label: "Support Email", placeholder: "support@kinetic.io", type: "email" },
-                { label: "Support Phone", placeholder: "+1 (800) 000-0000", type: "tel" },
-              ].map(({ label, placeholder, type }) => (
-                <div key={label}>
-                  <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">
-                    {label}
-                  </label>
-                  <input
-                    type={type}
-                    placeholder={placeholder}
-                    className="w-full bg-[#201f1f] border border-[#494847]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[#a3a6ff]/40 transition-colors"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button className="bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-[#b5b8ff] transition-colors">
-                Save General
-              </button>
-            </div>
+            <GeneralSettingsForm
+              fullName={adminProfile.full_name}
+              email={adminProfile.email}
+              phone={adminProfile.phone}
+            />
           </div>
 
           {/* Pricing */}
@@ -117,7 +115,7 @@ export default function AdminSettingsPage() {
                 "Out for Delivery",
                 "Order Delivered",
                 "Order Cancelled",
-              ].map((template, i) => (
+              ].map((template) => (
                 <div
                   key={template}
                   className="group flex items-center justify-between px-4 py-4 rounded-xl hover:bg-[#201f1f] transition-colors cursor-pointer"
