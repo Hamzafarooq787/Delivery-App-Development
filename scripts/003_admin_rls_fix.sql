@@ -89,7 +89,20 @@ create policy "Driver can insert delivery logs"
   on delivery_status_logs for insert
   with check (auth.uid() = updated_by);
 
--- delivery_requests: driver can update assigned deliveries (for status changes)
+-- delivery_requests: any authenticated driver can view unassigned (available) jobs
+drop policy if exists "Driver can view available deliveries" on delivery_requests;
+create policy "Driver can view available deliveries"
+  on delivery_requests for select
+  using (status = 'requested' and driver_id is null and auth.uid() is not null);
+
+-- delivery_requests: driver can claim an unassigned job
+drop policy if exists "Driver can claim available delivery" on delivery_requests;
+create policy "Driver can claim available delivery"
+  on delivery_requests for update
+  using (status = 'requested' and driver_id is null)
+  with check (auth.uid() = driver_id);
+
+-- delivery_requests: driver can update their own assigned deliveries (status changes)
 drop policy if exists "Driver can update assigned deliveries" on delivery_requests;
 create policy "Driver can update assigned deliveries"
   on delivery_requests for update

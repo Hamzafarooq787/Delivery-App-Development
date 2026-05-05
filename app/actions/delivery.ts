@@ -102,11 +102,12 @@ export async function submitSupportTicket(formData: FormData) {
 // ── Driver actions ────────────────────────────────────────────────────────────
 
 export async function getAvailableDeliveries() {
-  const supabase = await createClient()
+  // Use admin client: RLS has no policy allowing drivers to read unassigned delivery_requests
+  const admin = createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("delivery_requests")
-    .select("*")
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id")
     .eq("status", "requested")
     .is("driver_id", null)
     .order("created_at", { ascending: false })
@@ -120,22 +121,23 @@ export async function acceptDelivery(deliveryId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const { data: delivery, error: fetchError } = await supabase
+  const admin = createAdminClient()
+
+  // Verify the delivery is still available
+  const { data: delivery, error: fetchError } = await admin
     .from("delivery_requests")
     .select("id, status, driver_id")
     .eq("id", deliveryId)
     .single()
 
-  if (fetchError) {
-    console.error("[acceptDelivery] fetch error:", fetchError)
-    return { error: fetchError.message }
-  }
+  if (fetchError) return { error: fetchError.message }
 
   if (delivery.status !== "requested" || delivery.driver_id) {
     return { error: "This job is no longer available to accept." }
   }
 
-  const { data: updatedDelivery, error } = await supabase
+  // Claim the delivery atomically — only succeeds if still unassigned
+  const { data: updatedDelivery, error } = await admin
     .from("delivery_requests")
     .update({ driver_id: user.id, status: "accepted" })
     .eq("id", deliveryId)
@@ -144,16 +146,11 @@ export async function acceptDelivery(deliveryId: string) {
     .select("id")
     .maybeSingle()
 
-  if (error) {
-    console.error("[acceptDelivery] update error:", error)
-    return { error: error.message }
-  }
-
-  if (!updatedDelivery) {
-    return { error: "This job was already accepted by another driver." }
-  }
+  if (error) return { error: error.message }
+  if (!updatedDelivery) return { error: "This job was already accepted by another driver." }
 
   revalidatePath("/dashboard/driver/jobs/available")
+  revalidatePath("/dashboard/driver/jobs/active")
   revalidatePath("/dashboard/driver/active-jobs")
   return { success: true }
 }
@@ -408,6 +405,25 @@ export async function adminRejectDriver(driverId: string) {
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/drivers")
   revalidatePath(`/dashboard/admin/drivers/${driverId}`)
+  return { success: true }
+}
+
+export async function adminAssignDriver(deliveryId: string, driverId: string | null) {
+  const admin = createAdminClient()
+
+  const update: Record<string, string | null> =
+    driverId
+      ? { driver_id: driverId, status: "accepted" }
+      : { driver_id: null, status: "requested" }
+
+  const { error } = await admin
+    .from("delivery_requests")
+    .update(update)
+    .eq("id", deliveryId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/orders")
+  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
   return { success: true }
 }
 
