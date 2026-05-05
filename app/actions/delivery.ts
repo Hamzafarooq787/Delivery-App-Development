@@ -359,6 +359,62 @@ export async function adminRejectDriver(driverId: string) {
   return { success: true }
 }
 
+export async function adminGetCustomers() {
+  const admin = createAdminClient()
+
+  // Get all users with role = customer from public.users
+  const { data: users, error } = await admin
+    .from("users")
+    .select("id, full_name, phone, created_at")
+    .eq("role", "customer")
+    .order("created_at", { ascending: false })
+    .limit(50)
+
+  if (error) return { error: error.message, data: [] }
+  if (!users || users.length === 0) return { data: [] }
+
+  // Get emails from auth.users (email column doesn't exist in public.users)
+  const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const emailMap = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]))
+
+  return {
+    data: users.map((u) => ({
+      id: u.id,
+      full_name: u.full_name ?? "",
+      email: emailMap.get(u.id) ?? "",
+      phone: u.phone ?? null,
+      created_at: u.created_at,
+    })),
+  }
+}
+
+export async function adminGetDriverById(driverId: string) {
+  const admin = createAdminClient()
+
+  const [userRes, profileRes, earningsRes, jobsRes, authUserRes] = await Promise.all([
+    admin.from("users").select("id, full_name, phone, created_at").eq("id", driverId).single(),
+    admin.from("driver_profiles").select("status, created_at").eq("id", driverId).single(),
+    admin.from("driver_earnings").select("amount").eq("driver_id", driverId),
+    admin.from("delivery_requests").select("id", { count: "exact", head: true }).eq("driver_id", driverId).eq("status", "delivered"),
+    admin.auth.admin.getUserById(driverId),
+  ])
+
+  if (userRes.error || !userRes.data) return { error: "Driver not found", data: null }
+
+  return {
+    data: {
+      id: userRes.data.id,
+      full_name: userRes.data.full_name ?? "Unknown Driver",
+      email: authUserRes.data?.user?.email ?? "",
+      phone: userRes.data.phone ?? null,
+      created_at: userRes.data.created_at,
+      status: (profileRes.data?.status ?? "pending") as "pending" | "approved" | "rejected",
+      totalEarned: (earningsRes.data ?? []).reduce((s, e) => s + (e.amount ?? 0), 0),
+      jobsCompleted: jobsRes.count ?? 0,
+    },
+  }
+}
+
 export async function adminSaveSettings(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

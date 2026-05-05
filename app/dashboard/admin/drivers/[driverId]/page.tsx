@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { ArrowLeft, User, Car, FileText, DollarSign } from "lucide-react"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
-import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
+import { adminApproveDriver, adminRejectDriver, adminGetDriverById } from "@/app/actions/delivery"
 
 export default async function AdminDriverDetailPage({
   params,
@@ -14,33 +13,12 @@ export default async function AdminDriverDetailPage({
   params: Promise<{ driverId: string }>
 }) {
   const { driverId } = await params
-  const supabase = await createClient()
+  const { data: driver, error } = await adminGetDriverById(driverId)
 
-  const { data: user, error } = await supabase
-    .from("users")
-    .select("id, full_name, email, phone, created_at")
-    .eq("id", driverId)
-    .single()
-
-  if (error || !user) notFound()
-
-  const [profileRes, earningsRes, jobsRes] = await Promise.all([
-    supabase.from("driver_profiles").select("status, created_at").eq("id", driverId).single(),
-    supabase.from("driver_earnings").select("amount").eq("driver_id", driverId),
-    supabase
-      .from("delivery_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("driver_id", driverId)
-      .eq("status", "delivered"),
-  ])
-
-  const profile = profileRes.data
-  const driverStatus = (profile?.status ?? "pending") as "pending" | "approved" | "rejected"
-  const totalEarned = (earningsRes.data ?? []).reduce((sum, e) => sum + (e.amount ?? 0), 0)
-  const jobsCompleted = jobsRes.count ?? 0
+  if (error || !driver) notFound()
 
   const badgeStatus =
-    driverStatus === "approved" ? "verified" : driverStatus === "rejected" ? "cancelled" : "pending"
+    driver.status === "approved" ? "verified" : driver.status === "rejected" ? "cancelled" : "pending"
 
   async function approve() {
     "use server"
@@ -63,7 +41,7 @@ export default async function AdminDriverDetailPage({
           </Button>
         </Link>
         <PageHeader
-          title={user.full_name}
+          title={driver.full_name}
           description="Driver profile, documents, and job history."
         />
       </div>
@@ -80,20 +58,20 @@ export default async function AdminDriverDetailPage({
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Full Name</p>
-                <p className="font-medium">{user.full_name}</p>
+                <p className="font-medium">{driver.full_name}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Email</p>
-                <p className="font-medium">{user.email}</p>
+                <p className="font-medium">{driver.email || "—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Phone</p>
-                <p className="font-medium">{user.phone ?? "—"}</p>
+                <p className="font-medium">{driver.phone ?? "—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Joined</p>
                 <p className="font-medium">
-                  {new Date(user.created_at).toLocaleDateString("en-US", {
+                  {new Date(driver.created_at).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
                     year: "numeric",
@@ -177,12 +155,12 @@ export default async function AdminDriverDetailPage({
               <StatusBadge status={badgeStatus} />
               <div className="space-y-2 pt-2">
                 <form action={approve}>
-                  <Button className="w-full" size="sm" type="submit" disabled={driverStatus === "approved"}>
+                  <Button className="w-full" size="sm" type="submit" disabled={driver.status === "approved"}>
                     Approve Driver
                   </Button>
                 </form>
                 <form action={reject}>
-                  <Button variant="outline" className="w-full" size="sm" type="submit" disabled={driverStatus === "rejected"}>
+                  <Button variant="outline" className="w-full" size="sm" type="submit" disabled={driver.status === "rejected"}>
                     Reject
                   </Button>
                 </form>
@@ -203,11 +181,11 @@ export default async function AdminDriverDetailPage({
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Earned</span>
-                <span className="font-medium">${totalEarned.toFixed(2)}</span>
+                <span className="font-medium">${driver.totalEarned.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Jobs Completed</span>
-                <span className="font-medium">{jobsCompleted}</span>
+                <span className="font-medium">{driver.jobsCompleted}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Average Rating</span>

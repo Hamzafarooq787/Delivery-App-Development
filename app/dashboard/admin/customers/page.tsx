@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { adminGetCustomers } from "@/app/actions/delivery"
 
 const ACCENT_COLORS = [
   { bg: "bg-[#a3a6ff]/10", text: "text-[#a3a6ff]" },
@@ -8,16 +8,7 @@ const ACCENT_COLORS = [
 ]
 
 export default async function AdminCustomersPage() {
-  const supabase = await createClient()
-
-  const { data: customers, count } = await supabase
-    .from("users")
-    .select("id, full_name, email, created_at, phone", { count: "exact" })
-    .eq("role", "customer")
-    .order("created_at", { ascending: false })
-    .limit(20)
-
-  const rows = customers ?? []
+  const { data: rows = [] } = await adminGetCustomers()
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
@@ -69,7 +60,7 @@ export default async function AdminCustomersPage() {
               ) : (
                 rows.map((customer, index) => {
                   const accent = ACCENT_COLORS[index % ACCENT_COLORS.length]
-                  const name = customer.full_name ?? customer.email ?? "?"
+                  const name = customer.full_name || customer.email || "?"
                   const initials = name
                     .split(" ")
                     .map((w: string) => w[0])
@@ -87,7 +78,7 @@ export default async function AdminCustomersPage() {
                             {initials}
                           </div>
                           <div>
-                            <p className="text-white font-semibold text-sm">{customer.full_name ?? "Unknown"}</p>
+                            <p className="text-white font-semibold text-sm">{customer.full_name || "Unknown"}</p>
                             <p className="text-[#adaaaa] text-xs">
                               ID: KV-{customer.id.slice(0, 5).toUpperCase()}
                             </p>
@@ -95,7 +86,7 @@ export default async function AdminCustomersPage() {
                         </div>
                       </td>
                       <td className="px-6 lg:px-8 py-5">
-                        <p className="text-white text-sm">{customer.email}</p>
+                        <p className="text-white text-sm">{customer.email || "—"}</p>
                         <p className="text-[#adaaaa] text-xs">{customer.phone ?? "—"}</p>
                       </td>
                       <td className="px-6 lg:px-8 py-5">
@@ -130,7 +121,7 @@ export default async function AdminCustomersPage() {
           ) : (
             rows.map((customer, index) => {
               const accent = ACCENT_COLORS[index % ACCENT_COLORS.length]
-              const name = customer.full_name ?? customer.email ?? "?"
+              const name = customer.full_name || customer.email || "?"
               const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
               return (
                 <div key={customer.id} className="flex items-center gap-4 px-4 py-4 hover:bg-[#262626] transition-colors">
@@ -138,8 +129,8 @@ export default async function AdminCustomersPage() {
                     {initials}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold text-sm truncate">{customer.full_name ?? "Unknown"}</p>
-                    <p className="text-[#adaaaa] text-xs truncate">{customer.email}</p>
+                    <p className="text-white font-semibold text-sm truncate">{customer.full_name || "Unknown"}</p>
+                    <p className="text-[#adaaaa] text-xs truncate">{customer.email || "—"}</p>
                   </div>
                   <div className="w-2 h-2 rounded-full bg-[#a3a6ff] shadow-[0px_0px_8px_rgba(163,166,255,0.6)] shrink-0" />
                 </div>
@@ -151,7 +142,7 @@ export default async function AdminCustomersPage() {
         {/* Pagination Footer */}
         <div className="px-4 md:px-8 py-4 bg-[#201f1f]/30 flex items-center justify-between">
           <p className="text-xs text-[#adaaaa]">
-            {rows.length} of {count ?? 0} nodes
+            {rows.length} of {rows.length} nodes
           </p>
           <div className="flex gap-2">
             <button className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[#a3a6ff] transition-colors">
