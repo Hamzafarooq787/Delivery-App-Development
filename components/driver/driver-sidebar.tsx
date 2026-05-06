@@ -20,13 +20,16 @@ const navItems = [
   { label: "Support", href: "/dashboard/driver/support", icon: "headset_mic" },
 ]
 
+const UNLOCKED_ROUTES = ["/dashboard/driver/verification", "/dashboard/driver/support"]
+
 interface DriverSidebarProps {
   onClose?: () => void
   user?: { full_name?: string; email?: string }
   isOnline?: boolean
+  isLocked?: boolean
 }
 
-export function DriverSidebar({ onClose, user, isOnline: initialIsOnline = false }: DriverSidebarProps) {
+export function DriverSidebar({ onClose, user, isOnline: initialIsOnline = false, isLocked = false }: DriverSidebarProps) {
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
   const [isOnline, setIsOnline] = useState(initialIsOnline)
@@ -47,11 +50,36 @@ export function DriverSidebar({ onClose, user, isOnline: initialIsOnline = false
         <p className="text-[10px] text-[#adaaaa] tracking-[0.2em] uppercase mt-1 font-headline">Driver Portal</p>
       </div>
 
+      {isLocked && (
+        <div className="mx-4 mb-3 px-3 py-2.5 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 rounded-xl">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm text-[#a3a6ff]">lock</span>
+            <p className="text-[10px] font-bold text-[#a3a6ff] uppercase tracking-wider">Account Pending</p>
+          </div>
+          <p className="text-[10px] text-[#adaaaa] mt-0.5 leading-relaxed">Complete verification to unlock all features</p>
+        </div>
+      )}
+
       <nav className="flex-1 space-y-0.5 px-0 overflow-y-auto">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== "/dashboard/driver" && pathname.startsWith(item.href))
+          const itemLocked = isLocked && !UNLOCKED_ROUTES.some((r) => item.href.startsWith(r))
+
+          if (itemLocked) {
+            return (
+              <div
+                key={item.href}
+                className="flex items-center gap-3 px-6 py-3 text-sm font-headline tracking-tight opacity-30 cursor-not-allowed select-none border-l-4 border-transparent"
+              >
+                <span className="material-symbols-outlined text-lg text-[#adaaaa]">{item.icon}</span>
+                <span className="text-[#adaaaa]">{item.label}</span>
+                <span className="material-symbols-outlined text-xs text-[#494847] ml-auto">lock</span>
+              </div>
+            )
+          }
+
           return (
             <Link
               key={item.href}
@@ -72,29 +100,33 @@ export function DriverSidebar({ onClose, user, isOnline: initialIsOnline = false
       </nav>
 
       <div className="px-6 pt-6 pb-6 mt-auto">
-        <button
-          onClick={handleToggle}
-          disabled={isPending}
-          className={cn(
-            "w-full font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60",
-            isOnline
-              ? "bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0px_0px_15px_rgba(74,222,128,0.15)]"
-              : "bg-[#a3a6ff] text-[#0f00a4] shadow-[0px_0px_15px_rgba(163,166,255,0.2)]"
-          )}
-        >
-          <span className="material-symbols-outlined text-base">
-            {isOnline ? "wifi_off" : "add_circle"}
-          </span>
-          <span className="text-xs uppercase tracking-widest">
-            {isPending ? "Updating..." : isOnline ? "Go Offline" : "Go Online"}
-          </span>
-        </button>
+        {!isLocked && (
+          <>
+            <button
+              onClick={handleToggle}
+              disabled={isPending}
+              className={cn(
+                "w-full font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60",
+                isOnline
+                  ? "bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0px_0px_15px_rgba(74,222,128,0.15)]"
+                  : "bg-[#a3a6ff] text-[#0f00a4] shadow-[0px_0px_15px_rgba(163,166,255,0.2)]"
+              )}
+            >
+              <span className="material-symbols-outlined text-base">
+                {isOnline ? "wifi_off" : "add_circle"}
+              </span>
+              <span className="text-xs uppercase tracking-widest">
+                {isPending ? "Updating..." : isOnline ? "Go Offline" : "Go Online"}
+              </span>
+            </button>
 
-        {isOnline && (
-          <div className="flex items-center justify-center gap-1.5 mt-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Online</span>
-          </div>
+            {isOnline && (
+              <div className="flex items-center justify-center gap-1.5 mt-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Online</span>
+              </div>
+            )}
+          </>
         )}
 
         <LogoutButton className="mt-4 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#adaaaa] hover:text-white hover:bg-[#201f1f] rounded-lg transition-colors disabled:opacity-60">

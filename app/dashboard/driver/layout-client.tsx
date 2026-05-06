@@ -1,22 +1,33 @@
 "use client"
 
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 import { DriverSidebar } from "@/components/driver/driver-sidebar"
+import { DriverOnboarding } from "@/components/driver/driver-onboarding"
 
 interface DriverLayoutClientProps {
   children: React.ReactNode
   user: { full_name: string; email: string }
   isOnline: boolean
+  driverStatus: string
+  hasDocuments: boolean
 }
 
-export function DriverLayoutClient({ children, user, isOnline }: DriverLayoutClientProps) {
+const ALLOWED_WHEN_LOCKED = ["/dashboard/driver/verification", "/dashboard/driver/support"]
+
+export function DriverLayoutClient({ children, user, isOnline, driverStatus, hasDocuments }: DriverLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pathname = usePathname()
+
+  const isApproved = driverStatus === "approved"
+  const isLocked = !isApproved
+  const showOnboarding = isLocked && !ALLOWED_WHEN_LOCKED.some((p) => pathname.startsWith(p))
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#131313]">
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:shrink-0 h-full">
-        <DriverSidebar user={user} isOnline={isOnline} />
+        <DriverSidebar user={user} isOnline={isOnline} isLocked={isLocked} />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -27,7 +38,7 @@ export function DriverLayoutClient({ children, user, isOnline }: DriverLayoutCli
             onClick={() => setSidebarOpen(false)}
           />
           <div className="relative z-50 h-full">
-            <DriverSidebar user={user} isOnline={isOnline} onClose={() => setSidebarOpen(false)} />
+            <DriverSidebar user={user} isOnline={isOnline} isLocked={isLocked} onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
@@ -43,19 +54,23 @@ export function DriverLayoutClient({ children, user, isOnline }: DriverLayoutCli
             >
               <span className="material-symbols-outlined text-xl">menu</span>
             </button>
-            <div className="relative w-full max-w-md hidden sm:block">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-sm">search</span>
-              <input
-                className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[#a3a6ff]/30 text-white placeholder-[#adaaaa] outline-none"
-                placeholder="Search jobs, earnings, or IDs..."
-                type="text"
-              />
-            </div>
+            {!isLocked && (
+              <div className="relative w-full max-w-md hidden sm:block">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-sm">search</span>
+                <input
+                  className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[#a3a6ff]/30 text-white placeholder-[#adaaaa] outline-none"
+                  placeholder="Search jobs, earnings, or IDs..."
+                  type="text"
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3 md:gap-5 shrink-0">
-            <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
-              <span className="material-symbols-outlined">search</span>
-            </button>
+            {!isLocked && (
+              <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
+                <span className="material-symbols-outlined">search</span>
+              </button>
+            )}
             <button className="text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Notifications">
               <span className="material-symbols-outlined">notifications</span>
             </button>
@@ -69,7 +84,11 @@ export function DriverLayoutClient({ children, user, isOnline }: DriverLayoutCli
         </header>
 
         <main className="flex-1 overflow-y-auto pt-16 bg-[#131313]">
-          {children}
+          {showOnboarding ? (
+            <DriverOnboarding user={user} driverStatus={driverStatus} hasDocuments={hasDocuments} />
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

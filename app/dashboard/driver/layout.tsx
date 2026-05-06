@@ -8,16 +8,25 @@ export default async function DriverLayout({ children }: { children: React.React
 
   let profile = { full_name: "", email: authUser?.email ?? "" }
   let isOnline = false
+  let driverStatus = "pending"
+  let hasDocuments = false
 
   if (authUser) {
     const admin = createAdminClient()
-    const [usersRes, profileRes] = await Promise.all([
+    const [usersRes, profileRes, docsRes] = await Promise.all([
       supabase.from("users").select("full_name").eq("id", authUser.id).single(),
-      admin.from("driver_profiles").select("is_online").eq("id", authUser.id).single(),
+      admin.from("driver_profiles").select("is_online, status").eq("id", authUser.id).single(),
+      admin.from("driver_documents").select("id", { count: "exact", head: true }).eq("driver_id", authUser.id),
     ])
     profile.full_name = usersRes.data?.full_name ?? ""
     isOnline = profileRes.data?.is_online ?? false
+    driverStatus = profileRes.data?.status ?? "pending"
+    hasDocuments = (docsRes.count ?? 0) > 0
   }
 
-  return <DriverLayoutClient user={profile} isOnline={isOnline}>{children}</DriverLayoutClient>
+  return (
+    <DriverLayoutClient user={profile} isOnline={isOnline} driverStatus={driverStatus} hasDocuments={hasDocuments}>
+      {children}
+    </DriverLayoutClient>
+  )
 }
