@@ -10,6 +10,7 @@ const navItems = [
   { label: "Deliveries", href: "/dashboard/admin/orders", icon: "local_shipping" },
   { label: "Drivers", href: "/dashboard/admin/drivers", icon: "badge" },
   { label: "Customers", href: "/dashboard/admin/customers", icon: "group" },
+  { label: "Verification Requests", href: "/dashboard/admin/verification", icon: "verified_user", badgeKey: "pendingVerifications" },
   { label: "Payments", href: "/dashboard/admin/payments", icon: "payments" },
   { label: "Disputes", href: "/dashboard/admin/disputes", icon: "gavel" },
   { label: "Reports", href: "/dashboard/admin/reports", icon: "analytics" },
@@ -19,10 +20,15 @@ const navItems = [
 interface AdminSidebarProps {
   onClose?: () => void
   user?: { full_name?: string; email?: string }
+  pendingVerifications?: number
 }
 
-export function AdminSidebar({ onClose, user }: AdminSidebarProps) {
+export function AdminSidebar({ onClose, user, pendingVerifications = 0 }: AdminSidebarProps) {
   const pathname = usePathname()
+
+  const badges: Record<string, number> = {
+    pendingVerifications,
+  }
 
   return (
     <aside className="flex h-full w-64 flex-col bg-[#0e0e0e] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
@@ -38,15 +44,18 @@ export function AdminSidebar({ onClose, user }: AdminSidebarProps) {
         )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-0">
+      <nav className="flex-1 space-y-0.5 px-0 overflow-y-auto">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== "/dashboard/admin" && pathname.startsWith(item.href))
+          const badgeCount = item.badgeKey ? (badges[item.badgeKey] ?? 0) : 0
+
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 px-6 py-3 text-sm font-headline tracking-tight transition-all duration-200",
                 isActive
@@ -55,7 +64,12 @@ export function AdminSidebar({ onClose, user }: AdminSidebarProps) {
               )}
             >
               <span className="material-symbols-outlined text-lg">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {badgeCount > 0 && (
+                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#a3a6ff] text-[#0f00a4] text-[10px] font-black">
+                  {badgeCount > 99 ? "99+" : badgeCount}
+                </span>
+              )}
             </Link>
           )
         })}

@@ -6,16 +6,17 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar"
 interface AdminLayoutClientProps {
   children: React.ReactNode
   user: { full_name: string; email: string }
+  pendingVerifications: number
 }
 
-export function AdminLayoutClient({ children, user }: AdminLayoutClientProps) {
+export function AdminLayoutClient({ children, user, pendingVerifications }: AdminLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#131313]">
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:shrink-0 h-full">
-        <AdminSidebar user={user} />
+        <AdminSidebar user={user} pendingVerifications={pendingVerifications} />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -26,7 +27,7 @@ export function AdminLayoutClient({ children, user }: AdminLayoutClientProps) {
             onClick={() => setSidebarOpen(false)}
           />
           <div className="relative z-50 h-full">
-            <AdminSidebar user={user} onClose={() => setSidebarOpen(false)} />
+            <AdminSidebar user={user} pendingVerifications={pendingVerifications} onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { adminGetPendingVerificationCount } from "@/app/actions/delivery"
 import { AdminLayoutClient } from "./layout-client"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -15,5 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     profile.full_name = data?.full_name ?? ""
   }
 
-  return <AdminLayoutClient user={profile}>{children}</AdminLayoutClient>
+  const pendingVerifications = await adminGetPendingVerificationCount()
+
+  return <AdminLayoutClient user={profile} pendingVerifications={pendingVerifications}>{children}</AdminLayoutClient>
 }

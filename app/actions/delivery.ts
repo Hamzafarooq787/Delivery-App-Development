@@ -392,6 +392,7 @@ export async function adminApproveDriver(driverId: string) {
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/drivers")
   revalidatePath(`/dashboard/admin/drivers/${driverId}`)
+  revalidatePath("/dashboard/admin/verification")
   return { success: true }
 }
 
@@ -405,6 +406,7 @@ export async function adminRejectDriver(driverId: string) {
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/drivers")
   revalidatePath(`/dashboard/admin/drivers/${driverId}`)
+  revalidatePath("/dashboard/admin/verification")
   return { success: true }
 }
 
@@ -534,6 +536,74 @@ export async function getDriverPayouts() {
 
   if (error) return { error: error.message, data: [] }
   return { data: data ?? [] }
+}
+
+export type PendingVerificationDriver = {
+  id: string
+  full_name: string
+  email: string
+  phone: string
+  vehicle_type: string
+  vehicle_number: string
+  submitted_at: string
+  documents: { document_type: string; file_url: string }[]
+}
+
+export async function adminGetPendingVerifications(): Promise<{ data: PendingVerificationDriver[]; error?: string }> {
+  const admin = createAdminClient()
+
+  const { data: profiles, error: profilesErr } = await admin
+    .from("driver_profiles")
+    .select("id, vehicle_type, vehicle_number, updated_at")
+    .eq("status", "pending")
+    .order("updated_at", { ascending: false })
+
+  if (profilesErr) return { data: [], error: profilesErr.message }
+  if (!profiles || profiles.length === 0) return { data: [] }
+
+  const ids = profiles.map((p) => p.id)
+
+  const [usersRes, docsRes, authRes] = await Promise.all([
+    admin.from("users").select("id, full_name, phone, email").in("id", ids),
+    admin.from("driver_documents").select("driver_id, document_type, file_url").in("driver_id", ids),
+    admin.auth.admin.listUsers({ perPage: 1000 }),
+  ])
+
+  const emailMap = new Map(
+    (authRes.data?.users ?? []).map((u) => [u.id, u.email ?? ""])
+  )
+  const userMap = new Map((usersRes.data ?? []).map((u) => [u.id, u]))
+  const docsMap = new Map<string, { document_type: string; file_url: string }[]>()
+  for (const doc of docsRes.data ?? []) {
+    const arr = docsMap.get(doc.driver_id) ?? []
+    arr.push({ document_type: doc.document_type, file_url: doc.file_url })
+    docsMap.set(doc.driver_id, arr)
+  }
+
+  const data: PendingVerificationDriver[] = profiles.map((p) => {
+    const u = userMap.get(p.id)
+    return {
+      id: p.id,
+      full_name: u?.full_name ?? "Unknown",
+      email: emailMap.get(p.id) ?? u?.email ?? "",
+      phone: u?.phone ?? "",
+      vehicle_type: p.vehicle_type ?? "",
+      vehicle_number: p.vehicle_number ?? "",
+      submitted_at: p.updated_at ?? "",
+      documents: docsMap.get(p.id) ?? [],
+    }
+  })
+
+  return { data }
+}
+
+export async function adminGetPendingVerificationCount(): Promise<number> {
+  const admin = createAdminClient()
+  const { count } = await admin
+    .from("driver_profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending")
+  return count ?? 0
 }
 
 export async function adminGetPayoutsWithDrivers() {
