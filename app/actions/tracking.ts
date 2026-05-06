@@ -1,0 +1,88 @@
+"use server"
+
+import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+
+export type DriverLocation = {
+  driver_id: string
+  delivery_id: string | null
+  lat: number
+  lng: number
+  heading: number | null
+  speed: number | null
+  accuracy: number | null
+  updated_at: string
+}
+
+export async function updateMyLocation(input: {
+  lat: number
+  lng: number
+  heading?: number | null
+  speed?: number | null
+  accuracy?: number | null
+  delivery_id?: string | null
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from("driver_locations").upsert(
+    {
+      driver_id: user.id,
+      delivery_id: input.delivery_id ?? null,
+      lat: input.lat,
+      lng: input.lng,
+      heading: input.heading ?? null,
+      speed: input.speed ?? null,
+      accuracy: input.accuracy ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "driver_id" }
+  )
+
+  if (error) return { error: error.message }
+  return { ok: true }
+}
+
+export async function getDriverLocationForDelivery(deliveryId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: "Not authenticated" }
+
+  const admin = createAdminClient()
+  const { data: delivery, error: dErr } = await admin
+    .from("delivery_requests")
+    .select("driver_id, customer_id, status, pickup_lat, pickup_lng, delivery_lat, delivery_lng")
+    .eq("id", deliveryId)
+    .maybeSingle()
+
+  if (dErr || !delivery) return { data: null, error: dErr?.message ?? "Delivery not found" }
+  if (delivery.customer_id !== user.id && delivery.driver_id !== user.id) {
+    const { data: me } = await admin.from("users").select("role").eq("id", user.id).maybeSingle()
+    if (me?.role !== "admin") return { data: null, error: "Forbidden" }
+  }
+
+  if (!delivery.driver_id) {
+    return { data: { delivery, location: null }, error: null }
+  }
+
+  const { data: location } = await admin
+    .from("driver_locations")
+    .select("*")
+    .eq("driver_id", delivery.driver_id)
+    .maybeSingle()
+
+  return { data: { delivery, location: location as DriverLocation | null }, error: null }
+}
+
+export async function clearMyLocation() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from("driver_locations").delete().eq("driver_id", user.id)
+  if (error) return { error: error.message }
+  return { ok: true }
+}

@@ -7,6 +7,8 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { UpdateStatusButton } from "@/components/driver/update-status-button"
+import { LiveTrackingPanel } from "@/components/tracking/live-tracking-panel"
+import { DriverLocationBroadcaster } from "@/components/tracking/driver-location-broadcaster"
 
 const STATUS_ORDER = ["requested", "accepted", "collected", "in_transit", "delivered"]
 const STATUS_LABELS: Record<string, string> = {
@@ -75,6 +77,15 @@ export default async function JobDetailPage({
 
   const badgeStatus = STATUS_BADGE_MAP[job.status] ?? "pending"
 
+  const ACTIVE_STATUSES = ["accepted", "collected", "in_transit", "picked_up"]
+  const isActive = ACTIVE_STATUSES.includes(job.status)
+  const pickup = job.pickup_lat != null && job.pickup_lng != null
+    ? { lat: Number(job.pickup_lat), lng: Number(job.pickup_lng) }
+    : null
+  const destination = job.delivery_lat != null && job.delivery_lng != null
+    ? { lat: Number(job.delivery_lat), lng: Number(job.delivery_lng) }
+    : null
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -93,6 +104,27 @@ export default async function JobDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 flex flex-col gap-5">
+          {/* Live Map */}
+          {isActive && (
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-foreground">Live Tracking</h2>
+                <DriverLocationBroadcaster deliveryId={jobId} />
+              </div>
+              <LiveTrackingPanel
+                driverId={user?.id ?? null}
+                pickup={pickup}
+                destination={destination}
+                driverLabel="You"
+                followDriver
+                height={360}
+              />
+              <p className="text-[11px] text-muted-foreground mt-3">
+                Your location is shared with the customer while this job is active. Stop sharing by completing or cancelling the job.
+              </p>
+            </div>
+          )}
+
           {/* Route */}
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-foreground mb-4">Delivery Route</h2>
