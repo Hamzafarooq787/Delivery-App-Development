@@ -1,70 +1,71 @@
 import { createClient } from "@/lib/supabase/server"
-import { PageHeader } from "@/components/shared/page-header"
-import { User, Car } from "lucide-react"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { ProfileForm } from "@/components/driver/profile-form"
+import { VehicleForm } from "@/components/driver/vehicle-form"
+
+export const dynamic = "force-dynamic"
 
 export default async function DriverProfilePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  let profile = { full_name: "", phone: "", email: "" }
+  let profile = { full_name: "", phone: "", email: user?.email ?? "" }
+  let vehicleType = ""
+  let vehicleNumber = ""
+
   if (user) {
-    const { data } = await supabase
-      .from("users")
-      .select("full_name, phone, email")
-      .eq("id", user.id)
-      .single()
-    if (data) profile = { full_name: data.full_name ?? "", phone: data.phone ?? "", email: data.email ?? "" }
+    const admin = createAdminClient()
+    const [usersRes, profileRes] = await Promise.all([
+      supabase.from("users").select("full_name, phone, email").eq("id", user.id).single(),
+      admin.from("driver_profiles").select("vehicle_type, vehicle_number").eq("id", user.id).single(),
+    ])
+    if (usersRes.data) {
+      profile = {
+        full_name: usersRes.data.full_name ?? "",
+        phone: usersRes.data.phone ?? "",
+        email: usersRes.data.email ?? user.email ?? "",
+      }
+    }
+    if (profileRes.data) {
+      vehicleType = profileRes.data.vehicle_type ?? ""
+      vehicleNumber = profileRes.data.vehicle_number ?? ""
+    }
   }
 
+  const initials = profile.full_name
+    ? profile.full_name.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase()
+    : "DR"
+
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="My Profile" description="Manage your driver profile and vehicle information." />
+    <div className="pt-2 pb-12 px-2">
+      <div className="mb-8 md:mb-10">
+        <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">My Profile</h1>
+        <p className="text-[#adaaaa] mt-1">Manage your personal and vehicle information.</p>
+      </div>
 
       <div className="max-w-xl flex flex-col gap-5">
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex items-center gap-5 mb-6">
-            <div className="relative">
-              <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center">
-                <User className="h-10 w-10 text-muted-foreground" />
-              </div>
+        {/* Personal info card */}
+        <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-16 w-16 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
+              <span className="text-lg font-bold text-[#a3a6ff]">{initials}</span>
             </div>
-            <div>
-              <p className="text-base font-semibold text-foreground">{profile.full_name || "—"}</p>
-              <p className="text-xs text-muted-foreground mt-1">{profile.email}</p>
+            <div className="min-w-0">
+              <p className="text-base font-bold text-white truncate">{profile.full_name || "Driver"}</p>
+              <p className="text-xs text-[#adaaaa] mt-0.5 truncate">{profile.email}</p>
             </div>
           </div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Personal Info</h3>
+          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Personal Info</p>
           <ProfileForm fullName={profile.full_name} phone={profile.phone} />
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        {/* Vehicle info card */}
+        <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Car className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold text-foreground">Vehicle Information</h3>
+            <span className="material-symbols-outlined text-[#a3a6ff]">directions_car</span>
+            <p className="text-sm font-bold text-white">Vehicle Information</p>
           </div>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Make</label>
-                <input type="text" placeholder="e.g. Toyota" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Model</label>
-                <input type="text" placeholder="e.g. Corolla" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Year</label>
-                <input type="text" placeholder="e.g. 2020" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Plate Number</label>
-                <input type="text" placeholder="e.g. ABC-1234" className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-            </div>
-          </div>
+          <VehicleForm vehicleType={vehicleType} vehicleNumber={vehicleNumber} />
         </div>
       </div>
     </div>
