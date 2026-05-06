@@ -1,17 +1,36 @@
-import { PageHeader } from "@/components/shared/page-header"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { ArrowLeft, User, Car, FileText, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { adminApproveDriver, adminRejectDriver, adminGetDriverById } from "@/app/actions/delivery"
 import { getDriverDocumentsById } from "@/app/actions/documents"
+import { DriverDocumentsPanel } from "@/components/admin/driver-documents-panel"
 
-const DOC_LABELS: Record<string, string> = {
-  identity: "Identity / Driving Licence",
-  insurance: "Insurance Policy",
-  vehicle_registration: "Vehicle Registration",
+function fmtDate(v: string) {
+  if (!v) return "—"
+  return new Date(v).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+}
+
+function fmt(v: number) {
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(v)
+}
+
+function StatusPill({ status }: { status: string }) {
+  if (status === "approved")
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-400 border border-green-500/20">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-400" />Approved
+      </span>
+    )
+  if (status === "rejected")
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#ff6e84]/10 text-[#ff6e84] border border-[#ff6e84]/20">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#ff6e84]" />Rejected
+      </span>
+    )
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#a3a6ff]/10 text-[#a3a6ff] border border-[#a3a6ff]/20">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#a3a6ff] animate-pulse" />Pending Review
+    </span>
+  )
 }
 
 export default async function AdminDriverDetailPage({
@@ -27,8 +46,8 @@ export default async function AdminDriverDetailPage({
 
   if (error || !driver) notFound()
 
-  const badgeStatus =
-    driver.status === "approved" ? "verified" : driver.status === "rejected" ? "cancelled" : "pending"
+  const initials = driver.full_name
+    .split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase() || "DR"
 
   async function approve() {
     "use server"
@@ -43,209 +62,138 @@ export default async function AdminDriverDetailPage({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/admin/drivers">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+    <div className="pt-2 pb-12 px-2">
+      {/* Back + Header */}
+      <div className="flex items-center gap-3 mb-8 md:mb-10">
+        <Link
+          href="/dashboard/admin/drivers"
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#1a1919] border border-[#494847]/15 text-[#adaaaa] hover:text-white transition-colors"
+        >
+          <span className="material-symbols-outlined text-lg">arrow_back</span>
         </Link>
-        <PageHeader
-          title={driver.full_name}
-          description="Driver profile, documents, and job history."
-        />
+        <div>
+          <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">
+            {driver.full_name}
+          </h1>
+          <p className="text-[#adaaaa] mt-0.5">Driver profile and submitted documents.</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Profile */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Profile
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Full Name</p>
-                <p className="font-medium">{driver.full_name}</p>
+        {/* Left column */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Profile card */}
+          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
+                <span className="text-lg font-bold text-[#a3a6ff]">{initials}</span>
               </div>
-              <div>
-                <p className="text-muted-foreground">Email</p>
-                <p className="font-medium">{driver.email || "—"}</p>
+              <div className="min-w-0">
+                <p className="text-base font-bold text-white">{driver.full_name}</p>
+                <p className="text-xs text-[#adaaaa] mt-0.5">{driver.email || "No email"}</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Phone</p>
-                <p className="font-medium">{driver.phone ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Joined</p>
-                <p className="font-medium">
-                  {new Date(driver.created_at).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+              <div className="ml-auto"><StatusPill status={driver.status ?? "pending"} /></div>
+            </div>
 
-          {/* Documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Submitted Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {documents.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  No documents uploaded yet.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-muted-foreground">
-                        <th className="text-left py-2 pr-4 font-medium">Document</th>
-                        <th className="text-left py-2 pr-4 font-medium">Uploaded</th>
-                        <th className="text-left py-2 font-medium">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {documents.map((doc) => (
-                        <tr key={doc.id} className="border-b last:border-0">
-                          <td className="py-3 pr-4 font-medium">
-                            {DOC_LABELS[doc.document_type] ?? doc.document_type}
-                          </td>
-                          <td className="py-3 pr-4 text-muted-foreground text-xs">
-                            {new Date(doc.created_at).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </td>
-                          <td className="py-3">
-                            <a
-                              href={doc.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                            >
-                              View / Download
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Document type checklist */}
-              {documents.length > 0 && (
-                <div className="mt-4 pt-4 border-t flex flex-wrap gap-3">
-                  {["identity", "insurance", "vehicle_registration"].map((type) => {
-                    const uploaded = documents.some((d) => d.document_type === type)
-                    return (
-                      <div
-                        key={type}
-                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium ${
-                          uploaded
-                            ? "bg-green-500/10 text-green-600"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        <span className="text-base leading-none">{uploaded ? "✓" : "○"}</span>
-                        {DOC_LABELS[type]}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Vehicle */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Car className="h-4 w-4" />
-                Vehicle
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {["Type", "Make & Model", "Year", "Registration"].map((label) => (
+            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Personal Info</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {[
+                { label: "Phone", value: driver.phone ?? "—" },
+                { label: "Joined", value: fmtDate(driver.created_at) },
+                { label: "Vehicle Type", value: (driver as any).vehicle_type ?? "—" },
+                { label: "Plate Number", value: (driver as any).vehicle_number ?? "—" },
+                { label: "Jobs Completed", value: String(driver.jobsCompleted) },
+                { label: "Total Earned", value: fmt(driver.totalEarned) },
+              ].map(({ label, value }) => (
                 <div key={label}>
-                  <p className="text-muted-foreground">{label}</p>
-                  <p className="font-medium text-muted-foreground/50">—</p>
+                  <p className="text-[10px] text-[#adaaaa] uppercase font-bold mb-1">{label}</p>
+                  <p className="text-sm font-semibold text-white">{value}</p>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Documents card */}
+          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="material-symbols-outlined text-[#a3a6ff]">folder_open</span>
+              <p className="text-sm font-bold text-white">Submitted Documents</p>
+              <span className="ml-auto text-xs text-[#adaaaa]">{documents.length} file{documents.length !== 1 ? "s" : ""}</span>
+            </div>
+            <DriverDocumentsPanel documents={documents} />
+          </div>
         </div>
 
-        <div className="space-y-4">
-          {/* Verification Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Verification Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <StatusBadge status={badgeStatus} />
-              {documents.length === 0 && (
-                <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">
-                  Driver has not uploaded any documents yet.
-                </p>
-              )}
-              <div className="space-y-2 pt-2">
-                <form action={approve}>
-                  <Button
-                    className="w-full"
-                    size="sm"
-                    type="submit"
-                    disabled={driver.status === "approved"}
-                  >
-                    Approve Driver
-                  </Button>
-                </form>
-                <form action={reject}>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    size="sm"
-                    type="submit"
-                    disabled={driver.status === "rejected"}
-                  >
-                    Reject
-                  </Button>
-                </form>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Right column */}
+        <div className="flex flex-col gap-5">
+          {/* Verification actions */}
+          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5">
+            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Verification</p>
+            <div className="mb-4"><StatusPill status={driver.status ?? "pending"} /></div>
+            {documents.length === 0 && (
+              <p className="text-xs text-[#adaaaa] bg-[#262626] rounded-xl px-4 py-3 mb-4">
+                Driver has not uploaded any documents yet.
+              </p>
+            )}
+            <div className="flex flex-col gap-2">
+              <form action={approve}>
+                <button
+                  type="submit"
+                  disabled={driver.status === "approved"}
+                  className="w-full py-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 font-bold text-sm hover:bg-green-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  Approve Driver
+                </button>
+              </form>
+              <form action={reject}>
+                <button
+                  type="submit"
+                  disabled={driver.status === "rejected"}
+                  className="w-full py-2.5 rounded-xl bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] font-bold text-sm hover:bg-[#ff6e84]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">cancel</span>
+                  Reject Driver
+                </button>
+              </form>
+            </div>
+          </div>
 
-          {/* Earnings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Earnings Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Earned</span>
-                <span className="font-medium">${driver.totalEarned.toFixed(2)}</span>
+          {/* Earnings summary */}
+          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5">
+            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Earnings Summary</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-[#adaaaa]">Total Earned</span>
+                <span className="text-sm font-bold text-[#a3a6ff]">{fmt(driver.totalEarned)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Jobs Completed</span>
-                <span className="font-medium">{driver.jobsCompleted}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-[#adaaaa]">Jobs Completed</span>
+                <span className="text-sm font-bold text-white">{driver.jobsCompleted}</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Quick links */}
+          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5">
+            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Quick Links</p>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/dashboard/admin/verification"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-white rounded-xl text-xs font-semibold transition-all"
+              >
+                <span className="material-symbols-outlined text-sm">verified_user</span>
+                Verification Queue
+              </Link>
+              <Link
+                href="/dashboard/admin/drivers"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-white rounded-xl text-xs font-semibold transition-all"
+              >
+                <span className="material-symbols-outlined text-sm">badge</span>
+                All Drivers
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
