@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
 
 const defaultTimelineSteps = [
   { label: 'Requested', detail: '—', done: false, active: false },
@@ -33,7 +34,7 @@ function LiveTrackingPageInner() {
 
       let query = supabase
         .from('delivery_requests')
-        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at')
+        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng')
         .eq('customer_id', user.id)
 
       if (requestedId) {
@@ -94,30 +95,24 @@ function LiveTrackingPageInner() {
     <>
       <Header onNewDelivery={() => setShowModal(true)} />
       <main className="pt-16 pb-20 md:pb-0 md:ml-64 min-h-screen bg-surface-container-low relative overflow-hidden">
-        {/* Map Background */}
+        {/* Live Map Background */}
         <div className="absolute inset-0 z-0">
-          <div className="w-full h-full bg-[#050505] relative overflow-hidden">
-            <div
-              className="absolute inset-0 opacity-20 pointer-events-none"
-              style={{
-                backgroundImage: 'radial-gradient(#262626 1px, transparent 1px)',
-                backgroundSize: '40px 40px',
-              }}
-            />
-            {/* SVG Route Indicator */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-              <path
-                d="M 200,400 Q 500,300 800,500 T 1200,450"
-                fill="none"
-                stroke="#a3a6ff"
-                strokeDasharray="8,8"
-                strokeWidth="3"
-                className="opacity-60"
-              />
-              <circle cx="200" cy="400" r="6" fill="#c180ff" />
-              <circle cx="1200" cy="450" r="8" fill="#a3a6ff" className="animate-pulse" />
-            </svg>
-          </div>
+          <LiveTrackingPanel
+            driverId={shipment?.driver_id ?? null}
+            pickup={
+              shipment?.pickup_lat != null && shipment?.pickup_lng != null
+                ? { lat: Number(shipment.pickup_lat), lng: Number(shipment.pickup_lng) }
+                : null
+            }
+            destination={
+              shipment?.delivery_lat != null && shipment?.delivery_lng != null
+                ? { lat: Number(shipment.delivery_lat), lng: Number(shipment.delivery_lng) }
+                : null
+            }
+            driverLabel={driver?.full_name ?? 'Driver'}
+            height="100%"
+            followDriver={false}
+          />
         </div>
 
         {/* Overlay Panels Container */}
