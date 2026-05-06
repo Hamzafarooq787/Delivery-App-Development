@@ -6,16 +6,17 @@ import { DriverSidebar } from "@/components/driver/driver-sidebar"
 interface DriverLayoutClientProps {
   children: React.ReactNode
   user: { full_name: string; email: string }
+  isOnline: boolean
 }
 
-export function DriverLayoutClient({ children, user }: DriverLayoutClientProps) {
+export function DriverLayoutClient({ children, user, isOnline }: DriverLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#131313]">
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:shrink-0 h-full">
-        <DriverSidebar user={user} />
+        <DriverSidebar user={user} isOnline={isOnline} />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -26,7 +27,7 @@ export function DriverLayoutClient({ children, user }: DriverLayoutClientProps) 
             onClick={() => setSidebarOpen(false)}
           />
           <div className="relative z-50 h-full">
-            <DriverSidebar user={user} onClose={() => setSidebarOpen(false)} />
+            <DriverSidebar user={user} isOnline={isOnline} onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}
