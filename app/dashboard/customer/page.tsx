@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
 import { createClient } from '@/lib/supabase/client'
 
 type DeliveryRow = {
@@ -16,6 +17,22 @@ type DeliveryRow = {
   status: string | null
   created_at: string | null
 }
+
+type ActiveShipment = {
+  id: string
+  tracking_number: string | null
+  status: string | null
+  pickup_address: string | null
+  delivery_address: string | null
+  driver_id: string | null
+  pickup_lat: number | null
+  pickup_lng: number | null
+  delivery_lat: number | null
+  delivery_lng: number | null
+  driver_name: string | null
+}
+
+const ACTIVE_STATUSES = ['accepted', 'collected', 'picked_up', 'in_transit']
 
 const STATUS_DISPLAY: Record<string, { label: string; cls: string }> = {
   requested: { label: 'REQUESTED', cls: 'bg-secondary/10 text-secondary border border-secondary/20' },
@@ -57,6 +74,7 @@ export default function CustomerDashboardPage() {
   const [activeCount, setActiveCount] = useState(0)
   const [completedThisMonth, setCompletedThisMonth] = useState(0)
   const [totalSpent, setTotalSpent] = useState(0)
+  const [activeShipment, setActiveShipment] = useState<ActiveShipment | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -68,7 +86,7 @@ export default function CustomerDashboardPage() {
       startOfMonth.setDate(1)
       startOfMonth.setHours(0, 0, 0, 0)
 
-      const [recentRes, activeRes, monthRes, deliveredRes] = await Promise.all([
+      const [recentRes, activeRes, monthRes, deliveredRes, activeShipmentRes] = await Promise.all([
         supabase
           .from('delivery_requests')
           .select('id, tracking_number, pickup_address, delivery_address, item_description, price, status, created_at')
@@ -91,6 +109,14 @@ export default function CustomerDashboardPage() {
           .select('price')
           .eq('customer_id', user.id)
           .eq('status', 'delivered'),
+        supabase
+          .from('delivery_requests')
+          .select('id, tracking_number, status, pickup_address, delivery_address, driver_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng')
+          .eq('customer_id', user.id)
+          .in('status', ACTIVE_STATUSES)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ])
 
       if (cancelled) return
@@ -106,6 +132,25 @@ export default function CustomerDashboardPage() {
 
       if (deliveredRes.error) console.error('[v0] dashboard spend error', deliveredRes.error)
       else setTotalSpent((deliveredRes.data ?? []).reduce((s, r: any) => s + (Number(r.price) || 0), 0))
+
+      if (activeShipmentRes.error) {
+        console.error('[v0] active shipment error', activeShipmentRes.error)
+        setActiveShipment(null)
+      } else if (activeShipmentRes.data) {
+        const ship = activeShipmentRes.data as Omit<ActiveShipment, 'driver_name'>
+        let driver_name: string | null = null
+        if (ship.driver_id) {
+          const { data: drv } = await supabase
+            .from('users')
+            .select('full_name')
+            .eq('id', ship.driver_id)
+            .maybeSingle()
+          driver_name = (drv as any)?.full_name ?? null
+        }
+        if (!cancelled) setActiveShipment({ ...ship, driver_name })
+      } else {
+        setActiveShipment(null)
+      }
     }
     load()
     return () => { cancelled = true }
@@ -154,6 +199,67 @@ export default function CustomerDashboardPage() {
               ))}
             </div>
           </div>
+
+          {/* Live Tracking Widget — visible only when there's an active shipment */}
+          {activeShipment && (
+            <div className="mb-6 bg-surface-container rounded-2xl shadow-xl overflow-hidden border border-outline-variant/10">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <span
+                      className="material-symbols-outlined text-primary"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      my_location
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+                      Live Tracking
+                    </p>
+                    <h4 className="font-headline text-lg font-bold text-on-surface truncate">
+                      {activeShipment.tracking_number || `KV-${activeShipment.id.slice(0, 8).toUpperCase()}`}
+                      {activeShipment.driver_name ? ` · ${activeShipment.driver_name}` : ''}
+                    </h4>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    {(activeShipment.status || 'tracking').replace(/_/g, ' ')}
+                  </span>
+                  <Link
+                    href={`/dashboard/customer/tracking?id=${activeShipment.id}`}
+                    className="text-primary text-xs font-bold uppercase tracking-widest hover:underline"
+                  >
+                    Open Full
+                  </Link>
+                </div>
+              </div>
+              <div className="p-4">
+                <LiveTrackingPanel
+                  driverId={activeShipment.driver_id}
+                  pickup={
+                    activeShipment.pickup_lat != null && activeShipment.pickup_lng != null
+                      ? { lat: Number(activeShipment.pickup_lat), lng: Number(activeShipment.pickup_lng) }
+                      : null
+                  }
+                  destination={
+                    activeShipment.delivery_lat != null && activeShipment.delivery_lng != null
+                      ? { lat: Number(activeShipment.delivery_lat), lng: Number(activeShipment.delivery_lng) }
+                      : null
+                  }
+                  driverLabel={activeShipment.driver_name ?? 'Driver'}
+                  height={360}
+                />
+                {!activeShipment.driver_id && (
+                  <p className="text-xs text-on-surface-variant mt-3">
+                    Waiting for a driver to accept your delivery. The map will go live as soon as a driver is assigned.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Bento Grid Layout */}
           <div className="grid grid-cols-12 gap-6">
