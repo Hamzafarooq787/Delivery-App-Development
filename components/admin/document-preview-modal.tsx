@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import { useState } from "react"
 
 const DOC_LABELS: Record<string, string> = {
   identity: "Identity / Driving Licence",
@@ -29,20 +30,18 @@ async function triggerDownload(url: string, filename: string) {
   }
 }
 
-export function DocumentPreviewModal({
-  doc,
-  onClose,
-}: {
-  doc: Doc
-  onClose: () => void
-}) {
+export function DocumentPreviewModal({ doc, onClose }: { doc: Doc; onClose: () => void }) {
   const label = DOC_LABELS[doc.document_type] ?? doc.document_type
   const img = isImage(doc.file_url)
   const filename = `${doc.document_type}-${Date.now()}.${img ? "jpg" : "pdf"}`
+  const [zoom, setZoom] = useState(1)
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose()
+      if (e.key === "+" || e.key === "=") setZoom((z) => Math.min(z + 0.25, 4))
+      if (e.key === "-") setZoom((z) => Math.max(z - 0.25, 0.25))
+      if (e.key === "0") setZoom(1)
     }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
@@ -50,7 +49,7 @@ export function DocumentPreviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-3xl max-h-[90vh] rounded-2xl border border-[#494847]/20 shadow-2xl overflow-hidden bg-[#1a1919] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15 shrink-0">
@@ -62,6 +61,35 @@ export function DocumentPreviewModal({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Zoom controls (images only) */}
+            {img && (
+              <div className="flex items-center gap-1 bg-[#262626] border border-[#494847]/20 rounded-lg px-1">
+                <button
+                  onClick={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+                  disabled={zoom <= 0.25}
+                  className="p-1.5 text-[#adaaaa] hover:text-white disabled:opacity-30 transition-colors"
+                  title="Zoom out ( - )"
+                >
+                  <span className="material-symbols-outlined text-sm">zoom_out</span>
+                </button>
+                <span className="text-[10px] font-bold text-[#adaaaa] min-w-[36px] text-center">{Math.round(zoom * 100)}%</span>
+                <button
+                  onClick={() => setZoom((z) => Math.min(z + 0.25, 4))}
+                  disabled={zoom >= 4}
+                  className="p-1.5 text-[#adaaaa] hover:text-white disabled:opacity-30 transition-colors"
+                  title="Zoom in ( + )"
+                >
+                  <span className="material-symbols-outlined text-sm">zoom_in</span>
+                </button>
+                <button
+                  onClick={() => setZoom(1)}
+                  className="p-1.5 text-[#adaaaa] hover:text-white transition-colors border-l border-[#494847]/20"
+                  title="Reset zoom ( 0 )"
+                >
+                  <span className="material-symbols-outlined text-sm">fit_screen</span>
+                </button>
+              </div>
+            )}
             <button
               onClick={() => triggerDownload(doc.file_url, filename)}
               className="flex items-center gap-1.5 px-3 py-2 bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs rounded-lg hover:bg-[#8387ff] transition-all"
@@ -81,20 +109,32 @@ export function DocumentPreviewModal({
         {/* Preview */}
         <div className="flex-1 overflow-auto bg-[#131313] flex items-center justify-center min-h-[300px]">
           {img ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={doc.file_url}
-              alt={label}
-              className="max-w-full max-h-[70vh] object-contain"
-            />
+            <div
+              className="transition-transform duration-200 origin-center cursor-zoom-in"
+              style={{ transform: `scale(${zoom})` }}
+              onClick={() => setZoom((z) => Math.min(z + 0.25, 4))}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={doc.file_url}
+                alt={label}
+                className="max-w-full max-h-[65vh] object-contain select-none"
+              />
+            </div>
           ) : (
             <iframe
               src={doc.file_url}
               title={label}
-              className="w-full h-[70vh] border-0"
+              className="w-full h-[65vh] border-0"
             />
           )}
         </div>
+
+        {img && zoom > 1 && (
+          <div className="shrink-0 px-5 py-2 bg-[#131313] border-t border-[#494847]/10 text-center">
+            <p className="text-[10px] text-[#494847]">Click image to zoom in · Press <kbd className="px-1 bg-[#1a1919] rounded text-[#adaaaa]">-</kbd> to zoom out · <kbd className="px-1 bg-[#1a1919] rounded text-[#adaaaa]">0</kbd> to reset</p>
+          </div>
+        )}
       </div>
     </div>
   )
