@@ -554,9 +554,9 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
 
   const { data: profiles, error: profilesErr } = await admin
     .from("driver_profiles")
-    .select("id, vehicle_type, vehicle_number, updated_at")
+    .select("id, vehicle_type, vehicle_number, created_at")
     .eq("status", "pending")
-    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
 
   if (profilesErr) return { data: [], error: profilesErr.message }
   if (!profiles || profiles.length === 0) return { data: [] }
@@ -589,7 +589,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
       phone: u?.phone ?? "",
       vehicle_type: p.vehicle_type ?? "",
       vehicle_number: p.vehicle_number ?? "",
-      submitted_at: p.updated_at ?? "",
+      submitted_at: p.created_at ?? "",
       documents: docsMap.get(p.id) ?? [],
     }
   })
