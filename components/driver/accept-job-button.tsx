@@ -12,11 +12,12 @@ export function AcceptJobButton({ deliveryId }: { deliveryId: string }) {
     startTransition(async () => {
       const result = await acceptDelivery(deliveryId)
       if (result?.error) {
-        console.log("[v0] acceptDelivery error:", result.error)
         alert(`Could not accept job: ${result.error}`)
         return
       }
-      router.push("/dashboard/driver/active-jobs")
+      // Navigate to the job detail page — DriverLocationBroadcaster
+      // is already mounted there and will auto-start GPS broadcasting.
+      router.push(`/dashboard/driver/jobs/${deliveryId}`)
       router.refresh()
     })
   }
@@ -26,9 +27,12 @@ export function AcceptJobButton({ deliveryId }: { deliveryId: string }) {
       type="button"
       onClick={handleAccept}
       disabled={isPending}
-      className="w-full py-2.5 bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm rounded-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+      className="w-full py-2.5 bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm rounded-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.2)" }}
     >
+      <span className="material-symbols-outlined text-base">
+        {isPending ? "hourglass_empty" : "check_circle"}
+      </span>
       {isPending ? "Accepting..." : "Accept Job"}
     </button>
   )

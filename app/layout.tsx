@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Manrope, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from 'sonner'
 import './globals.css'
 
 const manrope = Manrope({
@@ -36,6 +37,18 @@ export default function RootLayout({
       </head>
       <body className="bg-[#0e0e0e] font-inter text-white overflow-x-hidden antialiased">
         {children}
+        <Toaster
+          position="top-right"
+          theme="dark"
+          toastOptions={{
+            style: {
+              background: '#1a1919',
+              border: '1px solid rgba(73,72,71,0.3)',
+              color: '#fff',
+              borderRadius: '14px',
+            },
+          }}
+        />
         <Analytics />
       </body>
     </html>

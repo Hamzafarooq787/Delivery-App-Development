@@ -25,7 +25,7 @@ export default async function DriverLayout({ children }: { children: React.React
   }
 
   return (
-    <DriverLayoutClient user={profile} isOnline={isOnline} driverStatus={driverStatus} hasDocuments={hasDocuments}>
+    <DriverLayoutClient user={profile} isOnline={isOnline} driverStatus={driverStatus} hasDocuments={hasDocuments} userId={authUser?.id ?? ""}>
       {children}
     </DriverLayoutClient>
   )

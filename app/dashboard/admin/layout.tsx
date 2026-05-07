@@ -18,5 +18,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const pendingVerifications = await adminGetPendingVerificationCount()
 
-  return <AdminLayoutClient user={profile} pendingVerifications={pendingVerifications}>{children}</AdminLayoutClient>
+  return (
+    <AdminLayoutClient user={profile} pendingVerifications={pendingVerifications} userId={authUser?.id ?? ""}>
+      {children}
+    </AdminLayoutClient>
+  )
 }

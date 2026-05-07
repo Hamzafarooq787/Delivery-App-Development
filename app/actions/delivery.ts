@@ -149,10 +149,15 @@ export async function acceptDelivery(deliveryId: string) {
   if (error) return { error: error.message }
   if (!updatedDelivery) return { error: "This job was already accepted by another driver." }
 
+  // Auto-set driver online when they accept a job
+  await admin
+    .from("driver_profiles")
+    .upsert({ id: user.id, is_online: true }, { onConflict: "id" })
+
   revalidatePath("/dashboard/driver/jobs/available")
   revalidatePath("/dashboard/driver/jobs/active")
   revalidatePath("/dashboard/driver/active-jobs")
-  return { success: true }
+  return { success: true, deliveryId: updatedDelivery.id }
 }
 
 export async function updateDeliveryStatus(deliveryId: string, status: string) {
@@ -175,8 +180,25 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
     updated_by: user.id,
   })
 
+  // Auto-offline when job is completed or cancelled — if no other active jobs remain
+  if (status === "delivered" || status === "cancelled") {
+    const admin = createAdminClient()
+    const ACTIVE = ["accepted", "collected", "picked_up", "in_transit"]
+    const { count } = await admin
+      .from("delivery_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("driver_id", user.id)
+      .in("status", ACTIVE)
+    if ((count ?? 0) === 0) {
+      await admin
+        .from("driver_profiles")
+        .upsert({ id: user.id, is_online: false }, { onConflict: "id" })
+    }
+  }
+
   revalidatePath("/driver/jobs/active")
   revalidatePath("/driver/jobs/completed")
+  revalidatePath("/dashboard/driver/active-jobs")
   return { success: true }
 }
 
