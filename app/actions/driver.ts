@@ -82,3 +82,17 @@ export async function toggleDriverOnline(isOnline: boolean) {
   if (error) return { error: error.message }
   return { success: true }
 }
+
+export async function getDriverNamesByIds(driverIds: string[]): Promise<Record<string, string>> {
+  if (driverIds.length === 0) return {}
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from("users")
+    .select("id, full_name")
+    .in("id", driverIds)
+  const map: Record<string, string> = {}
+  for (const u of data ?? []) {
+    map[(u as any).id] = (u as any).full_name ?? "Driver"
+  }
+  return map
+}

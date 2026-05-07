@@ -4,6 +4,7 @@ import { useState } from "react"
 import { usePathname } from "next/navigation"
 import { DriverSidebar } from "@/components/driver/driver-sidebar"
 import { DriverOnboarding } from "@/components/driver/driver-onboarding"
+import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
 
 interface DriverLayoutClientProps {
   children: React.ReactNode
@@ -11,11 +12,12 @@ interface DriverLayoutClientProps {
   isOnline: boolean
   driverStatus: string
   hasDocuments: boolean
+  userId: string
 }
 
 const ALLOWED_WHEN_LOCKED = ["/dashboard/driver/verification", "/dashboard/driver/support"]
 
-export function DriverLayoutClient({ children, user, isOnline, driverStatus, hasDocuments }: DriverLayoutClientProps) {
+export function DriverLayoutClient({ children, user, isOnline, driverStatus, hasDocuments, userId }: DriverLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
 
@@ -71,9 +73,7 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
                 <span className="material-symbols-outlined">search</span>
               </button>
             )}
-            <button className="text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Notifications">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
+            {userId && isApproved && <RealtimeNotifications role="driver" userId={userId} />}
             <button className="hidden md:block text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Help">
               <span className="material-symbols-outlined">help_outline</span>
             </button>

@@ -1,17 +1,18 @@
 'use client'
 
+import { RealtimeNotifications } from '@/components/shared/realtime-notifications'
+
 interface HeaderProps {
   onNewDelivery?: () => void
+  userId?: string
 }
 
-export default function Header({ onNewDelivery }: HeaderProps) {
+export default function Header({ onNewDelivery, userId }: HeaderProps) {
   return (
     <header className="fixed top-0 right-0 w-full md:w-[calc(100%-16rem)] h-16 z-40 bg-[#0e0e0e]/80 backdrop-blur-xl border-b border-outline-variant/15 shadow-2xl shadow-black/20 flex items-center justify-between px-8">
       <div className="flex items-center flex-1">
         <div className="relative w-64 group">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">
-            search
-          </span>
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
           <input
             className="bg-surface-container-highest/50 border-none rounded-full py-2 pl-10 pr-4 text-sm text-on-surface focus:ring-1 focus:ring-primary/30 w-full placeholder:text-on-surface-variant/50 outline-none"
             placeholder="Search parcels, routes..."
@@ -20,14 +21,17 @@ export default function Header({ onNewDelivery }: HeaderProps) {
         </div>
       </div>
       <div className="flex items-center space-x-6">
-        <button className="relative text-on-surface-variant hover:text-white transition-colors cursor-pointer">
-          <span className="material-symbols-outlined">notifications</span>
-          <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full"></span>
-        </button>
-        <button className="text-on-surface-variant hover:text-white transition-colors cursor-pointer">
+        {userId ? (
+          <RealtimeNotifications role="customer" userId={userId} />
+        ) : (
+          <button className="relative text-on-surface-variant hover:text-white transition-colors">
+            <span className="material-symbols-outlined">notifications</span>
+          </button>
+        )}
+        <button className="text-on-surface-variant hover:text-white transition-colors">
           <span className="material-symbols-outlined">help_outline</span>
         </button>
-        <div className="h-4 w-px bg-outline-variant/30"></div>
+        <div className="h-4 w-px bg-outline-variant/30" />
         {onNewDelivery && (
           <button
             onClick={onNewDelivery}
@@ -37,7 +41,7 @@ export default function Header({ onNewDelivery }: HeaderProps) {
             NEW DELIVERY
           </button>
         )}
-        <button className="text-sm font-inter text-white font-semibold hover:text-primary transition-colors cursor-pointer uppercase tracking-widest text-[11px]">
+        <button className="text-sm font-inter text-white font-semibold hover:text-primary transition-colors uppercase tracking-widest text-[11px]">
           Support
         </button>
       </div>

@@ -22,6 +22,7 @@ function LiveTrackingPageInner() {
   const [shipment, setShipment] = useState<any>(null)
   const [driver, setDriver] = useState<Driver>(null)
   const [timelineSteps, setTimelineSteps] = useState(defaultTimelineSteps)
+  const [userId, setUserId] = useState('')
   const supabase = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
   const requestedId = searchParams.get('id')
@@ -31,6 +32,7 @@ function LiveTrackingPageInner() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      if (!cancelled) setUserId(user.id)
 
       let query = supabase
         .from('delivery_requests')
@@ -93,7 +95,7 @@ function LiveTrackingPageInner() {
 
   return (
     <>
-      <Header onNewDelivery={() => setShowModal(true)} />
+      <Header onNewDelivery={() => setShowModal(true)} userId={userId} />
       <main className="pt-16 pb-20 md:pb-0 md:ml-64 min-h-screen bg-surface-container-low relative overflow-hidden">
         {/* Live Map Background */}
         <div className="absolute inset-0 z-0">

@@ -6,6 +6,7 @@ import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { MultiDriverMapDynamic } from '@/components/tracking/multi-driver-map-dynamic'
 import { createClient } from '@/lib/supabase/client'
+import { getDriverNamesByIds } from '@/app/actions/driver'
 
 type DeliveryRow = {
   id: string
@@ -65,6 +66,7 @@ export default function CustomerDashboardPage() {
   const [showModal, setShowModal] = useState(false)
   const supabase = useMemo(() => createClient(), [])
 
+  const [userId, setUserId] = useState('')
   const [recent, setRecent] = useState<DeliveryRow[]>([])
   const [activeCount, setActiveCount] = useState(0)
   const [completedThisMonth, setCompletedThisMonth] = useState(0)
@@ -76,6 +78,7 @@ export default function CustomerDashboardPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      if (!cancelled) setUserId(user.id)
 
       const startOfMonth = new Date()
       startOfMonth.setDate(1)
@@ -119,19 +122,10 @@ export default function CustomerDashboardPage() {
       setCompletedThisMonth(monthRes.count ?? 0)
       setTotalSpent(((deliveredRes.data ?? []) as any[]).reduce((s, r) => s + (Number(r.price) || 0), 0))
 
-      // Resolve driver names
+      // Resolve driver names via admin action (bypasses RLS on users table)
       const delivs = (activeDelivsRes.data ?? []) as Omit<ActiveDelivery, 'driver_name'>[]
       const driverIds = [...new Set(delivs.map((d) => d.driver_id).filter(Boolean))] as string[]
-      let nameMap: Record<string, string> = {}
-      if (driverIds.length > 0) {
-        const { data: users } = await supabase
-          .from('users')
-          .select('id, full_name')
-          .in('id', driverIds)
-        for (const u of users ?? []) {
-          nameMap[(u as any).id] = (u as any).full_name ?? 'Driver'
-        }
-      }
+      const nameMap = await getDriverNamesByIds(driverIds)
       if (!cancelled) {
         setActiveDeliveries(
           delivs.map((d) => ({ ...d, driver_name: d.driver_id ? (nameMap[d.driver_id] ?? 'Driver') : null }))
@@ -147,7 +141,7 @@ export default function CustomerDashboardPage() {
 
   return (
     <>
-      <Header onNewDelivery={() => setShowModal(true)} />
+      <Header onNewDelivery={() => setShowModal(true)} userId={userId} />
       <main className="pt-16 md:pl-64 min-h-screen bg-surface-container-low">
         <div className="max-w-7xl mx-auto p-6 pb-32">
 

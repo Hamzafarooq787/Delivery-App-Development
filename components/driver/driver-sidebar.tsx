@@ -2,10 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState, useTransition } from "react"
 import { cn } from "@/lib/utils"
 import { LogoutButton } from "@/components/auth/logout-button"
-import { toggleDriverOnline } from "@/app/actions/driver"
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard/driver", icon: "dashboard" },
@@ -29,19 +27,8 @@ interface DriverSidebarProps {
   isLocked?: boolean
 }
 
-export function DriverSidebar({ onClose, user, isOnline: initialIsOnline = false, isLocked = false }: DriverSidebarProps) {
+export function DriverSidebar({ onClose, user, isOnline = false, isLocked = false }: DriverSidebarProps) {
   const pathname = usePathname()
-  const [isPending, startTransition] = useTransition()
-  const [isOnline, setIsOnline] = useState(initialIsOnline)
-
-  function handleToggle() {
-    const next = !isOnline
-    setIsOnline(next)
-    startTransition(async () => {
-      const result = await toggleDriverOnline(next)
-      if (result.error) setIsOnline(!next)
-    })
-  }
 
   return (
     <aside className="flex h-full w-64 flex-col bg-[#0e0e0e] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
@@ -101,32 +88,15 @@ export function DriverSidebar({ onClose, user, isOnline: initialIsOnline = false
 
       <div className="px-6 pt-6 pb-6 mt-auto">
         {!isLocked && (
-          <>
-            <button
-              onClick={handleToggle}
-              disabled={isPending}
-              className={cn(
-                "w-full font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60",
-                isOnline
-                  ? "bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0px_0px_15px_rgba(74,222,128,0.15)]"
-                  : "bg-[#a3a6ff] text-[#0f00a4] shadow-[0px_0px_15px_rgba(163,166,255,0.2)]"
-              )}
-            >
-              <span className="material-symbols-outlined text-base">
-                {isOnline ? "wifi_off" : "add_circle"}
-              </span>
-              <span className="text-xs uppercase tracking-widest">
-                {isPending ? "Updating..." : isOnline ? "Go Offline" : "Go Online"}
-              </span>
-            </button>
-
-            {isOnline && (
-              <div className="flex items-center justify-center gap-1.5 mt-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Online</span>
-              </div>
-            )}
-          </>
+          <div className={cn(
+            "w-full py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 border text-xs font-bold uppercase tracking-widest",
+            isOnline
+              ? "bg-green-500/10 border-green-500/30 text-green-400"
+              : "bg-[#262626] border-[#494847]/20 text-[#adaaaa]"
+          )}>
+            <span className={cn("w-2 h-2 rounded-full", isOnline ? "bg-green-400 animate-pulse" : "bg-[#494847]")} />
+            {isOnline ? "On Duty" : "Off Duty"}
+          </div>
         )}
 
         <LogoutButton className="mt-4 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#adaaaa] hover:text-white hover:bg-[#201f1f] rounded-lg transition-colors disabled:opacity-60">

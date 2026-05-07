@@ -2,30 +2,27 @@
 
 import { useState } from "react"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
+import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
 
 interface AdminLayoutClientProps {
   children: React.ReactNode
   user: { full_name: string; email: string }
   pendingVerifications: number
+  userId: string
 }
 
-export function AdminLayoutClient({ children, user, pendingVerifications }: AdminLayoutClientProps) {
+export function AdminLayoutClient({ children, user, pendingVerifications, userId }: AdminLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#131313]">
-      {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:shrink-0 h-full">
         <AdminSidebar user={user} pendingVerifications={pendingVerifications} />
       </div>
 
-      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <div className="relative z-50 h-full">
             <AdminSidebar user={user} pendingVerifications={pendingVerifications} onClose={() => setSidebarOpen(false)} />
           </div>
@@ -33,32 +30,21 @@ export function AdminLayoutClient({ children, user, pendingVerifications }: Admi
       )}
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top Header */}
         <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-[#0e0e0e]/60 backdrop-blur-xl flex justify-between items-center px-4 md:px-8 z-40 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="flex lg:hidden shrink-0 items-center justify-center h-8 w-8 text-[#adaaaa] hover:text-white"
-              aria-label="Toggle menu"
-            >
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex lg:hidden shrink-0 items-center justify-center h-8 w-8 text-[#adaaaa] hover:text-white" aria-label="Toggle menu">
               <span className="material-symbols-outlined text-xl">menu</span>
             </button>
             <div className="relative w-full max-w-md hidden sm:block">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-sm">search</span>
-              <input
-                className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[#a3a6ff]/30 text-white placeholder-[#adaaaa] outline-none"
-                placeholder="Search transactions, users, or IDs..."
-                type="text"
-              />
+              <input className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[#a3a6ff]/30 text-white placeholder-[#adaaaa] outline-none" placeholder="Search transactions, users, or IDs..." type="text" />
             </div>
           </div>
           <div className="flex items-center gap-3 md:gap-5 shrink-0">
             <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
               <span className="material-symbols-outlined">search</span>
             </button>
-            <button className="text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Notifications">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
+            {userId && <RealtimeNotifications role="admin" userId={userId} />}
             <button className="hidden md:block text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Help">
               <span className="material-symbols-outlined">help_outline</span>
             </button>
