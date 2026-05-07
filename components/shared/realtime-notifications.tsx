@@ -37,7 +37,30 @@ export function RealtimeNotifications({ role, userId }: Props) {
 
   const unread = notifs.filter((n) => !n.read).length
 
-  // Subscribe to the notifications table filtered by this user's id
+  // Load existing notifications on mount
+  useEffect(() => {
+    if (!userId) return
+    supabase
+      .from("notifications")
+      .select("id, title, body, read, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        if (!data) return
+        setNotifs(
+          data.map((r) => ({
+            id: r.id,
+            title: r.title,
+            body: r.body,
+            at: new Date(r.created_at).getTime(),
+            read: r.read,
+          }))
+        )
+      })
+  }, [supabase, userId])
+
+  // Subscribe to new notifications in real time
   useEffect(() => {
     if (!userId) return
 
@@ -61,7 +84,10 @@ export function RealtimeNotifications({ role, userId }: Props) {
             at: new Date(row.created_at).getTime(),
             read: false,
           }
-          setNotifs((prev) => [n, ...prev].slice(0, 30))
+          setNotifs((prev) => {
+            if (prev.some((x) => x.id === n.id)) return prev
+            return [n, ...prev].slice(0, 30)
+          })
           toast(n.title, {
             description: n.body,
             duration: 6000,
@@ -69,7 +95,9 @@ export function RealtimeNotifications({ role, userId }: Props) {
           })
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        if (err) console.error("[notifications] channel error", err)
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [supabase, userId])
@@ -86,6 +114,13 @@ export function RealtimeNotifications({ role, userId }: Props) {
 
   function markAllRead() {
     setNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
+    // persist read state in db (best effort)
+    supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", userId)
+      .eq("read", false)
+      .then(() => {})
   }
 
   return (
@@ -108,7 +143,13 @@ export function RealtimeNotifications({ role, userId }: Props) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#494847]/15 shrink-0">
             <p className="text-xs font-bold text-white uppercase tracking-wider">Notifications</p>
             {notifs.length > 0 && (
-              <button onClick={() => setNotifs([])} className="text-[10px] text-[#adaaaa] hover:text-white">
+              <button
+                onClick={() => {
+                  setNotifs([])
+                  supabase.from("notifications").delete().eq("user_id", userId).then(() => {})
+                }}
+                className="text-[10px] text-[#adaaaa] hover:text-white"
+              >
                 Clear all
               </button>
             )}
