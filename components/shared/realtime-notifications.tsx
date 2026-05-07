@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 export type NotifRole = "admin" | "driver" | "customer"
 
@@ -41,6 +42,16 @@ function buildNotif(role: NotifRole, payload: any): Notif | null {
   return null
 }
 
+function toastIcon(role: NotifRole, title: string) {
+  if (title === "Delivered!") return "✅"
+  if (role === "admin") return "📦"
+  if (role === "driver") return "🚚"
+  if (title.includes("Way")) return "🚗"
+  if (title.includes("Picked")) return "📬"
+  if (title.includes("Transit")) return "🛣️"
+  return "🔔"
+}
+
 export function RealtimeNotifications({ role, userId }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [notifs, setNotifs] = useState<Notif[]>([])
@@ -66,8 +77,13 @@ export function RealtimeNotifications({ role, userId }: Props) {
           const n = buildNotif(role, payload)
           if (!n) return
           setNotifs((prev) => [n, ...prev].slice(0, 30))
-          // Auto-show the bell as unread
           setOpen(false)
+          // Show a pop-up toast alongside the bell
+          toast(n.title, {
+            description: n.body,
+            duration: 6000,
+            icon: toastIcon(role, n.title),
+          })
         }
       )
       .subscribe()
