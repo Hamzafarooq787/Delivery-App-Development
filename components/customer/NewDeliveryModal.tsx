@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast, Toaster } from 'sonner'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
 interface NewDeliveryModalProps {
@@ -52,10 +52,9 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
       if (error) { toast.error(error.message || 'Failed to create delivery.'); setSubmitting(false); return }
 
       toast.success('Delivery requested!')
-      setTimeout(() => {
-        router.push('/dashboard/customer/active-deliveries')
-        router.refresh()
-      }, 600)
+      onClose()
+      router.push('/dashboard/customer/active-deliveries')
+      router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unexpected error.')
       setSubmitting(false)
@@ -64,7 +63,6 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <Toaster position="top-center" richColors />
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative z-10 w-full max-w-md bg-[#1a1919] rounded-2xl border border-[#494847]/20 shadow-2xl overflow-hidden">
