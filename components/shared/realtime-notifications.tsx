@@ -19,33 +19,10 @@ type Props = {
   userId: string
 }
 
-function buildNotif(role: NotifRole, payload: any): Notif | null {
-  const row = (payload.new ?? payload.old) as Record<string, any> | null
-  if (!row) return null
-  const event = payload.eventType as string
-
-  const tn = row.tracking_number ? `#${row.tracking_number}` : `#${String(row.id).slice(0, 8).toUpperCase()}`
-
-  if (role === "admin" && event === "INSERT") {
-    return { id: row.id, title: "New Shipment Request", body: `${tn} — ${row.pickup_address?.split(",")[0] ?? ""} → ${row.delivery_address?.split(",")[0] ?? ""}`, at: Date.now(), read: false }
-  }
-  if (role === "driver" && event === "INSERT" && row.status === "requested") {
-    return { id: row.id, title: "New Job Available", body: `${tn} — ${row.pickup_address?.split(",")[0] ?? ""} → ${row.delivery_address?.split(",")[0] ?? ""}`, at: Date.now(), read: false }
-  }
-  if (role === "customer" && event === "UPDATE") {
-    const s = row.status as string
-    if (s === "accepted") return { id: `${row.id}-accepted`, title: "Driver On the Way", body: `Your delivery ${tn} has been accepted by a driver.`, at: Date.now(), read: false }
-    if (s === "collected" || s === "picked_up") return { id: `${row.id}-collected`, title: "Package Picked Up", body: `Driver has collected your package for ${tn}.`, at: Date.now(), read: false }
-    if (s === "in_transit") return { id: `${row.id}-transit`, title: "In Transit", body: `Your delivery ${tn} is on its way.`, at: Date.now(), read: false }
-    if (s === "delivered") return { id: `${row.id}-delivered`, title: "Delivered!", body: `Your delivery ${tn} has been completed.`, at: Date.now(), read: false }
-  }
-  return null
-}
-
-function toastIcon(role: NotifRole, title: string) {
+function toastIcon(title: string) {
   if (title === "Delivered!") return "✅"
-  if (role === "admin") return "📦"
-  if (role === "driver") return "🚚"
+  if (title === "New Shipment Request") return "📦"
+  if (title === "New Job Available") return "🚚"
   if (title.includes("Way")) return "🚗"
   if (title.includes("Picked")) return "📬"
   if (title.includes("Transit")) return "🛣️"
@@ -60,36 +37,42 @@ export function RealtimeNotifications({ role, userId }: Props) {
 
   const unread = notifs.filter((n) => !n.read).length
 
+  // Subscribe to the notifications table filtered by this user's id
   useEffect(() => {
-    const filter =
-      role === "customer"
-        ? `customer_id=eq.${userId}`
-        : role === "driver"
-        ? "status=eq.requested"
-        : undefined
+    if (!userId) return
 
     const channel = supabase
-      .channel(`notifs-${role}-${userId}`)
+      .channel(`notifications-${userId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "delivery_requests", ...(filter ? { filter } : {}) },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
         (payload) => {
-          const n = buildNotif(role, payload)
-          if (!n) return
+          const row = payload.new as any
+          if (!row) return
+          const n: Notif = {
+            id: row.id,
+            title: row.title,
+            body: row.body,
+            at: new Date(row.created_at).getTime(),
+            read: false,
+          }
           setNotifs((prev) => [n, ...prev].slice(0, 30))
-          setOpen(false)
-          // Show a pop-up toast alongside the bell
           toast(n.title, {
             description: n.body,
             duration: 6000,
-            icon: toastIcon(role, n.title),
+            icon: toastIcon(n.title),
           })
         }
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [supabase, role, userId])
+  }, [supabase, userId])
 
   // Close panel on outside click
   useEffect(() => {
