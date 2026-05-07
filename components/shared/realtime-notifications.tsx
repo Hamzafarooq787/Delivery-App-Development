@@ -29,6 +29,43 @@ function toastIcon(title: string) {
   return "🔔"
 }
 
+// Play a short chime using Web Audio API (no audio file needed)
+function playChime() {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = "sine"
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.15)
+    gain.gain.setValueAtTime(0.25, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.4)
+  } catch {}
+}
+
+// Show a native OS/browser notification (works on laptop & mobile)
+function showBrowserNotification(title: string, body: string) {
+  if (typeof window === "undefined") return
+  if (!("Notification" in window)) return
+  if (Notification.permission !== "granted") return
+  try {
+    new Notification(title, { body, icon: "/favicon.ico", tag: title })
+  } catch {}
+}
+
+// Request notification permission once
+function requestNotifPermission() {
+  if (typeof window === "undefined") return
+  if (!("Notification" in window)) return
+  if (Notification.permission === "default") {
+    Notification.requestPermission()
+  }
+}
+
 export function RealtimeNotifications({ role, userId }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [notifs, setNotifs] = useState<Notif[]>([])
@@ -37,7 +74,10 @@ export function RealtimeNotifications({ role, userId }: Props) {
 
   const unread = notifs.filter((n) => !n.read).length
 
-  // Load existing notifications on mount
+  // Ask for browser notification permission on first mount
+  useEffect(() => { requestNotifPermission() }, [])
+
+  // Load existing notifications from DB on mount
   useEffect(() => {
     if (!userId) return
     supabase
@@ -60,46 +100,61 @@ export function RealtimeNotifications({ role, userId }: Props) {
       })
   }, [supabase, userId])
 
-  // Subscribe to new notifications in real time
+  // Subscribe to real-time inserts — set auth token first so RLS works
   useEffect(() => {
     if (!userId) return
 
-    const channel = supabase
-      .channel(`notifications-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const row = payload.new as any
-          if (!row) return
-          const n: Notif = {
-            id: row.id,
-            title: row.title,
-            body: row.body,
-            at: new Date(row.created_at).getTime(),
-            read: false,
-          }
-          setNotifs((prev) => {
-            if (prev.some((x) => x.id === n.id)) return prev
-            return [n, ...prev].slice(0, 30)
-          })
-          toast(n.title, {
-            description: n.body,
-            duration: 6000,
-            icon: toastIcon(n.title),
-          })
-        }
-      )
-      .subscribe((status, err) => {
-        if (err) console.error("[notifications] channel error", err)
-      })
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-    return () => { supabase.removeChannel(channel) }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      // Ensure realtime WebSocket carries the JWT so the RLS SELECT check passes
+      if (session?.access_token) {
+        supabase.realtime.setAuth(session.access_token)
+      }
+
+      channel = supabase
+        .channel(`notifications-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            const row = payload.new as any
+            if (!row) return
+            const n: Notif = {
+              id: row.id,
+              title: row.title,
+              body: row.body,
+              at: new Date(row.created_at).getTime(),
+              read: false,
+            }
+            setNotifs((prev) => {
+              if (prev.some((x) => x.id === n.id)) return prev
+              return [n, ...prev].slice(0, 30)
+            })
+            // In-app toast
+            toast(n.title, {
+              description: n.body,
+              duration: 6000,
+              icon: toastIcon(n.title),
+            })
+            // Native OS/browser notification + chime
+            showBrowserNotification(n.title, n.body)
+            playChime()
+          }
+        )
+        .subscribe((status, err) => {
+          if (err) console.error("[notif] subscription error", err)
+        })
+    })
+
+    return () => {
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [supabase, userId])
 
   // Close panel on outside click
@@ -114,13 +169,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
 
   function markAllRead() {
     setNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
-    // persist read state in db (best effort)
-    supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", userId)
-      .eq("read", false)
-      .then(() => {})
+    supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false).then(() => {})
   }
 
   return (
