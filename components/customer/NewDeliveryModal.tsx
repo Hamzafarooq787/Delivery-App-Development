@@ -15,6 +15,17 @@ const PAYLOAD_OPTIONS = [
   { icon: 'precision_manufacturing', label: 'Fragile' },
 ] as const
 
+const PROHIBITED_ITEMS = [
+  { icon: 'gavel', label: 'Illegal goods' },
+  { icon: 'security', label: 'Weapons & ammo' },
+  { icon: 'payments', label: 'Cash & currency' },
+  { icon: 'whatshot', label: 'Flammables' },
+  { icon: 'science', label: 'Hazardous chemicals' },
+  { icon: 'medication', label: 'Controlled substances' },
+  { icon: 'no_adult_content', label: 'Prohibited content' },
+  { icon: 'battery_alert', label: 'Damaged batteries' },
+]
+
 export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
   const router = useRouter()
 
@@ -23,6 +34,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
   const [deliveryStreet, setDeliveryStreet] = useState('')
   const [deliveryCity, setDeliveryCity] = useState('')
   const [selectedPayload, setSelectedPayload] = useState<string>(PAYLOAD_OPTIONS[0].label)
+  const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const buildAddress = (street: string, city: string) =>
@@ -34,6 +46,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     const delivery_address = buildAddress(deliveryStreet, deliveryCity)
     if (!pickup_address) { toast.error('Enter a pickup address.'); return }
     if (!delivery_address) { toast.error('Enter a delivery address.'); return }
+    if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
 
     setSubmitting(true)
     try {
@@ -65,10 +78,10 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-10 w-full max-w-md bg-[#1a1919] rounded-2xl border border-[#494847]/20 shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-md bg-[#1a1919] rounded-2xl border border-[#494847]/20 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#a3a6ff]/10 flex items-center justify-center">
               <span className="material-symbols-outlined text-[#a3a6ff] text-lg">local_shipping</span>
@@ -86,7 +99,8 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
           </button>
         </div>
 
-        <div className="px-5 py-5 space-y-4">
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
 
           {/* Pickup */}
           <div>
@@ -159,10 +173,56 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
               })}
             </div>
           </div>
+
+          {/* Prohibited Items */}
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-red-500/15">
+              <span className="material-symbols-outlined text-red-400 text-base">block</span>
+              <p className="text-[11px] font-bold text-red-400 uppercase tracking-wider">Prohibited Items</p>
+            </div>
+            <div className="px-4 py-3 grid grid-cols-2 gap-2">
+              {PROHIBITED_ITEMS.map((item) => (
+                <div key={item.label} className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-red-400/70 text-sm">{item.icon}</span>
+                  <span className="text-[11px] text-[#adaaaa]">{item.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 pb-3">
+              <p className="text-[10px] text-[#494847] leading-relaxed">
+                Shipping prohibited items may result in immediate cancellation, account suspension, and legal action.
+              </p>
+            </div>
+          </div>
+
+          {/* Confirmation checkbox */}
+          <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+            confirmed
+              ? 'border-green-500/40 bg-green-500/5'
+              : 'border-[#494847]/20 bg-[#262626] hover:border-[#494847]/40'
+          }`}>
+            <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${
+              confirmed ? 'bg-green-500 border-green-500' : 'border-[#494847]/60'
+            }`}>
+              {confirmed && (
+                <span className="material-symbols-outlined text-white text-[12px]">check</span>
+              )}
+            </div>
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+            />
+            <p className="text-[11px] text-[#adaaaa] leading-relaxed">
+              I confirm that my package does <span className="text-white font-bold">not</span> contain any prohibited, illegal, or dangerous items. I accept full responsibility for the contents.
+            </p>
+          </label>
+
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-[#494847]/15 flex items-center justify-between gap-3">
+        <div className="px-5 py-4 border-t border-[#494847]/15 flex items-center justify-between gap-3 shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors"
@@ -171,9 +231,9 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting}
-            className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            style={{ boxShadow: '0 0 20px rgba(163,166,255,0.25)' }}
+            disabled={submitting || !confirmed}
+            className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{ boxShadow: confirmed ? '0 0 20px rgba(163,166,255,0.25)' : 'none' }}
           >
             <span className="material-symbols-outlined text-base">bolt</span>
             {submitting ? 'Requesting…' : 'Request Delivery'}
