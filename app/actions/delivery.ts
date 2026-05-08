@@ -202,6 +202,44 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
   return { success: true }
 }
 
+export async function safetyReleaseJob(deliveryId: string, reason: string) {
+  const supabase = await createClient()
+  const admin = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  // Release job back to the pool so another driver can accept it
+  const { error } = await admin
+    .from("delivery_requests")
+    .update({ status: "requested", driver_id: null })
+    .eq("id", deliveryId)
+    .eq("driver_id", user.id)
+
+  if (error) return { error: error.message }
+
+  // Log the safety cancellation with reason
+  await admin.from("delivery_status_logs").insert({
+    delivery_id: deliveryId,
+    status: `safety_release: ${reason}`,
+    updated_by: user.id,
+  })
+
+  // Auto-offline if no other active jobs remain
+  const ACTIVE = ["accepted", "collected", "picked_up", "in_transit"]
+  const { count } = await admin
+    .from("delivery_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("driver_id", user.id)
+    .in("status", ACTIVE)
+  if ((count ?? 0) === 0) {
+    await admin.from("driver_profiles").upsert({ id: user.id, is_online: false }, { onConflict: "id" })
+  }
+
+  revalidatePath("/dashboard/driver/jobs")
+  revalidatePath("/dashboard/driver/active-jobs")
+  return { success: true }
+}
+
 export async function getDriverDeliveries(statusFilter?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

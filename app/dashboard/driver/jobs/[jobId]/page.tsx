@@ -2,11 +2,12 @@ import { PageHeader } from "@/components/shared/page-header"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Timeline } from "@/components/shared/timeline"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, MapPin, Package, User, Phone, XCircle } from "lucide-react"
+import { ArrowLeft, MapPin, Package, User, Phone } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { UpdateStatusButton } from "@/components/driver/update-status-button"
+import { SafetyCancelButton } from "@/components/driver/safety-cancel-button"
 import { LiveTrackingPanel } from "@/components/tracking/live-tracking-panel"
 import { DriverLocationBroadcaster } from "@/components/tracking/driver-location-broadcaster"
 
@@ -209,11 +210,7 @@ export default async function JobDetailPage({
           {job.status !== "delivered" && job.status !== "cancelled" && (
             <div className="flex gap-3">
               <UpdateStatusButton jobId={jobId} currentStatus={job.status} />
-              <Button variant="outline" size="sm" className="flex-1" asChild>
-                <Link href="/dashboard/driver/support">
-                  <XCircle className="mr-1.5 h-4 w-4" />Report Issue
-                </Link>
-              </Button>
+              <SafetyCancelButton jobId={jobId} />
             </div>
           )}
         </div>
