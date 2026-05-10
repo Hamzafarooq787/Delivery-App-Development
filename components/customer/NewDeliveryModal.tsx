@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { MAPBOX_TOKEN } from '@/lib/mapbox'
 import { fetchRoute } from '@/lib/mapbox'
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 import dynamic from 'next/dynamic'
 
 const MapboxLiveMap = dynamic(

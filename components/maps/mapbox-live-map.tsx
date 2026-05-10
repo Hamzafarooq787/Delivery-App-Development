@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import Map, { Marker, Source, Layer, NavigationControl, type MapRef } from "react-map-gl/mapbox"
-import { MAPBOX_TOKEN, DARK_STYLE } from "@/lib/mapbox"
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+const DARK_STYLE = "mapbox://styles/mapbox/dark-v11"
 
 type LngLat = { lng: number; lat: number }
 

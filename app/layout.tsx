@@ -3,6 +3,7 @@ import { Manrope, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import './globals.css'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 const manrope = Manrope({
   subsets: ['latin'],
