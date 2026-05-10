@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
-import { MultiDriverMapDynamic } from '@/components/tracking/multi-driver-map-dynamic'
+import dynamic from 'next/dynamic'
+const MapboxMultiDriver = dynamic(
+  () => import('@/components/maps/mapbox-multi-driver').then((m) => m.MapboxMultiDriver),
+  { ssr: false }
+)
 import { createClient } from '@/lib/supabase/client'
 import { getDriverNamesByIds } from '@/app/actions/driver'
 
@@ -221,7 +225,7 @@ export default function CustomerDashboardPage() {
 
                 {/* Map — left half */}
                 <div className="flex-1 min-h-[280px] lg:min-h-0">
-                  <MultiDriverMapDynamic
+                  <MapboxMultiDriver
                     deliveries={activeDeliveries}
                     height="100%"
                     className="h-full w-full"
