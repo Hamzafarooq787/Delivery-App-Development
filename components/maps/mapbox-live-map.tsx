@@ -1,10 +1,26 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import Map, { Marker, Source, Layer, NavigationControl, type MapRef } from "react-map-gl/mapbox"
+import { useEffect, useRef, useState, useCallback } from "react"
+import { GoogleMap, useJsApiLoader, Polyline } from "@react-google-maps/api"
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
-const DARK_STYLE = "mapbox://styles/mapbox/dark-v11"
+const GOOGLE_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!
+
+const DARK_STYLES: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#212121" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#181818" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#2c2c2c" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#373737" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3c3c3c" }] },
+  { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3d3d3d" }] },
+]
 
 type LngLat = { lng: number; lat: number }
 
@@ -31,6 +47,10 @@ function initials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+function toLngLat(ll: LngLat) {
+  return { lat: ll.lat, lng: ll.lng }
+}
+
 export function MapboxLiveMap({
   drivers = [],
   pickup,
@@ -40,12 +60,12 @@ export function MapboxLiveMap({
   followDriverId,
   customerLocation,
 }: Props) {
-  const mapRef = useRef<MapRef>(null)
-  const [mounted, setMounted] = useState(false)
+  const { isLoaded } = useJsApiLoader({ googleMapsApiKey: GOOGLE_KEY })
+  const mapRef = useRef<google.maps.Map | null>(null)
+  const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map())
   const [userLocation, setUserLocation] = useState<LngLat | null>(null)
 
   useEffect(() => {
-    setMounted(true)
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLocation({ lng: pos.coords.longitude, lat: pos.coords.latitude }),
@@ -54,142 +74,177 @@ export function MapboxLiveMap({
     }
   }, [])
 
-  // Fly to user's location at street level when no other markers exist
-  useEffect(() => {
-    if (!userLocation || !mapRef.current || !mounted) return
-    const hasMarkers = drivers.length > 0 || pickup || destination
-    if (!hasMarkers) {
-      mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 14, duration: 1000 })
-    }
-  }, [userLocation, mounted])
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map
+  }, [])
 
-  // Pan to followed driver
+  // Fit bounds / fly to whenever markers change
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !isLoaded) return
+
+    const points: google.maps.LatLng[] = []
+    drivers.forEach((d) => points.push(new google.maps.LatLng(d.position.lat, d.position.lng)))
+    if (pickup) points.push(new google.maps.LatLng(pickup.lat, pickup.lng))
+    if (destination) points.push(new google.maps.LatLng(destination.lat, destination.lng))
+    if (customerLocation) points.push(new google.maps.LatLng(customerLocation.lat, customerLocation.lng))
+
+    if (points.length === 0) {
+      if (userLocation) map.panTo({ lat: userLocation.lat, lng: userLocation.lng })
+      return
+    }
+    if (points.length === 1) {
+      map.panTo(points[0].toJSON())
+      map.setZoom(15)
+      return
+    }
+    const bounds = new google.maps.LatLngBounds()
+    points.forEach((p) => bounds.extend(p))
+    map.fitBounds(bounds, 80)
+  }, [isLoaded, drivers.length, !!pickup, !!destination, !!customerLocation, userLocation])
+
+  // Follow specific driver
   useEffect(() => {
     if (!followDriverId || !mapRef.current) return
     const d = drivers.find((d) => d.id === followDriverId)
-    if (d) mapRef.current.easeTo({ center: [d.position.lng, d.position.lat], duration: 800 })
+    if (d) mapRef.current.panTo({ lat: d.position.lat, lng: d.position.lng })
   }, [drivers, followDriverId])
 
-  // Fit bounds / zoom to markers whenever they change
+  // Manage advanced markers
   useEffect(() => {
-    if (!mapRef.current || !mounted) return
-    const points: [number, number][] = []
-    drivers.forEach((d) => points.push([d.position.lng, d.position.lat]))
-    if (pickup) points.push([pickup.lng, pickup.lat])
-    if (destination) points.push([destination.lng, destination.lat])
-    if (customerLocation) points.push([customerLocation.lng, customerLocation.lat])
+    if (!isLoaded || !mapRef.current) return
+    const map = mapRef.current
+    const existing = markersRef.current
+    const newKeys = new Set<string>()
 
-    if (points.length === 0) return
-
-    if (points.length === 1) {
-      mapRef.current.flyTo({ center: points[0], zoom: 14, duration: 1000 })
-      return
+    async function ensureLib() {
+      return google.maps.importLibrary("marker") as Promise<google.maps.MarkerLibrary>
     }
 
-    const lngs = points.map((p) => p[0])
-    const lats = points.map((p) => p[1])
-    mapRef.current.fitBounds(
-      [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
-      { padding: 80, duration: 1000, maxZoom: 15 }
-    )
-  }, [mounted, drivers.length, !!pickup, !!destination, !!customerLocation])
+    async function renderMarkers() {
+      const { AdvancedMarkerElement } = await ensureLib()
 
-  if (!mounted) return <div style={{ height }} className="bg-[#1a1a1a] rounded-xl animate-pulse" />
+      function upsert(key: string, lat: number, lng: number, el: HTMLElement) {
+        newKeys.add(key)
+        if (existing.has(key)) {
+          const m = existing.get(key)!
+          m.position = { lat, lng }
+          if (m.content !== el) m.content = el
+        } else {
+          const m = new AdvancedMarkerElement({ map, position: { lat, lng }, content: el })
+          existing.set(key, m)
+        }
+      }
 
-  const routeData: GeoJSON.Feature<GeoJSON.LineString> | null = routeGeometry
-    ? { type: "Feature", properties: {}, geometry: routeGeometry }
+      // Pickup
+      if (pickup) {
+        const el = document.createElement("div")
+        el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:#a3a6ff;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(163,166,255,0.5)">
+            <span class="material-symbols-outlined" style="color:white;font-size:16px">radio_button_checked</span>
+          </div>
+          <div style="width:2px;height:10px;background:#a3a6ff"></div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#a3a6ff"></div>
+        </div>`
+        upsert("pickup", pickup.lat, pickup.lng, el)
+      }
+
+      // Destination
+      if (destination) {
+        const el = document.createElement("div")
+        el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center">
+          <div style="width:32px;height:32px;border-radius:50%;background:#c180ff;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(193,128,255,0.5)">
+            <span class="material-symbols-outlined" style="color:white;font-size:16px">location_on</span>
+          </div>
+          <div style="width:2px;height:10px;background:#c180ff"></div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#c180ff"></div>
+        </div>`
+        upsert("destination", destination.lat, destination.lng, el)
+      }
+
+      // Customer
+      if (customerLocation) {
+        const el = document.createElement("div")
+        el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;position:relative">
+          <div style="position:absolute;inset:0;border-radius:50%;background:rgba(6,182,212,0.3);transform:scale(1.8);animation:ping 1s cubic-bezier(0,0,0.2,1) infinite"></div>
+          <div style="width:36px;height:36px;border-radius:50%;background:#06b6d4;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(6,182,212,0.6);position:relative;z-index:1">
+            <span class="material-symbols-outlined" style="color:white;font-size:16px">person_pin</span>
+          </div>
+          <div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:#06b6d4;color:white;margin-top:2px;white-space:nowrap">Customer</div>
+        </div>`
+        upsert("customer", customerLocation.lat, customerLocation.lng, el)
+      }
+
+      // Drivers
+      for (const driver of drivers) {
+        const el = document.createElement("div")
+        const accepted = driver.isAccepted
+        el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;position:relative">
+          ${accepted ? `<div style="position:absolute;inset:0;border-radius:50%;background:rgba(74,222,128,0.3);transform:scale(1.8);animation:ping 1s cubic-bezier(0,0,0.2,1) infinite"></div>` : ''}
+          <div style="width:40px;height:40px;border-radius:50%;border:2px solid ${accepted ? '#86efac' : 'white'};background:${accepted ? '#22c55e' : '#a3a6ff'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${accepted ? 'white' : '#0f00a4'};box-shadow:0 0 14px ${accepted ? 'rgba(34,197,94,0.5)' : 'rgba(163,166,255,0.4)'};position:relative;z-index:1">
+            ${initials(driver.label)}
+          </div>
+          <div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${accepted ? '#22c55e' : '#1a1919'};color:${accepted ? 'white' : '#adaaaa'};margin-top:2px;white-space:nowrap">${driver.label}</div>
+        </div>`
+        upsert(`driver-${driver.id}`, driver.position.lat, driver.position.lng, el)
+      }
+
+      // Remove stale markers
+      for (const [key, marker] of existing) {
+        if (!newKeys.has(key)) {
+          marker.map = null
+          existing.delete(key)
+        }
+      }
+    }
+
+    renderMarkers()
+  }, [isLoaded, pickup, destination, customerLocation, drivers])
+
+  // Cleanup markers on unmount
+  useEffect(() => {
+    return () => {
+      markersRef.current.forEach((m) => { m.map = null })
+      markersRef.current.clear()
+    }
+  }, [])
+
+  const routeCoords = routeGeometry
+    ? routeGeometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
     : null
 
-  const defaultCenter = userLocation ?? { lng: -0.1276, lat: 51.5074 }
+  const defaultCenter = userLocation
+    ? { lat: userLocation.lat, lng: userLocation.lng }
+    : { lat: 33.1, lng: 73.75 } // Mirpur, AJK default
+
+  if (!isLoaded) {
+    return <div style={{ height }} className="bg-[#1a1a1a] rounded-xl animate-pulse" />
+  }
 
   return (
     <div style={{ height }} className="relative rounded-xl overflow-hidden">
-      <Map
-        ref={mapRef}
-        mapboxAccessToken={MAPBOX_TOKEN}
-        mapStyle={DARK_STYLE}
-        initialViewState={{ longitude: defaultCenter.lng, latitude: defaultCenter.lat, zoom: 14 }}
-        style={{ width: "100%", height: "100%" }}
-        attributionControl={false}
+      <style>{`@keyframes ping{75%,100%{transform:scale(2);opacity:0}}`}</style>
+      <GoogleMap
+        mapContainerStyle={{ width: "100%", height: "100%" }}
+        center={defaultCenter}
+        zoom={14}
+        onLoad={onMapLoad}
+        options={{
+          styles: DARK_STYLES,
+          disableDefaultUI: true,
+          zoomControl: true,
+          zoomControlOptions: { position: 9 /* BOTTOM_RIGHT */ },
+          mapId: undefined,
+          clickableIcons: false,
+        }}
       >
-        <NavigationControl position="bottom-right" />
-
-        {/* Route line */}
-        {routeData && (
-          <Source id="route" type="geojson" data={routeData}>
-            <Layer
-              id="route-line"
-              type="line"
-              paint={{ "line-color": "#a3a6ff", "line-width": 4, "line-opacity": 0.85 }}
-              layout={{ "line-join": "round", "line-cap": "round" }}
-            />
-          </Source>
+        {routeCoords && routeCoords.length > 1 && (
+          <Polyline
+            path={routeCoords}
+            options={{ strokeColor: "#a3a6ff", strokeWeight: 4, strokeOpacity: 0.85 }}
+          />
         )}
-
-        {/* Pickup marker */}
-        {pickup && (
-          <Marker longitude={pickup.lng} latitude={pickup.lat} anchor="bottom">
-            <div className="flex flex-col items-center">
-              <div className="w-8 h-8 rounded-full bg-[#a3a6ff] border-2 border-white flex items-center justify-center shadow-lg shadow-[#a3a6ff]/40">
-                <span className="material-symbols-outlined text-white text-sm">radio_button_checked</span>
-              </div>
-              <div className="w-0.5 h-3 bg-[#a3a6ff]" />
-              <div className="w-1.5 h-1.5 rounded-full bg-[#a3a6ff]" />
-            </div>
-          </Marker>
-        )}
-
-        {/* Destination marker */}
-        {destination && (
-          <Marker longitude={destination.lng} latitude={destination.lat} anchor="bottom">
-            <div className="flex flex-col items-center">
-              <div className="w-8 h-8 rounded-full bg-[#c180ff] border-2 border-white flex items-center justify-center shadow-lg shadow-[#c180ff]/40">
-                <span className="material-symbols-outlined text-white text-sm">location_on</span>
-              </div>
-              <div className="w-0.5 h-3 bg-[#c180ff]" />
-              <div className="w-1.5 h-1.5 rounded-full bg-[#c180ff]" />
-            </div>
-          </Marker>
-        )}
-
-        {/* Customer live location marker */}
-        {customerLocation && (
-          <Marker longitude={customerLocation.lng} latitude={customerLocation.lat} anchor="center">
-            <div className="relative flex flex-col items-center">
-              <div className="absolute inset-0 rounded-full bg-cyan-400/30 animate-ping scale-150" />
-              <div className="w-9 h-9 rounded-full bg-cyan-500 border-2 border-white flex items-center justify-center shadow-xl z-10 shadow-cyan-500/40">
-                <span className="material-symbols-outlined text-white text-sm">person_pin</span>
-              </div>
-              <div className="text-[9px] font-bold px-1.5 py-0.5 rounded mt-0.5 bg-cyan-500 text-white whitespace-nowrap">
-                Customer
-              </div>
-            </div>
-          </Marker>
-        )}
-
-        {/* Driver markers */}
-        {drivers.map((driver) => (
-          <Marker key={driver.id} longitude={driver.position.lng} latitude={driver.position.lat} anchor="center">
-            <div className="relative flex flex-col items-center">
-              {driver.isAccepted && (
-                <div className="absolute inset-0 rounded-full bg-green-400/30 animate-ping scale-150" />
-              )}
-              <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-xs font-black shadow-xl z-10 ${
-                driver.isAccepted
-                  ? "bg-green-500 border-green-300 text-white shadow-green-500/40"
-                  : "bg-[#a3a6ff] border-white text-[#0f00a4] shadow-[#a3a6ff]/40"
-              }`}>
-                {initials(driver.label)}
-              </div>
-              <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded mt-0.5 whitespace-nowrap ${
-                driver.isAccepted ? "bg-green-500 text-white" : "bg-[#1a1919] text-[#adaaaa]"
-              }`}>
-                {driver.label}
-              </div>
-            </div>
-          </Marker>
-        ))}
-      </Map>
+      </GoogleMap>
     </div>
   )
 }

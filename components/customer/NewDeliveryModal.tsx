@@ -5,10 +5,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { fetchRoute } from '@/lib/mapbox'
 import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tracking'
-
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+import {
+  fetchRoute,
+  googlePlacesAutocomplete,
+  googlePlaceCoords,
+  googleReverseGeocode,
+  googleDetectCountryCode,
+  type PlaceSuggestion,
+} from '@/lib/google'
 
 const MapboxLiveMap = dynamic(
   () => import('@/components/maps/mapbox-live-map').then((m) => m.MapboxLiveMap),
@@ -36,7 +41,6 @@ const PROHIBITED_ITEMS = [
   { icon: 'battery_alert', label: 'Damaged batteries' },
 ]
 
-type Suggestion = { place_name: string; center: [number, number] }
 type LatLng = { lng: number; lat: number }
 
 function AddressInput({
@@ -45,15 +49,16 @@ function AddressInput({
 }: {
   label: string; icon: string; color: string; placeholder: string; value: string
   onChange: (v: string) => void
-  onSelect: (place: string, coords: LatLng) => void
+  onSelect: (place: string, coords: LatLng | null) => void
   onGpsClick: () => void
   gpsLoading: boolean
   proximity: LatLng | null
   countryCode: string | null
 }) {
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [open, setOpen] = useState(false)
   const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [selecting, setSelecting] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -79,22 +84,25 @@ function AddressInput({
     if (v.length < 2) { setSuggestions([]); setOpen(false); return }
     debounceRef.current = setTimeout(async () => {
       try {
-        // Build URL with country restriction and proximity bias for hyper-local results
-        let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(v)}.json`
-        url += `?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=8&fuzzyMatch=true`
-        // Restrict to user's country so only local addresses show
-        if (countryCode) url += `&country=${countryCode}`
-        // Bias toward user's GPS location so nearest streets come first
-        if (proximity) url += `&proximity=${proximity.lng},${proximity.lat}`
-
-        const res = await fetch(url)
-        const data = await res.json()
-        const features = (data.features || []) as Suggestion[]
-        setSuggestions(features)
-        if (features.length > 0) openDropdown()
+        const results = await googlePlacesAutocomplete(v, {
+          proximity: proximity ?? undefined,
+          countryCode,
+        })
+        setSuggestions(results)
+        if (results.length > 0) openDropdown()
         else setOpen(false)
       } catch {}
     }, 250)
+  }
+
+  async function handleSelect(s: PlaceSuggestion) {
+    onChange(s.text)
+    setOpen(false)
+    setSuggestions([])
+    setSelecting(true)
+    const coords = await googlePlaceCoords(s.placeId).catch(() => null)
+    onSelect(s.text, coords)
+    setSelecting(false)
   }
 
   return (
@@ -104,11 +112,10 @@ function AddressInput({
           <span className="material-symbols-outlined text-sm">{icon}</span>
           {label}
         </label>
-        {/* GPS auto-fill button */}
         <button
           type="button"
           onClick={onGpsClick}
-          disabled={gpsLoading}
+          disabled={gpsLoading || selecting}
           className="flex items-center gap-1 text-[10px] font-bold text-[#a3a6ff] hover:text-white transition-colors disabled:opacity-50"
         >
           <span className="material-symbols-outlined text-sm">
@@ -117,24 +124,23 @@ function AddressInput({
           {gpsLoading ? 'Locating…' : 'Use my location'}
         </button>
       </div>
-      <input
-        ref={inputRef}
-        className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => handleChange(e.target.value)}
-        onFocus={() => { if (suggestions.length > 0) openDropdown() }}
-        autoComplete="off"
-      />
+      <div className="relative">
+        <input
+          ref={inputRef}
+          className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={() => { if (suggestions.length > 0) openDropdown() }}
+          autoComplete="off"
+        />
+        {selecting && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#adaaaa]">Getting location…</span>
+        )}
+      </div>
       {open && suggestions.length > 0 && dropdownRect && (
         <div
-          style={{
-            position: 'fixed',
-            top: dropdownRect.top,
-            left: dropdownRect.left,
-            width: dropdownRect.width,
-            zIndex: 99999,
-          }}
+          style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, zIndex: 99999 }}
           className="bg-[#1a1919] border border-[#494847]/30 rounded-xl overflow-hidden shadow-2xl"
         >
           {suggestions.map((s, i) => (
@@ -142,18 +148,15 @@ function AddressInput({
               key={i}
               type="button"
               className="w-full flex items-start gap-2.5 px-4 py-2.5 text-left hover:bg-[#262626] transition-colors border-b border-[#494847]/10 last:border-0"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                onSelect(s.place_name, { lng: s.center[0], lat: s.center[1] })
-                onChange(s.place_name)
-                setOpen(false)
-                setSuggestions([])
-              }}
+              onMouseDown={(e) => { e.preventDefault(); handleSelect(s) }}
             >
               <span className="material-symbols-outlined text-[#adaaaa] text-sm mt-0.5 shrink-0">location_on</span>
-              <span className="text-xs text-white leading-relaxed">{s.place_name}</span>
+              <span className="text-xs text-white leading-relaxed">{s.text}</span>
             </button>
           ))}
+          <div className="flex items-center justify-end px-3 py-1.5 border-t border-[#494847]/10">
+            <span className="text-[9px] text-[#494847]">powered by Google</span>
+          </div>
         </div>
       )}
     </div>
@@ -190,15 +193,8 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const coords: LatLng = { lng: pos.coords.longitude, lat: pos.coords.latitude }
       setUserCoords(coords)
-      // Reverse geocode to detect country code (e.g. "pk" for Pakistan)
-      try {
-        const res = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${coords.lng},${coords.lat}.json?access_token=${MAPBOX_TOKEN}&types=country&limit=1`
-        )
-        const data = await res.json()
-        const code = data.features?.[0]?.properties?.short_code as string | undefined
-        if (code) setCountryCode(code.toLowerCase())
-      } catch {}
+      const code = await googleDetectCountryCode(coords.lat, coords.lng).catch(() => null)
+      if (code) setCountryCode(code)
     }, () => {})
   }, [])
 
@@ -231,11 +227,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
       async (pos) => {
         const { longitude: lng, latitude: lat } = pos.coords
         try {
-          const res = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&types=address,poi&limit=1`
-          )
-          const data = await res.json()
-          const place = data.features?.[0]?.place_name as string | undefined
+          const place = await googleReverseGeocode(lat, lng)
           const address = place || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
           if (field === 'pickup') {
             setPickupValue(address)
@@ -260,7 +252,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     )
   }
 
-  // Start live location sharing
+  // Start live location sharing — also sets destination to customer's GPS
   function startLiveLocation() {
     if (!('geolocation' in navigator)) {
       setLiveLocationError('GPS not supported on this device.')
@@ -268,25 +260,25 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     }
     setLiveLocationError(null)
 
-    // Send location immediately, then on interval
-    function sendLocation() {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          await updateCustomerLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        },
-        () => {
-          setLiveLocationError('Location permission denied.')
-          stopLiveLocation()
-        }
-      )
+    const sendAndUpdate = (pos: GeolocationPosition) => {
+      const { latitude: lat, longitude: lng } = pos.coords
+      updateCustomerLocation({ lat, lng })
+      // Keep destination coords in sync so the route map stays current
+      setDeliveryCoords({ lat, lng })
     }
 
-    // Check permission first
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        await updateCustomerLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        const { latitude: lat, longitude: lng } = pos.coords
+        // Reverse geocode to get exact street address for the destination field
+        const place = await googleReverseGeocode(lat, lng).catch(() => null)
+        setDeliveryValue(place || `${lat.toFixed(6)}, ${lng.toFixed(6)}`)
+        setDeliveryCoords({ lat, lng })
+        await updateCustomerLocation({ lat, lng })
         setLiveLocationActive(true)
-        liveLocationIntervalRef.current = setInterval(sendLocation, 5000)
+        liveLocationIntervalRef.current = setInterval(() => {
+          navigator.geolocation.getCurrentPosition(sendAndUpdate, () => {})
+        }, 5000)
       },
       () => {
         setLiveLocationError('Location permission denied. Please allow location access.')
@@ -294,20 +286,22 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     )
   }
 
-  // Stop live location sharing
+  // Stop live location sharing — clear destination so user can fill it manually
   async function stopLiveLocation() {
     if (liveLocationIntervalRef.current) {
       clearInterval(liveLocationIntervalRef.current)
       liveLocationIntervalRef.current = null
     }
     setLiveLocationActive(false)
+    setDeliveryValue('')
+    setDeliveryCoords(null)
     await clearCustomerLocation()
   }
 
   async function handleSubmit() {
     if (submitting) return
     if (!pickupValue) { toast.error('Enter a pickup address.'); return }
-    if (!deliveryValue) { toast.error('Enter a delivery address.'); return }
+    if (!deliveryValue && !liveLocationActive) { toast.error('Enter a delivery address or use live location.'); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
 
     setSubmitting(true)
@@ -378,7 +372,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
             placeholder="Search pickup address..."
             value={pickupValue}
             onChange={(v) => { setPickupValue(v); if (!v) setPickupCoords(null) }}
-            onSelect={(place, coords) => { setPickupValue(place); setPickupCoords(coords) }}
+            onSelect={(place, coords) => { setPickupValue(place); setPickupCoords(coords ?? null) }}
             onGpsClick={() => fillFromGps('pickup')}
             gpsLoading={gpsPickupLoading}
             proximity={userCoords}
@@ -392,61 +386,61 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
             <div className="h-px flex-1 bg-[#494847]/20" />
           </div>
 
-          {/* Destination */}
-          <AddressInput
-            label="Destination"
-            icon="location_on"
-            color="text-[#c180ff]"
-            placeholder="Search delivery address..."
-            value={deliveryValue}
-            onChange={(v) => { setDeliveryValue(v); if (!v) setDeliveryCoords(null) }}
-            onSelect={(place, coords) => { setDeliveryValue(place); setDeliveryCoords(coords) }}
-            onGpsClick={() => fillFromGps('destination')}
-            gpsLoading={gpsDestLoading}
-            proximity={userCoords}
-            countryCode={countryCode}
-          />
-
-          {/* Live Location Sharing Widget */}
+          {/* Destination — replaced by live location card when active */}
           {liveLocationActive ? (
-            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
-              <div className="flex items-center gap-3 min-w-0">
-                {/* Pulsing ping animation */}
-                <div className="relative shrink-0 flex items-center justify-center w-8 h-8">
-                  <span className="absolute inline-flex w-full h-full rounded-full bg-cyan-400/30 animate-ping" />
-                  <span className="material-symbols-outlined text-cyan-400 text-lg relative z-10">share_location</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-cyan-400">Live location active</p>
-                  <p className="text-[10px] text-[#adaaaa]">Driver can see your real-time position</p>
-                </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#c180ff]">
+                  <span className="material-symbols-outlined text-sm">location_on</span>
+                  Destination
+                </label>
               </div>
-              <button
-                type="button"
-                onClick={stopLiveLocation}
-                className="shrink-0 px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
-              >
-                Stop
-              </button>
+              <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative shrink-0 flex items-center justify-center w-8 h-8">
+                    <span className="absolute inline-flex w-full h-full rounded-full bg-cyan-400/30 animate-ping" />
+                    <span className="material-symbols-outlined text-cyan-400 text-lg relative z-10">my_location</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-cyan-400">Your live location</p>
+                    <p className="text-[10px] text-[#adaaaa] truncate">{deliveryValue || 'Getting your location…'}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={stopLiveLocation}
+                  className="shrink-0 px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
+                >
+                  Stop
+                </button>
+              </div>
             </div>
           ) : (
-            <div>
+            <div className="space-y-2">
+              <AddressInput
+                label="Destination"
+                icon="location_on"
+                color="text-[#c180ff]"
+                placeholder="Search delivery address..."
+                value={deliveryValue}
+                onChange={(v) => { setDeliveryValue(v); if (!v) setDeliveryCoords(null) }}
+                onSelect={(place, coords) => { setDeliveryValue(place); setDeliveryCoords(coords ?? null) }}
+                onGpsClick={() => fillFromGps('destination')}
+                gpsLoading={gpsDestLoading}
+                proximity={userCoords}
+                countryCode={countryCode}
+              />
+              {/* Live location as alternative to typing destination */}
               <button
                 type="button"
                 onClick={startLiveLocation}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#262626] border border-[#494847]/20 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-dashed border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/5 transition-all"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="material-symbols-outlined text-cyan-400 text-lg shrink-0">share_location</span>
-                  <div className="text-left min-w-0">
-                    <p className="text-xs font-bold text-white">Share Live Location</p>
-                    <p className="text-[10px] text-[#adaaaa]">Driver will see your real-time position</p>
-                  </div>
-                </div>
-                <span className="material-symbols-outlined text-[#adaaaa] text-base shrink-0">chevron_right</span>
+                <span className="material-symbols-outlined text-base">share_location</span>
+                <span className="text-xs font-bold">Use my live location as destination</span>
               </button>
               {liveLocationError && (
-                <p className="mt-1.5 text-[10px] text-red-400 px-1">{liveLocationError}</p>
+                <p className="text-[10px] text-red-400 px-1">{liveLocationError}</p>
               )}
             </div>
           )}
