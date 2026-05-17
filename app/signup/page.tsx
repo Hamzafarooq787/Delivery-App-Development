@@ -3,8 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { signUp } from "@/app/actions/auth"
-
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+import { googleReverseGeocode } from "@/lib/google"
 
 type Role = "customer" | "driver"
 
@@ -26,21 +25,11 @@ export default function SignupPage() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { longitude: lng, latitude: lat } = pos.coords
-        try {
-          const res = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&types=address,poi&limit=1`
-          )
-          const data = await res.json()
-          const place = data.features?.[0]?.place_name as string | undefined
-          setAddress(place || `${lat.toFixed(6)}, ${lng.toFixed(6)}`)
-        } catch {
-          setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`)
-        }
+        const place = await googleReverseGeocode(lat, lng).catch(() => null)
+        setAddress(place || `${lat.toFixed(6)}, ${lng.toFixed(6)}`)
         setDetectingAddress(false)
       },
-      () => {
-        setDetectingAddress(false)
-      }
+      () => setDetectingAddress(false)
     )
   }
 
