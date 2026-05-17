@@ -58,16 +58,25 @@ function AddressInput({
 }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('mousedown', handle)
     return () => document.removeEventListener('mousedown', handle)
   }, [])
+
+  function openDropdown() {
+    if (!inputRef.current) return
+    const r = inputRef.current.getBoundingClientRect()
+    setDropdownRect({ top: r.bottom + 4, left: r.left, width: r.width })
+    setOpen(true)
+  }
 
   function handleChange(v: string) {
     onChange(v)
@@ -81,27 +90,38 @@ function AddressInput({
         const data = await res.json()
         const features = (data.features || []) as Suggestion[]
         setSuggestions(features)
-        setOpen(features.length > 0)
+        if (features.length > 0) openDropdown()
+        else setOpen(false)
       } catch {}
     }, 300)
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={wrapRef} className="relative">
       <label className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mb-2 ${color}`}>
         <span className="material-symbols-outlined text-sm">{icon}</span>
         {label}
       </label>
       <input
+        ref={inputRef}
         className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors"
         placeholder={placeholder}
         value={value}
         onChange={(e) => handleChange(e.target.value)}
-        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        onFocus={() => { if (suggestions.length > 0) openDropdown() }}
         autoComplete="off"
       />
-      {open && suggestions.length > 0 && (
-        <div className="absolute z-[100] left-0 right-0 mt-1 bg-[#1a1919] border border-[#494847]/30 rounded-xl overflow-hidden shadow-2xl">
+      {open && suggestions.length > 0 && dropdownRect && (
+        <div
+          style={{
+            position: 'fixed',
+            top: dropdownRect.top,
+            left: dropdownRect.left,
+            width: dropdownRect.width,
+            zIndex: 99999,
+          }}
+          className="bg-[#1a1919] border border-[#494847]/30 rounded-xl overflow-hidden shadow-2xl"
+        >
           {suggestions.map((s, i) => (
             <button
               key={i}
