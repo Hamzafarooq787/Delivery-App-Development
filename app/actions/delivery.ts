@@ -107,7 +107,7 @@ export async function getAvailableDeliveries() {
 
   const { data, error } = await admin
     .from("delivery_requests")
-    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id")
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng")
     .eq("status", "requested")
     .is("driver_id", null)
     .order("created_at", { ascending: false })

@@ -22,6 +22,7 @@ type Props = {
   routeGeometry?: GeoJSON.LineString | null
   height?: number | string
   followDriverId?: string | null
+  customerLocation?: LngLat | null
 }
 
 function initials(name: string) {
@@ -37,6 +38,7 @@ export function MapboxLiveMap({
   routeGeometry,
   height = 400,
   followDriverId,
+  customerLocation,
 }: Props) {
   const mapRef = useRef<MapRef>(null)
   const [mounted, setMounted] = useState(false)
@@ -44,14 +46,22 @@ export function MapboxLiveMap({
 
   useEffect(() => {
     setMounted(true)
-    // Get user location to center map initially
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLocation({ lng: pos.coords.longitude, lat: pos.coords.latitude }),
-        () => {} // silent fail — fall back to default
+        () => {}
       )
     }
   }, [])
+
+  // Fly to user's location at street level when no other markers exist
+  useEffect(() => {
+    if (!userLocation || !mapRef.current || !mounted) return
+    const hasMarkers = drivers.length > 0 || pickup || destination
+    if (!hasMarkers) {
+      mapRef.current.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 14, duration: 1000 })
+    }
+  }, [userLocation, mounted])
 
   // Pan to followed driver
   useEffect(() => {
@@ -67,11 +77,11 @@ export function MapboxLiveMap({
     drivers.forEach((d) => points.push([d.position.lng, d.position.lat]))
     if (pickup) points.push([pickup.lng, pickup.lat])
     if (destination) points.push([destination.lng, destination.lat])
+    if (customerLocation) points.push([customerLocation.lng, customerLocation.lat])
 
     if (points.length === 0) return
 
     if (points.length === 1) {
-      // Single marker — zoom to street level
       mapRef.current.flyTo({ center: points[0], zoom: 14, duration: 1000 })
       return
     }
@@ -82,7 +92,7 @@ export function MapboxLiveMap({
       [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
       { padding: 80, duration: 1000, maxZoom: 15 }
     )
-  }, [mounted, drivers.length, !!pickup, !!destination])
+  }, [mounted, drivers.length, !!pickup, !!destination, !!customerLocation])
 
   if (!mounted) return <div style={{ height }} className="bg-[#1a1a1a] rounded-xl animate-pulse" />
 
@@ -90,7 +100,6 @@ export function MapboxLiveMap({
     ? { type: "Feature", properties: {}, geometry: routeGeometry }
     : null
 
-  // Default center: user location if available, else London as neutral fallback
   const defaultCenter = userLocation ?? { lng: -0.1276, lat: 51.5074 }
 
   return (
@@ -99,7 +108,7 @@ export function MapboxLiveMap({
         ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle={DARK_STYLE}
-        initialViewState={{ longitude: defaultCenter.lng, latitude: defaultCenter.lat, zoom: 12 }}
+        initialViewState={{ longitude: defaultCenter.lng, latitude: defaultCenter.lat, zoom: 14 }}
         style={{ width: "100%", height: "100%" }}
         attributionControl={false}
       >
@@ -139,6 +148,21 @@ export function MapboxLiveMap({
               </div>
               <div className="w-0.5 h-3 bg-[#c180ff]" />
               <div className="w-1.5 h-1.5 rounded-full bg-[#c180ff]" />
+            </div>
+          </Marker>
+        )}
+
+        {/* Customer live location marker */}
+        {customerLocation && (
+          <Marker longitude={customerLocation.lng} latitude={customerLocation.lat} anchor="center">
+            <div className="relative flex flex-col items-center">
+              <div className="absolute inset-0 rounded-full bg-cyan-400/30 animate-ping scale-150" />
+              <div className="w-9 h-9 rounded-full bg-cyan-500 border-2 border-white flex items-center justify-center shadow-xl z-10 shadow-cyan-500/40">
+                <span className="material-symbols-outlined text-white text-sm">person_pin</span>
+              </div>
+              <div className="text-[9px] font-bold px-1.5 py-0.5 rounded mt-0.5 bg-cyan-500 text-white whitespace-nowrap">
+                Customer
+              </div>
             </div>
           </Marker>
         )}

@@ -86,3 +86,38 @@ export async function clearMyLocation() {
   if (error) return { error: error.message }
   return { ok: true }
 }
+
+export async function updateCustomerLocation(input: {
+  lat: number
+  lng: number
+  delivery_id?: string | null
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from("customer_locations").upsert(
+    {
+      customer_id: user.id,
+      lat: input.lat,
+      lng: input.lng,
+      delivery_id: input.delivery_id ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "customer_id" }
+  )
+  if (error) return { error: error.message }
+  return { ok: true }
+}
+
+export async function clearCustomerLocation() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from("customer_locations").delete().eq("customer_id", user.id)
+  if (error) return { error: error.message }
+  return { ok: true }
+}

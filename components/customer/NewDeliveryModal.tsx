@@ -85,7 +85,7 @@ function AddressInput({
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(v)}.json?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=5&types=address,place,locality,neighborhood,poi`
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(v)}.json?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=8&fuzzyMatch=true`
         )
         const data = await res.json()
         const features = (data.features || []) as Suggestion[]
