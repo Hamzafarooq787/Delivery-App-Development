@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { fetchRoute } from '@/lib/mapbox'
+import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tracking'
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
 
@@ -39,23 +40,10 @@ type Suggestion = { place_name: string; center: [number, number] }
 type LatLng = { lng: number; lat: number }
 
 function AddressInput({
-  label,
-  icon,
-  color,
-  placeholder,
-  value,
-  onChange,
-  onSelect,
-  onGpsClick,
-  gpsLoading,
-  proximity,
-  countryCode,
+  label, icon, color, placeholder, value, onChange, onSelect,
+  onGpsClick, gpsLoading, proximity, countryCode,
 }: {
-  label: string
-  icon: string
-  color: string
-  placeholder: string
-  value: string
+  label: string; icon: string; color: string; placeholder: string; value: string
   onChange: (v: string) => void
   onSelect: (place: string, coords: LatLng) => void
   onGpsClick: () => void
@@ -190,7 +178,11 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
   const [countryCode, setCountryCode] = useState<string | null>(null)
   const [gpsPickupLoading, setGpsPickupLoading] = useState(false)
   const [gpsDestLoading, setGpsDestLoading] = useState(false)
-  const [waLoading, setWaLoading] = useState(false)
+
+  // Live location sharing state
+  const [liveLocationActive, setLiveLocationActive] = useState(false)
+  const [liveLocationError, setLiveLocationError] = useState<string | null>(null)
+  const liveLocationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // On mount: silently get GPS and detect country to restrict autocomplete
   useEffect(() => {
@@ -210,6 +202,15 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     }, () => {})
   }, [])
 
+  // Cleanup live location interval on unmount
+  useEffect(() => {
+    return () => {
+      if (liveLocationIntervalRef.current) {
+        clearInterval(liveLocationIntervalRef.current)
+      }
+    }
+  }, [])
+
   // Calculate route when both coords set
   useEffect(() => {
     if (!pickupCoords || !deliveryCoords) { setRouteGeometry(null); setRouteInfo(null); return }
@@ -220,7 +221,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     })
   }, [pickupCoords, deliveryCoords])
 
-  // Fill an address field from device GPS (reverse geocode to human address)
+  // Fill an address field from device GPS (reverse geocode to exact street address)
   async function fillFromGps(field: 'pickup' | 'destination') {
     if (!('geolocation' in navigator)) { toast.error('GPS not supported on this device.'); return }
     if (field === 'pickup') setGpsPickupLoading(true)
@@ -231,7 +232,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
         const { longitude: lng, latitude: lat } = pos.coords
         try {
           const res = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&types=address,poi&limit=1`
           )
           const data = await res.json()
           const place = data.features?.[0]?.place_name as string | undefined
@@ -259,23 +260,48 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     )
   }
 
-  // Share current GPS location via WhatsApp
-  function shareWhatsApp() {
-    if (!('geolocation' in navigator)) { toast.error('GPS not supported.'); return }
-    setWaLoading(true)
+  // Start live location sharing
+  function startLiveLocation() {
+    if (!('geolocation' in navigator)) {
+      setLiveLocationError('GPS not supported on this device.')
+      return
+    }
+    setLiveLocationError(null)
+
+    // Send location immediately, then on interval
+    function sendLocation() {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          await updateCustomerLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        },
+        () => {
+          setLiveLocationError('Location permission denied.')
+          stopLiveLocation()
+        }
+      )
+    }
+
+    // Check permission first
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords
-        const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`
-        const message = encodeURIComponent(`My current location for pickup:\n${mapsUrl}`)
-        window.open(`https://wa.me/?text=${message}`, '_blank')
-        setWaLoading(false)
+      async (pos) => {
+        await updateCustomerLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setLiveLocationActive(true)
+        liveLocationIntervalRef.current = setInterval(sendLocation, 5000)
       },
       () => {
-        toast.error('Location permission denied.')
-        setWaLoading(false)
+        setLiveLocationError('Location permission denied. Please allow location access.')
       }
     )
+  }
+
+  // Stop live location sharing
+  async function stopLiveLocation() {
+    if (liveLocationIntervalRef.current) {
+      clearInterval(liveLocationIntervalRef.current)
+      liveLocationIntervalRef.current = null
+    }
+    setLiveLocationActive(false)
+    await clearCustomerLocation()
   }
 
   async function handleSubmit() {
@@ -303,6 +329,9 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
       })
 
       if (error) { toast.error(error.message || 'Failed to create delivery.'); setSubmitting(false); return }
+
+      // Stop live location if active when delivery is submitted
+      if (liveLocationActive) await stopLiveLocation()
 
       toast.success('Delivery requested!')
       onClose()
@@ -341,28 +370,6 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
 
-          {/* WhatsApp location share banner */}
-          <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#25D366]/10 border border-[#25D366]/20">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="material-symbols-outlined text-[#25D366] text-lg shrink-0">share_location</span>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-white">Share your live location</p>
-                <p className="text-[10px] text-[#adaaaa]">Send your GPS pin to the driver via WhatsApp</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={shareWhatsApp}
-              disabled={waLoading}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#25D366] text-white text-xs font-bold hover:bg-[#1da851] transition-colors disabled:opacity-60"
-            >
-              {waLoading
-                ? <span className="material-symbols-outlined text-sm">hourglass_empty</span>
-                : <span className="material-symbols-outlined text-sm">send</span>}
-              {waLoading ? 'Getting…' : 'WhatsApp'}
-            </button>
-          </div>
-
           {/* Pickup */}
           <AddressInput
             label="Pickup"
@@ -399,6 +406,50 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
             proximity={userCoords}
             countryCode={countryCode}
           />
+
+          {/* Live Location Sharing Widget */}
+          {liveLocationActive ? (
+            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Pulsing ping animation */}
+                <div className="relative shrink-0 flex items-center justify-center w-8 h-8">
+                  <span className="absolute inline-flex w-full h-full rounded-full bg-cyan-400/30 animate-ping" />
+                  <span className="material-symbols-outlined text-cyan-400 text-lg relative z-10">share_location</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-cyan-400">Live location active</p>
+                  <p className="text-[10px] text-[#adaaaa]">Driver can see your real-time position</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={stopLiveLocation}
+                className="shrink-0 px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
+              >
+                Stop
+              </button>
+            </div>
+          ) : (
+            <div>
+              <button
+                type="button"
+                onClick={startLiveLocation}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#262626] border border-[#494847]/20 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="material-symbols-outlined text-cyan-400 text-lg shrink-0">share_location</span>
+                  <div className="text-left min-w-0">
+                    <p className="text-xs font-bold text-white">Share Live Location</p>
+                    <p className="text-[10px] text-[#adaaaa]">Driver will see your real-time position</p>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-[#adaaaa] text-base shrink-0">chevron_right</span>
+              </button>
+              {liveLocationError && (
+                <p className="mt-1.5 text-[10px] text-red-400 px-1">{liveLocationError}</p>
+              )}
+            </div>
+          )}
 
           {/* Route map preview */}
           {showMap && (
