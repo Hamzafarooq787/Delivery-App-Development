@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import { GoogleMap, useJsApiLoader, Polyline } from "@react-google-maps/api"
+import { GoogleMap, useJsApiLoader, Polyline, OverlayView } from "@react-google-maps/api"
 
 const GOOGLE_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!
 
@@ -47,8 +47,60 @@ function initials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-function toLngLat(ll: LngLat) {
-  return { lat: ll.lat, lng: ll.lng }
+function PickupPin() {
+  return (
+    <div style={{ transform: "translate(-50%, -100%)" }} className="flex flex-col items-center">
+      <div className="w-8 h-8 rounded-full bg-[#a3a6ff] border-2 border-white flex items-center justify-center shadow-lg" style={{ boxShadow: "0 0 12px rgba(163,166,255,0.6)" }}>
+        <span className="material-symbols-outlined text-white text-sm">radio_button_checked</span>
+      </div>
+      <div className="w-0.5 h-2.5 bg-[#a3a6ff]" />
+      <div className="w-1.5 h-1.5 rounded-full bg-[#a3a6ff]" />
+    </div>
+  )
+}
+
+function DestinationPin() {
+  return (
+    <div style={{ transform: "translate(-50%, -100%)" }} className="flex flex-col items-center">
+      <div className="w-8 h-8 rounded-full bg-[#c180ff] border-2 border-white flex items-center justify-center shadow-lg" style={{ boxShadow: "0 0 12px rgba(193,128,255,0.6)" }}>
+        <span className="material-symbols-outlined text-white text-sm">location_on</span>
+      </div>
+      <div className="w-0.5 h-2.5 bg-[#c180ff]" />
+      <div className="w-1.5 h-1.5 rounded-full bg-[#c180ff]" />
+    </div>
+  )
+}
+
+function CustomerPin() {
+  return (
+    <div style={{ transform: "translate(-50%, -50%)" }} className="flex flex-col items-center relative">
+      <div className="absolute inset-0 rounded-full bg-cyan-400/30 animate-ping" style={{ transform: "scale(2)" }} />
+      <div className="w-9 h-9 rounded-full bg-cyan-500 border-2 border-white flex items-center justify-center z-10 relative" style={{ boxShadow: "0 0 14px rgba(6,182,212,0.6)" }}>
+        <span className="material-symbols-outlined text-white text-sm">person_pin</span>
+      </div>
+      <div className="text-[9px] font-bold px-1.5 py-0.5 rounded mt-0.5 bg-cyan-500 text-white whitespace-nowrap">Customer</div>
+    </div>
+  )
+}
+
+function DriverPin({ driver }: { driver: Driver }) {
+  const accepted = driver.isAccepted
+  return (
+    <div style={{ transform: "translate(-50%, -50%)" }} className="flex flex-col items-center relative">
+      {accepted && <div className="absolute inset-0 rounded-full bg-green-400/30 animate-ping" style={{ transform: "scale(2)" }} />}
+      <div
+        className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-xs font-black z-10 relative ${
+          accepted ? "bg-green-500 border-green-300 text-white" : "bg-[#a3a6ff] border-white text-[#0f00a4]"
+        }`}
+        style={{ boxShadow: accepted ? "0 0 14px rgba(34,197,94,0.5)" : "0 0 14px rgba(163,166,255,0.4)" }}
+      >
+        {initials(driver.label)}
+      </div>
+      <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded mt-0.5 whitespace-nowrap ${accepted ? "bg-green-500 text-white" : "bg-[#1a1919] text-[#adaaaa]"}`}>
+        {driver.label}
+      </div>
+    </div>
+  )
 }
 
 export function MapboxLiveMap({
@@ -60,10 +112,10 @@ export function MapboxLiveMap({
   followDriverId,
   customerLocation,
 }: Props) {
-  const { isLoaded } = useJsApiLoader({ googleMapsApiKey: GOOGLE_KEY })
+  const { isLoaded } = useJsApiLoader({ id: "google-map-script", googleMapsApiKey: GOOGLE_KEY })
   const mapRef = useRef<google.maps.Map | null>(null)
-  const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map())
   const [userLocation, setUserLocation] = useState<LngLat | null>(null)
+  const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -76,32 +128,33 @@ export function MapboxLiveMap({
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map
+    setMapReady(true)
   }, [])
 
-  // Fit bounds / fly to whenever markers change
+  // Fit bounds whenever markers change
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !isLoaded) return
+    if (!map || !mapReady) return
 
-    const points: google.maps.LatLng[] = []
-    drivers.forEach((d) => points.push(new google.maps.LatLng(d.position.lat, d.position.lng)))
-    if (pickup) points.push(new google.maps.LatLng(pickup.lat, pickup.lng))
-    if (destination) points.push(new google.maps.LatLng(destination.lat, destination.lng))
-    if (customerLocation) points.push(new google.maps.LatLng(customerLocation.lat, customerLocation.lng))
+    const points: { lat: number; lng: number }[] = []
+    drivers.forEach((d) => points.push({ lat: d.position.lat, lng: d.position.lng }))
+    if (pickup) points.push({ lat: pickup.lat, lng: pickup.lng })
+    if (destination) points.push({ lat: destination.lat, lng: destination.lng })
+    if (customerLocation) points.push({ lat: customerLocation.lat, lng: customerLocation.lng })
 
     if (points.length === 0) {
       if (userLocation) map.panTo({ lat: userLocation.lat, lng: userLocation.lng })
       return
     }
     if (points.length === 1) {
-      map.panTo(points[0].toJSON())
+      map.panTo(points[0])
       map.setZoom(15)
       return
     }
     const bounds = new google.maps.LatLngBounds()
     points.forEach((p) => bounds.extend(p))
     map.fitBounds(bounds, 80)
-  }, [isLoaded, drivers.length, !!pickup, !!destination, !!customerLocation, userLocation])
+  }, [mapReady, drivers.length, !!pickup, !!destination, !!customerLocation, userLocation])
 
   // Follow specific driver
   useEffect(() => {
@@ -110,112 +163,13 @@ export function MapboxLiveMap({
     if (d) mapRef.current.panTo({ lat: d.position.lat, lng: d.position.lng })
   }, [drivers, followDriverId])
 
-  // Manage advanced markers
-  useEffect(() => {
-    if (!isLoaded || !mapRef.current) return
-    const map = mapRef.current
-    const existing = markersRef.current
-    const newKeys = new Set<string>()
-
-    async function ensureLib() {
-      return google.maps.importLibrary("marker") as Promise<google.maps.MarkerLibrary>
-    }
-
-    async function renderMarkers() {
-      const { AdvancedMarkerElement } = await ensureLib()
-
-      function upsert(key: string, lat: number, lng: number, el: HTMLElement) {
-        newKeys.add(key)
-        if (existing.has(key)) {
-          const m = existing.get(key)!
-          m.position = { lat, lng }
-          if (m.content !== el) m.content = el
-        } else {
-          const m = new AdvancedMarkerElement({ map, position: { lat, lng }, content: el })
-          existing.set(key, m)
-        }
-      }
-
-      // Pickup
-      if (pickup) {
-        const el = document.createElement("div")
-        el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center">
-          <div style="width:32px;height:32px;border-radius:50%;background:#a3a6ff;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(163,166,255,0.5)">
-            <span class="material-symbols-outlined" style="color:white;font-size:16px">radio_button_checked</span>
-          </div>
-          <div style="width:2px;height:10px;background:#a3a6ff"></div>
-          <div style="width:6px;height:6px;border-radius:50%;background:#a3a6ff"></div>
-        </div>`
-        upsert("pickup", pickup.lat, pickup.lng, el)
-      }
-
-      // Destination
-      if (destination) {
-        const el = document.createElement("div")
-        el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center">
-          <div style="width:32px;height:32px;border-radius:50%;background:#c180ff;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(193,128,255,0.5)">
-            <span class="material-symbols-outlined" style="color:white;font-size:16px">location_on</span>
-          </div>
-          <div style="width:2px;height:10px;background:#c180ff"></div>
-          <div style="width:6px;height:6px;border-radius:50%;background:#c180ff"></div>
-        </div>`
-        upsert("destination", destination.lat, destination.lng, el)
-      }
-
-      // Customer
-      if (customerLocation) {
-        const el = document.createElement("div")
-        el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;position:relative">
-          <div style="position:absolute;inset:0;border-radius:50%;background:rgba(6,182,212,0.3);transform:scale(1.8);animation:ping 1s cubic-bezier(0,0,0.2,1) infinite"></div>
-          <div style="width:36px;height:36px;border-radius:50%;background:#06b6d4;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(6,182,212,0.6);position:relative;z-index:1">
-            <span class="material-symbols-outlined" style="color:white;font-size:16px">person_pin</span>
-          </div>
-          <div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:#06b6d4;color:white;margin-top:2px;white-space:nowrap">Customer</div>
-        </div>`
-        upsert("customer", customerLocation.lat, customerLocation.lng, el)
-      }
-
-      // Drivers
-      for (const driver of drivers) {
-        const el = document.createElement("div")
-        const accepted = driver.isAccepted
-        el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;position:relative">
-          ${accepted ? `<div style="position:absolute;inset:0;border-radius:50%;background:rgba(74,222,128,0.3);transform:scale(1.8);animation:ping 1s cubic-bezier(0,0,0.2,1) infinite"></div>` : ''}
-          <div style="width:40px;height:40px;border-radius:50%;border:2px solid ${accepted ? '#86efac' : 'white'};background:${accepted ? '#22c55e' : '#a3a6ff'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${accepted ? 'white' : '#0f00a4'};box-shadow:0 0 14px ${accepted ? 'rgba(34,197,94,0.5)' : 'rgba(163,166,255,0.4)'};position:relative;z-index:1">
-            ${initials(driver.label)}
-          </div>
-          <div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${accepted ? '#22c55e' : '#1a1919'};color:${accepted ? 'white' : '#adaaaa'};margin-top:2px;white-space:nowrap">${driver.label}</div>
-        </div>`
-        upsert(`driver-${driver.id}`, driver.position.lat, driver.position.lng, el)
-      }
-
-      // Remove stale markers
-      for (const [key, marker] of existing) {
-        if (!newKeys.has(key)) {
-          marker.map = null
-          existing.delete(key)
-        }
-      }
-    }
-
-    renderMarkers()
-  }, [isLoaded, pickup, destination, customerLocation, drivers])
-
-  // Cleanup markers on unmount
-  useEffect(() => {
-    return () => {
-      markersRef.current.forEach((m) => { m.map = null })
-      markersRef.current.clear()
-    }
-  }, [])
-
   const routeCoords = routeGeometry
     ? routeGeometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
     : null
 
   const defaultCenter = userLocation
     ? { lat: userLocation.lat, lng: userLocation.lng }
-    : { lat: 33.1, lng: 73.75 } // Mirpur, AJK default
+    : { lat: 33.1, lng: 73.75 } // Mirpur, AJK
 
   if (!isLoaded) {
     return <div style={{ height }} className="bg-[#1a1a1a] rounded-xl animate-pulse" />
@@ -223,7 +177,6 @@ export function MapboxLiveMap({
 
   return (
     <div style={{ height }} className="relative rounded-xl overflow-hidden">
-      <style>{`@keyframes ping{75%,100%{transform:scale(2);opacity:0}}`}</style>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
         center={defaultCenter}
@@ -234,8 +187,8 @@ export function MapboxLiveMap({
           disableDefaultUI: true,
           zoomControl: true,
           zoomControlOptions: { position: 9 /* BOTTOM_RIGHT */ },
-          mapId: undefined,
           clickableIcons: false,
+          gestureHandling: "greedy",
         }}
       >
         {routeCoords && routeCoords.length > 1 && (
@@ -244,6 +197,30 @@ export function MapboxLiveMap({
             options={{ strokeColor: "#a3a6ff", strokeWeight: 4, strokeOpacity: 0.85 }}
           />
         )}
+
+        {pickup && (
+          <OverlayView position={{ lat: pickup.lat, lng: pickup.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <PickupPin />
+          </OverlayView>
+        )}
+
+        {destination && (
+          <OverlayView position={{ lat: destination.lat, lng: destination.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <DestinationPin />
+          </OverlayView>
+        )}
+
+        {customerLocation && (
+          <OverlayView position={{ lat: customerLocation.lat, lng: customerLocation.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <CustomerPin />
+          </OverlayView>
+        )}
+
+        {drivers.map((driver) => (
+          <OverlayView key={driver.id} position={{ lat: driver.position.lat, lng: driver.position.lng }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <DriverPin driver={driver} />
+          </OverlayView>
+        ))}
       </GoogleMap>
     </div>
   )
