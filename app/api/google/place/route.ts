@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const KEY = process.env.GOOGLE_MAPS_KEY!
+const KEY = process.env.GOOGLE_MAPS_KEY
 
 export async function GET(req: NextRequest) {
+  if (!KEY) return NextResponse.json({ error: 'GOOGLE_MAPS_KEY not set' }, { status: 500 })
+
   const placeId = req.nextUrl.searchParams.get('placeId')
   if (!placeId) return NextResponse.json({ error: 'missing placeId' }, { status: 400 })
+
   const res = await fetch(
-    `https://places.googleapis.com/v1/places/${placeId}?fields=location&key=${KEY}`
+    `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=geometry&key=${KEY}`
   )
   const data = await res.json()
-  return NextResponse.json(data)
+  const loc = data.result?.geometry?.location
+  if (!loc) return NextResponse.json({ error: 'no location', status: data.status }, { status: 404 })
+
+  // Normalise to the shape lib/google.ts expects: { location: { latitude, longitude } }
+  return NextResponse.json({ location: { latitude: loc.lat, longitude: loc.lng } })
 }
