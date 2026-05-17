@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
 import { createClient } from '@/lib/supabase/client'
 
 type DeliveryRow = {
@@ -162,6 +163,11 @@ export default function ActiveDeliveriesPage() {
                 {deliveries.length} {deliveries.length === 1 ? 'Operation' : 'Operations'} Live
               </span>
             </div>
+            {deliveries.some((d) => ['accepted', 'collected', 'in_transit'].includes(d.status ?? '')) && (
+              <CustomerLocationBroadcaster
+                deliveryId={deliveries.find((d) => ['accepted', 'collected', 'in_transit'].includes(d.status ?? ''))?.id}
+              />
+            )}
           </div>
         </div>
 

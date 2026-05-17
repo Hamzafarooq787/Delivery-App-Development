@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
+import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
 
 const defaultTimelineSteps = [
   { label: 'Requested', detail: '—', done: false, active: false },
@@ -111,10 +112,16 @@ function LiveTrackingPageInner() {
                 ? { lat: Number(shipment.delivery_lat), lng: Number(shipment.delivery_lng) }
                 : null
             }
+            customerId={userId || null}
             driverLabel={driver?.full_name ?? 'Driver'}
             height="100%"
             followDriver={false}
           />
+          {shipment && ['accepted', 'collected', 'in_transit'].includes(shipment.status) && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+              <CustomerLocationBroadcaster deliveryId={shipment.id} />
+            </div>
+          )}
         </div>
 
         {/* Overlay Panels Container */}

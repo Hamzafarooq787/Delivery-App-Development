@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { AcceptJobButton } from "@/components/driver/accept-job-button"
 
 type Job = {
@@ -14,6 +14,8 @@ type Job = {
   status: string
   created_at: string
   driver_id?: string | null
+  pickup_lat?: number | null
+  pickup_lng?: number | null
 }
 
 type SortKey = "newest" | "oldest" | "payout_high" | "payout_low"
@@ -28,9 +30,28 @@ function fmtDate(v: string | null) {
   return new Date(v).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
 }
 
+function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3958.8
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<SortKey>("newest")
+  const [driverGps, setDriverGps] = useState<{ lat: number; lng: number } | null>(null)
+
+  useEffect(() => {
+    if (!("geolocation" in navigator)) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setDriverGps({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {}
+    )
+  }, [])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -114,6 +135,10 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
         <div className="grid grid-cols-1 gap-6">
           {filtered.map((job) => {
             const price = fmt(job.price)
+            const distanceMiles =
+              driverGps && job.pickup_lat != null && job.pickup_lng != null
+                ? haversineMiles(driverGps.lat, driverGps.lng, Number(job.pickup_lat), Number(job.pickup_lng))
+                : null
             return (
               <div
                 key={job.id}
@@ -164,6 +189,12 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
 
                 <div className="md:w-44 flex flex-col justify-between gap-4">
                   <div className="space-y-2 text-xs">
+                    {distanceMiles != null && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#adaaaa]">Distance to pickup</span>
+                        <span className="text-green-400 font-black">{distanceMiles.toFixed(1)} mi</span>
+                      </div>
+                    )}
                     {job.item_value != null && (
                       <div className="flex justify-between">
                         <span className="text-[#adaaaa]">Item Value</span>

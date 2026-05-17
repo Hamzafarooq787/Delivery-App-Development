@@ -116,6 +116,7 @@ export default async function JobDetailPage({
                 driverId={user?.id ?? null}
                 pickup={pickup}
                 destination={destination}
+                customerId={job.customer_id ?? null}
                 driverLabel="You"
                 followDriver
                 height={360}
