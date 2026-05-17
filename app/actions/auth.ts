@@ -38,7 +38,8 @@ export async function signUp(formData: FormData) {
   const password = formData.get("password") as string
   const full_name = `${formData.get("first_name")} ${formData.get("last_name")}`.trim()
   const role = (formData.get("role") as string) ?? "customer"
-  const phone = (formData.get("phone") as string) ?? null
+  const phone = (formData.get("phone") as string) || null
+  const address = (formData.get("address") as string) || null
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -51,7 +52,6 @@ export async function signUp(formData: FormData) {
 
   if (error) return { error: error.message }
 
-  // Use service-role client so these writes succeed before the user has a session
   if (data.user) {
     const admin = createAdminClient()
 
@@ -63,6 +63,12 @@ export async function signUp(formData: FormData) {
       await admin
         .from("driver_profiles")
         .upsert({ id: data.user.id, status: "pending" }, { onConflict: "id" })
+    }
+
+    if (role === "customer") {
+      await admin
+        .from("customer_profiles")
+        .upsert({ id: data.user.id, default_address: address }, { onConflict: "id" })
     }
   }
 

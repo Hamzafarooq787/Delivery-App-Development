@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { signUp } from "@/app/actions/auth"
 
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+
 type Role = "customer" | "driver"
 
 export default function SignupPage() {
@@ -11,9 +13,36 @@ export default function SignupPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState<Role>("customer")
+  const [phone, setPhone] = useState("")
+  const [address, setAddress] = useState("")
+  const [detectingAddress, setDetectingAddress] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  async function detectAddress() {
+    if (!("geolocation" in navigator)) return
+    setDetectingAddress(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { longitude: lng, latitude: lat } = pos.coords
+        try {
+          const res = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&types=address,poi&limit=1`
+          )
+          const data = await res.json()
+          const place = data.features?.[0]?.place_name as string | undefined
+          setAddress(place || `${lat.toFixed(6)}, ${lng.toFixed(6)}`)
+        } catch {
+          setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`)
+        }
+        setDetectingAddress(false)
+      },
+      () => {
+        setDetectingAddress(false)
+      }
+    )
+  }
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -27,6 +56,8 @@ export default function SignupPage() {
     formData.set("email", email)
     formData.set("password", password)
     formData.set("role", role)
+    formData.set("phone", phone)
+    formData.set("address", address)
 
     const result = await signUp(formData)
 
@@ -147,6 +178,65 @@ export default function SignupPage() {
                     />
                   </div>
                 </div>
+
+                {/* Customer-only fields: Phone and Home Address */}
+                {role === "customer" && (
+                  <>
+                    {/* Phone Number */}
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="phone" className="text-xs font-semibold text-[#adaaaa] uppercase tracking-widest">
+                        Phone Number
+                      </label>
+                      <div className="relative">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-[18px]">
+                          phone
+                        </span>
+                        <input
+                          id="phone"
+                          type="tel"
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="+92 300 1234567"
+                          className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Home / Default Address */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="address" className="text-xs font-semibold text-[#adaaaa] uppercase tracking-widest">
+                          Home / Default Address
+                        </label>
+                        <button
+                          type="button"
+                          onClick={detectAddress}
+                          disabled={detectingAddress}
+                          className="flex items-center gap-1 text-[10px] font-bold text-[#a3a6ff] hover:text-white transition-colors disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            {detectingAddress ? "hourglass_empty" : "my_location"}
+                          </span>
+                          {detectingAddress ? "Detecting…" : "📍 Detect"}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-[18px]">
+                          location_on
+                        </span>
+                        <input
+                          id="address"
+                          type="text"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          placeholder="Your home or default address"
+                          className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Email */}
                 <div className="flex flex-col gap-1.5">
