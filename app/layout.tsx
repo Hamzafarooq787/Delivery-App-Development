@@ -34,10 +34,6 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
           rel="stylesheet"
         />
-        <link
-          href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css"
-          rel="stylesheet"
-        />
       </head>
       <body className="bg-[#0e0e0e] font-inter text-white overflow-x-hidden antialiased">
         {children}

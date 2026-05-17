@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { fetchRoute } from '@/lib/mapbox'
 import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tracking'
 import {
+  fetchRoute,
   googlePlacesAutocomplete,
   googlePlaceCoords,
   googleReverseGeocode,
