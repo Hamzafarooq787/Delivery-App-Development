@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -7,7 +8,6 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchRoute } from '@/lib/mapbox'
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
-import dynamic from 'next/dynamic'
 
 const MapboxLiveMap = dynamic(
   () => import('@/components/maps/mapbox-live-map').then((m) => m.MapboxLiveMap),
@@ -36,7 +36,6 @@ const PROHIBITED_ITEMS = [
 ]
 
 type Suggestion = { place_name: string; center: [number, number] }
-
 type LatLng = { lng: number; lat: number }
 
 function AddressInput({
@@ -47,6 +46,10 @@ function AddressInput({
   value,
   onChange,
   onSelect,
+  onGpsClick,
+  gpsLoading,
+  proximity,
+  countryCode,
 }: {
   label: string
   icon: string
@@ -55,6 +58,10 @@ function AddressInput({
   value: string
   onChange: (v: string) => void
   onSelect: (place: string, coords: LatLng) => void
+  onGpsClick: () => void
+  gpsLoading: boolean
+  proximity: LatLng | null
+  countryCode: string | null
 }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [open, setOpen] = useState(false)
@@ -81,27 +88,47 @@ function AddressInput({
   function handleChange(v: string) {
     onChange(v)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (v.length < 3) { setSuggestions([]); setOpen(false); return }
+    if (v.length < 2) { setSuggestions([]); setOpen(false); return }
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(v)}.json?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=8&fuzzyMatch=true`
-        )
+        // Build URL with country restriction and proximity bias for hyper-local results
+        let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(v)}.json`
+        url += `?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=8&fuzzyMatch=true`
+        // Restrict to user's country so only local addresses show
+        if (countryCode) url += `&country=${countryCode}`
+        // Bias toward user's GPS location so nearest streets come first
+        if (proximity) url += `&proximity=${proximity.lng},${proximity.lat}`
+
+        const res = await fetch(url)
         const data = await res.json()
         const features = (data.features || []) as Suggestion[]
         setSuggestions(features)
         if (features.length > 0) openDropdown()
         else setOpen(false)
       } catch {}
-    }, 300)
+    }, 250)
   }
 
   return (
     <div ref={wrapRef} className="relative">
-      <label className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mb-2 ${color}`}>
-        <span className="material-symbols-outlined text-sm">{icon}</span>
-        {label}
-      </label>
+      <div className="flex items-center justify-between mb-2">
+        <label className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${color}`}>
+          <span className="material-symbols-outlined text-sm">{icon}</span>
+          {label}
+        </label>
+        {/* GPS auto-fill button */}
+        <button
+          type="button"
+          onClick={onGpsClick}
+          disabled={gpsLoading}
+          className="flex items-center gap-1 text-[10px] font-bold text-[#a3a6ff] hover:text-white transition-colors disabled:opacity-50"
+        >
+          <span className="material-symbols-outlined text-sm">
+            {gpsLoading ? 'hourglass_empty' : 'my_location'}
+          </span>
+          {gpsLoading ? 'Locating…' : 'Use my location'}
+        </button>
+      </div>
       <input
         ref={inputRef}
         className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors"
@@ -158,7 +185,32 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
   const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Calculate route when both coords are set
+  // User's device GPS + detected country
+  const [userCoords, setUserCoords] = useState<LatLng | null>(null)
+  const [countryCode, setCountryCode] = useState<string | null>(null)
+  const [gpsPickupLoading, setGpsPickupLoading] = useState(false)
+  const [gpsDestLoading, setGpsDestLoading] = useState(false)
+  const [waLoading, setWaLoading] = useState(false)
+
+  // On mount: silently get GPS and detect country to restrict autocomplete
+  useEffect(() => {
+    if (!('geolocation' in navigator)) return
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const coords: LatLng = { lng: pos.coords.longitude, lat: pos.coords.latitude }
+      setUserCoords(coords)
+      // Reverse geocode to detect country code (e.g. "pk" for Pakistan)
+      try {
+        const res = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${coords.lng},${coords.lat}.json?access_token=${MAPBOX_TOKEN}&types=country&limit=1`
+        )
+        const data = await res.json()
+        const code = data.features?.[0]?.properties?.short_code as string | undefined
+        if (code) setCountryCode(code.toLowerCase())
+      } catch {}
+    }, () => {})
+  }, [])
+
+  // Calculate route when both coords set
   useEffect(() => {
     if (!pickupCoords || !deliveryCoords) { setRouteGeometry(null); setRouteInfo(null); return }
     fetchRoute(pickupCoords, deliveryCoords).then((r) => {
@@ -167,6 +219,64 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
       setRouteInfo({ miles: r.distance_miles, duration_min: r.duration_min })
     })
   }, [pickupCoords, deliveryCoords])
+
+  // Fill an address field from device GPS (reverse geocode to human address)
+  async function fillFromGps(field: 'pickup' | 'destination') {
+    if (!('geolocation' in navigator)) { toast.error('GPS not supported on this device.'); return }
+    if (field === 'pickup') setGpsPickupLoading(true)
+    else setGpsDestLoading(true)
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { longitude: lng, latitude: lat } = pos.coords
+        try {
+          const res = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+          )
+          const data = await res.json()
+          const place = data.features?.[0]?.place_name as string | undefined
+          const address = place || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+          if (field === 'pickup') {
+            setPickupValue(address)
+            setPickupCoords({ lat, lng })
+            setGpsPickupLoading(false)
+          } else {
+            setDeliveryValue(address)
+            setDeliveryCoords({ lat, lng })
+            setGpsDestLoading(false)
+          }
+        } catch {
+          if (field === 'pickup') setGpsPickupLoading(false)
+          else setGpsDestLoading(false)
+          toast.error('Could not get address for your location.')
+        }
+      },
+      () => {
+        if (field === 'pickup') setGpsPickupLoading(false)
+        else setGpsDestLoading(false)
+        toast.error('Location permission denied. Please allow location access.')
+      }
+    )
+  }
+
+  // Share current GPS location via WhatsApp
+  function shareWhatsApp() {
+    if (!('geolocation' in navigator)) { toast.error('GPS not supported.'); return }
+    setWaLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`
+        const message = encodeURIComponent(`My current location for pickup:\n${mapsUrl}`)
+        window.open(`https://wa.me/?text=${message}`, '_blank')
+        setWaLoading(false)
+      },
+      () => {
+        toast.error('Location permission denied.')
+        setWaLoading(false)
+      }
+    )
+  }
 
   async function handleSubmit() {
     if (submitting) return
@@ -231,6 +341,28 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
 
+          {/* WhatsApp location share banner */}
+          <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#25D366]/10 border border-[#25D366]/20">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="material-symbols-outlined text-[#25D366] text-lg shrink-0">share_location</span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white">Share your live location</p>
+                <p className="text-[10px] text-[#adaaaa]">Send your GPS pin to the driver via WhatsApp</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={shareWhatsApp}
+              disabled={waLoading}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#25D366] text-white text-xs font-bold hover:bg-[#1da851] transition-colors disabled:opacity-60"
+            >
+              {waLoading
+                ? <span className="material-symbols-outlined text-sm">hourglass_empty</span>
+                : <span className="material-symbols-outlined text-sm">send</span>}
+              {waLoading ? 'Getting…' : 'WhatsApp'}
+            </button>
+          </div>
+
           {/* Pickup */}
           <AddressInput
             label="Pickup"
@@ -240,6 +372,10 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
             value={pickupValue}
             onChange={(v) => { setPickupValue(v); if (!v) setPickupCoords(null) }}
             onSelect={(place, coords) => { setPickupValue(place); setPickupCoords(coords) }}
+            onGpsClick={() => fillFromGps('pickup')}
+            gpsLoading={gpsPickupLoading}
+            proximity={userCoords}
+            countryCode={countryCode}
           />
 
           {/* Arrow divider */}
@@ -258,6 +394,10 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
             value={deliveryValue}
             onChange={(v) => { setDeliveryValue(v); if (!v) setDeliveryCoords(null) }}
             onSelect={(place, coords) => { setDeliveryValue(place); setDeliveryCoords(coords) }}
+            onGpsClick={() => fillFromGps('destination')}
+            gpsLoading={gpsDestLoading}
+            proximity={userCoords}
+            countryCode={countryCode}
           />
 
           {/* Route map preview */}
