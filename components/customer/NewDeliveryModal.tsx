@@ -91,7 +91,10 @@ function AddressInput({
         setSuggestions(results)
         if (results.length > 0) openDropdown()
         else setOpen(false)
-      } catch {}
+      } catch (err) {
+        console.error('[autocomplete] fetch failed:', err)
+        setOpen(false)
+      }
     }, 250)
   }
 

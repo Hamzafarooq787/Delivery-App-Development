@@ -48,6 +48,9 @@ export async function googlePlacesAutocomplete(
     body: JSON.stringify(body),
   })
   const data = await res.json()
+  if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+    console.error('[autocomplete] Google API error:', data.status, data.error_message)
+  }
   return (data.suggestions || [])
     .map((s: any) => ({
       text: s.placePredictions?.text?.text || '',

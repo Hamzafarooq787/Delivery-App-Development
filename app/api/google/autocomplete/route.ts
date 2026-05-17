@@ -1,18 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const KEY = process.env.GOOGLE_MAPS_KEY!
+const KEY = process.env.GOOGLE_MAPS_KEY
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': KEY,
-      'X-Goog-FieldMask': 'suggestions.placePredictions.text,suggestions.placePredictions.placeId',
-    },
-    body: JSON.stringify(body),
-  })
+  if (!KEY) return NextResponse.json({ error: 'GOOGLE_MAPS_KEY not set' }, { status: 500 })
+
+  const { input, locationBias, includedRegionCodes } = await req.json()
+
+  const params = new URLSearchParams({ input, key: KEY, language: 'en' })
+  if (locationBias?.circle?.center) {
+    const { latitude: lat, longitude: lng } = locationBias.circle.center
+    params.set('location', `${lat},${lng}`)
+    params.set('radius', String(locationBias.circle.radius ?? 50000))
+  }
+  if (includedRegionCodes?.[0]) {
+    params.set('components', `country:${includedRegionCodes[0]}`)
+  }
+
+  const res = await fetch(
+    `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`
+  )
   const data = await res.json()
-  return NextResponse.json(data)
+
+  // Normalise to the shape lib/google.ts expects
+  const suggestions = (data.predictions ?? []).map((p: any) => ({
+    placePredictions: {
+      text: { text: p.description },
+      placeId: p.place_id,
+    },
+  }))
+  return NextResponse.json({ suggestions, status: data.status, error_message: data.error_message })
 }
