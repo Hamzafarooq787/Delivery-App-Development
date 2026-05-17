@@ -4,13 +4,9 @@ import { useEffect, useRef, useState } from "react"
 import { updateMyLocation, clearMyLocation } from "@/app/actions/tracking"
 
 type Props = {
-  /** Active delivery id to associate with the location pings (optional). */
   deliveryId?: string | null
-  /** Disable broadcasting (e.g. driver offline). */
   disabled?: boolean
-  /** Minimum interval between server pings, ms. Default 4000. */
   intervalMs?: number
-  /** Render a small status indicator. Default true. */
   showStatus?: boolean
   className?: string
 }
@@ -26,9 +22,62 @@ export function DriverLocationBroadcaster({
 }: Props) {
   const [status, setStatus] = useState<Status>("idle")
   const [lastPing, setLastPing] = useState<number | null>(null)
+  const [wakeLockDenied, setWakeLockDenied] = useState(false)
   const lastSentRef = useRef<number>(0)
   const watchIdRef = useRef<number | null>(null)
   const inFlightRef = useRef<boolean>(false)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const fallbackTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Acquire wake lock to prevent screen sleep
+  async function acquireWakeLock() {
+    if (!("wakeLock" in navigator)) return
+    try {
+      wakeLockRef.current = await (navigator as any).wakeLock.request("screen")
+      wakeLockRef.current.addEventListener("release", () => {
+        wakeLockRef.current = null
+      })
+    } catch {
+      setWakeLockDenied(true)
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {})
+      wakeLockRef.current = null
+    }
+  }
+
+  function startWatch(onPos: PositionCallback, onErr: PositionErrorCallback) {
+    if (watchIdRef.current != null) {
+      navigator.geolocation.clearWatch(watchIdRef.current)
+    }
+    const id = navigator.geolocation.watchPosition(onPos, onErr, {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+      timeout: 15000,
+    })
+    watchIdRef.current = id
+  }
+
+  function startFallbackInterval(onPos: PositionCallback) {
+    if (fallbackTimerRef.current) clearInterval(fallbackTimerRef.current)
+    fallbackTimerRef.current = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(onPos, () => {}, {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 10000,
+      })
+    }, intervalMs * 2)
+  }
+
+  function stopFallbackInterval() {
+    if (fallbackTimerRef.current) {
+      clearInterval(fallbackTimerRef.current)
+      fallbackTimerRef.current = null
+    }
+  }
 
   useEffect(() => {
     if (disabled) {
@@ -36,8 +85,9 @@ export function DriverLocationBroadcaster({
         navigator.geolocation.clearWatch(watchIdRef.current)
         watchIdRef.current = null
       }
+      stopFallbackInterval()
+      releaseWakeLock()
       setStatus("idle")
-      // Best-effort cleanup on the server
       clearMyLocation().catch(() => {})
       return
     }
@@ -48,6 +98,7 @@ export function DriverLocationBroadcaster({
     }
 
     setStatus("requesting")
+    acquireWakeLock()
 
     const onPosition = (pos: GeolocationPosition) => {
       const now = Date.now()
@@ -81,18 +132,27 @@ export function DriverLocationBroadcaster({
       else setStatus("error")
     }
 
-    const id = navigator.geolocation.watchPosition(onPosition, onError, {
-      enableHighAccuracy: true,
-      maximumAge: 1000,
-      timeout: 15000,
-    })
-    watchIdRef.current = id
+    startWatch(onPosition, onError)
+    startFallbackInterval(onPosition)
+
+    // Restart watchPosition when tab becomes visible again (browser pauses it when hidden)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        startWatch(onPosition, onError)
+        // Re-acquire wake lock (released when screen locked)
+        acquireWakeLock()
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange)
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
       if (watchIdRef.current != null) {
         navigator.geolocation.clearWatch(watchIdRef.current)
         watchIdRef.current = null
       }
+      stopFallbackInterval()
+      releaseWakeLock()
       clearMyLocation().catch(() => {})
     }
   }, [disabled, intervalMs, deliveryId])
@@ -118,13 +178,20 @@ export function DriverLocationBroadcaster({
   })()
 
   return (
-    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1a1919] border border-[#494847]/30 ${className ?? ""}`}>
-      <span className={`w-2 h-2 rounded-full ${cfg.color} ${cfg.animate ? "animate-pulse" : ""}`} />
-      <span className="text-[10px] font-bold uppercase tracking-wider text-white">{cfg.text}</span>
-      {lastPing && status === "broadcasting" && (
-        <span className="text-[10px] text-[#adaaaa] normal-case font-medium tracking-normal">
-          • {new Date(lastPing).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-        </span>
+    <div className="space-y-1.5">
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1a1919] border border-[#494847]/30 ${className ?? ""}`}>
+        <span className={`w-2 h-2 rounded-full ${cfg.color} ${cfg.animate ? "animate-pulse" : ""}`} />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-white">{cfg.text}</span>
+        {lastPing && status === "broadcasting" && (
+          <span className="text-[10px] text-[#adaaaa] normal-case font-medium tracking-normal">
+            • {new Date(lastPing).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          </span>
+        )}
+      </div>
+      {wakeLockDenied && status === "broadcasting" && (
+        <p className="text-[10px] text-yellow-400 px-1">
+          Keep this screen open — your device may pause location sharing when locked.
+        </p>
       )}
     </div>
   )
