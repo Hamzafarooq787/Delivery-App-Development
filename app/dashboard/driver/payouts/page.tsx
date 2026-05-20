@@ -27,8 +27,9 @@ export default async function DriverPayoutsPage() {
   const earnings = earningsRes.data ?? []
   const payouts  = payoutsRes.data ?? []
 
-  const totalEarned  = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
-  const totalPaidOut = earnings.filter(e => e.status === "paid").reduce((s, e) => s + (e.amount ?? 0), 0)
+  const totalEarned    = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
+  // totalPaidOut = sum of all processed payout records (more accurate than earnings.status)
+  const totalPaidOut   = payouts.filter(p => p.status === "paid").reduce((s, p) => s + (p.amount ?? 0), 0)
   const pendingBalance = earnings.filter(e => e.status === "pending").reduce((s, e) => s + (e.amount ?? 0), 0)
 
   return (
@@ -70,7 +71,9 @@ export default async function DriverPayoutsPage() {
             <span className="material-symbols-outlined text-[#adaaaa]">payments</span>
           </div>
           <p className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(totalPaidOut)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">{payouts.filter(p => p.status === "paid").length} payouts processed</p>
+          <p className="text-xs text-[#adaaaa] mt-1">
+            {payouts.filter(p => p.status === "paid").length} payout{payouts.filter(p => p.status === "paid").length !== 1 ? "s" : ""} processed
+          </p>
         </div>
       </div>
 
