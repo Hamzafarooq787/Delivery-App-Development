@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { fetchRoute } from "@/lib/google"
 import { MapboxLiveMap } from "./mapbox-live-map"
 
 type Delivery = {
@@ -10,6 +11,10 @@ type Delivery = {
   status: string
   driver_id: string | null
   driver_name: string | null
+  pickup_lat?: number | null
+  pickup_lng?: number | null
+  delivery_lat?: number | null
+  delivery_lng?: number | null
 }
 
 type DriverPosition = {
@@ -21,14 +26,17 @@ type DriverPosition = {
 
 type Props = {
   deliveries: Delivery[]
+  focusedDeliveryId?: string | null
   height?: number | string
   className?: string
 }
 
-export function MapboxMultiDriver({ deliveries, height = 420, className }: Props) {
+export function MapboxMultiDriver({ deliveries, focusedDeliveryId, height = 420, className }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [positions, setPositions] = useState<Record<string, { lat: number; lng: number }>>({})
   const [liveCount, setLiveCount] = useState(0)
+  const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null)
+  const [routeGeometry2, setRouteGeometry2] = useState<GeoJSON.LineString | null>(null)
 
   const driverIds = useMemo(
     () => deliveries.map((d) => d.driver_id).filter(Boolean) as string[],
@@ -51,7 +59,7 @@ export function MapboxMultiDriver({ deliveries, height = 420, className }: Props
       })
   }, [supabase, driverIds.join(",")])
 
-  // Realtime updates
+  // Realtime driver location updates
   useEffect(() => {
     if (driverIds.length === 0) return
     const channel = supabase
@@ -64,12 +72,44 @@ export function MapboxMultiDriver({ deliveries, height = 420, className }: Props
           setLiveCount((c) => Math.max(0, c - 1))
         } else {
           setPositions((prev) => ({ ...prev, [row.driver_id]: { lat: row.lat, lng: row.lng } }))
-          setLiveCount((c) => c)
         }
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [supabase, driverIds.join(",")])
+
+  // Focused delivery
+  const focusedDelivery = useMemo(() => {
+    if (focusedDeliveryId) return deliveries.find((d) => d.id === focusedDeliveryId) ?? deliveries[0] ?? null
+    return deliveries[0] ?? null
+  }, [deliveries, focusedDeliveryId])
+
+  const pickup = focusedDelivery?.pickup_lat != null && focusedDelivery?.pickup_lng != null
+    ? { lat: Number(focusedDelivery.pickup_lat), lng: Number(focusedDelivery.pickup_lng) }
+    : null
+
+  const destination = focusedDelivery?.delivery_lat != null && focusedDelivery?.delivery_lng != null
+    ? { lat: Number(focusedDelivery.delivery_lat), lng: Number(focusedDelivery.delivery_lng) }
+    : null
+
+  const focusedDriverId = focusedDelivery?.driver_id ?? null
+  const focusedDriverPos = focusedDriverId ? positions[focusedDriverId] ?? null : null
+
+  // Fetch pickup→destination route when focused delivery changes
+  useEffect(() => {
+    if (!pickup || !destination) { setRouteGeometry(null); return }
+    fetchRoute(pickup, destination)
+      .then((r) => setRouteGeometry(r?.geometry ?? null))
+      .catch(() => {})
+  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng])
+
+  // Fetch driver→pickup route when driver position is available
+  useEffect(() => {
+    if (!focusedDriverPos || !pickup) { setRouteGeometry2(null); return }
+    fetchRoute(focusedDriverPos, pickup)
+      .then((r) => setRouteGeometry2(r?.geometry ?? null))
+      .catch(() => {})
+  }, [focusedDriverPos?.lat, focusedDriverPos?.lng, pickup?.lat, pickup?.lng])
 
   const drivers: DriverPosition[] = deliveries
     .filter((d) => d.driver_id && positions[d.driver_id])
@@ -90,7 +130,15 @@ export function MapboxMultiDriver({ deliveries, height = 420, className }: Props
         </span>
       </div>
 
-      <MapboxLiveMap drivers={drivers} height={height} />
+      <MapboxLiveMap
+        drivers={drivers}
+        pickup={pickup}
+        destination={destination}
+        routeGeometry={routeGeometry}
+        routeGeometry2={routeGeometry2}
+        followDriverId={focusedDriverId}
+        height={height}
+      />
     </div>
   )
 }
