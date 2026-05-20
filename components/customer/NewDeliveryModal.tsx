@@ -30,12 +30,6 @@ const PAYLOAD_OPTIONS = [
   { icon: 'precision_manufacturing', label: 'Fragile' },
 ] as const
 
-const PRICING_TIERS = [
-  { label: '0 – 3 miles', price: 10 },
-  { label: '3 – 7 miles', price: 15 },
-  { label: '7 – 12 miles', price: 20 },
-]
-
 function getPrice(miles: number): number {
   if (miles <= 3) return 10
   if (miles <= 7) return 15
@@ -362,7 +356,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-10 w-full max-w-lg bg-[#1a1919] rounded-2xl border border-[#494847]/20 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="relative z-10 w-full max-w-lg bg-[#1a1919] rounded-2xl border border-[#494847]/20 shadow-2xl flex flex-col" style={{ maxHeight: '92dvh' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15 shrink-0">
@@ -381,7 +375,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
         </div>
 
         {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
+        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4 overscroll-contain">
 
           {/* Pickup */}
           <AddressInput
@@ -517,32 +511,6 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
               })()}
             </div>
           )}
-
-          {/* Pricing tiers */}
-          <div className="rounded-xl border border-[#494847]/20 bg-[#262626] overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#494847]/15">
-              <span className="material-symbols-outlined text-[#6ee7b7] text-base">sell</span>
-              <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Delivery Pricing</p>
-            </div>
-            <div className="divide-y divide-[#494847]/15">
-              {PRICING_TIERS.map((tier) => (
-                <div key={tier.label} className="flex items-center justify-between px-4 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[#adaaaa] text-sm">route</span>
-                    <span className="text-xs text-[#adaaaa]">{tier.label}</span>
-                  </div>
-                  <span className="text-sm font-black text-white">£{tier.price}</span>
-                </div>
-              ))}
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#adaaaa] text-sm">route</span>
-                  <span className="text-xs text-[#adaaaa]">Over 12 miles</span>
-                </div>
-                <span className="text-xs font-bold text-white">£20 + £1.50/mile over 12</span>
-              </div>
-            </div>
-          </div>
 
           {/* Package type */}
           <div>
