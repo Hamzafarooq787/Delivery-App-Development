@@ -104,7 +104,7 @@ function DriverPin({ driver }: { driver: Driver }) {
   )
 }
 
-export function MapboxLiveMap({
+export function GoogleLiveMap({
   drivers = [],
   pickup,
   destination,
@@ -133,7 +133,8 @@ export function MapboxLiveMap({
     setMapReady(true)
   }, [])
 
-  // Fit bounds whenever markers change
+  // Fit bounds whenever markers change — track actual positions so bounds update when driver moves
+  const driverPositionKey = drivers.map((d) => `${d.id}:${d.position.lat.toFixed(4)},${d.position.lng.toFixed(4)}`).join("|")
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapReady) return
@@ -155,8 +156,13 @@ export function MapboxLiveMap({
     }
     const bounds = new google.maps.LatLngBounds()
     points.forEach((p) => bounds.extend(p))
-    map.fitBounds(bounds, 80)
-  }, [mapReady, drivers.length, !!pickup, !!destination, !!customerLocation, userLocation])
+    map.fitBounds(bounds, { top: 60, right: 40, bottom: 60, left: 40 })
+    // Clamp zoom after fitBounds so map doesn't over-zoom on close points
+    google.maps.event.addListenerOnce(map, "bounds_changed", () => {
+      const z = map.getZoom()
+      if (z !== undefined && z > 15) map.setZoom(15)
+    })
+  }, [mapReady, driverPositionKey, pickup?.lat, pickup?.lng, destination?.lat, destination?.lng, !!customerLocation, userLocation])
 
   // Follow specific driver
   useEffect(() => {
@@ -195,6 +201,8 @@ export function MapboxLiveMap({
           zoomControlOptions: { position: 9 /* BOTTOM_RIGHT */ },
           clickableIcons: false,
           gestureHandling: "greedy",
+          minZoom: 5,
+          maxZoom: 18,
         }}
       >
         {routeCoords && routeCoords.length > 1 && (

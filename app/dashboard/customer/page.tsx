@@ -5,8 +5,8 @@ import Link from 'next/link'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import dynamic from 'next/dynamic'
-const MapboxMultiDriver = dynamic(
-  () => import('@/components/maps/mapbox-multi-driver').then((m) => m.MapboxMultiDriver),
+const GoogleMultiDriver = dynamic(
+  () => import('@/components/maps/google-multi-driver').then((m) => m.GoogleMultiDriver),
   { ssr: false }
 )
 import { createClient } from '@/lib/supabase/client'
@@ -29,6 +29,10 @@ type ActiveDelivery = {
   status: string
   pickup_address: string | null
   delivery_address: string | null
+  pickup_lat: number | null
+  pickup_lng: number | null
+  delivery_lat: number | null
+  delivery_lng: number | null
   driver_id: string | null
   driver_name: string | null
 }
@@ -76,6 +80,7 @@ export default function CustomerDashboardPage() {
   const [completedThisMonth, setCompletedThisMonth] = useState(0)
   const [totalSpent, setTotalSpent] = useState(0)
   const [activeDeliveries, setActiveDeliveries] = useState<ActiveDelivery[]>([])
+  const [focusedDeliveryId, setFocusedDeliveryId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -113,7 +118,7 @@ export default function CustomerDashboardPage() {
           .eq('status', 'delivered'),
         supabase
           .from('delivery_requests')
-          .select('id, tracking_number, status, pickup_address, delivery_address, driver_id')
+          .select('id, tracking_number, status, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, driver_id')
           .eq('customer_id', user.id)
           .in('status', ACTIVE_STATUSES)
           .order('created_at', { ascending: false }),
@@ -225,8 +230,9 @@ export default function CustomerDashboardPage() {
 
                 {/* Map — left half */}
                 <div className="flex-1 min-h-[280px] lg:min-h-0">
-                  <MapboxMultiDriver
+                  <GoogleMultiDriver
                     deliveries={activeDeliveries}
+                    focusedDeliveryId={focusedDeliveryId ?? activeDeliveries[0]?.id ?? null}
                     height="100%"
                     className="h-full w-full"
                   />
@@ -242,14 +248,15 @@ export default function CustomerDashboardPage() {
                   <div className="divide-y divide-outline-variant/10">
                     {activeDeliveries.map((d) => {
                       const statusMeta = STATUS_DISPLAY[d.status] ?? { label: d.status.toUpperCase(), cls: 'bg-surface-container-highest text-on-surface-variant' }
+                      const isFocused = (focusedDeliveryId ?? activeDeliveries[0]?.id) === d.id
                       return (
-                        <Link
+                        <button
                           key={d.id}
-                          href={`/dashboard/customer/tracking?id=${d.id}`}
-                          className="flex items-center gap-3 px-4 py-3.5 hover:bg-surface-container-high transition-colors group"
+                          onClick={() => setFocusedDeliveryId(d.id)}
+                          className={`w-full text-left flex items-center gap-3 px-4 py-3.5 transition-colors group ${isFocused ? 'bg-primary/5 border-l-2 border-primary' : 'hover:bg-surface-container-high border-l-2 border-transparent'}`}
                         >
                           {/* Avatar */}
-                          <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border ${isFocused ? 'bg-primary/20 border-primary/40' : 'bg-primary/10 border-primary/20'}`}>
                             <span className="text-xs font-bold text-primary">
                               {d.driver_name ? getInitials(d.driver_name) : '?'}
                             </span>
@@ -281,8 +288,15 @@ export default function CustomerDashboardPage() {
                             ) : (
                               <span className="text-[9px] text-on-surface-variant">No driver</span>
                             )}
+                            <Link
+                              href={`/dashboard/customer/tracking?id=${d.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[9px] text-primary font-bold hover:underline"
+                            >
+                              Track →
+                            </Link>
                           </div>
-                        </Link>
+                        </button>
                       )
                     })}
                   </div>

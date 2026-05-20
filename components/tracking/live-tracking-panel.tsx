@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { fetchRoute } from "@/lib/google"
 
-const MapboxLiveMap = dynamic(
-  () => import("@/components/maps/mapbox-live-map").then((m) => m.MapboxLiveMap),
+const GoogleLiveMap = dynamic(
+  () => import("@/components/maps/google-live-map").then((m) => m.GoogleLiveMap),
   { ssr: false }
 )
 
@@ -155,7 +155,7 @@ export function LiveTrackingPanel({
           <span className="text-[10px] font-bold text-white uppercase tracking-wider">Customer Live</span>
         </div>
       )}
-      <MapboxLiveMap
+      <GoogleLiveMap
         drivers={drivers}
         pickup={pickup ? { lng: pickup.lng, lat: pickup.lat } : null}
         destination={destination ? { lng: destination.lng, lat: destination.lat } : null}

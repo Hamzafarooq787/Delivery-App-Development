@@ -15,8 +15,8 @@ import {
   type PlaceSuggestion,
 } from '@/lib/google'
 
-const MapboxLiveMap = dynamic(
-  () => import('@/components/maps/mapbox-live-map').then((m) => m.MapboxLiveMap),
+const GoogleLiveMap = dynamic(
+  () => import('@/components/maps/google-live-map').then((m) => m.GoogleLiveMap),
   { ssr: false }
 )
 
@@ -461,7 +461,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
           {/* Route map preview */}
           {showMap && (
             <div className="rounded-xl overflow-hidden border border-[#494847]/20">
-              <MapboxLiveMap
+              <GoogleLiveMap
                 pickup={pickupCoords}
                 destination={deliveryCoords}
                 routeGeometry={routeGeometry}
