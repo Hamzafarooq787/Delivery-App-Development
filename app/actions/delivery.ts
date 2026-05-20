@@ -542,9 +542,29 @@ export async function adminGetCustomers() {
   if (error) return { error: error.message, data: [] }
   if (!users || users.length === 0) return { data: [] }
 
-  // Get emails from auth.users (email column doesn't exist in public.users)
-  const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 })
-  const emailMap = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]))
+  const customerIds = users.map((u) => u.id)
+
+  // Batch-fetch emails + delivery data in parallel (no N+1)
+  const [authRes, deliveriesRes] = await Promise.all([
+    admin.auth.admin.listUsers({ perPage: 1000 }),
+    admin
+      .from("delivery_requests")
+      .select("customer_id, price, status")
+      .in("customer_id", customerIds),
+  ])
+
+  const emailMap = new Map((authRes.data?.users ?? []).map((u) => [u.id, u.email ?? ""]))
+
+  // Aggregate delivery count (all statuses) and total spend (delivered = paid)
+  const deliveryCountMap: Record<string, number> = {}
+  const spendMap: Record<string, number> = {}
+  for (const d of deliveriesRes.data ?? []) {
+    if (!d.customer_id) continue
+    deliveryCountMap[d.customer_id] = (deliveryCountMap[d.customer_id] ?? 0) + 1
+    if (d.status === "delivered" && d.price) {
+      spendMap[d.customer_id] = (spendMap[d.customer_id] ?? 0) + d.price
+    }
+  }
 
   return {
     data: users.map((u) => ({
@@ -553,6 +573,8 @@ export async function adminGetCustomers() {
       email: emailMap.get(u.id) ?? "",
       phone: u.phone ?? null,
       created_at: u.created_at,
+      delivery_count: deliveryCountMap[u.id] ?? 0,
+      total_spend: spendMap[u.id] ?? 0,
     })),
   }
 }
