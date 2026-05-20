@@ -677,3 +677,38 @@ export async function adminGetPayoutsWithDrivers() {
   if (error) return { error: error.message, data: [] }
   return { data: data ?? [] }
 }
+
+export async function uploadParcelPhotoAndCollect(deliveryId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const file = formData.get('photo') as File
+  if (!file || file.size === 0) return { error: 'No photo provided' }
+
+  const path = `${user.id}/parcel-${deliveryId}-${Date.now()}.jpg`
+  const { error: uploadError } = await supabase.storage
+    .from('driver-documents')
+    .upload(path, file, { contentType: 'image/jpeg', upsert: true })
+
+  if (uploadError) return { error: uploadError.message }
+
+  const { data: { publicUrl } } = supabase.storage.from('driver-documents').getPublicUrl(path)
+
+  const { error } = await supabase
+    .from('delivery_requests')
+    .update({ status: 'collected', parcel_image_url: publicUrl })
+    .eq('id', deliveryId)
+    .eq('driver_id', user.id)
+
+  if (error) return { error: error.message }
+
+  await supabase.from('delivery_status_logs').insert({
+    delivery_id: deliveryId,
+    status: 'collected',
+    updated_by: user.id,
+  })
+
+  revalidatePath(`/dashboard/driver/jobs/${deliveryId}`)
+  return { success: true, photoUrl: publicUrl }
+}

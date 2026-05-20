@@ -1,0 +1,355 @@
+"use client"
+
+import dynamic from "next/dynamic"
+import Link from "next/link"
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { updateDeliveryStatus } from "@/app/actions/delivery"
+import { ParcelAuthModal } from "./parcel-auth-modal"
+import { SafetyCancelButton } from "./safety-cancel-button"
+
+const LiveTrackingPanel = dynamic(
+  () => import("@/components/tracking/live-tracking-panel").then((m) => m.LiveTrackingPanel),
+  { ssr: false }
+)
+const DriverLocationBroadcaster = dynamic(
+  () => import("@/components/tracking/driver-location-broadcaster").then((m) => m.DriverLocationBroadcaster),
+  { ssr: false }
+)
+
+const STATUS_STEPS = ["accepted", "collected", "in_transit", "delivered"]
+const STATUS_LABELS: Record<string, string> = {
+  accepted: "Heading to Pickup",
+  collected: "Parcel Collected",
+  in_transit: "En Route",
+  delivered: "Delivered",
+}
+const STATUS_ICONS: Record<string, string> = {
+  accepted: "local_shipping",
+  collected: "inventory_2",
+  in_transit: "directions_car",
+  delivered: "check_circle",
+}
+
+type Job = {
+  id: string
+  status: string
+  tracking_number: string | null
+  pickup_address: string | null
+  delivery_address: string | null
+  pickup_lat: number | null
+  pickup_lng: number | null
+  delivery_lat: number | null
+  delivery_lng: number | null
+  item_description: string | null
+  price: number | null
+  parcel_image_url: string | null
+  customer_id: string | null
+}
+
+type Customer = { full_name: string | null; phone: string | null; email: string | null } | null
+
+type TimelineStep = { label: string; status: "completed" | "active" | "upcoming"; time?: string }
+
+type Props = {
+  job: Job
+  customer: Customer
+  timelineSteps: TimelineStep[]
+  userId: string
+}
+
+export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
+  const [showParcelAuth, setShowParcelAuth] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+
+  const ACTIVE_STATUSES = ["accepted", "collected", "in_transit", "picked_up"]
+  const isActive = ACTIVE_STATUSES.includes(job.status)
+  const isDone = job.status === "delivered" || job.status === "cancelled"
+
+  const pickup = job.pickup_lat != null && job.pickup_lng != null
+    ? { lat: Number(job.pickup_lat), lng: Number(job.pickup_lng) }
+    : null
+  const destination = job.delivery_lat != null && job.delivery_lng != null
+    ? { lat: Number(job.delivery_lat), lng: Number(job.delivery_lng) }
+    : null
+
+  const stepIndex = STATUS_STEPS.indexOf(job.status)
+
+  function advanceStatus(nextStatus: string) {
+    startTransition(async () => {
+      const result = await updateDeliveryStatus(job.id, nextStatus)
+      if (result?.error) { toast.error(result.error); return }
+      if (nextStatus === "delivered") {
+        toast.success("Delivery complete! Great work.")
+        router.push("/dashboard/driver/jobs/completed")
+      } else {
+        toast.success("Status updated.")
+        router.refresh()
+      }
+    })
+  }
+
+  function customerInitials() {
+    const n = customer?.full_name?.trim()
+    if (!n) return "?"
+    const parts = n.split(/\s+/).filter(Boolean)
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0e0e0e] pb-24">
+      {/* Top bar */}
+      <div className="sticky top-0 z-20 bg-[#0e0e0e]/95 backdrop-blur-sm border-b border-[#494847]/15 px-4 py-3 flex items-center gap-3">
+        <Link href="/dashboard/driver/active-jobs" className="flex items-center gap-1.5 text-[#adaaaa] hover:text-white transition-colors text-sm font-bold">
+          <span className="material-symbols-outlined text-lg">arrow_back</span>
+          Back
+        </Link>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-white truncate">{job.tracking_number ?? `Job #${job.id.slice(0, 8).toUpperCase()}`}</p>
+          <p className="text-[10px] text-[#adaaaa] uppercase tracking-wider">{STATUS_LABELS[job.status] ?? job.status}</p>
+        </div>
+        <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+          job.status === "delivered" ? "bg-[#6ee7b7]/10 text-[#6ee7b7] border-[#6ee7b7]/20" :
+          job.status === "in_transit" ? "bg-[#a3a6ff]/10 text-[#a3a6ff] border-[#a3a6ff]/20" :
+          job.status === "collected" ? "bg-[#c180ff]/10 text-[#c180ff] border-[#c180ff]/20" :
+          "bg-amber-400/10 text-amber-400 border-amber-400/20"
+        }`}>
+          {STATUS_LABELS[job.status] ?? job.status}
+        </div>
+      </div>
+
+      <div className="px-4 pt-4 space-y-4">
+
+        {/* Progress Steps */}
+        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            {STATUS_STEPS.map((s, i) => {
+              const done = i < stepIndex
+              const active = i === stepIndex
+              return (
+                <div key={s} className="flex-1 flex flex-col items-center gap-1.5 relative">
+                  {i < STATUS_STEPS.length - 1 && (
+                    <div className={`absolute top-4 left-1/2 w-full h-px ${done ? "bg-[#a3a6ff]" : "bg-[#494847]/30"}`} />
+                  )}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-all ${
+                    done ? "bg-[#a3a6ff] border-[#a3a6ff]" :
+                    active ? "bg-[#1a1919] border-[#a3a6ff] shadow-[0_0_12px_rgba(163,166,255,0.4)]" :
+                    "bg-[#1a1919] border-[#494847]/30"
+                  }`}>
+                    {done ? (
+                      <span className="material-symbols-outlined text-white text-sm">check</span>
+                    ) : (
+                      <span className={`material-symbols-outlined text-sm ${active ? "text-[#a3a6ff]" : "text-[#494847]"}`}>
+                        {STATUS_ICONS[s]}
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-[9px] font-bold uppercase tracking-wider text-center ${active ? "text-[#a3a6ff]" : done ? "text-[#adaaaa]" : "text-[#494847]"}`}>
+                    {STATUS_LABELS[s]}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Live Map */}
+        {isActive && (
+          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#494847]/15">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <p className="text-[11px] font-bold text-white uppercase tracking-wider">Live Navigation</p>
+              </div>
+              <DriverLocationBroadcaster deliveryId={job.id} />
+            </div>
+            <LiveTrackingPanel
+              driverId={userId}
+              pickup={pickup}
+              destination={destination}
+              customerId={job.customer_id ?? null}
+              deliveryId={job.id}
+              driverLabel="You"
+              followDriver
+              isDriverView
+              height={300}
+            />
+          </div>
+        )}
+
+        {/* Route Card */}
+        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
+          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Delivery Route</p>
+          <div className="flex gap-3">
+            <div className="flex flex-col items-center pt-1 shrink-0">
+              <div className="w-3 h-3 rounded-full border-2 border-[#a3a6ff] bg-[#0e0e0e]" />
+              <div className="w-px flex-1 min-h-[32px] border-l border-dashed border-[#494847] my-1" />
+              <div className="w-3 h-3 rounded-full bg-[#c180ff]" />
+            </div>
+            <div className="flex-1 space-y-4 min-w-0">
+              <div>
+                <p className="text-[10px] text-[#adaaaa] uppercase font-bold mb-1">Pickup</p>
+                <p className="text-sm font-semibold text-white leading-snug">{job.pickup_address || "—"}</p>
+                {pickup && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${pickup.lat},${pickup.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#a3a6ff] hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-sm">navigation</span>
+                    Navigate
+                  </a>
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] text-[#adaaaa] uppercase font-bold mb-1">Destination</p>
+                <p className="text-sm font-semibold text-white leading-snug">{job.delivery_address || "—"}</p>
+                {destination && job.status !== "accepted" && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#c180ff] hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-sm">navigation</span>
+                    Navigate
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Parcel photo (if already taken) */}
+        {job.parcel_image_url && (
+          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#6ee7b7]/15 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#6ee7b7]/10">
+              <span className="material-symbols-outlined text-[#6ee7b7] text-base">verified</span>
+              <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Parcel Authenticated</p>
+            </div>
+            <img src={job.parcel_image_url} alt="Parcel" className="w-full object-cover" style={{ maxHeight: 200 }} />
+          </div>
+        )}
+
+        {/* Package Info */}
+        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
+          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Package Info</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] text-[#494847] uppercase mb-0.5">Type</p>
+              <p className="text-sm font-semibold text-white">{job.item_description || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-[#494847] uppercase mb-0.5">Payout</p>
+              <p className="text-sm font-black text-[#6ee7b7]">
+                {job.price != null ? `£${Number(job.price).toFixed(2)}` : "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Info */}
+        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
+          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Customer</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
+              <span className="text-sm font-bold text-[#a3a6ff]">{customerInitials()}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">{customer?.full_name || "Customer"}</p>
+              <p className="text-[11px] text-[#adaaaa] truncate">{customer?.email || "—"}</p>
+            </div>
+            {customer?.phone && (
+              <a
+                href={`tel:${customer.phone}`}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-xs font-bold hover:bg-[#a3a6ff]/20 transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">call</span>
+                Call
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Delivery Timeline */}
+        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
+          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Progress Timeline</p>
+          <div className="relative space-y-6">
+            <div className="absolute left-3 top-1 bottom-1 w-px border-l border-dashed border-[#494847]/40" />
+            {timelineSteps.map((step, i) => (
+              <div key={i} className={`relative flex items-start gap-4 ${step.status === "upcoming" ? "opacity-35" : ""}`}>
+                <div className={`z-10 w-6 h-6 rounded-full flex items-center justify-center border-2 shrink-0 ${
+                  step.status === "completed" ? "bg-[#a3a6ff] border-[#a3a6ff]" :
+                  step.status === "active" ? "bg-[#1a1919] border-[#a3a6ff] shadow-[0_0_10px_rgba(163,166,255,0.5)]" :
+                  "bg-[#1a1919] border-[#494847]/40"
+                }`}>
+                  {step.status === "completed" && <span className="material-symbols-outlined text-white text-[12px]">check</span>}
+                  {step.status === "active" && <div className="w-2 h-2 rounded-full bg-[#a3a6ff]" />}
+                </div>
+                <div className="flex-1 min-w-0 pb-1">
+                  <div className="flex items-center justify-between">
+                    <p className={`text-sm font-bold ${step.status === "active" ? "text-[#a3a6ff]" : "text-white"}`}>{step.label}</p>
+                    {step.time && <p className="text-[10px] text-[#494847]">{step.time}</p>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Fixed action bar */}
+      {!isDone && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-[#0e0e0e]/95 backdrop-blur-sm border-t border-[#494847]/15 px-4 py-4 md:pl-[272px]">
+          <div className="flex gap-3 max-w-2xl mx-auto">
+            {/* Safety cancel */}
+            <SafetyCancelButton jobId={job.id} />
+
+            {/* Main CTA — context sensitive */}
+            {job.status === "accepted" && (
+              <button
+                onClick={() => setShowParcelAuth(true)}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98]"
+                style={{ boxShadow: "0 0 20px rgba(163,166,255,0.25)" }}
+              >
+                <span className="material-symbols-outlined text-base">verified_user</span>
+                Authenticate Parcel
+              </button>
+            )}
+            {job.status === "collected" && (
+              <button
+                onClick={() => advanceStatus("in_transit")}
+                disabled={isPending}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#c180ff] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ boxShadow: "0 0 20px rgba(193,128,255,0.25)" }}
+              >
+                <span className="material-symbols-outlined text-base">directions_car</span>
+                {isPending ? "Updating…" : "Start Delivery"}
+              </button>
+            )}
+            {job.status === "in_transit" && (
+              <button
+                onClick={() => advanceStatus("delivered")}
+                disabled={isPending}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#6ee7b7] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ boxShadow: "0 0 20px rgba(110,231,183,0.25)" }}
+              >
+                <span className="material-symbols-outlined text-base">check_circle</span>
+                {isPending ? "Completing…" : "Mark as Delivered"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showParcelAuth && (
+        <ParcelAuthModal deliveryId={job.id} onClose={() => setShowParcelAuth(false)} />
+      )}
+    </div>
+  )
+}
