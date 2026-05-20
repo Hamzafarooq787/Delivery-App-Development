@@ -138,6 +138,97 @@ export async function markAllPayoutsPaid() {
 }
 
 /**
+ * Admin approves a pending payout request (pending → approved).
+ */
+export async function approveDriverPayout(payoutId: string) {
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from("payouts")
+    .update({ status: "approved" })
+    .eq("id", payoutId)
+    .eq("status", "pending")
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/payouts")
+  return { success: true }
+}
+
+/**
+ * Admin rejects a pending or approved payout request.
+ */
+export async function rejectDriverPayout(payoutId: string) {
+  const admin = createAdminClient()
+  const { data: payout, error: fetchErr } = await admin
+    .from("payouts")
+    .select("id, driver_id, status")
+    .eq("id", payoutId)
+    .single()
+  if (fetchErr || !payout) return { error: "Payout not found" }
+  if (!["pending", "approved"].includes(payout.status))
+    return { error: "Only pending or approved payouts can be rejected" }
+
+  const { error } = await admin
+    .from("payouts")
+    .update({ status: "rejected" })
+    .eq("id", payoutId)
+  if (error) return { error: error.message }
+
+  revalidatePath("/dashboard/admin/payouts")
+  revalidatePath("/dashboard/driver/payouts")
+  return { success: true }
+}
+
+/**
+ * Admin marks an approved payout as completed / paid (approved → paid).
+ * Also accepts pending → paid for backwards-compat with the old single-step flow.
+ */
+export async function completeDriverPayout(payoutId: string) {
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from("payouts")
+    .update({ status: "paid" })
+    .eq("id", payoutId)
+    .in("status", ["pending", "approved"])
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/admin/payouts")
+  revalidatePath("/dashboard/driver/payouts")
+  return { success: true }
+}
+
+/**
+ * Fetch driver earnings + delivery breakdown for the detail modal.
+ * Called lazily when an admin opens a payout detail view.
+ */
+export async function getDriverPayoutDetails(driverId: string) {
+  const admin = createAdminClient()
+  const [earningsRes, deliveriesRes, payoutsHistoryRes] = await Promise.all([
+    admin
+      .from("driver_earnings")
+      .select("id, amount, commission_amount, status, created_at")
+      .eq("driver_id", driverId)
+      .order("created_at", { ascending: false })
+      .limit(15),
+    admin
+      .from("delivery_requests")
+      .select("id, tracking_number, price, status, created_at, pickup_address, dropoff_address")
+      .eq("driver_id", driverId)
+      .eq("status", "delivered")
+      .order("created_at", { ascending: false })
+      .limit(10),
+    admin
+      .from("payouts")
+      .select("id, amount, status, created_at")
+      .eq("driver_id", driverId)
+      .order("created_at", { ascending: false })
+      .limit(6),
+  ])
+  return {
+    earnings:       earningsRes.data       ?? [],
+    deliveries:     deliveriesRes.data     ?? [],
+    payoutHistory:  payoutsHistoryRes.data ?? [],
+  }
+}
+
+/**
  * Admin processes a specific driver's pending earnings directly:
  * creates a 'paid' payout record and marks all their driver_earnings as 'paid'.
  * Also creates driver_earnings rows for any unclaimed completed deliveries.

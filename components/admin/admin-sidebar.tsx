@@ -12,6 +12,7 @@ const navItems = [
   { label: "Customers", href: "/dashboard/admin/customers", icon: "group" },
   { label: "Verification Requests", href: "/dashboard/admin/verification", icon: "verified_user", badgeKey: "pendingVerifications" },
   { label: "Payments", href: "/dashboard/admin/payments", icon: "payments" },
+  { label: "Payouts",  href: "/dashboard/admin/payouts",  icon: "account_balance_wallet" },
   { label: "Disputes", href: "/dashboard/admin/disputes", icon: "gavel" },
   { label: "Reports", href: "/dashboard/admin/reports", icon: "analytics" },
   { label: "Settings", href: "/dashboard/admin/settings", icon: "settings" },
