@@ -1,0 +1,538 @@
+"use client"
+
+import { useState, useTransition } from "react"
+import { updateDriverProfile }        from "@/app/actions/delivery"
+import {
+  updateVehicleInfo,
+  toggleDriverOnline,
+  updateDriverNotifications,
+  changeDriverPassword,
+}                                     from "@/app/actions/driver"
+
+// ─────────── Shared primitives ─────────────────────────────────────────────
+
+const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all"
+const LABEL = "text-xs font-semibold text-[#adaaaa] uppercase tracking-wider"
+
+function Feedback({ saved, error }: { saved: boolean; error: string | null }) {
+  if (error)
+    return (
+      <p className="text-xs text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 rounded-xl px-4 py-3 mt-3">
+        {error}
+      </p>
+    )
+  if (saved)
+    return (
+      <p className="text-xs text-[#6ee7b7] flex items-center gap-1 mt-3 font-semibold">
+        <span className="material-symbols-outlined text-sm">check_circle</span>
+        Saved successfully!
+      </p>
+    )
+  return null
+}
+
+function SaveBtn({
+  isPending,
+  label = "Save Changes",
+}: {
+  isPending: boolean
+  label?: string
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={isPending}
+      className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
+    >
+      {isPending ? (
+        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+      ) : null}
+      {isPending ? "Saving…" : label}
+    </button>
+  )
+}
+
+// ─────────── Profile section ───────────────────────────────────────────────
+
+function ProfileSection({
+  fullName,
+  phone,
+  email,
+}: {
+  fullName: string
+  phone: string
+  email: string
+}) {
+  const [isPending, start] = useTransition()
+  const [saved,  setSaved] = useState(false)
+  const [error,  setError] = useState<string | null>(null)
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setSaved(false)
+    const fd   = new FormData(e.currentTarget)
+    const name = (fd.get("full_name") as string ?? "").trim()
+    const parts = name.split(" ")
+    fd.set("first_name", parts[0] ?? "")
+    fd.set("last_name",  parts.slice(1).join(" "))
+    start(async () => {
+      const r = await updateDriverProfile(fd)
+      if (r?.error) { setError(r.error); return }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    })
+  }
+
+  return (
+    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-10 h-10 bg-[#a3a6ff]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#a3a6ff]">person</span>
+        </div>
+        <h3 className="text-lg font-bold font-headline text-white">Profile Information</h3>
+      </div>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className={LABEL}>Full Name</label>
+            <input name="full_name" type="text" defaultValue={fullName} placeholder="Your full name" className={INPUT} />
+          </div>
+          <div className="space-y-1.5">
+            <label className={LABEL}>Phone Number</label>
+            <input name="phone" type="tel" defaultValue={phone} placeholder="+44 7700 000000" className={INPUT} />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className={LABEL}>Email Address</label>
+            <input
+              type="email"
+              value={email}
+              readOnly
+              className={`${INPUT} opacity-50 cursor-not-allowed`}
+              title="Email cannot be changed here"
+            />
+            <p className="text-[10px] text-[#adaaaa] mt-1">Contact support to change your email address.</p>
+          </div>
+        </div>
+        <Feedback saved={saved} error={error} />
+        <div className="pt-1"><SaveBtn isPending={isPending} /></div>
+      </form>
+    </div>
+  )
+}
+
+// ─────────── Vehicle section ───────────────────────────────────────────────
+
+function VehicleSection({
+  vehicleType,
+  vehicleNumber,
+}: {
+  vehicleType: string
+  vehicleNumber: string
+}) {
+  const [isPending, start] = useTransition()
+  const [saved,  setSaved] = useState(false)
+  const [error,  setError] = useState<string | null>(null)
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setSaved(false)
+    start(async () => {
+      const r = await updateVehicleInfo(new FormData(e.currentTarget))
+      if (r.error) { setError(r.error); return }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    })
+  }
+
+  return (
+    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-10 h-10 bg-[#c180ff]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#c180ff]">directions_car</span>
+        </div>
+        <h3 className="text-lg font-bold font-headline text-white">Vehicle Details</h3>
+      </div>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className={LABEL}>Vehicle Type</label>
+            <input
+              name="vehicle_type"
+              type="text"
+              defaultValue={vehicleType}
+              placeholder="e.g. Sedan, SUV, Motorcycle"
+              className={INPUT}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className={LABEL}>Plate / Vehicle Number</label>
+            <input
+              name="vehicle_number"
+              type="text"
+              defaultValue={vehicleNumber}
+              placeholder="e.g. AB12 CDE"
+              className={INPUT}
+            />
+          </div>
+        </div>
+        <Feedback saved={saved} error={error} />
+        <div className="pt-1"><SaveBtn isPending={isPending} label="Save Vehicle" /></div>
+      </form>
+    </div>
+  )
+}
+
+// ─────────── Notifications section ────────────────────────────────────────
+
+function Toggle({
+  id,
+  name,
+  checked,
+  onChange,
+  label,
+  description,
+}: {
+  id: string
+  name: string
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: string
+  description: string
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-white">{label}</p>
+        <p className="text-xs text-[#adaaaa] mt-0.5">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        id={id}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+          checked ? "bg-[#a3a6ff]" : "bg-[#494847]"
+        }`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+            checked ? "translate-x-5" : "translate-x-0"
+          }`}
+        />
+      </button>
+      {/* Hidden input so it's included in FormData */}
+      <input type="hidden" name={name} value={checked ? "1" : "0"} />
+    </div>
+  )
+}
+
+function NotificationsSection({
+  notificationsEnabled,
+  deliveryAlerts,
+}: {
+  notificationsEnabled: boolean
+  deliveryAlerts: boolean
+}) {
+  const [notifs,   setNotifs]  = useState(notificationsEnabled)
+  const [alerts,   setAlerts]  = useState(deliveryAlerts)
+  const [isPending, start]     = useTransition()
+  const [saved,  setSaved]     = useState(false)
+  const [error,  setError]     = useState<string | null>(null)
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setSaved(false)
+    start(async () => {
+      const r = await updateDriverNotifications(new FormData(e.currentTarget))
+      if (r?.error) { setError(r.error); return }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    })
+  }
+
+  return (
+    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-10 h-10 bg-[#6ee7b7]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#6ee7b7]">notifications</span>
+        </div>
+        <h3 className="text-lg font-bold font-headline text-white">Notification Settings</h3>
+      </div>
+      <form onSubmit={onSubmit} className="space-y-5">
+        <Toggle
+          id="notifications_enabled"
+          name="notifications_enabled"
+          checked={notifs}
+          onChange={setNotifs}
+          label="Push Notifications"
+          description="Receive push notifications for job assignments and platform alerts."
+        />
+        <div className="h-px bg-[#494847]/10" />
+        <Toggle
+          id="delivery_alerts"
+          name="delivery_alerts"
+          checked={alerts}
+          onChange={setAlerts}
+          label="Delivery Alerts"
+          description="Get notified when a new delivery in your area becomes available."
+        />
+        <Feedback saved={saved} error={error} />
+        <div className="pt-1"><SaveBtn isPending={isPending} label="Save Preferences" /></div>
+      </form>
+    </div>
+  )
+}
+
+// ─────────── Security section ──────────────────────────────────────────────
+
+function SecuritySection() {
+  const [isPending, start] = useTransition()
+  const [saved,  setSaved] = useState(false)
+  const [error,  setError] = useState<string | null>(null)
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setSaved(false)
+    const form = e.currentTarget
+    start(async () => {
+      const r = await changeDriverPassword(new FormData(form))
+      if (r?.error) { setError(r.error); return }
+      form.reset()
+      setSaved(true)
+      setTimeout(() => setSaved(false), 4000)
+    })
+  }
+
+  return (
+    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-10 h-10 bg-[#ff6e84]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#ff6e84]">lock</span>
+        </div>
+        <h3 className="text-lg font-bold font-headline text-white">Security</h3>
+      </div>
+
+      {/* Change password */}
+      <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Change Password</p>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <label className={LABEL}>New Password</label>
+          <input
+            name="new_password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="At least 8 characters"
+            className={INPUT}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className={LABEL}>Confirm New Password</label>
+          <input
+            name="confirm_password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Repeat password"
+            className={INPUT}
+          />
+        </div>
+        <Feedback saved={saved} error={error} />
+        <div className="pt-1">
+          <SaveBtn isPending={isPending} label="Update Password" />
+        </div>
+      </form>
+
+      {/* Divider */}
+      <div className="h-px bg-[#494847]/10 my-6" />
+
+      {/* Session info */}
+      <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Session</p>
+      <a
+        href="/auth/logout"
+        className="flex items-center gap-3 w-full p-4 bg-[#262626] hover:bg-[#ff6e84]/10 border border-[#494847]/10 hover:border-[#ff6e84]/20 rounded-xl transition-all group"
+      >
+        <span className="material-symbols-outlined text-[#ff6e84] group-hover:scale-110 transition-transform">logout</span>
+        <div>
+          <p className="text-sm font-semibold text-white">Sign Out</p>
+          <p className="text-xs text-[#adaaaa]">Sign out of this device</p>
+        </div>
+        <span className="material-symbols-outlined text-[#adaaaa] text-sm ml-auto">chevron_right</span>
+      </a>
+    </div>
+  )
+}
+
+// ─────────── Availability sidebar card ────────────────────────────────────
+
+function AvailabilityCard({ isOnline: initial }: { isOnline: boolean }) {
+  const [online,   setOnline]  = useState(initial)
+  const [isPending, start]     = useTransition()
+  const [error,    setError]   = useState<string | null>(null)
+
+  function toggle(val: boolean) {
+    setOnline(val)
+    setError(null)
+    start(async () => {
+      const r = await toggleDriverOnline(val)
+      if (r.error) { setError(r.error); setOnline(!val) }
+    })
+  }
+
+  return (
+    <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-2xl p-5 md:p-8 flex flex-col items-center text-center border border-[#494847]/15">
+      <div className="mb-5 relative">
+        <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-colors ${
+          online ? "border-[#6ee7b7]/40 bg-[#6ee7b7]/10" : "border-[#494847]/40 bg-[#262626]"
+        }`}>
+          <span className={`material-symbols-outlined text-3xl transition-colors ${online ? "text-[#6ee7b7]" : "text-[#adaaaa]"}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+            sensors
+          </span>
+        </div>
+        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#0e0e0e] transition-colors ${
+          online ? "bg-[#6ee7b7]" : "bg-[#494847]"
+        }`} style={{ boxShadow: online ? "0 0 10px rgba(110,231,183,0.4)" : undefined }} />
+      </div>
+      <h3 className="text-xl font-black font-headline text-white mb-1">Driver Status</h3>
+      <p className="text-xs text-[#adaaaa] mb-6 leading-relaxed px-2">Toggle your visibility to the dispatch network.</p>
+
+      {/* Online / Offline pill toggle */}
+      <div className="w-full bg-[#0e0e0e] rounded-full p-1.5 flex items-center">
+        <button
+          type="button"
+          onClick={() => toggle(true)}
+          disabled={isPending}
+          className={`w-1/2 py-2.5 rounded-full text-sm font-bold transition-all ${
+            online
+              ? "bg-[#6ee7b7] text-[#0f3d2c] shadow-[0_0_10px_rgba(110,231,183,0.3)]"
+              : "text-[#adaaaa] hover:text-white"
+          }`}
+        >
+          Online
+        </button>
+        <button
+          type="button"
+          onClick={() => toggle(false)}
+          disabled={isPending}
+          className={`w-1/2 py-2.5 rounded-full text-sm font-bold transition-all ${
+            !online
+              ? "bg-[#494847] text-white"
+              : "text-[#adaaaa] hover:text-white"
+          }`}
+        >
+          Offline
+        </button>
+      </div>
+
+      <p className={`mt-3 text-[11px] font-semibold tracking-wider uppercase ${online ? "text-[#6ee7b7]/80" : "text-[#adaaaa]/60"}`}>
+        {online ? "Receiving Jobs" : "Not Accepting Jobs"}
+      </p>
+      {isPending && <p className="text-[10px] text-[#adaaaa] mt-1">Updating…</p>}
+      {error    && <p className="text-[10px] text-[#ff6e84] mt-1">{error}</p>}
+    </div>
+  )
+}
+
+// ─────────── Safety sidebar card ──────────────────────────────────────────
+
+function SafetyCard() {
+  const links = [
+    { icon: "cancel",          label: "Cancel Active Job",  color: "text-[#ff6e84]", hover: "hover:bg-[#ff6e84]/10", href: "/dashboard/driver/active-jobs" },
+    { icon: "report",          label: "Report Incident",    color: "text-[#c180ff]", hover: "hover:bg-[#c180ff]/10", href: "/dashboard/driver/support" },
+    { icon: "contact_support", label: "Live Dispatch Chat", color: "text-[#a3a6ff]", hover: "hover:bg-[#a3a6ff]/10", href: "/dashboard/driver/support" },
+  ]
+  return (
+    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+      <h3 className="text-base font-bold font-headline text-white mb-5">Safety &amp; Support</h3>
+      <div className="space-y-3">
+        {links.map(item => (
+          <a
+            key={item.label}
+            href={item.href}
+            className={`flex items-center justify-between p-4 bg-[#262626] ${item.hover} rounded-xl border border-[#494847]/10 transition-all group`}
+          >
+            <div className="flex items-center gap-3">
+              <span className={`material-symbols-outlined ${item.color} group-hover:scale-110 transition-transform text-lg`}>{item.icon}</span>
+              <span className="text-sm font-semibold text-white">{item.label}</span>
+            </div>
+            <span className="material-symbols-outlined text-[#adaaaa] text-sm">chevron_right</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─────────── Account card ──────────────────────────────────────────────────
+
+function AccountCard({ email, role }: { email: string; role: string }) {
+  return (
+    <div className="rounded-xl border border-[#a3a6ff]/10 p-5" style={{ background: "linear-gradient(to bottom right, rgba(163,166,255,0.08), transparent)" }}>
+      <p className="text-[10px] font-bold text-[#a3a6ff] tracking-widest uppercase mb-3">Account</p>
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#a3a6ff] text-lg">account_circle</span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-white font-semibold truncate">{email || "—"}</p>
+          <p className="text-[10px] text-[#adaaaa] capitalize mt-0.5">{role}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────── Main panel ────────────────────────────────────────────────────
+
+export type DriverSettingsPanelProps = {
+  fullName: string
+  phone: string
+  email: string
+  role: string
+  vehicleType: string
+  vehicleNumber: string
+  isOnline: boolean
+  notificationsEnabled: boolean
+  deliveryAlerts: boolean
+}
+
+export function DriverSettingsPanel({
+  fullName,
+  phone,
+  email,
+  role,
+  vehicleType,
+  vehicleNumber,
+  isOnline,
+  notificationsEnabled,
+  deliveryAlerts,
+}: DriverSettingsPanelProps) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+
+      {/* ── Main column ── */}
+      <section className="lg:col-span-8 space-y-6">
+        <ProfileSection      fullName={fullName}  phone={phone}   email={email} />
+        <VehicleSection      vehicleType={vehicleType}  vehicleNumber={vehicleNumber} />
+        <NotificationsSection
+          notificationsEnabled={notificationsEnabled}
+          deliveryAlerts={deliveryAlerts}
+        />
+        <SecuritySection />
+      </section>
+
+      {/* ── Sidebar ── */}
+      <aside className="lg:col-span-4 space-y-5">
+        <AvailabilityCard isOnline={isOnline} />
+        <SafetyCard />
+        <AccountCard email={email} role={role} />
+      </aside>
+    </div>
+  )
+}
