@@ -145,22 +145,23 @@ export default function ActiveDeliveriesPage() {
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} />
-      <main className="pt-24 pb-20 md:pb-8 pl-4 pr-4 md:pl-72 md:pr-8 min-h-screen bg-surface-container-low">
-        {/* Header Section */}
-        <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <main className="pt-16 pb-28 md:pb-8 px-4 md:pl-72 md:pr-8 min-h-screen bg-surface-container-low">
+
+        {/* ── Page header ── */}
+        <div className="pt-5 md:pt-8 mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
-              Active Deliveries
+            <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-on-surface">
+              Shipments
             </h2>
-            <p className="text-on-surface-variant font-body text-sm mt-1">
-              Real-time status of your kinetic fleet across global corridors.
+            <p className="text-on-surface-variant text-sm mt-1">
+              Real-time status of all your active deliveries.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="bg-surface-container rounded-xl px-4 py-2 flex items-center gap-3">
+            <div className="bg-surface-container rounded-xl px-3 py-2 flex items-center gap-2.5">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_#a3a6ff]" />
-              <span className="font-label text-xs font-semibold text-on-surface uppercase tracking-widest">
-                {deliveries.length} {deliveries.length === 1 ? 'Operation' : 'Operations'} Live
+              <span className="text-xs font-bold text-on-surface uppercase tracking-widest">
+                {deliveries.length} live
               </span>
             </div>
             {deliveries.some((d) => ['accepted', 'collected', 'in_transit'].includes(d.status ?? '')) && (
@@ -172,128 +173,141 @@ export default function ActiveDeliveriesPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <span className="font-label text-xs text-on-surface-variant uppercase tracking-widest">
-              Loading deliveries...
-            </span>
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-surface-container animate-pulse" />
+            <span className="text-xs text-on-surface-variant uppercase tracking-widest">Loading…</span>
           </div>
         ) : deliveries.length === 0 ? (
-          <div className="bg-surface-container rounded-xl border border-outline-variant/10 px-8 py-16 flex flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-surface-container-highest flex items-center justify-center text-primary mb-4">
-              <span className="material-symbols-outlined">inbox</span>
+          <div className="bg-surface-container rounded-2xl border border-outline-variant/10 px-6 py-16 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 rounded-2xl bg-surface-container-highest flex items-center justify-center text-primary mb-4">
+              <span className="material-symbols-outlined text-2xl">inbox</span>
             </div>
-            <h3 className="font-headline font-bold text-lg text-on-surface">No deliveries yet</h3>
-            <p className="text-sm text-on-surface-variant mt-2 max-w-md">
-              Once you create a delivery request it will appear here in real time.
+            <h3 className="font-headline font-bold text-lg text-on-surface">No active deliveries</h3>
+            <p className="text-sm text-on-surface-variant mt-2 max-w-xs">
+              Create a delivery request and it will appear here in real time.
             </p>
             <button
               onClick={() => setShowModal(true)}
-              className="mt-6 bg-primary text-on-primary px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+              className="mt-6 bg-primary text-on-primary px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"
             >
               New Delivery
             </button>
           </div>
         ) : (
-          /* Bento Grid for Shipments */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {deliveries.map((shipment, idx) => {
-              const statusKey = (shipment.status ?? 'requested').toLowerCase()
-              const statusMeta =
-                ACTIVE_STATUS_LABELS[statusKey] ?? {
-                  label: statusKey.replace(/_/g, ' '),
-                  cls: 'bg-surface-container-highest text-on-surface-variant',
-                }
-              const trackingId = formatTrackingId(shipment)
-              const driverInitial = shipment.driver_id
-                ? shipment.driver_id.slice(0, 2).toUpperCase()
-                : 'NA'
-              const driverBg = DRIVER_BG_PALETTE[idx % DRIVER_BG_PALETTE.length]
+          <>
+            {/* ── MOBILE: native list ── */}
+            <div className="md:hidden bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/10">
+              {deliveries.map((shipment, idx) => {
+                const statusKey  = (shipment.status ?? 'requested').toLowerCase()
+                const statusMeta = ACTIVE_STATUS_LABELS[statusKey] ?? { label: statusKey.replace(/_/g, ' '), cls: 'bg-surface-container-highest text-on-surface-variant' }
+                const tid        = formatTrackingId(shipment)
+                const driverBg   = DRIVER_BG_PALETTE[idx % DRIVER_BG_PALETTE.length]
 
-              return (
-                <div
-                  key={shipment.id}
-                  className="bg-surface-container rounded-xl overflow-hidden group transition-all duration-300 hover:bg-surface-container-high relative border border-transparent hover:border-primary/10"
-                >
-                  <div className="absolute top-0 right-0 p-4">
-                    <span
-                      className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${statusMeta.cls}`}
-                    >
-                      {statusMeta.label}
-                    </span>
-                  </div>
+                return (
+                  <div
+                    key={shipment.id}
+                    className="flex items-center gap-4 px-4 py-4 border-b border-outline-variant/8 last:border-b-0 active:bg-surface-container-high transition-colors"
+                    onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
+                  >
+                    {/* Driver avatar */}
+                    <div className={`w-11 h-11 rounded-full ${driverBg} flex items-center justify-center text-xs font-black text-on-primary shrink-0`}>
+                      {shipment.driver_id ? shipment.driver_id.slice(0, 2).toUpperCase() : '?'}
+                    </div>
 
-                  <div className="p-6">
-                    <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.2em] mb-4">
-                      Order ID: {trackingId}
-                    </p>
-
-                    {shipment.item_description && (
-                      <p className="text-sm font-headline font-bold text-on-surface mb-6 line-clamp-1">
-                        {shipment.item_description}
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-sm font-bold text-on-surface font-mono">{tid}</p>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${statusMeta.cls}`}>
+                          {statusMeta.label}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant truncate">
+                        {formatRoute(shipment.pickup_address)} → {formatRoute(shipment.delivery_address)}
                       </p>
-                    )}
-
-                    <div className="flex flex-col gap-6 mb-8">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-surface-container-highest flex items-center justify-center text-primary">
-                          <span className="material-symbols-outlined">location_on</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] text-on-surface-variant uppercase font-semibold">
-                            Pickup
-                          </p>
-                          <p className="text-on-surface font-headline font-bold truncate">
-                            {formatRoute(shipment.pickup_address)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="ml-5 h-6 border-l-2 border-dashed border-outline-variant" />
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-surface-container-highest flex items-center justify-center text-secondary">
-                          <span className="material-symbols-outlined">flag</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] text-on-surface-variant uppercase font-semibold">
-                            Destination
-                          </p>
-                          <p className="text-on-surface font-headline font-bold truncate">
-                            {formatRoute(shipment.delivery_address)}
-                          </p>
-                        </div>
-                      </div>
+                      {shipment.item_description && (
+                        <p className="text-[10px] text-on-surface-variant/70 truncate mt-0.5">{shipment.item_description}</p>
+                      )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-6 border-t border-outline-variant/10">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-full ${driverBg} flex items-center justify-center text-[10px] font-bold text-on-primary`}
-                        >
-                          {driverInitial}
+                    <span className="material-symbols-outlined text-on-surface-variant/40 text-lg shrink-0">chevron_right</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* ── DESKTOP: bento grid ── */}
+            <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-6">
+              {deliveries.map((shipment, idx) => {
+                const statusKey  = (shipment.status ?? 'requested').toLowerCase()
+                const statusMeta = ACTIVE_STATUS_LABELS[statusKey] ?? { label: statusKey.replace(/_/g, ' '), cls: 'bg-surface-container-highest text-on-surface-variant' }
+                const trackingId = formatTrackingId(shipment)
+                const driverBg   = DRIVER_BG_PALETTE[idx % DRIVER_BG_PALETTE.length]
+
+                return (
+                  <div
+                    key={shipment.id}
+                    className="bg-surface-container rounded-xl overflow-hidden group transition-all duration-300 hover:bg-surface-container-high relative border border-transparent hover:border-primary/10"
+                  >
+                    <div className="absolute top-0 right-0 p-4">
+                      <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${statusMeta.cls}`}>
+                        {statusMeta.label}
+                      </span>
+                    </div>
+                    <div className="p-6">
+                      <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.2em] mb-4">
+                        Order ID: {trackingId}
+                      </p>
+                      {shipment.item_description && (
+                        <p className="text-sm font-headline font-bold text-on-surface mb-6 line-clamp-1">
+                          {shipment.item_description}
+                        </p>
+                      )}
+                      <div className="flex flex-col gap-6 mb-8">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-surface-container-highest flex items-center justify-center text-primary">
+                            <span className="material-symbols-outlined">location_on</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-on-surface-variant uppercase font-semibold">Pickup</p>
+                            <p className="text-on-surface font-headline font-bold truncate">{formatRoute(shipment.pickup_address)}</p>
+                          </div>
                         </div>
-                        <div className="text-xs">
-                          <p className="text-on-surface font-medium">
-                            {shipment.driver_id ? 'Driver assigned' : 'Awaiting driver'}
-                          </p>
-                          <p className="text-on-surface-variant">
-                            {shipment.created_at
-                              ? new Date(shipment.created_at).toLocaleDateString()
-                              : ''}
-                          </p>
+                        <div className="ml-5 h-6 border-l-2 border-dashed border-outline-variant" />
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-surface-container-highest flex items-center justify-center text-secondary">
+                            <span className="material-symbols-outlined">flag</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-on-surface-variant uppercase font-semibold">Destination</p>
+                            <p className="text-on-surface font-headline font-bold truncate">{formatRoute(shipment.delivery_address)}</p>
+                          </div>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
-                        className="bg-primary text-on-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(163,166,255,0.2)]"
-                      >
-                        Track
-                      </button>
+                      <div className="flex items-center justify-between pt-6 border-t border-outline-variant/10">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full ${driverBg} flex items-center justify-center text-[10px] font-bold text-on-primary`}>
+                            {shipment.driver_id ? shipment.driver_id.slice(0, 2).toUpperCase() : 'NA'}
+                          </div>
+                          <div className="text-xs">
+                            <p className="text-on-surface font-medium">{shipment.driver_id ? 'Driver assigned' : 'Awaiting driver'}</p>
+                            <p className="text-on-surface-variant">{shipment.created_at ? new Date(shipment.created_at).toLocaleDateString() : ''}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
+                          className="bg-primary text-on-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(163,166,255,0.2)]"
+                        >
+                          Track
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </main>
 
