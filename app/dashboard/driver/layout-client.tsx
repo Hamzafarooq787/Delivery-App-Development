@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import { DriverSidebar } from "@/components/driver/driver-sidebar"
+import { DriverBottomNav } from "@/components/driver/DriverBottomNav"
 import { DriverOnboarding } from "@/components/driver/driver-onboarding"
 import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
 
@@ -83,13 +84,14 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto pt-16 bg-[#131313]">
+        <main className="flex-1 overflow-y-auto pt-16 pb-20 lg:pb-0 bg-[#131313]">
           {showOnboarding ? (
             <DriverOnboarding user={user} driverStatus={driverStatus} hasDocuments={hasDocuments} />
           ) : (
             children
           )}
         </main>
+        <DriverBottomNav isLocked={isLocked} />
       </div>
     </div>
   )

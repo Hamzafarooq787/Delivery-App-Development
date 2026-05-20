@@ -5,14 +5,13 @@ import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { createClient } from '@/lib/supabase/client'
 
-// A unified row — built from the payments table, with delivery info joined
 type TxRow = {
   id: string
   amount: number
   status: string
   created_at: string | null
   tracking_number: string | null
-  source: 'payment' | 'delivery' // fallback rows come from delivery_requests
+  source: 'payment' | 'delivery'
 }
 
 const STATUS_STYLE: Record<string, { label: string; color: string; dot: string; bg: string }> = {
@@ -35,6 +34,12 @@ function fmtDate(iso: string | null) {
   return `${d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' })} · ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
 }
 
+function fmtDateShort(iso: string | null) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })
+}
+
 export default function PaymentsPage() {
   const [showModal, setShowModal] = useState(false)
   const supabase = useMemo(() => createClient(), [])
@@ -49,7 +54,6 @@ export default function PaymentsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      // Fetch customer's deliveries with price + status
       const { data: deliveries } = await supabase
         .from('delivery_requests')
         .select('id, tracking_number, price, status, created_at')
@@ -59,7 +63,6 @@ export default function PaymentsPage() {
       const deliveryRows = deliveries ?? []
       const ids = deliveryRows.map((d: any) => d.id)
 
-      // Try to fetch payment records for these deliveries
       let paymentRows: TxRow[] = []
       if (ids.length > 0) {
         const { data: payments } = await supabase
@@ -85,11 +88,9 @@ export default function PaymentsPage() {
 
       if (cancelled) return
 
-      // If we got payment records, use them; otherwise fall back to delivery_requests.price
       if (paymentRows.length > 0) {
         setTransactions(paymentRows)
       } else {
-        // Fallback: build transaction rows from delivery_requests so the page never appears empty
         const fallback: TxRow[] = deliveryRows
           .filter((d: any) => d.price && Number(d.price) > 0)
           .map((d: any) => ({
@@ -138,18 +139,93 @@ export default function PaymentsPage() {
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} />
-      <main className="pt-24 pb-12 md:ml-64 px-4 md:px-8 min-h-screen bg-[#0e0e0e]">
+      <main className="pt-16 pb-28 md:pb-8 px-4 md:px-8 md:ml-64 min-h-screen bg-[#0e0e0e]">
         <div className="max-w-5xl mx-auto">
 
           {/* Page header */}
-          <header className="mb-10">
-            <h2 className="text-3xl font-extrabold font-headline tracking-tight text-white">Payments</h2>
-            <p className="text-[#adaaaa] mt-2 text-sm">Review your delivery charges and settlement history.</p>
-          </header>
+          <div className="pt-5 md:pt-8 mb-6 md:mb-10">
+            <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-white">Payments</h2>
+            <p className="text-[#adaaaa] mt-1 text-sm">Review your delivery charges and settlement history.</p>
+          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* ── MOBILE: summary chips ── */}
+          <div className="md:hidden flex gap-3 overflow-x-auto no-scrollbar pb-4 mb-4">
+            {[
+              { label: 'Total Paid', value: fmt(summary.totalPaid), color: 'text-[#6ee7b7]' },
+              { label: 'This Month', value: fmt(summary.monthSpend), color: 'text-[#a3a6ff]' },
+              { label: 'Pending', value: fmt(summary.totalPending), color: 'text-[#c180ff]' },
+            ].map(chip => (
+              <div key={chip.label} className="bg-[#1a1919] rounded-2xl px-4 py-3 flex-shrink-0 border border-[#494847]/10">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-[#adaaaa]">{chip.label}</p>
+                <p className={`text-lg font-black font-headline mt-0.5 ${chip.color}`}>{chip.value}</p>
+              </div>
+            ))}
+          </div>
 
-            {/* Transactions list */}
+          {/* ── MOBILE: transaction list ── */}
+          <div className="md:hidden">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#a3a6ff] text-base">receipt_long</span>
+                Transactions
+              </h3>
+              {transactions.length > 0 && (
+                <span className="text-xs font-bold text-[#a3a6ff]">{transactions.length} total</span>
+              )}
+            </div>
+            <div className="bg-[#1a1919] rounded-2xl overflow-hidden border border-[#494847]/10">
+              {loading ? (
+                <div className="py-16 text-center">
+                  <span className="material-symbols-outlined text-[#adaaaa] text-3xl animate-spin">progress_activity</span>
+                  <p className="text-xs text-[#adaaaa] mt-3 uppercase tracking-widest">Loading…</p>
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="py-16 text-center px-8">
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#262626] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">receipt_long</span>
+                  </div>
+                  <p className="text-sm font-bold text-white mb-1">No transactions yet</p>
+                  <p className="text-xs text-[#adaaaa]">Charges appear here after requesting a delivery.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[#494847]/10">
+                  {visible.map((tx) => {
+                    const sKey = tx.status.toLowerCase()
+                    const meta = STATUS_STYLE[sKey] ?? STATUS_STYLE.pending
+                    const label = tx.tracking_number ? `Delivery ${tx.tracking_number}` : 'Delivery charge'
+                    return (
+                      <div key={tx.id} className="flex items-center gap-3 px-4 py-4">
+                        <div className="w-10 h-10 rounded-xl bg-[#262626] flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[#a3a6ff] text-base">local_shipping</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{label}</p>
+                          <p className="text-xs text-[#adaaaa]">{fmtDateShort(tx.created_at)}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-black text-white">{fmt(tx.amount)}</p>
+                          <span className={`text-[10px] font-bold ${meta.color}`}>{meta.label}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {transactions.length > 5 && (
+                    <div className="px-4 py-3">
+                      <button
+                        onClick={() => setShowAll(v => !v)}
+                        className="w-full py-2.5 rounded-xl border border-[#494847]/20 text-[#adaaaa] text-xs font-bold uppercase tracking-widest transition-all"
+                      >
+                        {showAll ? 'Show fewer' : `Show all ${transactions.length}`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── DESKTOP: original 3-col grid ── */}
+          <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -173,23 +249,16 @@ export default function PaymentsPage() {
                       <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">receipt_long</span>
                     </div>
                     <p className="text-sm font-bold text-white mb-1">No payment transactions yet</p>
-                    <p className="text-xs text-[#adaaaa]">
-                      Once you request a delivery, charges will appear here.
-                    </p>
+                    <p className="text-xs text-[#adaaaa]">Once you request a delivery, charges will appear here.</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-[#494847]/10">
                     {visible.map((tx) => {
                       const sKey = tx.status.toLowerCase()
                       const meta = STATUS_STYLE[sKey] ?? STATUS_STYLE.pending
-                      const label = tx.tracking_number
-                        ? `Delivery ${tx.tracking_number}`
-                        : 'Delivery charge'
+                      const label = tx.tracking_number ? `Delivery ${tx.tracking_number}` : 'Delivery charge'
                       return (
-                        <div
-                          key={tx.id}
-                          className="flex items-center justify-between px-5 py-4 hover:bg-[#201f1f] transition-colors group"
-                        >
+                        <div key={tx.id} className="flex items-center justify-between px-5 py-4 hover:bg-[#201f1f] transition-colors group">
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-xl bg-[#262626] group-hover:bg-[#a3a6ff]/10 flex items-center justify-center transition-colors shrink-0">
                               <span className="material-symbols-outlined text-[#a3a6ff]">local_shipping</span>
@@ -209,7 +278,6 @@ export default function PaymentsPage() {
                         </div>
                       )
                     })}
-
                     {transactions.length > 5 && (
                       <div className="px-5 py-3">
                         <button
@@ -225,9 +293,7 @@ export default function PaymentsPage() {
               </div>
             </div>
 
-            {/* Billing summary */}
             <div className="space-y-4">
-              {/* Total paid card */}
               <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl border border-[#a3a6ff]/20 relative overflow-hidden">
                 <div className="absolute -top-4 -right-4 w-20 h-20 bg-[#a3a6ff]/10 rounded-full blur-2xl" />
                 <p className="text-[10px] font-bold text-[#a3a6ff] uppercase tracking-[0.2em] mb-2">Total Paid</p>
@@ -248,13 +314,9 @@ export default function PaymentsPage() {
                 </div>
               </div>
 
-              {/* Security badge */}
               <div className="bg-[#1a1919] border border-[#494847]/10 p-5 rounded-2xl flex items-center gap-4">
                 <div className="w-11 h-11 bg-[#6ee7b7]/10 rounded-full flex items-center justify-center shrink-0">
-                  <span
-                    className="material-symbols-outlined text-[#6ee7b7]"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
+                  <span className="material-symbols-outlined text-[#6ee7b7]" style={{ fontVariationSettings: "'FILL' 1" }}>
                     verified
                   </span>
                 </div>
@@ -264,7 +326,6 @@ export default function PaymentsPage() {
                 </div>
               </div>
 
-              {/* Payment method placeholder */}
               <div className="bg-[#1a1919] border border-[#494847]/10 p-5 rounded-2xl">
                 <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Payment Method</p>
                 <div className="flex items-center gap-3">

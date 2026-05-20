@@ -239,7 +239,7 @@ export function PaymentsPanel({
         <div className="sm:col-span-2 lg:col-span-5 bg-[#1a1919] p-6 md:p-8 rounded-xl relative overflow-hidden flex flex-col justify-between min-h-[160px]">
           <div className="z-10">
             <p className="text-[#adaaaa] text-sm font-medium mb-1">Gross Revenue (All Time)</p>
-            <h2 className="text-5xl font-extrabold text-[#a3a6ff] font-headline tracking-tight">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-[#a3a6ff] font-headline tracking-tight">
               {fmt(grossRevenue)}
             </h2>
           </div>

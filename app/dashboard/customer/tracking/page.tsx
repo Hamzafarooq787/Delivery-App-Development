@@ -97,7 +97,7 @@ function LiveTrackingPageInner() {
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} userId={userId} />
-      <main className="pt-16 pb-20 md:pb-0 md:ml-64 min-h-screen bg-surface-container-low relative overflow-hidden">
+      <main className="pt-16 pb-28 md:pb-0 md:ml-64 min-h-screen bg-surface-container-low relative overflow-hidden">
         {/* Live Map Background */}
         <div className="absolute inset-0 z-0">
           <LiveTrackingPanel
@@ -126,7 +126,7 @@ function LiveTrackingPageInner() {
         </div>
 
         {/* Overlay Panels Container */}
-        <div className="relative z-10 p-4 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-6 h-[calc(100vh-4rem)]">
+        <div className="relative z-10 p-4 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-[calc(100vh-4rem)] overflow-y-auto md:overflow-visible">
           {/* Left Panel: Tracking Info */}
           <div className="md:col-span-4 lg:col-span-3 space-y-4">
             {/* ETA Card */}

@@ -155,13 +155,14 @@ export default async function AdminReportsPage() {
 
       {/* Top Drivers Table */}
       <div className="bg-[#1a1919] rounded-xl overflow-hidden">
-        <div className="px-8 py-5 border-b border-[#494847]/10 flex items-center justify-between">
+        <div className="px-6 md:px-8 py-5 border-b border-[#494847]/10 flex items-center justify-between">
           <h3 className="text-base font-bold text-white font-headline">Top Field Agents</h3>
           <a href="/dashboard/admin/drivers" className="text-xs text-[#a3a6ff] hover:underline">
             View All
           </a>
         </div>
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left min-w-[480px]">
           <thead>
             <tr className="bg-[#201f1f] text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
               <th className="px-8 py-4">Rank</th>
@@ -212,6 +213,7 @@ export default async function AdminReportsPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )
