@@ -1,213 +1,161 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient }      from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { ProcessPayoutButton, ProcessAllButton } from "@/components/admin/process-payout-buttons"
-
-function fmt(n: number) {
-  return `£${n.toFixed(2)}`
-}
+import { redirect }          from "next/navigation"
+import { AdminPayoutsPanel, type AdminPayoutsPanelProps } from "@/components/admin/admin-payouts-panel"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminPayoutsPage() {
+  // ── Auth guard — admins only ──────────────────────────────────────────────
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/auth/login")
+
+  const { data: selfUser } = await supabase
+    .from("users").select("role").eq("id", user.id).single()
+  if (selfUser?.role !== "admin") redirect("/dashboard")
+
   const admin = createAdminClient()
 
-  // Get all payout requests (from payouts table)
-  const { data: payoutRows } = await admin
-    .from("payouts")
-    .select("id, driver_id, amount, status, created_at, users(full_name, email)")
-    .order("created_at", { ascending: false })
+  // ── Parallel data fetch ───────────────────────────────────────────────────
+  const [payoutsRes, allEarningsRes, authRes] = await Promise.all([
+    admin
+      .from("payouts")
+      .select("id, driver_id, amount, status, created_at")
+      .order("created_at", { ascending: false }),
+    admin
+      .from("driver_earnings")
+      .select("driver_id, amount, commission_amount, status"),
+    admin.auth.admin.listUsers({ perPage: 1000 }),
+  ])
 
-  const payouts = payoutRows ?? []
+  const allPayouts  = payoutsRes.data  ?? []
+  const allEarnings = allEarningsRes.data ?? []
 
-  // Get all driver_earnings to build per-driver pending balances
-  const { data: earningsRows } = await admin
-    .from("driver_earnings")
-    .select("driver_id, amount, commission_amount, status")
+  // Unique driver IDs across payouts + earnings
+  const payoutDriverIds   = allPayouts.map(p => p.driver_id).filter(Boolean) as string[]
+  const earningsDriverIds = allEarnings.map(e => e.driver_id).filter(Boolean) as string[]
+  const uniqueDriverIds   = [...new Set([...payoutDriverIds, ...earningsDriverIds])]
 
-  const earnings = earningsRows ?? []
+  // Batch-fetch users table rows + auth emails
+  const [driverUsersRes, fallbackEarningsRes] = await Promise.all([
+    uniqueDriverIds.length > 0
+      ? admin.from("users").select("id, full_name, phone").in("id", uniqueDriverIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null; phone: string | null }[] }),
+    uniqueDriverIds.length > 0
+      ? admin
+          .from("delivery_requests")
+          .select("driver_id, price")
+          .eq("status", "delivered")
+          .in("driver_id", uniqueDriverIds)
+          .not("price", "is", null)
+      : Promise.resolve({ data: [] as { driver_id: string | null; price: number | null }[] }),
+  ])
 
-  // Aggregate pending earnings by driver
+  const emailMap = new Map(
+    (authRes.data?.users ?? []).map(u => [u.id, u.email ?? ""])
+  )
+
+  const driverInfoMap = new Map(
+    (driverUsersRes.data ?? []).map(u => ({
+      id: u.id,
+      full_name: u.full_name ?? "",
+      phone: u.phone ?? null,
+    })).map(u => [u.id, u])
+  )
+
+  // ── Per-driver earnings stats (driver_earnings + fallback) ─────────────
+  const earnStats: Record<string, { totalEarned: number; pendingEarnings: number; coveredIds: Set<string> }> = {}
+
+  for (const e of allEarnings) {
+    if (!e.driver_id) continue
+    if (!earnStats[e.driver_id]) earnStats[e.driver_id] = { totalEarned: 0, pendingEarnings: 0, coveredIds: new Set() }
+    earnStats[e.driver_id].totalEarned     += e.amount ?? 0
+    if (e.status === "pending") earnStats[e.driver_id].pendingEarnings += e.amount ?? 0
+  }
+
+  // Synthetic fallback from delivery_requests
+  for (const d of fallbackEarningsRes.data ?? []) {
+    if (!d.driver_id || !d.price) continue
+    if (!earnStats[d.driver_id]) earnStats[d.driver_id] = { totalEarned: 0, pendingEarnings: 0, coveredIds: new Set() }
+    // Only count if not already in driver_earnings (covered)
+    earnStats[d.driver_id].totalEarned     += Math.round(d.price * 0.75 * 100) / 100
+    earnStats[d.driver_id].pendingEarnings += Math.round(d.price * 0.75 * 100) / 100
+  }
+
+  // Per-driver payout totals (to compute real pendingBalance)
+  const paidOutMap: Record<string, number> = {}
+  for (const p of allPayouts) {
+    if (!p.driver_id || p.status !== "paid") continue
+    paidOutMap[p.driver_id] = (paidOutMap[p.driver_id] ?? 0) + (p.amount ?? 0)
+  }
+
+  // ── Enrich payout rows ────────────────────────────────────────────────────
+  const enrichedPayouts: AdminPayoutsPanelProps["payouts"] = allPayouts.map(p => {
+    const info  = driverInfoMap.get(p.driver_id ?? "")
+    const stats = earnStats[p.driver_id ?? ""]
+    return {
+      id:         p.id,
+      driver_id:  p.driver_id ?? "",
+      amount:     p.amount    ?? 0,
+      status:     p.status    as "pending" | "approved" | "rejected" | "paid",
+      created_at: p.created_at,
+      driver: {
+        full_name: info?.full_name ?? "Unknown",
+        email:     emailMap.get(p.driver_id ?? "") ?? "",
+        phone:     info?.phone ?? null,
+      },
+      driverStats: {
+        totalEarned:         stats?.totalEarned ?? 0,
+        pendingEarnings:     Math.max(0, (stats?.totalEarned ?? 0) - (paidOutMap[p.driver_id ?? ""] ?? 0)),
+        completedDeliveries: 0, // loaded lazily in detail modal
+      },
+    }
+  })
+
+  // ── Pending driver balances (have earnings, no recent payout pending) ─────
   const pendingByDriver: Record<string, { pending: number; total: number; jobs: number }> = {}
-  for (const e of earnings) {
+  for (const e of allEarnings) {
     if (!e.driver_id) continue
     if (!pendingByDriver[e.driver_id]) pendingByDriver[e.driver_id] = { pending: 0, total: 0, jobs: 0 }
     pendingByDriver[e.driver_id].total += e.amount ?? 0
-    pendingByDriver[e.driver_id].jobs += 1
+    pendingByDriver[e.driver_id].jobs  += 1
     if (e.status === "pending") pendingByDriver[e.driver_id].pending += e.amount ?? 0
   }
 
-  // Get driver user info
-  const driverIds = Object.keys(pendingByDriver)
-  const { data: driverUsers } = driverIds.length
-    ? await admin.from("users").select("id, full_name, email").in("id", driverIds)
-    : { data: [] }
-
-  const driverMap: Record<string, { full_name?: string; email?: string }> = {}
-  for (const u of driverUsers ?? []) driverMap[u.id] = u
-
-  const pendingDriverList = driverIds
-    .filter((id) => pendingByDriver[id].pending > 0)
-    .map((id) => ({
-      driverId: id,
-      ...driverMap[id],
-      ...pendingByDriver[id],
+  const pendingDriverList: AdminPayoutsPanelProps["pendingDrivers"] = Object.entries(pendingByDriver)
+    .filter(([, v]) => v.pending > 0)
+    .map(([id, v]) => ({
+      driverId:  id,
+      full_name: driverInfoMap.get(id)?.full_name ?? "",
+      email:     emailMap.get(id) ?? "",
+      phone:     driverInfoMap.get(id)?.phone ?? null,
+      pending:   v.pending,
+      total:     v.total,
+      jobs:      v.jobs,
     }))
     .sort((a, b) => b.pending - a.pending)
 
-  // Summary stats
-  const totalAllEarnings    = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
-  const totalPendingBalance = earnings.filter(e => e.status === "pending").reduce((s, e) => s + (e.amount ?? 0), 0)
-  const totalCommission     = earnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0)
-  const totalProcessed      = payouts.filter(p => p.status === "paid").reduce((s, p) => s + (p.amount ?? 0), 0)
-  const pendingPayoutCount  = payouts.filter(p => p.status === "pending").length
+  // ── KPI stats ─────────────────────────────────────────────────────────────
+  const pendingPayouts   = allPayouts.filter(p => p.status === "pending")
+  const approvedPayouts  = allPayouts.filter(p => p.status === "approved")
+  const paidPayouts      = allPayouts.filter(p => p.status === "paid")
+  const pendingOrApproved = [...pendingPayouts, ...approvedPayouts]
+
+  const stats: AdminPayoutsPanelProps["stats"] = {
+    pendingRequestCount: pendingOrApproved.length,
+    pendingAmount:       pendingOrApproved.reduce((s, p) => s + (p.amount ?? 0), 0),
+    totalPaidOut:        paidPayouts.reduce((s, p) => s + (p.amount ?? 0), 0),
+    driversAwaiting:     new Set(pendingOrApproved.map(p => p.driver_id).filter(Boolean)).size,
+    platformCommission:  allEarnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0),
+    totalPayoutCount:    allPayouts.length,
+  }
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 md:mb-8">
-        <div>
-          <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-white">Driver Payouts</h2>
-          <p className="text-[#adaaaa] mt-1 text-sm">Review pending balances and process driver disbursements.</p>
-        </div>
-        {pendingPayoutCount > 0 && <ProcessAllButton count={pendingPayoutCount} />}
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6 md:mb-8">
-        <div className="bg-[#1a1919] p-6 rounded-xl border-l-4 border-[#a3a6ff]">
-          <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-2">Total Earned (Drivers)</p>
-          <p className="text-2xl font-black font-headline text-white">{fmt(totalAllEarnings)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">{earnings.length} deliveries</p>
-        </div>
-        <div className="bg-[#1a1919] p-6 rounded-xl border-l-4 border-[#c180ff]">
-          <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-2">Pending Balance</p>
-          <p className="text-2xl font-black font-headline text-[#c180ff]">{fmt(totalPendingBalance)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">{pendingDriverList.length} drivers waiting</p>
-        </div>
-        <div className="bg-[#1a1919] p-6 rounded-xl border-l-4 border-[#6ee7b7]">
-          <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-2">Total Processed</p>
-          <p className="text-2xl font-black font-headline text-[#6ee7b7]">{fmt(totalProcessed)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">{payouts.filter(p => p.status === "paid").length} payouts</p>
-        </div>
-        <div className="bg-[#1a1919] p-6 rounded-xl border-l-4 border-[#ff6e84]">
-          <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-2">Platform Commission</p>
-          <p className="text-2xl font-black font-headline text-white">{fmt(totalCommission)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">25% of all fares</p>
-        </div>
-      </div>
-
-      {/* Pending Balances per Driver */}
-      {pendingDriverList.length > 0 && (
-        <div className="bg-[#1a1919] rounded-xl overflow-hidden mb-6">
-          <div className="px-6 py-5 border-b border-[#494847]/10 flex items-center justify-between">
-            <div>
-              <h3 className="font-headline text-base font-bold text-white">Pending Driver Balances</h3>
-              <p className="text-xs text-[#adaaaa] mt-0.5">Earnings awaiting disbursement</p>
-            </div>
-            <span className="text-xs font-bold text-[#c180ff] bg-[#c180ff]/10 px-3 py-1 rounded-full">
-              {pendingDriverList.length} drivers
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px]">
-              <thead>
-                <tr className="bg-[#201f1f]/50 text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
-                  <th className="px-6 py-4 text-left">Driver</th>
-                  <th className="px-6 py-4 text-right">Total Earned</th>
-                  <th className="px-6 py-4 text-right">Pending</th>
-                  <th className="px-6 py-4 text-right">Jobs</th>
-                  <th className="px-6 py-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#494847]/10">
-                {pendingDriverList.map((d) => (
-                  <tr key={d.driverId} className="hover:bg-[#201f1f] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] text-xs font-bold shrink-0">
-                          {(d.full_name ?? d.email ?? "?").slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-white">{d.full_name ?? "—"}</p>
-                          <p className="text-xs text-[#adaaaa]">{d.email ?? ""}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm text-[#adaaaa]">{fmt(d.total)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <span className="text-sm font-black text-[#c180ff]">{fmt(d.pending)}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm text-[#adaaaa]">{d.jobs}</td>
-                    <td className="px-6 py-4 text-right">
-                      <ProcessPayoutButton driverId={d.driverId} amount={d.pending} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Payout history */}
-      <div className="bg-[#1a1919] rounded-xl overflow-hidden">
-        <div className="px-6 py-5 border-b border-[#494847]/10">
-          <h3 className="font-headline text-base font-bold text-white">Payout Request History</h3>
-          <p className="text-xs text-[#adaaaa] mt-0.5">All payout requests submitted by drivers</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px]">
-            <thead>
-              <tr className="bg-[#201f1f]/50 text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
-                <th className="px-6 py-4 text-left">Payout ID</th>
-                <th className="px-6 py-4 text-left">Driver</th>
-                <th className="px-6 py-4 text-right">Amount</th>
-                <th className="px-6 py-4 text-right">Status</th>
-                <th className="px-6 py-4 text-right">Date</th>
-                <th className="px-6 py-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#494847]/10">
-              {payouts.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-16 text-center text-[#adaaaa] text-sm">No payout requests yet.</td>
-                </tr>
-              ) : (
-                payouts.map((p) => {
-                  const driver = p.users as { full_name?: string; email?: string } | null
-                  const isPaid = p.status === "paid"
-                  return (
-                    <tr key={p.id} className="hover:bg-[#201f1f] transition-colors">
-                      <td className="px-6 py-4 font-mono text-xs text-[#a3a6ff]">#{p.id.slice(0, 8).toUpperCase()}</td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-white">{driver?.full_name ?? "—"}</p>
-                        <p className="text-xs text-[#adaaaa]">{driver?.email ?? ""}</p>
-                      </td>
-                      <td className="px-6 py-4 text-right text-sm font-black text-white">{fmt(p.amount ?? 0)}</td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded ${
-                          isPaid
-                            ? "bg-[#6ee7b7]/10 text-[#6ee7b7]"
-                            : "bg-[#c180ff]/10 text-[#c180ff]"
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? "bg-[#6ee7b7]" : "bg-[#c180ff] animate-pulse"}`} />
-                          {isPaid ? "Disbursed" : "Processing"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right text-xs text-[#adaaaa]">
-                        {new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {!isPaid && <ProcessPayoutButton payoutId={p.id} amount={p.amount ?? 0} markExisting />}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <AdminPayoutsPanel
+      payouts={enrichedPayouts}
+      pendingDrivers={pendingDriverList}
+      stats={stats}
+    />
   )
 }
