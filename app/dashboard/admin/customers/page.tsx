@@ -91,14 +91,16 @@ export default async function AdminCustomersPage() {
                       </td>
                       <td className="px-6 lg:px-8 py-5">
                         <div className="flex items-center gap-2">
-                          <span className="text-white font-bold text-sm">—</span>
+                          <span className="text-white font-bold text-sm">{customer.delivery_count}</span>
                           <span className={`text-[10px] ${accent.text} ${accent.bg} px-1.5 py-0.5 rounded font-bold`}>
-                            Active
+                            {customer.delivery_count === 1 ? "Order" : "Orders"}
                           </span>
                         </div>
                       </td>
                       <td className="px-6 lg:px-8 py-5 text-right">
-                        <p className="text-white font-headline font-bold text-sm">—</p>
+                        <p className="text-white font-headline font-bold text-sm">
+                          £{customer.total_spend.toFixed(2)}
+                        </p>
                         <p className="text-[10px] text-[#adaaaa]">LTM Spend</p>
                       </td>
                       <td className="px-6 lg:px-8 py-5">
@@ -132,7 +134,10 @@ export default async function AdminCustomersPage() {
                     <p className="text-white font-semibold text-sm truncate">{customer.full_name || "Unknown"}</p>
                     <p className="text-[#adaaaa] text-xs truncate">{customer.email || "—"}</p>
                   </div>
-                  <div className="w-2 h-2 rounded-full bg-[#a3a6ff] shadow-[0px_0px_8px_rgba(163,166,255,0.6)] shrink-0" />
+                  <div className="text-right shrink-0">
+                    <p className="text-white font-bold text-sm">£{customer.total_spend.toFixed(2)}</p>
+                    <p className="text-[#adaaaa] text-[10px]">{customer.delivery_count} orders</p>
+                  </div>
                 </div>
               )
             })
