@@ -16,15 +16,17 @@ export default async function DriverDashboard() {
       .order("created_at", { ascending: false }),
     supabase
       .from("driver_earnings")
-      .select("amount")
+      .select("amount, commission_amount, status")
       .eq("driver_id", user?.id ?? ""),
   ])
 
   const jobs = jobsRes.data ?? []
   const totalEarnings =
     earningsRes.data?.reduce((sum, e) => sum + (e.amount ?? 0), 0) ?? 0
+  const pendingEarnings =
+    earningsRes.data?.filter(e => e.status === "pending").reduce((sum, e) => sum + (e.amount ?? 0), 0) ?? 0
   const activeJobs = jobs.filter((j) =>
-    ["accepted", "picked_up", "in_transit"].includes(j.status)
+    ["accepted", "collected", "picked_up", "in_transit"].includes(j.status)
   ).length
   const completedJobs = jobs.filter((j) => j.status === "delivered").length
   const recentActivity = jobs.slice(0, 3)
@@ -63,6 +65,11 @@ export default async function DriverDashboard() {
             <p className="text-xs text-[#adaaaa] flex items-center gap-1">
               <span className="text-[#a3a6ff] font-bold">All time · your 75% share</span>
             </p>
+            {pendingEarnings > 0 && (
+              <p className="text-xs text-[#c180ff] mt-1 font-bold">
+                £{pendingEarnings.toFixed(2)} pending withdrawal
+              </p>
+            )}
           </div>
           <div className="mt-8 h-12 w-full bg-black/30 rounded flex items-end gap-1 p-2">
             <div className="flex-1 bg-[#a3a6ff]/20 h-4 rounded-sm"></div>

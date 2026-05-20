@@ -5,9 +5,9 @@ import { OrderStatusChart } from "@/components/admin/order-status-chart"
 export default async function AdminReportsPage() {
   const supabase = await createClient()
 
-  const [deliveriesRes, paymentsRes, driversRes, customersRes] = await Promise.all([
-    supabase.from("delivery_requests").select("id, status, created_at").order("created_at", { ascending: true }),
-    supabase.from("payments").select("amount, created_at").eq("status", "succeeded"),
+  const [deliveriesRes, earningsRes, driversRes, customersRes] = await Promise.all([
+    supabase.from("delivery_requests").select("id, status, created_at, price").order("created_at", { ascending: true }),
+    supabase.from("driver_earnings").select("amount, commission_amount, created_at"),
     supabase.from("users").select("id, full_name, email").eq("role", "driver").limit(5),
     supabase
       .from("users")
@@ -17,26 +17,29 @@ export default async function AdminReportsPage() {
   ])
 
   const deliveries = deliveriesRes.data ?? []
-  const payments = paymentsRes.data ?? []
+  // Use driver_earnings as revenue source; fall back to delivery_requests.price sum
+  const earnings = earningsRes.data ?? []
   const topDrivers = driversRes.data ?? []
   const newCustomers = customersRes.count ?? 0
 
-  const totalRevenue = payments.reduce((s, p) => s + (p.amount ?? 0), 0)
+  const totalRevenue = earnings.length > 0
+    ? earnings.reduce((s, e) => s + (e.amount ?? 0) + (e.commission_amount ?? 0), 0)
+    : deliveries.reduce((s, d) => s + ((d as any).price ?? 0), 0)
   const activeDrivers = topDrivers.length
 
   // Build daily chart data (last 7 days)
   const now = Date.now()
   const days7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now - (6 - i) * 86400000)
-    const label = d.toLocaleDateString("en-US", { weekday: "short" })
+    const label = d.toLocaleDateString("en-GB", { weekday: "short" })
     const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
     const dayEnd = dayStart + 86400000
-    const revenue = payments
-      .filter((p) => {
-        const t = new Date(p.created_at).getTime()
+    const revenue = earnings
+      .filter((e) => {
+        const t = new Date(e.created_at).getTime()
         return t >= dayStart && t < dayEnd
       })
-      .reduce((s, p) => s + (p.amount ?? 0), 0)
+      .reduce((s, e) => s + (e.amount ?? 0) + (e.commission_amount ?? 0), 0)
     const orders = deliveries.filter((d2) => {
       const t = new Date(d2.created_at).getTime()
       return t >= dayStart && t < dayEnd
@@ -61,7 +64,7 @@ export default async function AdminReportsPage() {
     },
     {
       label: "Revenue (30d)",
-      value: `$${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `£${totalRevenue.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       delta: "+12.4%",
       up: true,
       icon: "payments",
@@ -131,7 +134,7 @@ export default async function AdminReportsPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-white font-headline">Revenue Momentum</h3>
-              <p className="text-[#adaaaa] text-xs">Weekly earnings in USD</p>
+              <p className="text-[#adaaaa] text-xs">Weekly earnings in GBP (£)</p>
             </div>
             <span className="text-[10px] text-[#a3a6ff] bg-[#a3a6ff]/10 px-3 py-1 rounded-full font-bold">
               7-Day Window
