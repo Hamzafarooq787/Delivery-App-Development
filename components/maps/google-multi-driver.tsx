@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { fetchRoute } from "@/lib/google"
-import { MapboxLiveMap } from "./mapbox-live-map"
+import { GoogleLiveMap } from "./google-live-map"
 
 type Delivery = {
   id: string
@@ -31,7 +31,7 @@ type Props = {
   className?: string
 }
 
-export function MapboxMultiDriver({ deliveries, focusedDeliveryId, height = 420, className }: Props) {
+export function GoogleMultiDriver({ deliveries, focusedDeliveryId, height = 420, className }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [positions, setPositions] = useState<Record<string, { lat: number; lng: number }>>({})
   const [liveCount, setLiveCount] = useState(0)
@@ -63,7 +63,7 @@ export function MapboxMultiDriver({ deliveries, focusedDeliveryId, height = 420,
   useEffect(() => {
     if (driverIds.length === 0) return
     const channel = supabase
-      .channel("mapbox-multi-driver-locations")
+      .channel("google-multi-driver-locations")
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_locations" }, (payload) => {
         const row = (payload.new ?? payload.old) as any
         if (!row || !driverIds.includes(row.driver_id)) return
@@ -130,7 +130,7 @@ export function MapboxMultiDriver({ deliveries, focusedDeliveryId, height = 420,
         </span>
       </div>
 
-      <MapboxLiveMap
+      <GoogleLiveMap
         drivers={drivers}
         pickup={pickup}
         destination={destination}

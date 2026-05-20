@@ -104,7 +104,7 @@ function DriverPin({ driver }: { driver: Driver }) {
   )
 }
 
-export function MapboxLiveMap({
+export function GoogleLiveMap({
   drivers = [],
   pickup,
   destination,

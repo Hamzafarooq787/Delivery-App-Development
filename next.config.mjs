@@ -6,7 +6,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  transpilePackages: ['mapbox-gl'],
 }
 
 export default nextConfig

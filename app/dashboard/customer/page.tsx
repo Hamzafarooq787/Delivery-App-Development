@@ -5,8 +5,8 @@ import Link from 'next/link'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import dynamic from 'next/dynamic'
-const MapboxMultiDriver = dynamic(
-  () => import('@/components/maps/mapbox-multi-driver').then((m) => m.MapboxMultiDriver),
+const GoogleMultiDriver = dynamic(
+  () => import('@/components/maps/google-multi-driver').then((m) => m.GoogleMultiDriver),
   { ssr: false }
 )
 import { createClient } from '@/lib/supabase/client'
@@ -230,7 +230,7 @@ export default function CustomerDashboardPage() {
 
                 {/* Map — left half */}
                 <div className="flex-1 min-h-[280px] lg:min-h-0">
-                  <MapboxMultiDriver
+                  <GoogleMultiDriver
                     deliveries={activeDeliveries}
                     focusedDeliveryId={focusedDeliveryId ?? activeDeliveries[0]?.id ?? null}
                     height="100%"
