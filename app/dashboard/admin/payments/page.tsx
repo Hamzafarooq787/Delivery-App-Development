@@ -1,224 +1,111 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient }      from "@/lib/supabase/server"
+import { redirect }          from "next/navigation"
+import { PaymentsPanel }     from "@/components/admin/payments-panel"
+
+export const dynamic = "force-dynamic"
 
 export default async function AdminPaymentsPage() {
+  // ── Auth guard ─────────────────────────────────────────────────────────────
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/auth/login")
 
-  const [allPaymentsRes, pendingRes, failedRes, recentRes, earningsRes] = await Promise.all([
-    supabase.from("payments").select("amount").eq("status", "succeeded"),
-    supabase.from("payments").select("id", { count: "exact" }).eq("status", "pending"),
-    supabase.from("payments").select("amount").eq("status", "failed"),
-    supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.role !== "admin") redirect("/dashboard")
+
+  // ── Parallel data fetch ────────────────────────────────────────────────────
+  const [paymentsRes, payoutsRes, earningsRes] = await Promise.all([
+    admin
       .from("payments")
-      .select("id, amount, status, created_at, delivery_request_id, user_id")
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase.from("driver_earnings").select("amount, commission_amount"),
+      .select("id, amount, status, created_at, delivery_id")
+      .order("created_at", { ascending: false }),
+
+    admin
+      .from("payouts")
+      .select("id, amount, status, created_at, driver_id")
+      .order("created_at", { ascending: false }),
+
+    admin
+      .from("driver_earnings")
+      .select("amount, commission_amount"),
   ])
 
-  const totalDriverPayouts = earningsRes.data?.reduce((s, e) => s + (e.amount ?? 0), 0) ?? 0
-  const totalCommission    = earningsRes.data?.reduce((s, e) => s + (e.commission_amount ?? 0), 0) ?? 0
-  const grossFromEarnings  = totalDriverPayouts + totalCommission
-  // Fall back to payments table if driver_earnings is empty
-  const totalRevenue = grossFromEarnings > 0
-    ? grossFromEarnings
-    : (allPaymentsRes.data?.reduce((s, p) => s + (p.amount ?? 0), 0) ?? 0)
-  const pendingCount = pendingRes.count ?? 0
-  const failedAmount = failedRes.data?.reduce((s, p) => s + (p.amount ?? 0), 0) ?? 0
-  const payments = recentRes.data ?? []
+  const payments = paymentsRes.data ?? []
+  const payouts  = payoutsRes.data  ?? []
+  const earnings = earningsRes.data ?? []
 
-  return (
-    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
-        <div>
-          <h3 className="text-2xl font-bold font-headline text-white mb-1">Transactions</h3>
-          <p className="text-[#adaaaa] text-sm">Detailed log of all financial movements.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 md:gap-3">
-          <div className="flex items-center gap-2 bg-[#1a1919] px-3 py-2 rounded-lg border border-[#494847]/10 text-sm">
-            <span className="material-symbols-outlined text-sm text-[#adaaaa]">filter_list</span>
-            <span className="text-white hidden sm:inline">Status: All</span>
-          </div>
-          <div className="flex items-center gap-2 bg-[#1a1919] px-3 py-2 rounded-lg border border-[#494847]/10 text-sm">
-            <span className="material-symbols-outlined text-sm text-[#adaaaa]">calendar_today</span>
-            <span className="text-white hidden sm:inline">Last 30 Days</span>
-          </div>
-          <button className="bg-[#262626] hover:bg-[#2c2c2c] px-4 py-2 rounded-lg transition-colors text-sm font-semibold text-white">
-            Export CSV
-          </button>
-        </div>
-      </div>
+  // ── Enrich payments with customer info ────────────────────────────────────
+  // payments.delivery_id → delivery_requests.customer_id → users
+  const deliveryIds = [...new Set(
+    payments.map(p => p.delivery_id).filter((id): id is string => !!id),
+  )]
 
-      {/* Summary Bento Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-8">
-        {/* Gross Revenue */}
-        <div className="sm:col-span-2 lg:col-span-5 bg-[#1a1919] p-6 md:p-8 rounded-xl relative overflow-hidden flex flex-col justify-between min-h-[160px]">
-          <div className="z-10">
-            <p className="text-[#adaaaa] text-sm font-medium mb-1">Gross Revenue (All Time)</p>
-            <h2 className="text-5xl font-extrabold text-[#a3a6ff] font-headline tracking-tight">
-              £{totalRevenue.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </h2>
-          </div>
-          <div className="z-10 flex items-center gap-4">
-            <p className="text-[#adaaaa] text-sm">{payments.length} recent transactions</p>
-          </div>
-          <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-[#a3a6ff]/10 to-transparent pointer-events-none" />
-          <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-[#a3a6ff]/5 rounded-full blur-3xl pointer-events-none" />
-        </div>
+  const deliveriesRes = deliveryIds.length > 0
+    ? await admin
+        .from("delivery_requests")
+        .select("id, tracking_number, customer_id")
+        .in("id", deliveryIds)
+    : { data: [] as { id: string; tracking_number: string | null; customer_id: string | null }[] }
 
-        {/* Commission split */}
-        <div className="col-span-1 lg:col-span-4 space-y-4">
-          {/* Platform commission */}
-          <div className="bg-[#1a1919] px-6 py-5 rounded-xl flex items-center justify-between border-l-4 border-[#c180ff]">
-            <div>
-              <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Platform Commission (25%)</p>
-              <div className="flex items-baseline gap-2">
-                <h3 className="text-2xl font-bold text-[#c180ff] font-headline">
-                  £{totalCommission.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </h3>
-              </div>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#c180ff]/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#c180ff]">account_balance</span>
-            </div>
-          </div>
-          {/* Driver payouts */}
-          <div className="bg-[#1a1919] px-6 py-5 rounded-xl flex items-center justify-between border-l-4 border-[#6ee7b7]">
-            <div>
-              <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Driver Earnings (75%)</p>
-              <div className="flex items-baseline gap-2">
-                <h3 className="text-2xl font-bold text-[#6ee7b7] font-headline">
-                  £{totalDriverPayouts.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </h3>
-              </div>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#6ee7b7]/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#6ee7b7]">local_shipping</span>
-            </div>
-          </div>
-        </div>
+  const deliveries    = deliveriesRes.data ?? []
 
-        {/* Secondary stats */}
-        <div className="col-span-1 lg:col-span-3 space-y-4">
-          <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ minHeight: "76px" }}>
-            <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Pending Payouts</p>
-            <div className="flex items-baseline gap-2">
-              <h3 className="text-2xl font-bold text-white font-headline">{pendingCount}</h3>
-              <span className="text-xs text-[#adaaaa]">awaiting</span>
-            </div>
-          </div>
-          <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ minHeight: "76px" }}>
-            <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Failed Charges</p>
-            <div className="flex items-baseline gap-2">
-              <h3 className="text-2xl font-bold text-[#ff6e84] font-headline">
-                £{failedAmount.toFixed(2)}
-              </h3>
-              <span className="text-xs text-[#adaaaa]">failed</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Transactions Table */}
-      <div className="bg-[#1a1919] rounded-xl overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] text-left border-collapse">
-            <thead>
-              <tr className="bg-[#201f1f] text-[#adaaaa] text-[10px] uppercase tracking-[0.2em] font-bold">
-                <th className="px-5 md:px-8 py-4">Payment ID</th>
-                <th className="px-5 md:px-8 py-4">User / Recipient</th>
-                <th className="px-5 md:px-8 py-4">Amount</th>
-                <th className="px-5 md:px-8 py-4">Status</th>
-                <th className="px-5 md:px-8 py-4">Date &amp; Time</th>
-                <th className="px-5 md:px-8 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-transparent">
-              {payments.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-16 text-center text-[#adaaaa] text-sm">
-                    No transactions found
-                  </td>
-                </tr>
-              ) : (
-                payments.map((payment) => (
-                  <PaymentRow key={payment.id} payment={payment} />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function PaymentRow({ payment }: { payment: any }) {
-  const statusMap: Record<string, { label: string; dotClass: string; bgClass: string; textClass: string }> = {
-    succeeded: {
-      label: "Paid",
-      dotClass: "bg-[#a3a6ff] shadow-[0px_0px_6px_rgba(163,166,255,0.6)]",
-      bgClass: "bg-[#a3a6ff]/10",
-      textClass: "text-[#a3a6ff]",
-    },
-    pending: {
-      label: "Pending",
-      dotClass: "bg-[#c180ff] animate-pulse",
-      bgClass: "bg-[#c180ff]/10",
-      textClass: "text-[#c180ff]",
-    },
-    failed: {
-      label: "Failed",
-      dotClass: "bg-[#ff6e84]",
-      bgClass: "bg-[#ff6e84]/10",
-      textClass: "text-[#ff6e84]",
-    },
+  // Build delivery lookup map
+  const deliveryMap: Record<string, { tracking_number: string | null; customer_id: string | null }> = {}
+  for (const d of deliveries) {
+    deliveryMap[d.id] = { tracking_number: d.tracking_number, customer_id: d.customer_id }
   }
 
-  const config = statusMap[payment.status] ?? statusMap.pending
-  const shortId = `#KV-${payment.id.slice(0, 5).toUpperCase()}`
-  const dateObj = new Date(payment.created_at)
-  const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  const timeStr = dateObj.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+  // Collect all user IDs needed (customers + drivers) in one query
+  const customerIds = deliveries.map(d => d.customer_id).filter((id): id is string => !!id)
+  const driverIds   = payouts.map(p => p.driver_id).filter((id): id is string => !!id)
+  const allUserIds  = [...new Set([...customerIds, ...driverIds])]
+
+  const usersRes = allUserIds.length > 0
+    ? await admin
+        .from("users")
+        .select("id, full_name, email")
+        .in("id", allUserIds)
+    : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
+
+  // Build user lookup map
+  const usersMap: Record<string, { full_name: string | null; email: string | null }> = {}
+  for (const u of (usersRes.data ?? [])) {
+    usersMap[u.id] = { full_name: u.full_name, email: u.email }
+  }
+
+  // ── Assemble enriched rows ─────────────────────────────────────────────────
+  const enrichedPayments = payments.map(p => {
+    const delivery = p.delivery_id ? deliveryMap[p.delivery_id] : null
+    const customer = delivery?.customer_id ? usersMap[delivery.customer_id] : null
+    return {
+      ...p,
+      tracking_number: delivery?.tracking_number ?? null,
+      customer_name:   customer?.full_name        ?? null,
+      customer_email:  customer?.email            ?? null,
+    }
+  })
+
+  const enrichedPayouts = payouts.map(p => {
+    const driver = p.driver_id ? usersMap[p.driver_id] : null
+    return {
+      ...p,
+      driver_name:  driver?.full_name ?? null,
+      driver_email: driver?.email     ?? null,
+    }
+  })
 
   return (
-    <tr className="hover:bg-[#201f1f] transition-all group">
-      <td className="px-5 md:px-8 py-4 md:py-5">
-        <span className="font-mono text-xs text-[#a3a6ff]">{shortId}</span>
-      </td>
-      <td className="px-5 md:px-8 py-4 md:py-5">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-[#262626] flex items-center justify-center text-[#a3a6ff] font-bold text-xs shrink-0">
-            {(payment.user_id ?? "U").slice(0, 2).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white">Customer</p>
-            <p className="text-[10px] text-[#adaaaa]">user@kinetic.io</p>
-          </div>
-        </div>
-      </td>
-      <td className="px-5 md:px-8 py-4 md:py-5">
-        <span className="text-sm font-bold text-white">
-          £{(payment.amount ?? 0).toFixed(2)}
-        </span>
-      </td>
-      <td className="px-5 md:px-8 py-4 md:py-5">
-        <span
-          className={`px-2 py-1 ${config.bgClass} ${config.textClass} text-[10px] font-bold uppercase rounded tracking-wider flex items-center w-fit gap-1`}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
-          {config.label}
-        </span>
-      </td>
-      <td className="px-5 md:px-8 py-4 md:py-5 text-sm text-[#adaaaa]">
-        {dateStr}{" "}
-        <span className="text-[10px] opacity-50 ml-1">{timeStr}</span>
-      </td>
-      <td className="px-5 md:px-8 py-4 md:py-5 text-right">
-        <button className="material-symbols-outlined text-[#adaaaa] hover:text-white transition-colors">
-          more_vert
-        </button>
-      </td>
-    </tr>
+    <PaymentsPanel
+      payments={enrichedPayments}
+      payouts={enrichedPayouts}
+      earnings={earnings}
+    />
   )
 }
