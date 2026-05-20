@@ -80,6 +80,50 @@ export async function toggleDriverOnline(isOnline: boolean) {
     .upsert({ id: user.id, is_online: isOnline }, { onConflict: "id" })
 
   if (error) return { error: error.message }
+  revalidatePath("/dashboard/driver/settings")
+  return { success: true }
+}
+
+/**
+ * Save notification preferences.
+ * Requires columns notifications_enabled and delivery_alerts on driver_profiles.
+ * Run scripts/014_driver_settings.sql if these columns don't exist yet.
+ */
+export async function updateDriverNotifications(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const notifications_enabled = formData.get("notifications_enabled") === "1"
+  const delivery_alerts       = formData.get("delivery_alerts")       === "1"
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from("driver_profiles")
+    .upsert({ id: user.id, notifications_enabled, delivery_alerts }, { onConflict: "id" })
+
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/driver/settings")
+  return { success: true }
+}
+
+/** Change the driver's password via Supabase Auth admin API. */
+export async function changeDriverPassword(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const newPassword     = (formData.get("new_password")     as string ?? "").trim()
+  const confirmPassword = (formData.get("confirm_password") as string ?? "").trim()
+
+  if (!newPassword)                    return { error: "New password is required" }
+  if (newPassword.length < 8)          return { error: "Password must be at least 8 characters" }
+  if (newPassword !== confirmPassword) return { error: "Passwords do not match" }
+
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.updateUserById(user.id, { password: newPassword })
+
+  if (error) return { error: error.message }
   return { success: true }
 }
 

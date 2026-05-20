@@ -607,13 +607,18 @@ export async function updateDriverProfile(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const first = (formData.get("first_name") as string ?? "").trim()
-  const last = (formData.get("last_name") as string ?? "").trim()
+  const first     = (formData.get("first_name") as string ?? "").trim()
+  const last      = (formData.get("last_name")  as string ?? "").trim()
   const full_name = last ? `${first} ${last}` : first
+  const phone     = (formData.get("phone") as string ?? "").trim()
 
-  const { error } = await supabase
+  if (!full_name) return { error: "Name is required" }
+
+  // Use admin client to bypass any RLS restrictions on the users table
+  const admin = createAdminClient()
+  const { error } = await admin
     .from("users")
-    .update({ full_name, phone: formData.get("phone") as string })
+    .update({ full_name, phone })
     .eq("id", user.id)
 
   if (error) return { error: error.message }
