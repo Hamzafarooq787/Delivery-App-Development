@@ -36,11 +36,11 @@ const PRICING_TIERS = [
   { label: '7 – 12 miles', price: 20 },
 ]
 
-function getPrice(miles: number): number | null {
+function getPrice(miles: number): number {
   if (miles <= 3) return 10
   if (miles <= 7) return 15
   if (miles <= 12) return 20
-  return null // over 12 miles — contact for quote
+  return Math.round(miles * 1.5 * 100) / 100
 }
 
 const PROHIBITED_ITEMS = [
@@ -475,6 +475,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
               />
               {routeInfo && (() => {
                 const price = getPrice(routeInfo.miles)
+                const isPerMile = routeInfo.miles > 12
                 return (
                   <>
                     <div className="flex items-center justify-around px-4 py-3 bg-[#262626] border-t border-[#494847]/20">
@@ -497,31 +498,20 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-[#6ee7b7] text-base">payments</span>
                         <div>
-                          {price !== null ? (
-                            <>
-                              <p className="text-xs font-black text-[#6ee7b7]">£{price}</p>
-                              <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Price</p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-xs font-black text-yellow-400">Contact us</p>
-                              <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">&gt;12 miles</p>
-                            </>
-                          )}
+                          <p className="text-xs font-black text-[#6ee7b7]">£{price}</p>
+                          <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Price</p>
                         </div>
                       </div>
                     </div>
-                    {price !== null && (
-                      <div className="px-4 py-3 bg-[#6ee7b7]/5 border-t border-[#6ee7b7]/20 flex items-center justify-between">
-                        <p className="text-[11px] text-[#adaaaa]">Delivery charge for <span className="text-white font-bold">{routeInfo.miles} miles</span></p>
-                        <p className="text-lg font-black text-[#6ee7b7]">£{price}</p>
-                      </div>
-                    )}
-                    {price === null && (
-                      <div className="px-4 py-3 bg-yellow-500/5 border-t border-yellow-500/20">
-                        <p className="text-[11px] text-yellow-400">This route is over 12 miles. Please contact us for a custom quote.</p>
-                      </div>
-                    )}
+                    <div className="px-4 py-3 bg-[#6ee7b7]/5 border-t border-[#6ee7b7]/20 flex items-center justify-between">
+                      <p className="text-[11px] text-[#adaaaa]">
+                        {isPerMile
+                          ? <><span className="text-white font-bold">{routeInfo.miles} miles</span> × £1.50/mile</>
+                          : <>Delivery charge for <span className="text-white font-bold">{routeInfo.miles} miles</span></>
+                        }
+                      </p>
+                      <p className="text-lg font-black text-[#6ee7b7]">£{price}</p>
+                    </div>
                   </>
                 )
               })()}
@@ -549,7 +539,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                   <span className="material-symbols-outlined text-[#adaaaa] text-sm">route</span>
                   <span className="text-xs text-[#adaaaa]">Over 12 miles</span>
                 </div>
-                <span className="text-xs font-bold text-yellow-400">Contact us</span>
+                <span className="text-xs font-bold text-white">£1.50 / mile</span>
               </div>
             </div>
           </div>
@@ -628,7 +618,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
             style={{ boxShadow: confirmed ? '0 0 20px rgba(163,166,255,0.25)' : 'none' }}
           >
             <span className="material-symbols-outlined text-base">bolt</span>
-            {submitting ? 'Requesting…' : routeInfo && getPrice(routeInfo.miles) !== null ? `Request Delivery — £${getPrice(routeInfo.miles)}` : 'Request Delivery'}
+            {submitting ? 'Requesting…' : routeInfo ? `Request Delivery — £${getPrice(routeInfo.miles)}` : 'Request Delivery'}
           </button>
         </div>
       </div>
