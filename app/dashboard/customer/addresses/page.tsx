@@ -137,17 +137,17 @@ export default function AddressesPage() {
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} />
-      <main className="pt-16 md:ml-64 min-h-screen bg-surface-container-low">
-        <div className="p-10 max-w-7xl mx-auto">
+      <main className="pt-16 pb-28 md:pb-8 md:ml-64 min-h-screen bg-surface-container-low">
+        <div className="px-4 md:p-10 max-w-7xl mx-auto">
           {/* Page Header */}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 mb-12">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 md:gap-6 mb-8 md:mb-12">
             <div>
               <nav className="flex text-xs font-label text-on-surface-variant mb-2 gap-2">
                 <span>Settings</span>
                 <span>/</span>
                 <span className="text-primary">Addresses</span>
               </nav>
-              <h2 className="text-4xl font-extrabold font-headline tracking-tighter text-on-surface">
+              <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-on-surface">
                 Saved Addresses
               </h2>
               <p className="text-on-surface-variant mt-2 max-w-md text-sm">
@@ -244,7 +244,47 @@ export default function AddressesPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <>
+              {/* ── MOBILE: list view ── */}
+              <div className="md:hidden bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/10">
+                {addresses.map((addr) => (
+                  <div
+                    key={addr.id}
+                    className="flex items-center gap-3 px-4 py-4 border-b border-outline-variant/8 last:border-b-0"
+                  >
+                    <div className="bg-primary/20 p-2.5 rounded-xl shrink-0">
+                      <span className="material-symbols-outlined text-primary text-base">location_on</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-on-surface truncate">{addr.address}</p>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5">
+                        {addr.created_at ? new Date(addr.created_at).toLocaleDateString() : 'Saved'}
+                      </p>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openEditForm(addr)}
+                        className="p-2 hover:bg-white/10 rounded-lg text-on-surface-variant transition-colors"
+                        aria-label="Edit"
+                      >
+                        <span className="material-symbols-outlined text-sm">edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(addr.id)}
+                        className="p-2 hover:bg-error/10 hover:text-error rounded-lg text-on-surface-variant transition-colors"
+                        aria-label="Delete"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── DESKTOP: card grid ── */}
+            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {addresses.map((addr) => (
                 <div
                   key={addr.id}
@@ -291,6 +331,7 @@ export default function AddressesPage() {
                 </div>
               ))}
             </div>
+            </>
           )}
         </div>
       </main>

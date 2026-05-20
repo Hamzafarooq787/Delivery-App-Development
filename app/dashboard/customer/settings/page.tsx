@@ -146,11 +146,11 @@ export default function SettingsPage() {
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} />
-      <main className="pt-16 md:ml-64 min-h-screen bg-surface-container-low">
-        <div className="max-w-5xl mx-auto px-8 py-12">
+      <main className="pt-16 pb-28 md:pb-8 md:ml-64 min-h-screen bg-surface-container-low">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-12">
           {/* Page Header */}
-          <div className="mb-12">
-            <h2 className="text-4xl font-extrabold font-headline tracking-tighter mb-2 text-on-surface">
+          <div className="mb-8 md:mb-12">
+            <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter mb-2 text-on-surface">
               Settings
             </h2>
             <p className="text-on-surface-variant max-w-2xl text-sm">
