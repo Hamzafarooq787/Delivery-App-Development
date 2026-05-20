@@ -11,12 +11,25 @@ export default async function DriverPayoutsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [earningsRes, payoutsRes] = await Promise.all([
+  const [earningsRes, fallbackRes, payoutsRes] = await Promise.all([
+    // Primary: driver_earnings rows for this driver
     supabase
       .from("driver_earnings")
-      .select("id, amount, commission_amount, status, created_at, delivery_requests(tracking_number, pickup_address, delivery_address, price)")
+      .select("id, amount, commission_amount, status, created_at, delivery_requests(id, tracking_number, price)")
       .eq("driver_id", user?.id ?? "")
       .order("created_at", { ascending: false }),
+
+    // Fallback: completed deliveries with no driver_earnings row yet
+    // (jobs done before the auto-earnings feature was introduced)
+    supabase
+      .from("delivery_requests")
+      .select("id, tracking_number, price, created_at")
+      .eq("driver_id", user?.id ?? "")
+      .eq("status", "delivered")
+      .not("price", "is", null)
+      .order("created_at", { ascending: false }),
+
+    // Driver payout history
     supabase
       .from("payouts")
       .select("id, amount, status, created_at")
@@ -24,13 +37,41 @@ export default async function DriverPayoutsPage() {
       .order("created_at", { ascending: false }),
   ])
 
-  const earnings = earningsRes.data ?? []
-  const payouts  = payoutsRes.data ?? []
+  const realEarnings = earningsRes.data ?? []
+  const payouts      = payoutsRes.data  ?? []
 
-  const totalEarned    = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
-  // totalPaidOut = sum of all processed payout records (more accurate than earnings.status)
-  const totalPaidOut   = payouts.filter(p => p.status === "paid").reduce((s, p) => s + (p.amount ?? 0), 0)
-  const pendingBalance = earnings.filter(e => e.status === "pending").reduce((s, e) => s + (e.amount ?? 0), 0)
+  // Collect delivery IDs already covered by a driver_earnings row
+  const coveredDeliveryIds = new Set(
+    realEarnings
+      .map((e: any) => {
+        const dr = e.delivery_requests
+        return Array.isArray(dr) ? (dr[0]?.id ?? null) : (dr?.id ?? null)
+      })
+      .filter(Boolean),
+  )
+
+  // Synthesise earnings rows for deliveries that have no driver_earnings record
+  const syntheticEarnings = (fallbackRes.data ?? [])
+    .filter(d => !coveredDeliveryIds.has(d.id))
+    .map(d => ({
+      id:                `synthetic-${d.id}`,
+      amount:            d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null,
+      commission_amount: d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null,
+      // For payouts page, synthetic = pending (driver hasn't been paid out yet)
+      status:            "pending" as const,
+      created_at:        d.created_at,
+      delivery_requests: { id: d.id, tracking_number: d.tracking_number, price: d.price },
+    }))
+
+  // Merge: real rows first (most recent), then synthetic for any gaps
+  const allEarnings = [...realEarnings, ...syntheticEarnings]
+
+  // ── Summary numbers ────────────────────────────────────────────────────────
+  const totalEarned  = allEarnings.reduce((s, e) => s + (e.amount ?? 0), 0)
+  const totalPaidOut = payouts.filter(p => p.status === "paid").reduce((s, p) => s + (p.amount ?? 0), 0)
+  // Available balance = total earned minus amounts already paid out
+  // Using subtraction is robust whether we have real driver_earnings rows or synthetic ones
+  const pendingBalance = Math.max(0, Math.round((totalEarned - totalPaidOut) * 100) / 100)
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -62,7 +103,7 @@ export default async function DriverPayoutsPage() {
             <span className="material-symbols-outlined text-[#adaaaa]">emoji_events</span>
           </div>
           <p className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(totalEarned)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">{earnings.length} completed jobs</p>
+          <p className="text-xs text-[#adaaaa] mt-1">{allEarnings.length} completed job{allEarnings.length !== 1 ? "s" : ""}</p>
         </div>
 
         <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/5">
@@ -82,7 +123,7 @@ export default async function DriverPayoutsPage() {
         <div className="lg:col-span-7 flex flex-col">
           <h3 className="text-lg font-bold font-headline text-white mb-5">Earnings per Delivery</h3>
           <div className="bg-[#1a1919] rounded-2xl overflow-hidden flex-1">
-            {earnings.length === 0 ? (
+            {allEarnings.length === 0 ? (
               <div className="py-16 text-center px-8">
                 <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#262626] flex items-center justify-center">
                   <span className="material-symbols-outlined text-[#a3a6ff]">local_shipping</span>
@@ -100,15 +141,19 @@ export default async function DriverPayoutsPage() {
                     <div className="col-span-2 text-right">Status</div>
                   </div>
                   <div className="divide-y divide-[#494847]/5">
-                    {earnings.map((e) => {
+                    {allEarnings.map((e) => {
                       const dr = e.delivery_requests as any
-                      const fare = dr?.price ?? (e.amount ?? 0) / 0.75
+                      // price may come from the joined delivery_requests row
+                      const price = Array.isArray(dr) ? (dr[0]?.price ?? null) : (dr?.price ?? null)
+                      const tracking = Array.isArray(dr) ? (dr[0]?.tracking_number ?? null) : (dr?.tracking_number ?? null)
+                      // Derive fare: from joined price, or back-calculate from 75% cut
+                      const fare = price ?? (e.amount != null ? Math.round(e.amount / 0.75 * 100) / 100 : 0)
                       const isPaid = e.status === "paid"
                       return (
                         <div key={e.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-[#201f1f] transition-colors">
                           <div className="col-span-5 min-w-0">
                             <p className="text-sm font-bold text-white truncate">
-                              {dr?.tracking_number ?? "Delivery"}
+                              {tracking ?? "Delivery"}
                             </p>
                             <p className="text-xs text-[#adaaaa]">
                               {new Date(e.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}
@@ -150,7 +195,11 @@ export default async function DriverPayoutsPage() {
                   <span className="material-symbols-outlined text-[#adaaaa]">history</span>
                 </div>
                 <p className="text-sm font-bold text-white mb-1">No payouts yet</p>
-                <p className="text-xs text-[#adaaaa]">Request your first payout once you have earnings.</p>
+                <p className="text-xs text-[#adaaaa]">
+                  {pendingBalance > 0
+                    ? `You have ${fmt(pendingBalance)} available — click Request Payout above.`
+                    : "Request your first payout once you have earnings."}
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-[#494847]/5">
