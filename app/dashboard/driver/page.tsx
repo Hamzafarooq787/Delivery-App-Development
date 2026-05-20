@@ -50,7 +50,7 @@ export default async function DriverDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [jobsRes, earningsRes, fallbackEarningsRes] = await Promise.all([
+  const [jobsRes, earningsRes, fallbackEarningsRes, payoutsRes] = await Promise.all([
     supabase
       .from("delivery_requests")
       .select("id, tracking_number, status, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, price, created_at")
@@ -71,10 +71,20 @@ export default async function DriverDashboard() {
       .eq("driver_id", user?.id ?? "")
       .eq("status", "delivered")
       .not("price", "is", null),
+
+    // Payout requests — used for the "pending withdrawal" label
+    // (derive status from payouts table, not driver_earnings.status, because
+    //  synthetic earnings always have status="pending" in JS regardless of
+    //  whether the driver has already requested a payout)
+    supabase
+      .from("payouts")
+      .select("amount, status")
+      .eq("driver_id", user?.id ?? ""),
   ])
 
-  const jobs        = jobsRes.data ?? []
+  const jobs         = jobsRes.data  ?? []
   const realEarnings = earningsRes.data ?? []
+  const driverPayouts = payoutsRes.data ?? []
 
   // Track delivery IDs already covered by a driver_earnings row
   const coveredIds = new Set(
@@ -101,10 +111,19 @@ export default async function DriverDashboard() {
   const completedJobs = jobs.filter(j => j.status === "delivered")
   const cancelledJobs = jobs.filter(j => j.status === "cancelled")
 
-  const totalEarnings   = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
-  const pendingEarnings = earnings.filter(e => e.status === "pending").reduce((s, e) => s + (e.amount ?? 0), 0)
-  const todayTotal      = todayEarnings(earnings)
-  const bars            = sparkline(earnings)
+  const totalEarnings = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
+  const todayTotal    = todayEarnings(earnings)
+  const bars          = sparkline(earnings)
+
+  // "Pending withdrawal" label — derive from payouts table, NOT driver_earnings.status.
+  // Synthetic earnings always carry status="pending" in JS regardless of payout state,
+  // so using driver_earnings.status here creates a stale label after admin approves.
+  const pendingPayoutAmount  = driverPayouts
+    .filter(p => p.status === "pending")
+    .reduce((s, p) => s + (p.amount ?? 0), 0)
+  const approvedPayoutAmount = driverPayouts
+    .filter(p => p.status === "approved")
+    .reduce((s, p) => s + (p.amount ?? 0), 0)
 
   const tier       = driverTier(completedJobs.length)
   const reliability = reliabilityScore(completedJobs.length, cancelledJobs.length)
@@ -167,9 +186,14 @@ export default async function DriverDashboard() {
               All time: <span className="text-[#a3a6ff] font-bold">£{totalEarnings.toFixed(2)}</span>
               &nbsp;·&nbsp;your 75% share
             </p>
-            {pendingEarnings > 0 && (
+            {pendingPayoutAmount > 0 && (
               <p className="text-xs text-[#c180ff] mt-1 font-bold">
-                £{pendingEarnings.toFixed(2)} pending withdrawal
+                £{pendingPayoutAmount.toFixed(2)} pending withdrawal
+              </p>
+            )}
+            {approvedPayoutAmount > 0 && pendingPayoutAmount === 0 && (
+              <p className="text-xs text-[#6ee7b7] mt-1 font-bold">
+                £{approvedPayoutAmount.toFixed(2)} payout approved ✓
               </p>
             )}
           </div>

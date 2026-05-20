@@ -149,6 +149,8 @@ export async function approveDriverPayout(payoutId: string) {
     .eq("status", "pending")
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/payouts")
+  revalidatePath("/dashboard/driver/payouts")
+  revalidatePath("/dashboard/driver")
   return { success: true }
 }
 
@@ -174,6 +176,7 @@ export async function rejectDriverPayout(payoutId: string) {
 
   revalidatePath("/dashboard/admin/payouts")
   revalidatePath("/dashboard/driver/payouts")
+  revalidatePath("/dashboard/driver")
   return { success: true }
 }
 
@@ -191,6 +194,7 @@ export async function completeDriverPayout(payoutId: string) {
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/payouts")
   revalidatePath("/dashboard/driver/payouts")
+  revalidatePath("/dashboard/driver")
   return { success: true }
 }
 
