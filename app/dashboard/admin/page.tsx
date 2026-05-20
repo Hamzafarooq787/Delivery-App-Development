@@ -1,49 +1,133 @@
 import { createClient } from "@/lib/supabase/server"
 
+export const dynamic = "force-dynamic"
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function fmt(n: number) {
+  return `£${n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function relTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60_000)
+  if (m < 1) return "just now"
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  return `${d}d ago`
+}
+
+type FeedItem = {
+  id: string
+  title: string
+  body: string
+  time: string
+  rawTime: string
+  dot: string | null
+  dotBg: string
+  icon?: string
+  pulse: boolean
+}
+
+// ── page ─────────────────────────────────────────────────────────────────────
+
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
   const [
-    ordersRes,
-    paymentsRes,
-    activeDriversRes,
-    disputesRes,
-    recentOrdersRes,
-    pendingDriversRes,
-    earningsRes,
+    earningsRes,           // driver_earnings → commission/payout KPIs
+    deliveredPricesRes,    // delivered delivery_requests → fallback gross revenue
+    driverProfilesRes,     // all driver_profiles → fleet stats + approval rate
+    disputesCountRes,      // open disputes count
+    recentOrdersRes,       // last 5 orders → Recent Orders table
+    pendingDriversRes,     // pending drivers → Approval table + activity feed
+    chartDeliveriesRes,    // last-7-days delivery_requests → Revenue chart
+    allDeliveryStatusesRes,// all delivery statuses → fleet completion/active rates
+    statusLogsRes,         // recent status_logs → activity feed (delivery events)
+    disputesFeedRes,       // recent disputes → activity feed
+    payoutsFeedRes,        // recent payouts → activity feed
   ] = await Promise.all([
-    supabase.from("delivery_requests").select("id", { count: "exact" }),
-    supabase.from("payments").select("amount").eq("status", "succeeded"),
-    supabase.from("driver_profiles").select("id", { count: "exact" }).eq("status", "approved"),
-    supabase.from("disputes").select("id", { count: "exact" }).eq("status", "open"),
+    supabase
+      .from("driver_earnings")
+      .select("amount, commission_amount"),
+
+    supabase
+      .from("delivery_requests")
+      .select("price")
+      .eq("status", "delivered")
+      .not("price", "is", null),
+
+    supabase
+      .from("driver_profiles")
+      .select("id, status"),
+
+    supabase
+      .from("disputes")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
+
     supabase
       .from("delivery_requests")
       .select("id, tracking_number, status, price, created_at")
       .order("created_at", { ascending: false })
       .limit(5),
+
     supabase
       .from("driver_profiles")
       .select("id, created_at, users(full_name)")
       .eq("status", "pending")
+      .order("created_at", { ascending: false })
       .limit(3),
-    supabase.from("driver_earnings").select("amount, commission_amount"),
+
+    supabase
+      .from("delivery_requests")
+      .select("price, created_at, status")
+      .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString()),
+
+    supabase
+      .from("delivery_requests")
+      .select("status"),
+
+    supabase
+      .from("delivery_status_logs")
+      .select("id, status, created_at, delivery_requests(tracking_number)")
+      .order("created_at", { ascending: false })
+      .limit(10),
+
+    supabase
+      .from("disputes")
+      .select("id, issue, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5),
+
+    supabase
+      .from("payouts")
+      .select("id, amount, status, created_at, users(full_name)")
+      .order("created_at", { ascending: false })
+      .limit(5),
   ])
 
-  // Prefer driver_earnings as source of truth for revenue split; fall back to payments table
-  const totalCommission = earningsRes.data?.reduce((s, e) => s + (e.commission_amount ?? 0), 0) ?? 0
-  const totalDriverPayouts = earningsRes.data?.reduce((s, e) => s + (e.amount ?? 0), 0) ?? 0
-  const grossRevenue = totalCommission + totalDriverPayouts ||
-    (paymentsRes.data?.reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0)
-  const revenue = grossRevenue
+  // ── Revenue KPIs ──────────────────────────────────────────────────────────
+
+  const earnings           = earningsRes.data ?? []
+  const totalCommission    = earnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0)
+  const totalDriverPayouts = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
+  const grossFromEarnings  = totalCommission + totalDriverPayouts
+
+  // Fallback: sum delivered delivery prices when driver_earnings is sparse
+  const deliveredTotal = (deliveredPricesRes.data ?? []).reduce((s, d) => s + (d.price ?? 0), 0)
+  const grossRevenue   = grossFromEarnings > 0 ? grossFromEarnings : deliveredTotal
+  const commission     = grossFromEarnings > 0 ? totalCommission    : Math.round(deliveredTotal * 0.25 * 100) / 100
+  const driverPayouts  = grossFromEarnings > 0 ? totalDriverPayouts : Math.round(deliveredTotal * 0.75 * 100) / 100
+  const openDisputes   = disputesCountRes.count ?? 0
 
   const stats = [
     {
       label: "Gross Revenue",
-      value: `£${revenue.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      delta: "Total fares collected",
+      value: fmt(grossRevenue),
+      delta: "All completed fares",
       deltaUp: true,
       icon: "payments",
       iconColor: "text-[#a3a6ff]",
@@ -51,7 +135,7 @@ export default async function AdminDashboardPage() {
     },
     {
       label: "Platform Commission",
-      value: `£${totalCommission.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: fmt(commission),
       delta: "25% of all fares",
       deltaUp: true,
       icon: "account_balance",
@@ -60,7 +144,7 @@ export default async function AdminDashboardPage() {
     },
     {
       label: "Driver Payouts",
-      value: `£${totalDriverPayouts.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: fmt(driverPayouts),
       delta: "75% share to drivers",
       deltaUp: true,
       icon: "local_shipping",
@@ -69,23 +153,139 @@ export default async function AdminDashboardPage() {
     },
     {
       label: "Open Disputes",
-      value: String(disputesRes.count ?? 0),
-      delta: "Needs attention",
-      deltaUp: false,
+      value: String(openDisputes),
+      delta: openDisputes > 0 ? "Needs attention" : "All clear",
+      deltaUp: openDisputes === 0,
       icon: "gavel",
-      iconColor: "text-[#ff6e84]",
-      iconBg: "bg-[#ff6e84]/10",
+      iconColor: openDisputes > 0 ? "text-[#ff6e84]" : "text-[#6ee7b7]",
+      iconBg: openDisputes > 0 ? "bg-[#ff6e84]/10" : "bg-[#6ee7b7]/10",
     },
   ]
 
+  // ── Revenue Velocity Chart (last 7 days) ──────────────────────────────────
+
+  const chartDeliveries = chartDeliveriesRes.data ?? []
+
+  const days7 = Array.from({ length: 7 }, (_, i) => {
+    const d        = new Date(Date.now() - (6 - i) * 86_400_000)
+    const label    = d.toLocaleDateString("en-GB", { weekday: "short" })
+    const isToday  = i === 6
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+    const dayEnd   = dayStart + 86_400_000
+    const dayRev   = chartDeliveries
+      .filter(r => {
+        const t = new Date(r.created_at).getTime()
+        return t >= dayStart && t < dayEnd && r.price
+      })
+      .reduce((s, r) => s + (r.price ?? 0), 0)
+    return { label, revenue: dayRev, isToday }
+  })
+
+  const maxRev   = Math.max(...days7.map(d => d.revenue), 0.01)
+  const chartBars = days7.map(d => ({
+    ...d,
+    heightPct: Math.max(Math.round((d.revenue / maxRev) * 100), 4),
+  }))
+
+  // ── Activity Feed ─────────────────────────────────────────────────────────
+
+  const STATUS_CFG: Record<string, { mkTitle: (tn: string) => string; mkBody: (tn: string) => string; dot: string; dotBg: string; pulse: boolean }> = {
+    requested:  { mkTitle: () => "New delivery requested",    mkBody: tn => `Order ${tn} added to queue`,              dot: "bg-[#c180ff]", dotBg: "bg-[#c180ff]/20", pulse: true  },
+    accepted:   { mkTitle: () => "Driver accepted job",       mkBody: tn => `Order ${tn} — heading to pickup`,         dot: "bg-[#a3a6ff]", dotBg: "bg-[#a3a6ff]/20", pulse: false },
+    collected:  { mkTitle: () => "Parcel collected",          mkBody: tn => `Order ${tn} — parcel authenticated`,      dot: "bg-[#a3a6ff]", dotBg: "bg-[#a3a6ff]/20", pulse: false },
+    in_transit: { mkTitle: () => "En route to delivery",      mkBody: tn => `Order ${tn} is in transit`,               dot: "bg-[#a3a6ff]", dotBg: "bg-[#a3a6ff]/20", pulse: true  },
+    delivered:  { mkTitle: () => "Delivery completed ✓",      mkBody: tn => `Order ${tn} successfully delivered`,      dot: "bg-[#6ee7b7]", dotBg: "bg-[#6ee7b7]/20", pulse: false },
+    cancelled:  { mkTitle: () => "Delivery cancelled",        mkBody: tn => `Order ${tn} was cancelled`,               dot: "bg-[#ff6e84]", dotBg: "bg-[#ff6e84]/20", pulse: false },
+  }
+
+  const feedItems: FeedItem[] = []
+
+  for (const log of (statusLogsRes.data ?? [])) {
+    const dr  = log.delivery_requests as any
+    const tn  = Array.isArray(dr) ? (dr[0]?.tracking_number ?? "—") : (dr?.tracking_number ?? "—")
+    const cfg = STATUS_CFG[log.status]
+    if (cfg) {
+      feedItems.push({
+        id:      `log-${log.id}`,
+        title:   cfg.mkTitle(tn),
+        body:    cfg.mkBody(tn),
+        time:    relTime(log.created_at),
+        rawTime: log.created_at,
+        dot:     cfg.dot,
+        dotBg:   cfg.dotBg,
+        pulse:   cfg.pulse,
+      })
+    }
+  }
+
+  for (const d of (disputesFeedRes.data ?? [])) {
+    feedItems.push({
+      id:      `dispute-${d.id}`,
+      title:   "New dispute opened",
+      body:    d.issue ? (d.issue.length > 60 ? d.issue.slice(0, 60) + "…" : d.issue) : "Customer raised a dispute",
+      time:    relTime(d.created_at),
+      rawTime: d.created_at,
+      dot:     "bg-[#ff6e84]",
+      dotBg:   "bg-[#ff6e84]/20",
+      pulse:   false,
+    })
+  }
+
+  for (const p of (payoutsFeedRes.data ?? [])) {
+    const u    = p.users as any
+    const name = Array.isArray(u) ? (u[0]?.full_name ?? "Driver") : (u?.full_name ?? "Driver")
+    const paid = p.status === "paid"
+    feedItems.push({
+      id:      `payout-${p.id}`,
+      title:   paid ? "Payout disbursed" : "Payout requested",
+      body:    `${name} — ${fmt(p.amount ?? 0)}`,
+      time:    relTime(p.created_at),
+      rawTime: p.created_at,
+      dot:     paid ? "bg-[#6ee7b7]" : "bg-[#c180ff]",
+      dotBg:   paid ? "bg-[#6ee7b7]/20" : "bg-[#c180ff]/20",
+      pulse:   !paid,
+    })
+  }
+
+  // Sort merged feed newest first
+  feedItems.sort((a, b) => new Date(b.rawTime).getTime() - new Date(a.rawTime).getTime())
+  const feed = feedItems.slice(0, 7)
+
+  // ── Fleet Stats ───────────────────────────────────────────────────────────
+
+  const allStatuses  = (allDeliveryStatusesRes.data ?? []).map(d => d.status)
+  const totalOrders  = allStatuses.length
+  const deliveredN   = allStatuses.filter(s => s === "delivered").length
+  const cancelledN   = allStatuses.filter(s => s === "cancelled").length
+  const activeN      = allStatuses.filter(s => ["accepted", "collected", "in_transit"].includes(s)).length
+
+  const allDriverProfiles = driverProfilesRes.data ?? []
+  const approvedN    = allDriverProfiles.filter(d => d.status === "approved").length
+  const totalDriverN = allDriverProfiles.length
+
+  const completionRate = deliveredN + cancelledN > 0
+    ? Math.round((deliveredN / (deliveredN + cancelledN)) * 100)
+    : 0
+  const activeJobRate  = totalOrders > 0 ? Math.round((activeN / totalOrders) * 100) : 0
+  const approvalRate   = totalDriverN > 0 ? Math.round((approvedN / totalDriverN) * 100) : 0
+
+  const fleetBars = [
+    { label: "Delivery Completion", pct: completionRate, color: "bg-[#a3a6ff]",  subtext: `${deliveredN} delivered` },
+    { label: "Jobs Currently Active", pct: activeJobRate,  color: "bg-[#c180ff]", subtext: `${activeN} in progress` },
+    { label: "Driver Approval Rate",  pct: approvalRate,   color: "bg-[#ffa5d9]", subtext: `${approvedN} approved` },
+  ]
+
+  // ──────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
+
       {/* Page Header */}
       <div className="mb-6 md:mb-8">
         <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-white">
           Overview <span className="text-[#a3a6ff]">&amp;</span> Analytics
         </h2>
-        <p className="text-[#adaaaa] mt-2 text-sm">Real-time throughput and kinetic performance metrics.</p>
+        <p className="text-[#adaaaa] mt-2 text-sm">Real-time throughput and platform performance metrics.</p>
       </div>
 
       {/* KPI Cards */}
@@ -112,11 +312,7 @@ export default async function AdminDashboardPage() {
             </div>
             <div className="absolute bottom-0 left-0 w-full h-16 opacity-20 pointer-events-none">
               <svg className="w-full h-full" viewBox="0 0 400 60" preserveAspectRatio="none">
-                <path
-                  d="M0 50 Q 50 10, 100 35 T 200 20 T 300 40 T 400 15 V 60 H 0 Z"
-                  fill="#a3a6ff"
-                  fillOpacity="0.4"
-                />
+                <path d="M0 50 Q 50 10, 100 35 T 200 20 T 300 40 T 400 15 V 60 H 0 Z" fill="#a3a6ff" fillOpacity="0.4" />
               </svg>
             </div>
           </div>
@@ -124,50 +320,49 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left column */}
+
+        {/* ── Left column ── */}
         <div className="col-span-1 lg:col-span-8 space-y-6">
-          {/* Revenue Velocity */}
+
+          {/* Revenue Velocity — real 7-day bars */}
           <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 relative overflow-hidden">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h4 className="text-xl font-bold font-headline text-white">Revenue Velocity</h4>
-                <p className="text-[#adaaaa] text-sm">Aggregated earnings across all logistic sectors</p>
+                <p className="text-[#adaaaa] text-sm">Last 7 days — gross fare collected per day</p>
               </div>
-              <button className="text-[#adaaaa] hover:text-white">
-                <span className="material-symbols-outlined">more_vert</span>
-              </button>
+              <div className="text-xs text-[#adaaaa] bg-[#262626] px-3 py-1.5 rounded-lg">
+                {fmt(days7.reduce((s, d) => s + d.revenue, 0))} total
+              </div>
             </div>
             <div className="h-48 flex items-end justify-between gap-2 relative">
+              {/* Grid lines */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-5">
                 {[0, 1, 2, 3].map((i) => (
                   <div key={i} className="w-full h-px bg-white" />
                 ))}
               </div>
-              {[
-                { h: "h-32", color: "bg-[#a3a6ff]/20" },
-                { h: "h-20", color: "bg-[#a3a6ff]/20" },
-                { h: "h-44", color: "bg-[#a3a6ff]/20" },
-                { h: "h-28", color: "bg-[#a3a6ff]/20" },
-                { h: "h-48", color: "bg-[#c180ff]/40", highlight: true },
-                { h: "h-36", color: "bg-[#a3a6ff]/20" },
-                { h: "h-24", color: "bg-[#a3a6ff]/20" },
-              ].map((bar, i) => (
+              {chartBars.map((bar, i) => (
                 <div
                   key={i}
-                  className={`w-full ${bar.h} ${bar.color} rounded-t-lg relative group transition-all hover:brightness-125 ${bar.highlight ? "shadow-[0px_0px_15px_rgba(163,166,255,0.2)]" : ""}`}
+                  className={`w-full rounded-t-lg relative group transition-all hover:brightness-125 ${
+                    bar.isToday
+                      ? "bg-[#c180ff]/40 shadow-[0px_0px_15px_rgba(163,166,255,0.2)]"
+                      : "bg-[#a3a6ff]/20"
+                  }`}
+                  style={{ height: `${bar.heightPct}%` }}
                 >
-                  <div className={`absolute inset-x-0 bottom-0 h-full bg-gradient-to-t ${bar.highlight ? "from-[#c180ff]/60" : "from-[#a3a6ff]/40"} to-transparent`} />
-                  {bar.highlight && (
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#262626]/60 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-white whitespace-nowrap">
-                      ${(revenue / 7).toFixed(0)}
-                    </div>
-                  )}
+                  <div className={`absolute inset-x-0 bottom-0 h-full bg-gradient-to-t ${bar.isToday ? "from-[#c180ff]/60" : "from-[#a3a6ff]/40"} to-transparent`} />
+                  {/* Tooltip on hover */}
+                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[#262626]/95 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-white whitespace-nowrap pointer-events-none z-10">
+                    {bar.revenue > 0 ? fmt(bar.revenue) : "No data"}
+                  </div>
                 </div>
               ))}
             </div>
             <div className="mt-4 flex justify-between text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest px-1">
-              {["Mon", "Tue", "Wed", "Thu", "Fri (Today)", "Sat", "Sun"].map((day, i) => (
-                <span key={day} className={i === 4 ? "text-[#c180ff]" : ""}>{day}</span>
+              {chartBars.map((bar, i) => (
+                <span key={i} className={bar.isToday ? "text-[#c180ff]" : ""}>{bar.label}</span>
               ))}
             </div>
           </div>
@@ -176,9 +371,9 @@ export default async function AdminDashboardPage() {
           <div className="bg-[#1a1919] rounded-xl overflow-hidden">
             <div className="p-6 flex justify-between items-center">
               <h4 className="font-headline text-lg font-bold text-white">Pending Driver Approvals</h4>
-              <button className="text-[#a3a6ff] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
+              <a href="/dashboard/admin/drivers" className="text-[#a3a6ff] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
                 View All
-              </button>
+              </a>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -187,7 +382,7 @@ export default async function AdminDashboardPage() {
                     <th className="px-6 py-4">Driver Name</th>
                     <th className="px-6 py-4">Fleet Class</th>
                     <th className="px-6 py-4">Applied Date</th>
-                    <th className="px-6 py-4">Background Status</th>
+                    <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -209,21 +404,21 @@ export default async function AdminDashboardPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-[#adaaaa]">Last Mile</td>
                         <td className="px-6 py-4 text-sm text-[#adaaaa]">
-                          {new Date(driver.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          {new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
                         </td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#a3a6ff]/10 text-[#a3a6ff] uppercase">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#c180ff]/10 text-[#c180ff] uppercase">
                             Pending
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button className="p-2 text-[#a3a6ff] hover:bg-[#a3a6ff]/10 rounded-lg transition-colors">
-                            <span className="material-symbols-outlined text-lg">check_circle</span>
-                          </button>
+                          <a
+                            href={`/dashboard/admin/drivers/${driver.id}`}
+                            className="p-2 text-[#a3a6ff] hover:bg-[#a3a6ff]/10 rounded-lg transition-colors inline-flex"
+                            title="Review driver"
+                          >
+                            <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                          </a>
                         </td>
                       </tr>
                     ))
@@ -237,9 +432,9 @@ export default async function AdminDashboardPage() {
           <div className="bg-[#1a1919] rounded-xl overflow-hidden">
             <div className="p-6 flex justify-between items-center">
               <h4 className="font-headline text-lg font-bold text-white">Recent Orders</h4>
-              <button className="text-[#a3a6ff] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
+              <a href="/dashboard/admin/orders" className="text-[#a3a6ff] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
                 View All
-              </button>
+              </a>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -259,15 +454,15 @@ export default async function AdminDashboardPage() {
                   ) : (
                     (recentOrdersRes.data ?? []).map((order) => (
                       <tr key={order.id} className="hover:bg-[#201f1f] transition-colors">
-                        <td className="px-6 py-4 font-mono text-sm text-[#a3a6ff]">{order.tracking_number}</td>
+                        <td className="px-6 py-4 font-mono text-sm text-[#a3a6ff]">{order.tracking_number ?? "—"}</td>
                         <td className="px-6 py-4">
                           <StatusPill status={order.status} />
                         </td>
                         <td className="px-6 py-4 text-sm font-bold text-white">
-                          ${(order.price ?? 0).toFixed(2)}
+                          {order.price != null ? fmt(order.price) : "—"}
                         </td>
                         <td className="px-6 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
-                          {new Date(order.created_at).toLocaleDateString()}
+                          {new Date(order.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
                         </td>
                       </tr>
                     ))
@@ -278,87 +473,57 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Right column: Activity Feed */}
+        {/* ── Right column: Activity Feed + Fleet Stats ── */}
         <div className="col-span-1 lg:col-span-4">
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl h-full flex flex-col">
             <div className="p-6 border-b border-[#494847]/10">
               <h4 className="font-headline text-lg font-bold text-white">Activity Feed</h4>
-              <p className="text-[#adaaaa] text-[11px] uppercase tracking-widest mt-1">Live HQ Updates</p>
-            </div>
-            <div className="p-6 flex-1 overflow-y-auto space-y-8">
-              {[
-                {
-                  dot: "bg-[#a3a6ff]",
-                  dotBg: "bg-[#a3a6ff]/20",
-                  pulse: true,
-                  title: "Route #KV-821 Optimized",
-                  body: "System calculated 14% fuel reduction for Northwest sector fleet.",
-                  time: "2 mins ago",
-                },
-                {
-                  dot: null,
-                  dotBg: "bg-[#201f1f]",
-                  pulse: false,
-                  title: "Weather Alert: Chicago",
-                  body: "Severe thunderstorms predicted. 12 shipments rerouted to Hub-B.",
-                  time: "45 mins ago",
-                  icon: "info",
-                },
-                {
-                  dot: "bg-[#c180ff]",
-                  dotBg: "bg-[#c180ff]/20",
-                  pulse: false,
-                  title: "New Performance High",
-                  body: 'Carrier "Velocity-9" achieved 99.8% on-time delivery rate this week.',
-                  time: "1 hour ago",
-                },
-                {
-                  dot: null,
-                  dotBg: "bg-[#201f1f]",
-                  pulse: false,
-                  title: "Audit Log Exported",
-                  body: "Weekly compliance report generated by System Admin.",
-                  time: "3 hours ago",
-                  icon: "history",
-                },
-              ].map((feed, i) => (
-                <div key={i} className="flex gap-4 relative">
-                  {i < 3 && (
-                    <div className="absolute left-[11px] top-6 bottom-[-32px] w-[1px] border-l border-dashed border-[#494847]" />
-                  )}
-                  <div className={`w-6 h-6 rounded-full ${feed.dotBg} flex items-center justify-center relative z-10 shrink-0`}>
-                    {feed.dot ? (
-                      <div className={`w-2 h-2 ${feed.dot} rounded-full ${feed.pulse ? "animate-pulse shadow-[0_0_8px_rgba(163,166,255,0.8)]" : "shadow-[0_0_8px_rgba(193,128,255,0.8)]"}`} />
-                    ) : (
-                      <span className="material-symbols-outlined text-[14px] text-[#adaaaa]">{feed.icon}</span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">{feed.title}</p>
-                    <p className="text-xs text-[#adaaaa] mt-1 leading-relaxed">{feed.body}</p>
-                    <span className="text-[10px] text-[#adaaaa]/60 font-bold mt-2 inline-block uppercase">{feed.time}</span>
-                  </div>
-                </div>
-              ))}
+              <p className="text-[#adaaaa] text-[11px] uppercase tracking-widest mt-1">Live Platform Events</p>
             </div>
 
-            {/* Fleet Load */}
+            <div className="p-6 flex-1 overflow-y-auto space-y-6">
+              {feed.length === 0 ? (
+                <div className="py-10 text-center">
+                  <span className="material-symbols-outlined text-[#494847] text-3xl mb-3 block">notifications_none</span>
+                  <p className="text-sm font-bold text-white mb-1">No activity yet</p>
+                  <p className="text-xs text-[#adaaaa]">Platform events will appear here as deliveries are processed.</p>
+                </div>
+              ) : (
+                feed.map((item, i) => (
+                  <div key={item.id} className="flex gap-4 relative">
+                    {i < feed.length - 1 && (
+                      <div className="absolute left-[11px] top-6 bottom-[-24px] w-[1px] border-l border-dashed border-[#494847]" />
+                    )}
+                    <div className={`w-6 h-6 rounded-full ${item.dotBg} flex items-center justify-center relative z-10 shrink-0 mt-0.5`}>
+                      {item.dot ? (
+                        <div className={`w-2 h-2 ${item.dot} rounded-full ${item.pulse ? "animate-pulse shadow-[0_0_8px_rgba(163,166,255,0.8)]" : ""}`} />
+                      ) : (
+                        <span className="material-symbols-outlined text-[14px] text-[#adaaaa]">{item.icon}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-white leading-tight">{item.title}</p>
+                      <p className="text-xs text-[#adaaaa] mt-0.5 leading-relaxed">{item.body}</p>
+                      <span className="text-[10px] text-[#adaaaa]/60 font-bold mt-1 inline-block uppercase">{item.time}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Fleet Stats — real data */}
             <div className="p-6 border-t border-[#494847]/10">
-              <h5 className="text-xs font-bold font-headline text-white mb-4 uppercase tracking-widest">Fleet Load</h5>
+              <h5 className="text-xs font-bold font-headline text-white mb-4 uppercase tracking-widest">Fleet Stats</h5>
               <div className="space-y-4">
-                {[
-                  { label: "Autonomous Drones", pct: 88, color: "bg-[#a3a6ff]" },
-                  { label: "Heavy Logistics", pct: 42, color: "bg-[#c180ff]" },
-                  { label: "Local Couriers", pct: 65, color: "bg-[#ffa5d9]" },
-                ].map((bar) => (
+                {fleetBars.map((bar) => (
                   <div key={bar.label} className="space-y-1.5">
                     <div className="flex justify-between text-xs">
                       <span className="font-bold text-white">{bar.label}</span>
-                      <span className="text-[#adaaaa]">{bar.pct}%</span>
+                      <span className="text-[#adaaaa]">{bar.pct}% <span className="text-[#494847]">· {bar.subtext}</span></span>
                     </div>
                     <div className="h-1 w-full bg-[#262626] rounded-full overflow-hidden">
                       <div
-                        className={`h-full ${bar.color} rounded-full`}
+                        className={`h-full ${bar.color} rounded-full transition-all`}
                         style={{ width: `${bar.pct}%` }}
                       />
                     </div>
@@ -375,15 +540,17 @@ export default async function AdminDashboardPage() {
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
-    completed: { label: "Completed", className: "bg-[#ffa5d9]/10 text-[#ffa5d9]" },
-    pending: { label: "Pending", className: "bg-[#c180ff]/10 text-[#c180ff]" },
-    in_transit: { label: "In Transit", className: "bg-[#a3a6ff]/10 text-[#a3a6ff]" },
-    cancelled: { label: "Cancelled", className: "bg-[#ff6e84]/10 text-[#ff6e84]" },
+    delivered:  { label: "Delivered",  className: "bg-[#6ee7b7]/10 text-[#6ee7b7]"  },
+    requested:  { label: "Requested",  className: "bg-[#adaaaa]/10 text-[#adaaaa]"  },
+    accepted:   { label: "Accepted",   className: "bg-[#c180ff]/10 text-[#c180ff]"  },
+    collected:  { label: "Collected",  className: "bg-[#a3a6ff]/10 text-[#a3a6ff]"  },
+    in_transit: { label: "In Transit", className: "bg-[#a3a6ff]/10 text-[#a3a6ff]"  },
+    cancelled:  { label: "Cancelled",  className: "bg-[#ff6e84]/10 text-[#ff6e84]"  },
   }
-  const config = map[status] ?? { label: status, className: "bg-[#262626] text-[#adaaaa]" }
+  const cfg = map[status] ?? { label: status, className: "bg-[#262626] text-[#adaaaa]" }
   return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${config.className}`}>
-      {config.label}
+    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${cfg.className}`}>
+      {cfg.label}
     </span>
   )
 }
