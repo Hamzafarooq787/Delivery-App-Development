@@ -289,7 +289,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
         {stats.map((stat) => (
           <div
             key={stat.label}
@@ -298,7 +298,7 @@ export default async function AdminDashboardPage() {
             <div className="flex justify-between items-start relative z-10">
               <div>
                 <p className="text-[#adaaaa] text-xs font-bold uppercase tracking-widest mb-1">{stat.label}</p>
-                <h3 className="font-headline text-4xl font-bold text-[#a3a6ff]">{stat.value}</h3>
+                <h3 className="font-headline text-2xl md:text-4xl font-bold text-[#a3a6ff]">{stat.value}</h3>
                 <p className={`text-xs mt-2 flex items-center font-bold ${stat.deltaUp ? "text-[#c180ff]" : "text-[#ff6e84]"}`}>
                   <span className="material-symbols-outlined text-sm mr-1">
                     {stat.deltaUp ? "trending_up" : "trending_down"}
@@ -375,7 +375,28 @@ export default async function AdminDashboardPage() {
                 View All
               </a>
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile list */}
+            <div className="md:hidden divide-y divide-[#494847]/10">
+              {(pendingDriversRes.data ?? []).length === 0 ? (
+                <p className="py-10 text-center text-[#adaaaa] text-sm">No pending applications</p>
+              ) : (
+                (pendingDriversRes.data ?? []).map((driver: any) => (
+                  <a key={driver.id} href={`/dashboard/admin/drivers/${driver.id}`} className="flex items-center gap-3 px-4 py-4 hover:bg-[#262626] transition-colors">
+                    <div className="w-9 h-9 rounded-full bg-[#262626] flex items-center justify-center font-bold text-xs text-white shrink-0">
+                      {(driver.users?.full_name ?? "?").slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{driver.users?.full_name ?? "Unknown"}</p>
+                      <p className="text-xs text-[#adaaaa]">{new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#c180ff]/10 text-[#c180ff]">Pending</span>
+                    <span className="material-symbols-outlined text-[#a3a6ff] text-lg shrink-0">chevron_right</span>
+                  </a>
+                ))
+              )}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-[#201f1f]/50 text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
                   <tr>
@@ -436,7 +457,30 @@ export default async function AdminDashboardPage() {
                 View All
               </a>
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile list */}
+            <div className="md:hidden divide-y divide-[#494847]/10">
+              {(recentOrdersRes.data ?? []).length === 0 ? (
+                <p className="py-10 text-center text-[#adaaaa] text-sm">No orders yet</p>
+              ) : (
+                (recentOrdersRes.data ?? []).map((order) => (
+                  <div key={order.id} className="flex items-center gap-3 px-4 py-4">
+                    <div className="w-9 h-9 rounded-xl bg-[#262626] flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[#a3a6ff] text-base">local_shipping</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-mono text-[#a3a6ff] truncate">{order.tracking_number ?? "—"}</p>
+                      <p className="text-xs text-[#adaaaa]">{new Date(order.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-white">{order.price != null ? fmt(order.price) : "—"}</p>
+                      <StatusPill status={order.status} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-[#201f1f]/50 text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
                   <tr>

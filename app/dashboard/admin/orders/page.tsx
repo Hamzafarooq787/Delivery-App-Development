@@ -77,7 +77,7 @@ export default async function AdminOrdersPage() {
             <div>
               <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Active Shipments</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold font-headline text-[#a3a6ff]">
+                <span className="text-2xl md:text-4xl font-extrabold font-headline text-[#a3a6ff]">
                   {activeCount.toLocaleString()}
                 </span>
                 <span className="text-[#c180ff] text-xs font-semibold">Live</span>
@@ -86,14 +86,14 @@ export default async function AdminOrdersPage() {
             <div>
               <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Average Speed</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold font-headline text-white">14.2</span>
+                <span className="text-2xl md:text-4xl font-extrabold font-headline text-white">14.2</span>
                 <span className="text-[#adaaaa] text-xs font-semibold">min/km</span>
               </div>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Success Rate</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold font-headline text-white">{successRate}%</span>
+                <span className="text-2xl md:text-4xl font-extrabold font-headline text-white">{successRate}%</span>
               </div>
             </div>
           </div>

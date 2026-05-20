@@ -295,7 +295,7 @@ export function VerificationRequestsPanel({ initialDrivers }: { initialDrivers: 
   const [drivers, setDrivers] = useState(initialDrivers)
 
   return (
-    <div className="pt-2 pb-12 px-2">
+    <div className="px-4 md:px-8 py-6 md:py-8">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">Verification Requests</h1>

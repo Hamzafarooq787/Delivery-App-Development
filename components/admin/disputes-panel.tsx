@@ -96,7 +96,7 @@ export function DisputesPanel({ disputes: initial, total }: { disputes: Dispute[
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 mb-5">
+      <div className="flex flex-wrap items-center gap-2 mb-5">
         {(Object.keys(TAB_FILTER) as Tab[]).map((tab) => (
           <button
             key={tab}

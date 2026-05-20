@@ -54,7 +54,7 @@ export function AdminLayoutClient({ children, user, pendingVerifications, userId
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto pt-16 bg-[#131313]">
+        <main className="flex-1 overflow-y-auto pt-16 pb-6 bg-[#131313]">
           {children}
         </main>
       </div>
