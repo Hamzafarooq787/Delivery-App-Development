@@ -50,20 +50,50 @@ export default async function DriverDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [jobsRes, earningsRes] = await Promise.all([
+  const [jobsRes, earningsRes, fallbackEarningsRes] = await Promise.all([
     supabase
       .from("delivery_requests")
       .select("id, tracking_number, status, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, price, created_at")
       .eq("driver_id", user?.id ?? "")
       .order("created_at", { ascending: false }),
+
+    // Primary earnings source
     supabase
       .from("driver_earnings")
-      .select("amount, commission_amount, status, created_at")
+      .select("amount, commission_amount, status, created_at, delivery_id")
       .eq("driver_id", user?.id ?? ""),
+
+    // Fallback: completed deliveries with no driver_earnings row yet
+    // (same pattern used in driver/earnings and driver/payouts pages)
+    supabase
+      .from("delivery_requests")
+      .select("id, price, created_at")
+      .eq("driver_id", user?.id ?? "")
+      .eq("status", "delivered")
+      .not("price", "is", null),
   ])
 
-  const jobs     = jobsRes.data ?? []
-  const earnings = earningsRes.data ?? []
+  const jobs        = jobsRes.data ?? []
+  const realEarnings = earningsRes.data ?? []
+
+  // Track delivery IDs already covered by a driver_earnings row
+  const coveredIds = new Set(
+    realEarnings.map(e => (e as any).delivery_id).filter(Boolean),
+  )
+
+  // Synthesise earnings for deliveries that have no driver_earnings record
+  const syntheticEarnings = (fallbackEarningsRes.data ?? [])
+    .filter(d => !coveredIds.has(d.id))
+    .map(d => ({
+      amount:            d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null,
+      commission_amount: d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null,
+      status:            "pending" as const,
+      created_at:        d.created_at,
+      delivery_id:       d.id,
+    }))
+
+  // Merged earnings — real rows take precedence; synthetic fill the gaps
+  const earnings = [...realEarnings, ...syntheticEarnings]
 
   // ── aggregates ──
   const ACTIVE_STATUSES = ["accepted", "collected", "picked_up", "in_transit"]
@@ -269,7 +299,7 @@ export default async function DriverDashboard() {
                 const cfg = STATUS_ICON[job.status] ?? { icon: "local_shipping", color: "text-[#adaaaa]" }
                 const isCompleted = job.status === "delivered"
                 const earning = isCompleted && job.price ? `+£${(job.price * 0.75).toFixed(2)}` : null
-                const statusLabel = job.status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+                const statusLabel = job.status.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
                 return (
                   <Link
                     key={job.id}
