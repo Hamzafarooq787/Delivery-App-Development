@@ -207,7 +207,16 @@ export function MapboxLiveMap({
         {routeCoords2 && routeCoords2.length > 1 && (
           <Polyline
             path={routeCoords2}
-            options={{ strokeColor: "#c180ff", strokeWeight: 3, strokeOpacity: 0.7, strokeDasharray: "8 6" }}
+            options={{
+              strokeColor: "#c180ff",
+              strokeWeight: 0,
+              strokeOpacity: 0,
+              icons: [{
+                icon: { path: "M 0,-1 0,1", strokeColor: "#c180ff", strokeWeight: 3, strokeOpacity: 0.75, scale: 3 },
+                offset: "0",
+                repeat: "16px",
+              }],
+            }}
           />
         )}
 
