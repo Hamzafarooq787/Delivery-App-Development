@@ -55,7 +55,7 @@ function trackingId(d: DeliveryRow | ActiveDelivery) {
 
 function formatRoute(d: DeliveryRow) {
   const from = d.pickup_address?.split(',')[0]?.trim() || '—'
-  const to = d.delivery_address?.split(',')[0]?.trim() || '—'
+  const to   = d.delivery_address?.split(',')[0]?.trim() || '—'
   return `${from} → ${to}`
 }
 
@@ -70,17 +70,33 @@ function getInitials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 export default function CustomerDashboardPage() {
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, setShowModal]   = useState(false)
   const supabase = useMemo(() => createClient(), [])
 
-  const [userId, setUserId] = useState('')
-  const [recent, setRecent] = useState<DeliveryRow[]>([])
-  const [activeCount, setActiveCount] = useState(0)
+  const [userId,             setUserId]             = useState('')
+  const [userName,           setUserName]           = useState('')
+  const [recent,             setRecent]             = useState<DeliveryRow[]>([])
+  const [activeCount,        setActiveCount]        = useState(0)
   const [completedThisMonth, setCompletedThisMonth] = useState(0)
-  const [totalSpent, setTotalSpent] = useState(0)
-  const [activeDeliveries, setActiveDeliveries] = useState<ActiveDelivery[]>([])
-  const [focusedDeliveryId, setFocusedDeliveryId] = useState<string | null>(null)
+  const [totalSpent,         setTotalSpent]         = useState(0)
+  const [activeDeliveries,   setActiveDeliveries]   = useState<ActiveDelivery[]>([])
+  const [focusedDeliveryId,  setFocusedDeliveryId]  = useState<string | null>(null)
+
+  // Listen for FAB event from BottomNav (layout also listens, but this handles
+  // the case where the user triggers via keyboard / other means on dashboard)
+  useEffect(() => {
+    const open = () => setShowModal(true)
+    document.addEventListener('open-new-delivery', open)
+    return () => document.removeEventListener('open-new-delivery', open)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -93,7 +109,7 @@ export default function CustomerDashboardPage() {
       startOfMonth.setDate(1)
       startOfMonth.setHours(0, 0, 0, 0)
 
-      const [recentRes, activeRes, monthRes, deliveredRes, activeDelivsRes] = await Promise.all([
+      const [recentRes, activeRes, monthRes, deliveredRes, activeDelivsRes, profileRes] = await Promise.all([
         supabase
           .from('delivery_requests')
           .select('id, tracking_number, pickup_address, delivery_address, item_description, price, status, created_at')
@@ -122,6 +138,11 @@ export default function CustomerDashboardPage() {
           .eq('customer_id', user.id)
           .in('status', ACTIVE_STATUSES)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('users')
+          .select('full_name')
+          .eq('id', user.id)
+          .maybeSingle(),
       ])
 
       if (cancelled) return
@@ -130,8 +151,8 @@ export default function CustomerDashboardPage() {
       setActiveCount(activeRes.count ?? 0)
       setCompletedThisMonth(monthRes.count ?? 0)
       setTotalSpent(((deliveredRes.data ?? []) as any[]).reduce((s, r) => s + (Number(r.price) || 0), 0))
+      if (profileRes.data?.full_name) setUserName(profileRes.data.full_name.split(' ')[0])
 
-      // Resolve driver names via admin action (bypasses RLS on users table)
       const delivs = (activeDelivsRes.data ?? []) as Omit<ActiveDelivery, 'driver_name'>[]
       const driverIds = [...new Set(delivs.map((d) => d.driver_id).filter(Boolean))] as string[]
       const nameMap = await getDriverNamesByIds(driverIds)
@@ -146,16 +167,20 @@ export default function CustomerDashboardPage() {
   }, [supabase])
 
   const formattedSpent = totalSpent.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-  const hasActive = activeDeliveries.length > 0
+  const hasActive      = activeDeliveries.length > 0
+  const greeting       = getGreeting()
 
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} userId={userId} />
-      <main className="pt-16 md:pl-64 min-h-screen bg-surface-container-low">
-        <div className="max-w-7xl mx-auto p-6 pb-32">
 
-          {/* Page Header */}
-          <div className="flex items-center justify-between mb-8">
+      <main className="pt-16 md:pl-64 min-h-screen bg-surface-container-low">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-5 md:pt-6 pb-28 md:pb-12">
+
+          {/* ══════════════════════════════════════════════════
+              DESKTOP: page header + NEW SHIPMENT button
+          ══════════════════════════════════════════════════ */}
+          <div className="hidden md:flex items-center justify-between mb-8">
             <div>
               <h2 className="font-headline text-3xl font-extrabold text-on-surface tracking-tighter">
                 Command Center
@@ -174,8 +199,45 @@ export default function CustomerDashboardPage() {
             </button>
           </div>
 
-          {/* Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          {/* ══════════════════════════════════════════════════
+              MOBILE: hero greeting card
+          ══════════════════════════════════════════════════ */}
+          <div className="md:hidden mb-5">
+            <div
+              className="relative rounded-3xl overflow-hidden p-5 pt-6"
+              style={{ background: 'linear-gradient(135deg, rgba(163,166,255,0.15) 0%, rgba(193,128,255,0.08) 60%, rgba(255,165,217,0.05) 100%)', border: '1px solid rgba(163,166,255,0.15)' }}
+            >
+              {/* Glow blob */}
+              <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full bg-secondary/10 blur-2xl pointer-events-none" />
+
+              <p className="text-[11px] text-primary font-bold uppercase tracking-[0.18em] mb-0.5">{greeting}</p>
+              <h2 className="text-2xl font-black text-white font-headline tracking-tight">
+                {userName || 'Welcome back'}
+              </h2>
+
+              {/* Inline quick stats */}
+              <div className="flex items-center gap-3 mt-4">
+                <div className="flex-1 bg-surface-container/60 rounded-2xl px-3 py-2.5 text-center backdrop-blur-sm">
+                  <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Active</p>
+                  <p className="text-xl font-black font-headline text-primary">{activeCount}</p>
+                </div>
+                <div className="flex-1 bg-surface-container/60 rounded-2xl px-3 py-2.5 text-center backdrop-blur-sm">
+                  <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Done MTD</p>
+                  <p className="text-xl font-black font-headline text-secondary">{completedThisMonth}</p>
+                </div>
+                <div className="flex-1 bg-surface-container/60 rounded-2xl px-3 py-2.5 text-center backdrop-blur-sm">
+                  <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Spent</p>
+                  <p className="text-xl font-black font-headline text-tertiary">{formattedSpent}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ══════════════════════════════════════════════════
+              DESKTOP: stat cards grid
+          ══════════════════════════════════════════════════ */}
+          <div className="hidden md:grid grid-cols-3 gap-4 mb-6">
             <div className="glass-card p-5 rounded-2xl flex items-center gap-4">
               <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
@@ -205,9 +267,100 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
 
-          {/* Live Tracking Section — half map, half driver list */}
+          {/* ══════════════════════════════════════════════════
+              MOBILE: active deliveries — compact horizontal scroll
+          ══════════════════════════════════════════════════ */}
           {hasActive && (
-            <div className="mb-6 bg-surface-container rounded-2xl border border-outline-variant/10 overflow-hidden shadow-xl">
+            <div className="md:hidden mb-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <p className="text-sm font-black text-on-surface font-headline">Live</p>
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                    {activeDeliveries.length} active
+                  </span>
+                </div>
+                <Link
+                  href="/dashboard/customer/tracking"
+                  className="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-1"
+                >
+                  Map
+                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                </Link>
+              </div>
+
+              {/* Horizontal scroll cards */}
+              <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+                {activeDeliveries.map((d) => {
+                  const statusMeta = STATUS_DISPLAY[d.status] ?? { label: d.status.toUpperCase(), cls: 'bg-surface-container-highest text-on-surface-variant' }
+                  return (
+                    <div
+                      key={d.id}
+                      className="flex-shrink-0 w-52 bg-surface-container rounded-2xl p-4 border border-outline-variant/10"
+                      style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
+                    >
+                      {/* Driver avatar + name */}
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-black shrink-0">
+                          {d.driver_name ? getInitials(d.driver_name) : '?'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-on-surface truncate leading-tight">
+                            {d.driver_name ?? 'Awaiting driver'}
+                          </p>
+                          <p className="text-[10px] text-on-surface-variant font-mono">{trackingId(d)}</p>
+                        </div>
+                        {d.driver_id && (
+                          <span className="flex items-center gap-0.5 text-[9px] text-green-400 font-bold shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                            LIVE
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Status */}
+                      <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-3 ${statusMeta.cls}`}>
+                        {statusMeta.label}
+                      </span>
+
+                      {/* Destination */}
+                      {d.delivery_address && (
+                        <p className="text-[10px] text-on-surface-variant truncate mb-3">
+                          <span className="text-on-surface-variant mr-1">→</span>
+                          {d.delivery_address.split(',')[0]}
+                        </p>
+                      )}
+
+                      {/* Track CTA */}
+                      <Link
+                        href={`/dashboard/customer/tracking?id=${d.id}`}
+                        className="block w-full text-center bg-primary/10 text-primary text-[10px] font-bold py-2 rounded-xl border border-primary/20 active:scale-95 transition-transform"
+                      >
+                        Track →
+                      </Link>
+                    </div>
+                  )
+                })}
+
+                {/* End card: open map */}
+                <Link
+                  href="/dashboard/customer/tracking"
+                  className="flex-shrink-0 w-20 bg-surface-container rounded-2xl border border-outline-variant/10 flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:text-primary hover:border-primary/20 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-2xl">map</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-center leading-tight">
+                    Full<br />Map
+                  </span>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════
+              DESKTOP: live tracking (map + driver list)
+          ══════════════════════════════════════════════════ */}
+          {hasActive && (
+            <div className="hidden md:block mb-6 bg-surface-container rounded-2xl border border-outline-variant/10 overflow-hidden shadow-xl">
               {/* Section header */}
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-outline-variant/10">
                 <div className="flex items-center gap-2">
@@ -225,10 +378,8 @@ export default function CustomerDashboardPage() {
                 </Link>
               </div>
 
-              {/* Map + Driver list side by side */}
+              {/* Map + Driver list */}
               <div className="flex flex-col lg:flex-row" style={{ minHeight: 380 }}>
-
-                {/* Map — left half */}
                 <div className="flex-1 min-h-[280px] lg:min-h-0">
                   <GoogleMultiDriver
                     deliveries={activeDeliveries}
@@ -237,13 +388,9 @@ export default function CustomerDashboardPage() {
                     className="h-full w-full"
                   />
                 </div>
-
-                {/* Driver list — right half */}
                 <div className="w-full lg:w-72 xl:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-outline-variant/10 overflow-y-auto" style={{ maxHeight: 400 }}>
                   <div className="px-4 py-3 border-b border-outline-variant/10">
-                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                      Active Drivers
-                    </p>
+                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Active Drivers</p>
                   </div>
                   <div className="divide-y divide-outline-variant/10">
                     {activeDeliveries.map((d) => {
@@ -255,46 +402,26 @@ export default function CustomerDashboardPage() {
                           onClick={() => setFocusedDeliveryId(d.id)}
                           className={`w-full text-left flex items-center gap-3 px-4 py-3.5 transition-colors group ${isFocused ? 'bg-primary/5 border-l-2 border-primary' : 'hover:bg-surface-container-high border-l-2 border-transparent'}`}
                         >
-                          {/* Avatar */}
                           <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border ${isFocused ? 'bg-primary/20 border-primary/40' : 'bg-primary/10 border-primary/20'}`}>
                             <span className="text-xs font-bold text-primary">
                               {d.driver_name ? getInitials(d.driver_name) : '?'}
                             </span>
                           </div>
-
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-on-surface truncate">
-                              {d.driver_name ?? 'Awaiting driver'}
-                            </p>
-                            <p className="text-[10px] text-on-surface-variant truncate">
-                              {trackingId(d)}
-                            </p>
+                            <p className="text-sm font-bold text-on-surface truncate">{d.driver_name ?? 'Awaiting driver'}</p>
+                            <p className="text-[10px] text-on-surface-variant truncate">{trackingId(d)}</p>
                             {d.delivery_address && (
-                              <p className="text-[10px] text-on-surface-variant truncate">
-                                → {d.delivery_address.split(',')[0]}
-                              </p>
+                              <p className="text-[10px] text-on-surface-variant truncate">→ {d.delivery_address.split(',')[0]}</p>
                             )}
                           </div>
-
                           <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${statusMeta.cls}`}>
-                              {statusMeta.label}
-                            </span>
-                            {d.driver_id ? (
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${statusMeta.cls}`}>{statusMeta.label}</span>
+                            {d.driver_id && (
                               <span className="flex items-center gap-1 text-[9px] text-green-400 font-bold">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                                LIVE
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />LIVE
                               </span>
-                            ) : (
-                              <span className="text-[9px] text-on-surface-variant">No driver</span>
                             )}
-                            <Link
-                              href={`/dashboard/customer/tracking?id=${d.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-[9px] text-primary font-bold hover:underline"
-                            >
-                              Track →
-                            </Link>
+                            <Link href={`/dashboard/customer/tracking?id=${d.id}`} onClick={(e) => e.stopPropagation()} className="text-[9px] text-primary font-bold hover:underline">Track →</Link>
                           </div>
                         </button>
                       )
@@ -305,57 +432,127 @@ export default function CustomerDashboardPage() {
             </div>
           )}
 
-          {/* Recent Deliveries */}
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 bg-surface-container p-6 rounded-2xl shadow-xl">
-              <div className="flex items-center justify-between mb-5">
-                <h4 className="font-headline text-lg font-bold text-on-surface">Recent Deliveries</h4>
-                <Link
-                  href="/dashboard/customer/active-deliveries"
-                  className="text-primary text-xs font-bold uppercase tracking-widest hover:underline"
-                >
-                  View All
-                </Link>
-              </div>
-              <div className="space-y-2">
-                {recent.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <p className="text-sm text-on-surface-variant">No deliveries yet.</p>
-                    <button
-                      onClick={() => setShowModal(true)}
-                      className="mt-4 bg-primary text-on-primary px-5 py-2 rounded-full font-bold text-xs hover:brightness-110 transition-all"
-                    >
-                      Create your first delivery
-                    </button>
-                  </div>
-                ) : (
-                  recent.map((delivery) => {
-                    const statusKey = (delivery.status || 'requested').toLowerCase()
-                    const statusMeta = STATUS_DISPLAY[statusKey] ?? { label: statusKey.replace(/_/g, ' ').toUpperCase(), cls: 'bg-surface-container-highest text-on-surface-variant' }
-                    return (
-                      <div key={delivery.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-surface-container-high transition-colors group">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-surface-container-highest rounded-full flex items-center justify-center text-primary shrink-0">
-                            <span className="material-symbols-outlined text-lg">package_2</span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-on-surface">{trackingId(delivery)}</p>
-                            <p className="text-xs text-on-surface-variant truncate">{formatRoute(delivery)}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 shrink-0">
-                          <p className="text-xs text-on-surface-variant hidden md:block">{formatDateTime(delivery.created_at)}</p>
-                          <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${statusMeta.cls}`}>
-                            {statusMeta.label}
-                          </span>
-                          <span className="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity text-lg">chevron_right</span>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
+          {/* ══════════════════════════════════════════════════
+              MOBILE: empty state — no active deliveries
+          ══════════════════════════════════════════════════ */}
+          {!hasActive && (
+            <div className="md:hidden mb-5">
+              <button
+                onClick={() => setShowModal(true)}
+                className="w-full rounded-3xl border-2 border-dashed border-primary/25 bg-primary/5 flex items-center gap-4 px-5 py-5 active:scale-[0.98] transition-transform"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    add_circle
+                  </span>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-black text-white font-headline">Book a delivery</p>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5">Tap to create your first shipment</p>
+                </div>
+                <span className="material-symbols-outlined text-on-surface-variant ml-auto">chevron_right</span>
+              </button>
             </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════
+              MOBILE: quick action strips
+          ══════════════════════════════════════════════════ */}
+          <div className="md:hidden mb-5">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+              {[
+                { href: '/dashboard/customer/active-deliveries', icon: 'package_2',  label: 'All Shipments', color: 'primary'    },
+                { href: '/dashboard/customer/tracking',          icon: 'explore',     label: 'Live Map',      color: 'secondary'  },
+                { href: '/dashboard/customer/history',           icon: 'history',     label: 'History',       color: 'tertiary'   },
+                { href: '/dashboard/customer/payments',          icon: 'payments',    label: 'Payments',      color: 'error'      },
+              ].map((q) => (
+                <Link
+                  key={q.href}
+                  href={q.href}
+                  className="flex-shrink-0 flex flex-col items-center gap-2 bg-surface-container rounded-2xl px-4 py-3.5 border border-outline-variant/10 active:scale-95 transition-transform min-w-[72px]"
+                >
+                  <div className={`w-10 h-10 rounded-xl bg-${q.color}/10 flex items-center justify-center`}>
+                    <span className={`material-symbols-outlined text-${q.color} text-xl`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {q.icon}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-on-surface-variant text-center leading-tight uppercase tracking-wider whitespace-nowrap">
+                    {q.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* ══════════════════════════════════════════════════
+              RECENT DELIVERIES (both mobile + desktop)
+          ══════════════════════════════════════════════════ */}
+          <div className="bg-surface-container rounded-2xl md:rounded-2xl shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">
+              <h4 className="font-headline text-base md:text-lg font-bold text-on-surface">Recent Deliveries</h4>
+              <Link
+                href="/dashboard/customer/active-deliveries"
+                className="text-primary text-[10px] md:text-xs font-bold uppercase tracking-widest hover:underline flex items-center gap-1"
+              >
+                View All
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </Link>
+            </div>
+
+            {recent.length === 0 ? (
+              <div className="p-8 md:p-12 text-center flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-surface-container-highest flex items-center justify-center">
+                  <span className="material-symbols-outlined text-on-surface-variant text-2xl">inventory_2</span>
+                </div>
+                <p className="text-sm font-bold text-on-surface">No deliveries yet</p>
+                <p className="text-xs text-on-surface-variant">Create your first delivery to get started.</p>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="mt-2 bg-primary text-on-primary px-5 py-2 rounded-full font-bold text-xs hover:brightness-110 transition-all active:scale-95"
+                >
+                  Create delivery
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-outline-variant/8">
+                {recent.map((delivery) => {
+                  const statusKey  = (delivery.status || 'requested').toLowerCase()
+                  const statusMeta = STATUS_DISPLAY[statusKey] ?? { label: statusKey.replace(/_/g, ' ').toUpperCase(), cls: 'bg-surface-container-highest text-on-surface-variant' }
+                  const isActive   = ACTIVE_STATUSES.includes(delivery.status ?? '')
+                  return (
+                    <div
+                      key={delivery.id}
+                      className="flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 md:py-4 hover:bg-surface-container-high active:bg-surface-container-high transition-colors group cursor-pointer"
+                    >
+                      {/* Icon */}
+                      <div className="w-10 h-10 bg-surface-container-highest rounded-xl md:rounded-full flex items-center justify-center text-primary shrink-0">
+                        <span className="material-symbols-outlined text-lg" style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}>
+                          {isActive ? 'local_shipping' : 'package_2'}
+                        </span>
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-on-surface font-mono">{trackingId(delivery)}</p>
+                        <p className="text-[11px] text-on-surface-variant truncate mt-0.5">{formatRoute(delivery)}</p>
+                      </div>
+
+                      {/* Right */}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <span className={`text-[9px] md:text-[10px] font-bold px-2.5 py-1 rounded-full ${statusMeta.cls}`}>
+                          {statusMeta.label}
+                        </span>
+                        <p className="text-[10px] text-on-surface-variant hidden md:block">{formatDateTime(delivery.created_at)}</p>
+                      </div>
+
+                      <span className="material-symbols-outlined text-on-surface-variant/40 text-lg group-hover:text-on-surface-variant transition-colors shrink-0">
+                        chevron_right
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
         </div>
