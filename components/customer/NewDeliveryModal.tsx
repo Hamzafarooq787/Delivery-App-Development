@@ -40,7 +40,7 @@ function getPrice(miles: number): number {
   if (miles <= 3) return 10
   if (miles <= 7) return 15
   if (miles <= 12) return 20
-  return Math.round(miles * 1.5 * 100) / 100
+  return Math.round((20 + (miles - 12) * 1.5) * 100) / 100
 }
 
 const PROHIBITED_ITEMS = [
@@ -506,7 +506,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                     <div className="px-4 py-3 bg-[#6ee7b7]/5 border-t border-[#6ee7b7]/20 flex items-center justify-between">
                       <p className="text-[11px] text-[#adaaaa]">
                         {isPerMile
-                          ? <><span className="text-white font-bold">{routeInfo.miles} miles</span> × £1.50/mile</>
+                          ? <>£20 + <span className="text-white font-bold">{(routeInfo.miles - 12).toFixed(1)} miles</span> × £1.50</>
                           : <>Delivery charge for <span className="text-white font-bold">{routeInfo.miles} miles</span></>
                         }
                       </p>
@@ -539,7 +539,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                   <span className="material-symbols-outlined text-[#adaaaa] text-sm">route</span>
                   <span className="text-xs text-[#adaaaa]">Over 12 miles</span>
                 </div>
-                <span className="text-xs font-bold text-white">£1.50 / mile</span>
+                <span className="text-xs font-bold text-white">£20 + £1.50/mile over 12</span>
               </div>
             </div>
           </div>
