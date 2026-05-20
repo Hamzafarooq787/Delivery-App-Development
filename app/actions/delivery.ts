@@ -180,6 +180,33 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
     updated_by: user.id,
   })
 
+  // On delivery completion: record earnings with 75/25 commission split
+  if (status === "delivered") {
+    const { data: delivery } = await supabase
+      .from("delivery_requests")
+      .select("price")
+      .eq("id", deliveryId)
+      .single()
+
+    const price = Number(delivery?.price ?? 0)
+    if (price > 0) {
+      const driverCut = Math.round(price * 0.75 * 100) / 100       // 75%
+      const commission = Math.round(price * 0.25 * 100) / 100      // 25%
+
+      // Upsert to avoid duplicates if action is called twice
+      await supabase.from("driver_earnings").upsert(
+        {
+          driver_id: user.id,
+          delivery_id: deliveryId,
+          amount: driverCut,
+          commission_amount: commission,
+          status: "pending",
+        },
+        { onConflict: "delivery_id" }
+      )
+    }
+  }
+
   // Auto-offline when job is completed or cancelled — if no other active jobs remain
   if (status === "delivered" || status === "cancelled") {
     const admin = createAdminClient()
@@ -199,6 +226,7 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
   revalidatePath("/driver/jobs/active")
   revalidatePath("/driver/jobs/completed")
   revalidatePath("/dashboard/driver/active-jobs")
+  revalidatePath("/dashboard/driver/earnings")
   return { success: true }
 }
 

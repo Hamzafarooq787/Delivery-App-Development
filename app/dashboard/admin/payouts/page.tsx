@@ -33,7 +33,7 @@ export default async function AdminPayoutsPage() {
       <PageHeader title="Driver Payouts" description="Review and process pending driver payouts." />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} title="Total Paid Out" value={`$${totalPaid.toFixed(2)}`} />
+        <StatCard icon={DollarSign} title="Total Paid Out" value={`£${totalPaid.toFixed(2)}`} />
         <StatCard icon={Clock} title="Pending" value={String(pendingCount)} />
         <StatCard icon={CheckCircle} title="Processed" value={String(processedCount)} />
         <StatCard icon={XCircle} title="Failed" value={String(failedCount)} />
@@ -73,7 +73,7 @@ export default async function AdminPayoutsPage() {
                           <p className="text-xs text-muted-foreground">{driver?.email ?? ""}</p>
                         </td>
                         <td className="py-3 pr-4 font-medium">
-                          {p.amount != null ? `$${Number(p.amount).toFixed(2)}` : "—"}
+                          {p.amount != null ? `£${Number(p.amount).toFixed(2)}` : "—"}
                         </td>
                         <td className="py-3 pr-4 text-muted-foreground">{p.method ?? "—"}</td>
                         <td className="py-3 pr-4">

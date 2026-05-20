@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 export default async function AdminPaymentsPage() {
   const supabase = await createClient()
 
-  const [allPaymentsRes, pendingRes, failedRes, recentRes] = await Promise.all([
+  const [allPaymentsRes, pendingRes, failedRes, recentRes, earningsRes] = await Promise.all([
     supabase.from("payments").select("amount").eq("status", "succeeded"),
     supabase.from("payments").select("id", { count: "exact" }).eq("status", "pending"),
     supabase.from("payments").select("amount").eq("status", "failed"),
@@ -12,9 +12,16 @@ export default async function AdminPaymentsPage() {
       .select("id, amount, status, created_at, delivery_request_id, user_id")
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase.from("driver_earnings").select("amount, commission_amount"),
   ])
 
-  const totalRevenue = allPaymentsRes.data?.reduce((s, p) => s + (p.amount ?? 0), 0) ?? 0
+  const totalDriverPayouts = earningsRes.data?.reduce((s, e) => s + (e.amount ?? 0), 0) ?? 0
+  const totalCommission    = earningsRes.data?.reduce((s, e) => s + (e.commission_amount ?? 0), 0) ?? 0
+  const grossFromEarnings  = totalDriverPayouts + totalCommission
+  // Fall back to payments table if driver_earnings is empty
+  const totalRevenue = grossFromEarnings > 0
+    ? grossFromEarnings
+    : (allPaymentsRes.data?.reduce((s, p) => s + (p.amount ?? 0), 0) ?? 0)
   const pendingCount = pendingRes.count ?? 0
   const failedAmount = failedRes.data?.reduce((s, p) => s + (p.amount ?? 0), 0) ?? 0
   const payments = recentRes.data ?? []
@@ -44,64 +51,70 @@ export default async function AdminPaymentsPage() {
 
       {/* Summary Bento Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-8">
-        {/* Large Focus Card */}
-        <div className="sm:col-span-2 lg:col-span-6 bg-[#1a1919] p-6 md:p-8 rounded-xl relative overflow-hidden flex flex-col justify-between min-h-[160px]">
+        {/* Gross Revenue */}
+        <div className="sm:col-span-2 lg:col-span-5 bg-[#1a1919] p-6 md:p-8 rounded-xl relative overflow-hidden flex flex-col justify-between min-h-[160px]">
           <div className="z-10">
-            <p className="text-[#adaaaa] text-sm font-medium mb-1">Total Revenue (MTD)</p>
+            <p className="text-[#adaaaa] text-sm font-medium mb-1">Gross Revenue (All Time)</p>
             <h2 className="text-5xl font-extrabold text-[#a3a6ff] font-headline tracking-tight">
-              ${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              £{totalRevenue.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h2>
           </div>
           <div className="z-10 flex items-center gap-4">
-            <div className="flex items-center gap-1 text-[#c180ff] text-sm font-semibold">
-              <span className="material-symbols-outlined text-xs">trending_up</span>
-              <span>+12.4% vs last month</span>
-            </div>
-            <div className="h-1 w-1 rounded-full bg-[#494847]" />
-            <p className="text-[#adaaaa] text-sm">{payments.length} Recent Payments</p>
+            <p className="text-[#adaaaa] text-sm">{payments.length} recent transactions</p>
           </div>
           <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-[#a3a6ff]/10 to-transparent pointer-events-none" />
           <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-[#a3a6ff]/5 rounded-full blur-3xl pointer-events-none" />
         </div>
 
-        {/* Secondary Stats */}
-        <div className="col-span-1 lg:col-span-3 space-y-5">
-          <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ height: "92px" }}>
+        {/* Commission split */}
+        <div className="col-span-1 lg:col-span-4 space-y-4">
+          {/* Platform commission */}
+          <div className="bg-[#1a1919] px-6 py-5 rounded-xl flex items-center justify-between border-l-4 border-[#c180ff]">
+            <div>
+              <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Platform Commission (25%)</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-bold text-[#c180ff] font-headline">
+                  £{totalCommission.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-[#c180ff]/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[#c180ff]">account_balance</span>
+            </div>
+          </div>
+          {/* Driver payouts */}
+          <div className="bg-[#1a1919] px-6 py-5 rounded-xl flex items-center justify-between border-l-4 border-[#6ee7b7]">
+            <div>
+              <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Driver Earnings (75%)</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-2xl font-bold text-[#6ee7b7] font-headline">
+                  £{totalDriverPayouts.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-[#6ee7b7]/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[#6ee7b7]">local_shipping</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Secondary stats */}
+        <div className="col-span-1 lg:col-span-3 space-y-4">
+          <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ minHeight: "76px" }}>
             <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Pending Payouts</p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold text-white font-headline">{pendingCount}</h3>
               <span className="text-xs text-[#adaaaa]">awaiting</span>
             </div>
           </div>
-          <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ height: "92px" }}>
+          <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ minHeight: "76px" }}>
             <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Failed Charges</p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold text-[#ff6e84] font-headline">
-                ${failedAmount.toFixed(2)}
+                £{failedAmount.toFixed(2)}
               </h3>
               <span className="text-xs text-[#adaaaa]">failed</span>
             </div>
-          </div>
-        </div>
-
-        {/* Processing Volume Bar Chart */}
-        <div className="col-span-1 lg:col-span-3 bg-[#1a1919] p-6 rounded-xl flex flex-col justify-between">
-          <div>
-            <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Processing Volume</p>
-            <p className="text-xs text-[#adaaaa]">Real-time throughput</p>
-          </div>
-          <div className="flex items-end gap-1 h-16">
-            {[40, 60, 85, 50, 100, 70, 30].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm"
-                style={{
-                  height: `${h}%`,
-                  backgroundColor: i === 4 ? "#a3a6ff" : `rgba(163,166,255,${h / 150})`,
-                  boxShadow: i === 4 ? "0px 0px 15px rgba(163,166,255,0.2)" : undefined,
-                }}
-              />
-            ))}
           </div>
         </div>
       </div>
@@ -186,7 +199,7 @@ function PaymentRow({ payment }: { payment: any }) {
       </td>
       <td className="px-5 md:px-8 py-4 md:py-5">
         <span className="text-sm font-bold text-white">
-          ${(payment.amount ?? 0).toFixed(2)}
+          £{(payment.amount ?? 0).toFixed(2)}
         </span>
       </td>
       <td className="px-5 md:px-8 py-4 md:py-5">
