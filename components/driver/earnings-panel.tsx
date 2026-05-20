@@ -4,12 +4,14 @@ import { useState } from "react"
 
 type EarningRow = {
   id: string
-  amount: number | null
+  amount: number | null            // driver's 75%
+  commission_amount: number | null // platform's 25%
   created_at: string
   delivery_requests: {
     pickup_address: string | null
     delivery_address: string | null
     created_at: string
+    price: number | null           // full fare charged to customer
   } | null
 }
 
@@ -37,16 +39,20 @@ function sumFor(earnings: EarningRow[], tab: Tab) {
     .reduce((s, e) => s + (e.amount ?? 0), 0)
 }
 
+function fmt(n: number) {
+  return `£${n.toFixed(2)}`
+}
+
 export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
   const [activeTab, setActiveTab] = useState<Tab>("Daily")
 
   const cutoff = startOf(activeTab)
   const filtered = earnings.filter((e) => new Date(e.created_at) >= cutoff)
-  const total = filtered.reduce((s, e) => s + (e.amount ?? 0), 0)
 
-  const todayTotal = sumFor(earnings, "Daily")
-  const weekTotal = sumFor(earnings, "Weekly")
-  const monthTotal = sumFor(earnings, "Monthly")
+  const todayTotal  = sumFor(earnings, "Daily")
+  const weekTotal   = sumFor(earnings, "Weekly")
+  const monthTotal  = sumFor(earnings, "Monthly")
+  const allTimeTotal = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -54,7 +60,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">Earnings</h2>
-          <p className="text-[#adaaaa] mt-1">Real-time financial performance and payouts.</p>
+          <p className="text-[#adaaaa] mt-1">Your share of every completed delivery — 75% of the fare.</p>
         </div>
         <div className="flex bg-[#1a1919] p-1 rounded-xl">
           {(["Daily", "Weekly", "Monthly"] as Tab[]).map((tab) => (
@@ -71,6 +77,16 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
         </div>
       </div>
 
+      {/* Commission split notice */}
+      <div className="flex items-center gap-3 bg-[#1a1919] border border-[#494847]/20 rounded-xl px-5 py-4 mb-8">
+        <span className="material-symbols-outlined text-[#a3a6ff]">info</span>
+        <p className="text-sm text-[#adaaaa]">
+          Your earnings are <span className="text-white font-bold">75%</span> of each delivery fare.
+          The remaining <span className="text-[#c180ff] font-bold">25%</span> is the platform commission.
+          Taxes will be introduced in a future update.
+        </p>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
         <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden group border border-[#494847]/10 shadow-lg">
@@ -80,7 +96,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
             <span className="material-symbols-outlined text-[#a3a6ff]">today</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl md:text-4xl font-black font-headline text-white">${todayTotal.toFixed(2)}</span>
+            <span className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(todayTotal)}</span>
           </div>
         </div>
 
@@ -90,7 +106,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
             <span className="material-symbols-outlined text-[#adaaaa]">calendar_view_week</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl md:text-4xl font-black font-headline text-white">${weekTotal.toFixed(2)}</span>
+            <span className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(weekTotal)}</span>
           </div>
         </div>
 
@@ -100,7 +116,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
             <span className="material-symbols-outlined text-[#adaaaa]">calendar_month</span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl md:text-4xl font-black font-headline text-white">${monthTotal.toFixed(2)}</span>
+            <span className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(monthTotal)}</span>
           </div>
         </div>
       </div>
@@ -116,41 +132,52 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
           </div>
           <div className="bg-[#1a1919] rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <div className="min-w-[520px]">
+              <div className="min-w-[560px]">
                 <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#494847]/10 text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
-                  <div className="col-span-6">Job Details</div>
-                  <div className="col-span-3">Status</div>
-                  <div className="col-span-3 text-right">Amount</div>
+                  <div className="col-span-5">Job Details</div>
+                  <div className="col-span-3 text-right">Fare</div>
+                  <div className="col-span-2 text-right">Comm.</div>
+                  <div className="col-span-2 text-right">Your Cut</div>
                 </div>
                 <div className="divide-y divide-[#494847]/5">
                   {filtered.length === 0 ? (
                     <div className="py-16 text-center text-[#adaaaa] text-sm">No earnings for this period.</div>
                   ) : (
-                    filtered.map((e) => (
-                      <div key={e.id} className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-[#201f1f] transition-colors">
-                        <div className="col-span-6 flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center shrink-0">
-                            <span className="material-symbols-outlined text-[#a3a6ff]">local_shipping</span>
+                    filtered.map((e) => {
+                      const fare = e.delivery_requests?.price ?? (e.amount ?? 0) / 0.75
+                      const commission = e.commission_amount ?? (fare * 0.25)
+                      const driverCut = e.amount ?? (fare * 0.75)
+                      return (
+                        <div key={e.id} className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-[#201f1f] transition-colors">
+                          <div className="col-span-5 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-[#262626] flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">local_shipping</span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-white truncate">
+                                {e.delivery_requests?.pickup_address ?? "Delivery"}
+                              </p>
+                              <p className="text-xs text-[#adaaaa]">
+                                {new Date(e.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-white truncate">
-                              {e.delivery_requests?.pickup_address ?? "Delivery"}
-                            </p>
-                            <p className="text-xs text-[#adaaaa]">
-                              {new Date(e.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                            </p>
+                          {/* Fare */}
+                          <div className="col-span-3 text-right">
+                            <p className="text-sm font-semibold text-[#adaaaa]">{fmt(fare)}</p>
+                          </div>
+                          {/* Commission 25% */}
+                          <div className="col-span-2 text-right">
+                            <p className="text-xs font-semibold text-[#c180ff]">-{fmt(commission)}</p>
+                          </div>
+                          {/* Driver cut 75% */}
+                          <div className="col-span-2 text-right">
+                            <p className="text-sm font-black text-white">{fmt(driverCut)}</p>
+                            <p className="text-[10px] text-[#6ee7b7] font-bold">75%</p>
                           </div>
                         </div>
-                        <div className="col-span-3">
-                          <span className="px-2 py-1 bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px] font-bold rounded uppercase">
-                            Completed
-                          </span>
-                        </div>
-                        <div className="col-span-3 text-right">
-                          <p className="text-sm font-black text-white">${(e.amount ?? 0).toFixed(2)}</p>
-                        </div>
-                      </div>
-                    ))
+                      )
+                    })
                   )}
                 </div>
               </div>
@@ -161,6 +188,8 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
         {/* Financial Insights */}
         <div className="lg:col-span-4 space-y-6">
           <h3 className="text-lg font-bold font-headline text-white">Insights</h3>
+
+          {/* Earnings Velocity chart */}
           <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/5">
             <p className="text-[10px] uppercase font-bold tracking-widest text-[#adaaaa] mb-4">Earnings Velocity</p>
             <div className="h-32 flex items-end justify-between gap-1 mb-4">
@@ -171,10 +200,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                 const next = new Date(d)
                 next.setDate(d.getDate() + 1)
                 const dayTotal = earnings
-                  .filter((e) => {
-                    const t = new Date(e.created_at)
-                    return t >= d && t < next
-                  })
+                  .filter((e) => { const t = new Date(e.created_at); return t >= d && t < next })
                   .reduce((s, e) => s + (e.amount ?? 0), 0)
                 const maxDay = Math.max(...[...Array(7)].map((_, j) => {
                   const dd = new Date()
@@ -197,20 +223,45 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
             <p className="text-xs text-[#adaaaa] text-center">Last 7 days of earnings activity.</p>
           </div>
 
+          {/* All-time card */}
           <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl border border-[#a3a6ff]/20">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-[#a3a6ff] flex items-center justify-center text-[#0f00a4]" style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.3)" }}>
+              <div className="w-10 h-10 rounded-full bg-[#a3a6ff] flex items-center justify-center text-[#0f00a4]"
+                style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.3)" }}>
                 <span className="material-symbols-outlined">account_balance_wallet</span>
               </div>
               <div>
                 <p className="text-sm font-bold text-white">Total Earned</p>
-                <p className="text-[10px] text-[#adaaaa] font-medium">All time</p>
+                <p className="text-[10px] text-[#adaaaa] font-medium">All time · after commission</p>
               </div>
             </div>
-            <p className="text-3xl font-black font-headline text-white mb-2">
-              ${earnings.reduce((s, e) => s + (e.amount ?? 0), 0).toFixed(2)}
-            </p>
+            <p className="text-3xl font-black font-headline text-white mb-2">{fmt(allTimeTotal)}</p>
             <p className="text-xs text-[#adaaaa]">{earnings.length} completed jobs</p>
+
+            {/* Split breakdown */}
+            {earnings.length > 0 && (
+              <div className="mt-5 pt-5 border-t border-[#494847]/20 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#adaaaa]">Total fares collected</span>
+                  <span className="text-white font-bold">
+                    {fmt(earnings.reduce((s, e) => {
+                      const fare = e.delivery_requests?.price ?? (e.amount ?? 0) / 0.75
+                      return s + fare
+                    }, 0))}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#c180ff]">Platform commission (25%)</span>
+                  <span className="text-[#c180ff] font-bold">
+                    -{fmt(earnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0))}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs border-t border-[#494847]/20 pt-2 mt-1">
+                  <span className="text-[#6ee7b7] font-bold">Your earnings (75%)</span>
+                  <span className="text-[#6ee7b7] font-black">{fmt(allTimeTotal)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

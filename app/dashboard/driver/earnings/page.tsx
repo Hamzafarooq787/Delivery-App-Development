@@ -7,7 +7,7 @@ export default async function EarningsPage() {
 
   const { data: earnings } = await supabase
     .from("driver_earnings")
-    .select("id, amount, created_at, delivery_requests(pickup_address, delivery_address, created_at)")
+    .select("id, amount, commission_amount, created_at, delivery_requests(pickup_address, delivery_address, created_at, price)")
     .eq("driver_id", user?.id ?? "")
     .order("created_at", { ascending: false })
 

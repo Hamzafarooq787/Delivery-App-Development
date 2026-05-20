@@ -58,10 +58,10 @@ export default async function DriverDashboard() {
               </span>
             </div>
             <h3 className="text-4xl md:text-5xl font-black font-headline tracking-tighter text-white mb-2">
-              ${totalEarnings > 0 ? totalEarnings.toFixed(2) : "0.00"}
+              £{totalEarnings > 0 ? totalEarnings.toFixed(2) : "0.00"}
             </h3>
             <p className="text-xs text-[#adaaaa] flex items-center gap-1">
-              <span className="text-[#a3a6ff] font-bold">All time earnings</span>
+              <span className="text-[#a3a6ff] font-bold">All time · your 75% share</span>
             </p>
           </div>
           <div className="mt-8 h-12 w-full bg-black/30 rounded flex items-end gap-1 p-2">

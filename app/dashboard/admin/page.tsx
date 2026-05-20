@@ -13,6 +13,7 @@ export default async function AdminDashboardPage() {
     disputesRes,
     recentOrdersRes,
     pendingDriversRes,
+    earningsRes,
   ] = await Promise.all([
     supabase.from("delivery_requests").select("id", { count: "exact" }),
     supabase.from("payments").select("amount").eq("status", "succeeded"),
@@ -28,37 +29,43 @@ export default async function AdminDashboardPage() {
       .select("id, created_at, users(full_name)")
       .eq("status", "pending")
       .limit(3),
+    supabase.from("driver_earnings").select("amount, commission_amount"),
   ])
 
-  const revenue = paymentsRes.data?.reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0
+  // Prefer driver_earnings as source of truth for revenue split; fall back to payments table
+  const totalCommission = earningsRes.data?.reduce((s, e) => s + (e.commission_amount ?? 0), 0) ?? 0
+  const totalDriverPayouts = earningsRes.data?.reduce((s, e) => s + (e.amount ?? 0), 0) ?? 0
+  const grossRevenue = totalCommission + totalDriverPayouts ||
+    (paymentsRes.data?.reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0)
+  const revenue = grossRevenue
 
   const stats = [
     {
-      label: "Daily Revenue",
-      value: `$${revenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      delta: "+12.4% vs yesterday",
+      label: "Gross Revenue",
+      value: `£${revenue.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      delta: "Total fares collected",
       deltaUp: true,
       icon: "payments",
       iconColor: "text-[#a3a6ff]",
       iconBg: "bg-[#a3a6ff]/10",
     },
     {
-      label: "Total Deliveries",
-      value: String(ordersRes.count ?? 0),
-      delta: "-2.1% from peak",
-      deltaUp: false,
-      icon: "package_2",
-      iconColor: "text-[#adaaaa]",
-      iconBg: "bg-[#adaaaa]/10",
+      label: "Platform Commission",
+      value: `£${totalCommission.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      delta: "25% of all fares",
+      deltaUp: true,
+      icon: "account_balance",
+      iconColor: "text-[#c180ff]",
+      iconBg: "bg-[#c180ff]/10",
     },
     {
-      label: "Active Drivers",
-      value: String(activeDriversRes.count ?? 0),
-      delta: "Live Now",
+      label: "Driver Payouts",
+      value: `£${totalDriverPayouts.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      delta: "75% share to drivers",
       deltaUp: true,
-      icon: "charging_station",
-      iconColor: "text-[#ffa5d9]",
-      iconBg: "bg-[#ffa5d9]/10",
+      icon: "local_shipping",
+      iconColor: "text-[#6ee7b7]",
+      iconBg: "bg-[#6ee7b7]/10",
     },
     {
       label: "Open Disputes",
@@ -66,8 +73,8 @@ export default async function AdminDashboardPage() {
       delta: "Needs attention",
       deltaUp: false,
       icon: "gavel",
-      iconColor: "text-[#c180ff]",
-      iconBg: "bg-[#c180ff]/10",
+      iconColor: "text-[#ff6e84]",
+      iconBg: "bg-[#ff6e84]/10",
     },
   ]
 
