@@ -67,11 +67,22 @@ export default async function DriverPayoutsPage() {
   const allEarnings = [...realEarnings, ...syntheticEarnings]
 
   // ── Summary numbers ────────────────────────────────────────────────────────
-  const totalEarned  = allEarnings.reduce((s, e) => s + (e.amount ?? 0), 0)
+  const totalEarned = allEarnings.reduce((s, e) => s + (e.amount ?? 0), 0)
+
+  // Deduct ALL committed payouts from available balance:
+  //   pending  = awaiting admin review
+  //   approved = admin approved, payment in progress
+  //   paid     = disbursed
+  // Only rejected payouts are excluded (the amount returns to available).
+  const committedAmount = payouts
+    .filter(p => ["pending", "approved", "paid"].includes(p.status))
+    .reduce((s, p) => s + (p.amount ?? 0), 0)
+
+  // "Available balance" — what the driver can still request
+  const pendingBalance = Math.max(0, Math.round((totalEarned - committedAmount) * 100) / 100)
+
+  // "Total Paid Out" card — only fully disbursed payouts
   const totalPaidOut = payouts.filter(p => p.status === "paid").reduce((s, p) => s + (p.amount ?? 0), 0)
-  // Available balance = total earned minus amounts already paid out
-  // Using subtraction is robust whether we have real driver_earnings rows or synthetic ones
-  const pendingBalance = Math.max(0, Math.round((totalEarned - totalPaidOut) * 100) / 100)
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -204,13 +215,21 @@ export default async function DriverPayoutsPage() {
             ) : (
               <div className="divide-y divide-[#494847]/5">
                 {payouts.map((p) => {
-                  const isPaid = p.status === "paid"
+                  type StatusKey = "paid" | "approved" | "pending" | "rejected"
+                  const STATUS_MAP: Record<StatusKey, { icon: string; iconColor: string; iconBg: string; label: string; labelColor: string }> = {
+                    paid:     { icon: "check_circle",  iconColor: "text-[#6ee7b7]", iconBg: "bg-[#6ee7b7]/10", label: "Disbursed", labelColor: "text-[#6ee7b7]" },
+                    approved: { icon: "task_alt",       iconColor: "text-[#60a5fa]", iconBg: "bg-[#60a5fa]/10", label: "Approved",  labelColor: "text-[#60a5fa]" },
+                    pending:  { icon: "schedule",       iconColor: "text-[#c180ff]", iconBg: "bg-[#c180ff]/10", label: "Pending",   labelColor: "text-[#c180ff]" },
+                    rejected: { icon: "cancel",         iconColor: "text-[#ff6e84]", iconBg: "bg-[#ff6e84]/10", label: "Rejected",  labelColor: "text-[#ff6e84]" },
+                  }
+                  const statusCfg = STATUS_MAP[p.status as StatusKey] ?? STATUS_MAP.pending
+
                   return (
                     <div key={p.id} className="flex items-center justify-between px-6 py-4 hover:bg-[#201f1f] transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPaid ? "bg-[#6ee7b7]/10" : "bg-[#c180ff]/10"}`}>
-                          <span className={`material-symbols-outlined text-lg ${isPaid ? "text-[#6ee7b7]" : "text-[#c180ff]"}`}>
-                            {isPaid ? "check_circle" : "schedule"}
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${statusCfg.iconBg}`}>
+                          <span className={`material-symbols-outlined text-lg ${statusCfg.iconColor}`}>
+                            {statusCfg.icon}
                           </span>
                         </div>
                         <div>
@@ -221,9 +240,11 @@ export default async function DriverPayoutsPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-black text-white">{fmt(p.amount ?? 0)}</p>
-                        <span className={`text-[10px] font-bold ${isPaid ? "text-[#6ee7b7]" : "text-[#c180ff]"}`}>
-                          {isPaid ? "Disbursed" : "Processing"}
+                        <p className={`text-sm font-black ${p.status === "rejected" ? "text-[#ff6e84] line-through opacity-60" : "text-white"}`}>
+                          {fmt(p.amount ?? 0)}
+                        </p>
+                        <span className={`text-[10px] font-bold ${statusCfg.labelColor}`}>
+                          {statusCfg.label}
                         </span>
                       </div>
                     </div>
