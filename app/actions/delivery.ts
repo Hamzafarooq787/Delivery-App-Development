@@ -34,7 +34,18 @@ export async function createDeliveryRequest(formData: FormData) {
     .single()
 
   if (error) return { error: error.message }
+
+  // Auto-create a pending payment record so the customer can see charges in their Payments tab
+  if (data?.id && payload.price > 0) {
+    await supabase.from("payments").insert({
+      delivery_id: data.id,
+      amount: payload.price,
+      status: "pending",
+    })
+  }
+
   revalidatePath("/customer/orders")
+  revalidatePath("/dashboard/customer/payments")
   return { data }
 }
 
