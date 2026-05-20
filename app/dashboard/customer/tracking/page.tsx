@@ -113,6 +113,7 @@ function LiveTrackingPageInner() {
                 : null
             }
             customerId={userId || null}
+            deliveryId={shipment?.id ?? null}
             driverLabel={driver?.full_name ?? 'Driver'}
             height="100%"
             followDriver={false}
