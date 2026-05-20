@@ -4,13 +4,14 @@ import { useState, useMemo } from "react"
 
 // ─────────── Types ────────────────────────────────────────────────────────────
 
-type EnrichedPayment = {
+// delivery_requests row enriched with customer name/email
+type EnrichedDelivery = {
   id: string
-  amount: number | null
-  status: string
-  created_at: string
-  delivery_id: string | null
   tracking_number: string | null
+  price: number | null
+  status: string   // delivery status: requested | accepted | collected | in_transit | delivered | cancelled
+  created_at: string
+  customer_id: string | null
   customer_name: string | null
   customer_email: string | null
 }
@@ -18,7 +19,7 @@ type EnrichedPayment = {
 type EnrichedPayout = {
   id: string
   amount: number | null
-  status: string
+  status: string   // payout status: pending | paid
   created_at: string
   driver_id: string | null
   driver_name: string | null
@@ -32,33 +33,37 @@ type Earning = {
 
 type TxRow = {
   id: string
-  type: "payment" | "payout"
+  type: "delivery" | "payout"
+  shortLabel: string
   userName: string
   userEmail: string
   amount: number
-  status: string
+  paymentStatus: "paid" | "pending" | "failed"
   rawDate: string
   trackingNumber?: string
-  deliveryId?: string
 }
 
 // ─────────── Constants ────────────────────────────────────────────────────────
 
-const STATUS_OPTIONS = ["All", "Paid", "Pending", "Failed", "Released"] as const
+const STATUS_OPTIONS = ["All", "Paid", "Pending", "Failed"] as const
 const DATE_OPTIONS   = ["All Time", "Last 7 Days", "Last 30 Days"] as const
+type StatusFilter    = (typeof STATUS_OPTIONS)[number]
+type DateFilter      = (typeof DATE_OPTIONS)[number]
 
-type StatusFilter = (typeof STATUS_OPTIONS)[number]
-type DateFilter   = (typeof DATE_OPTIONS)[number]
-
-const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
-  paid:      { label: "Paid",      dot: "bg-[#a3a6ff] shadow-[0_0_6px_rgba(163,166,255,0.6)]", bg: "bg-[#a3a6ff]/10", text: "text-[#a3a6ff]" },
-  succeeded: { label: "Paid",      dot: "bg-[#a3a6ff]",                                         bg: "bg-[#a3a6ff]/10", text: "text-[#a3a6ff]" },
-  pending:   { label: "Pending",   dot: "bg-[#c180ff] animate-pulse",                           bg: "bg-[#c180ff]/10", text: "text-[#c180ff]" },
-  failed:    { label: "Failed",    dot: "bg-[#ff6e84]",                                         bg: "bg-[#ff6e84]/10", text: "text-[#ff6e84]" },
-  released:  { label: "Released",  dot: "bg-[#6ee7b7]",                                         bg: "bg-[#6ee7b7]/10", text: "text-[#6ee7b7]" },
-}
+const STATUS_CFG = {
+  paid:    { label: "Paid",    dot: "bg-[#a3a6ff] shadow-[0_0_6px_rgba(163,166,255,0.6)]", bg: "bg-[#a3a6ff]/10", text: "text-[#a3a6ff]" },
+  pending: { label: "Pending", dot: "bg-[#c180ff] animate-pulse",                           bg: "bg-[#c180ff]/10", text: "text-[#c180ff]" },
+  failed:  { label: "Failed",  dot: "bg-[#ff6e84]",                                         bg: "bg-[#ff6e84]/10", text: "text-[#ff6e84]" },
+} as const
 
 // ─────────── Helpers ──────────────────────────────────────────────────────────
+
+/** Map a delivery_requests.status → a payment-context status */
+function toPaymentStatus(deliveryStatus: string): "paid" | "pending" | "failed" {
+  if (deliveryStatus === "delivered") return "paid"
+  if (deliveryStatus === "cancelled") return "failed"
+  return "pending"
+}
 
 function fmt(n: number) {
   return `£${n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -68,74 +73,84 @@ function monogram(name: string | null, email: string | null) {
   return (name ?? email ?? "??").slice(0, 2).toUpperCase()
 }
 
-// ─────────── Main component ───────────────────────────────────────────────────
+// ─────────── Component ────────────────────────────────────────────────────────
 
 export function PaymentsPanel({
-  payments,
+  deliveries,
   payouts,
   earnings,
+  deliveredPrices,
 }: {
-  payments: EnrichedPayment[]
+  deliveries: EnrichedDelivery[]
   payouts: EnrichedPayout[]
   earnings: Earning[]
+  deliveredPrices: { price: number | null }[]
 }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All")
   const [dateFilter,   setDateFilter]   = useState<DateFilter>("All Time")
   const [selectedTx,   setSelectedTx]   = useState<TxRow | null>(null)
 
-  // ── Summary numbers ────────────────────────────────────────────────────────
-  const totalDriverEarnings = earnings.reduce((s, e) => s + (e.amount ?? 0), 0)
+  // ── Summary cards — IDENTICAL logic to Admin Overview ─────────────────────
+  const totalDriverEarnings = earnings.reduce((s, e) => s + (e.amount          ?? 0), 0)
   const totalCommission     = earnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0)
   const grossFromEarnings   = totalDriverEarnings + totalCommission
-  const grossRevenue = grossFromEarnings > 0
-    ? grossFromEarnings
-    : payments
-        .filter(p => p.status === "paid" || p.status === "released" || p.status === "succeeded")
-        .reduce((s, p) => s + (p.amount ?? 0), 0)
-  const platformCommission = totalCommission > 0 ? totalCommission : grossRevenue * 0.25
-  const driverEarnings     = totalDriverEarnings > 0 ? totalDriverEarnings : grossRevenue * 0.75
-  const pendingPayouts     = payouts.filter(p => p.status === "pending").length
-  const failedAmount       = payments.filter(p => p.status === "failed").reduce((s, p) => s + (p.amount ?? 0), 0)
 
-  // ── Unified transaction list ───────────────────────────────────────────────
+  // Fallback: sum of delivered delivery_requests.price (same as Overview fallback)
+  const deliveredTotal     = deliveredPrices.reduce((s, d) => s + (d.price ?? 0), 0)
+  const grossRevenue       = grossFromEarnings > 0 ? grossFromEarnings : deliveredTotal
+  const platformCommission = grossFromEarnings > 0
+    ? totalCommission
+    : Math.round(deliveredTotal * 0.25 * 100) / 100
+  const driverEarnings = grossFromEarnings > 0
+    ? totalDriverEarnings
+    : Math.round(deliveredTotal * 0.75 * 100) / 100
+
+  const pendingPayoutsCount = payouts.filter(p => p.status === "pending").length
+  // "Failed charges" = cancelled deliveries that had a price attached
+  const failedAmount = deliveries
+    .filter(d => d.status === "cancelled" && d.price != null)
+    .reduce((s, d) => s + (d.price ?? 0), 0)
+
+  // ── Build unified transaction rows ─────────────────────────────────────────
   const allTxs = useMemo<TxRow[]>(() => {
-    const px: TxRow[] = payments.map(p => ({
+    const deliveryRows: TxRow[] = deliveries.map(d => ({
+      id:            d.id,
+      type:          "delivery",
+      shortLabel:    d.tracking_number ?? d.id.slice(0, 8).toUpperCase(),
+      userName:      d.customer_name  ?? "Unknown Customer",
+      userEmail:     d.customer_email ?? "—",
+      amount:        d.price ?? 0,
+      paymentStatus: toPaymentStatus(d.status),
+      rawDate:       d.created_at,
+      trackingNumber: d.tracking_number ?? undefined,
+    }))
+    const payoutRows: TxRow[] = payouts.map(p => ({
       id:            p.id,
-      type:          "payment",
-      userName:      p.customer_name  ?? "Unknown Customer",
-      userEmail:     p.customer_email ?? "—",
+      type:          "payout",
+      shortLabel:    p.id.slice(0, 8).toUpperCase(),
+      userName:      p.driver_name  ?? "Unknown Driver",
+      userEmail:     p.driver_email ?? "—",
       amount:        p.amount ?? 0,
-      status:        p.status,
+      paymentStatus: p.status === "paid" ? "paid" : "pending",
       rawDate:       p.created_at,
-      trackingNumber: p.tracking_number ?? undefined,
-      deliveryId:    p.delivery_id ?? undefined,
     }))
-    const po: TxRow[] = payouts.map(p => ({
-      id:        p.id,
-      type:      "payout",
-      userName:  p.driver_name  ?? "Unknown Driver",
-      userEmail: p.driver_email ?? "—",
-      amount:    p.amount ?? 0,
-      status:    p.status,
-      rawDate:   p.created_at,
-    }))
-    return [...px, ...po].sort(
+    return [...deliveryRows, ...payoutRows].sort(
       (a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime(),
     )
-  }, [payments, payouts])
+  }, [deliveries, payouts])
 
-  // ── Filtered list ──────────────────────────────────────────────────────────
+  // ── Apply filters ──────────────────────────────────────────────────────────
   const filteredTxs = useMemo(() => {
     const now = Date.now()
     return allTxs.filter(tx => {
-      if (statusFilter !== "All" && tx.status !== statusFilter.toLowerCase()) return false
-      if (dateFilter === "Last 7 Days"  && new Date(tx.rawDate).getTime() < now - 7  * 86400000) return false
-      if (dateFilter === "Last 30 Days" && new Date(tx.rawDate).getTime() < now - 30 * 86400000) return false
+      if (statusFilter !== "All" && tx.paymentStatus !== statusFilter.toLowerCase()) return false
+      if (dateFilter === "Last 7 Days"  && new Date(tx.rawDate).getTime() < now - 7  * 86_400_000) return false
+      if (dateFilter === "Last 30 Days" && new Date(tx.rawDate).getTime() < now - 30 * 86_400_000) return false
       return true
     })
   }, [allTxs, statusFilter, dateFilter])
 
-  // ── CSV export ─────────────────────────────────────────────────────────────
+  // ── CSV export of visible rows ─────────────────────────────────────────────
   function handleExportCSV() {
     const header = "ID,Type,Name,Email,Amount (£),Status,Date\n"
     const body = filteredTxs
@@ -145,14 +160,14 @@ export function PaymentsPanel({
         `"${tx.userName}"`,
         `"${tx.userEmail}"`,
         tx.amount.toFixed(2),
-        tx.status,
+        tx.paymentStatus,
         `"${new Date(tx.rawDate).toLocaleString("en-GB")}"`,
       ].join(","))
       .join("\n")
     const blob = new Blob([header + body], { type: "text/csv;charset=utf-8;" })
     const url  = URL.createObjectURL(blob)
     const a    = Object.assign(document.createElement("a"), {
-      href:     url,
+      href: url,
       download: `transactions-${new Date().toISOString().slice(0, 10)}.csv`,
     })
     a.click()
@@ -165,7 +180,7 @@ export function PaymentsPanel({
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
 
-      {/* ── Page Header ──────────────────────────────────────────────────── */}
+      {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
           <h3 className="text-2xl font-bold font-headline text-white mb-1">Transactions</h3>
@@ -217,7 +232,7 @@ export function PaymentsPanel({
         </div>
       </div>
 
-      {/* ── Summary Bento ────────────────────────────────────────────────── */}
+      {/* ── Summary Bento ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-8">
 
         {/* Gross Revenue */}
@@ -229,7 +244,9 @@ export function PaymentsPanel({
             </h2>
           </div>
           <div className="z-10">
-            <p className="text-[#adaaaa] text-sm">{allTxs.length} total transaction{allTxs.length !== 1 ? "s" : ""}</p>
+            <p className="text-[#adaaaa] text-sm">
+              {allTxs.length} total transaction{allTxs.length !== 1 ? "s" : ""}
+            </p>
           </div>
           <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-[#a3a6ff]/10 to-transparent pointer-events-none" />
           <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-[#a3a6ff]/5 rounded-full blur-3xl pointer-events-none" />
@@ -257,33 +274,34 @@ export function PaymentsPanel({
           </div>
         </div>
 
-        {/* Pending + Failed */}
+        {/* Secondary stats */}
         <div className="col-span-1 lg:col-span-3 space-y-4">
           <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ minHeight: "76px" }}>
             <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Pending Payouts</p>
             <div className="flex items-baseline gap-2">
-              <h3 className="text-2xl font-bold text-white font-headline">{pendingPayouts}</h3>
+              <h3 className="text-2xl font-bold text-white font-headline">{pendingPayoutsCount}</h3>
               <span className="text-xs text-[#adaaaa]">awaiting</span>
             </div>
           </div>
           <div className="bg-[#1a1919] p-6 rounded-xl flex flex-col justify-center" style={{ minHeight: "76px" }}>
-            <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Failed Charges</p>
+            <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Cancelled Charges</p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold text-[#ff6e84] font-headline">{fmt(failedAmount)}</h3>
-              <span className="text-xs text-[#adaaaa]">failed</span>
+              <span className="text-xs text-[#adaaaa]">cancelled</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Transactions Table ────────────────────────────────────────────── */}
+      {/* ── Transactions Table ─────────────────────────────────────────────── */}
       <div className="bg-[#1a1919] rounded-xl overflow-hidden shadow-2xl">
 
         {/* Active filter banner */}
         {filtersActive && (
           <div className="px-5 md:px-8 py-3 bg-[#1e1e1e] border-b border-[#494847]/10 flex items-center gap-3">
             <span className="text-xs text-[#adaaaa]">
-              Showing <span className="text-white font-bold">{filteredTxs.length}</span> of{" "}
+              Showing{" "}
+              <span className="text-white font-bold">{filteredTxs.length}</span> of{" "}
               <span className="text-white font-bold">{allTxs.length}</span> transactions
             </span>
             <button
@@ -319,14 +337,18 @@ export function PaymentsPanel({
                       <p className="text-xs text-[#adaaaa]">
                         {filtersActive
                           ? "Try adjusting your filters"
-                          : "No payment or payout records yet"}
+                          : "No delivery or payout records yet"}
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 filteredTxs.map(tx => (
-                  <TxTableRow key={`${tx.type}-${tx.id}`} tx={tx} onSelect={() => setSelectedTx(tx)} />
+                  <TxTableRow
+                    key={`${tx.type}-${tx.id}`}
+                    tx={tx}
+                    onSelect={() => setSelectedTx(tx)}
+                  />
                 ))
               )}
             </tbody>
@@ -334,7 +356,7 @@ export function PaymentsPanel({
         </div>
       </div>
 
-      {/* ── Detail Modal ──────────────────────────────────────────────────── */}
+      {/* ── Detail modal ──────────────────────────────────────────────────── */}
       {selectedTx && (
         <TxDetailModal tx={selectedTx} onClose={() => setSelectedTx(null)} />
       )}
@@ -345,18 +367,20 @@ export function PaymentsPanel({
 // ─────────── Table row ────────────────────────────────────────────────────────
 
 function TxTableRow({ tx, onSelect }: { tx: TxRow; onSelect: () => void }) {
-  const cfg     = STATUS_CONFIG[tx.status] ?? STATUS_CONFIG.pending
+  const cfg     = STATUS_CFG[tx.paymentStatus]
   const shortId = `#${tx.id.slice(0, 8).toUpperCase()}`
   const dateObj = new Date(tx.rawDate)
-  const dateStr = dateObj.toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })
-  const timeStr = dateObj.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+  const dateStr = dateObj.toLocaleDateString("en-GB",  { month: "short", day: "numeric", year: "numeric" })
+  const timeStr = dateObj.toLocaleTimeString("en-GB",  { hour: "2-digit", minute: "2-digit" })
 
   return (
     <tr className="hover:bg-[#201f1f] transition-all group">
       <td className="px-5 md:px-8 py-4 md:py-5">
         <div>
           <span className="font-mono text-xs text-[#a3a6ff]">{shortId}</span>
-          <p className="text-[10px] text-[#adaaaa] mt-0.5 capitalize">{tx.type}</p>
+          <p className="text-[10px] text-[#adaaaa] mt-0.5 capitalize">
+            {tx.type === "delivery" ? "delivery payment" : "driver payout"}
+          </p>
         </div>
       </td>
       <td className="px-5 md:px-8 py-4 md:py-5">
@@ -412,7 +436,7 @@ function TxTableRow({ tx, onSelect }: { tx: TxRow; onSelect: () => void }) {
 // ─────────── Detail modal ─────────────────────────────────────────────────────
 
 function TxDetailModal({ tx, onClose }: { tx: TxRow; onClose: () => void }) {
-  const cfg = STATUS_CONFIG[tx.status] ?? STATUS_CONFIG.pending
+  const cfg = STATUS_CFG[tx.paymentStatus]
   const dateStr = new Date(tx.rawDate).toLocaleString("en-GB", {
     day: "numeric", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit",
@@ -428,8 +452,8 @@ function TxDetailModal({ tx, onClose }: { tx: TxRow; onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-[10px] uppercase tracking-widest font-bold text-[#adaaaa] capitalize mb-0.5">
-              {tx.type} Details
+            <p className="text-[10px] uppercase tracking-widest font-bold text-[#adaaaa] mb-0.5">
+              {tx.type === "delivery" ? "Delivery Payment" : "Driver Payout"}
             </p>
             <h3 className="text-lg font-bold text-white font-headline">
               #{tx.id.slice(0, 8).toUpperCase()}
@@ -443,7 +467,7 @@ function TxDetailModal({ tx, onClose }: { tx: TxRow; onClose: () => void }) {
           </button>
         </div>
 
-        {/* Amount pill */}
+        {/* Amount + status */}
         <div className="bg-[#262626] rounded-xl p-5 mb-5 flex items-center justify-between">
           <div>
             <p className="text-[10px] text-[#adaaaa] uppercase tracking-widest mb-1">Amount</p>
@@ -459,12 +483,14 @@ function TxDetailModal({ tx, onClose }: { tx: TxRow; onClose: () => void }) {
 
         {/* Detail rows */}
         <div className="space-y-0">
-          <DetailRow label={tx.type === "payment" ? "Customer" : "Driver"} value={tx.userName} />
-          <DetailRow label="Email"  value={tx.userEmail} />
-          <DetailRow label="Date"   value={dateStr} />
+          <DetailRow label={tx.type === "delivery" ? "Customer" : "Driver"} value={tx.userName} />
+          <DetailRow label="Email" value={tx.userEmail} />
+          <DetailRow label="Date"  value={dateStr} />
           {tx.trackingNumber && (
             <div className="flex items-center justify-between py-2.5 border-b border-[#494847]/10">
-              <span className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold">Delivery</span>
+              <span className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold">
+                Delivery
+              </span>
               <a
                 href={`/dashboard/admin/deliveries?tracking=${tx.trackingNumber}`}
                 className="text-xs text-[#a3a6ff] hover:underline font-mono"
