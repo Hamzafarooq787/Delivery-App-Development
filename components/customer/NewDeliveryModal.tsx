@@ -205,7 +205,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
       setUserCoords(coords)
       const code = await googleDetectCountryCode(coords.lat, coords.lng).catch(() => null)
       if (code) setCountryCode(code)
-    }, () => {})
+    }, () => {}, { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 })
   }, [])
 
   // Cleanup live location interval on unmount
@@ -234,31 +234,31 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     else setGpsDestLoading(true)
 
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+      (pos) => {
         const { longitude: lng, latitude: lat } = pos.coords
-        try {
-          const place = await googleReverseGeocode(lat, lng)
-          const address = place || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-          if (field === 'pickup') {
-            setPickupValue(address)
-            setPickupCoords({ lat, lng })
-            setGpsPickupLoading(false)
-          } else {
-            setDeliveryValue(address)
-            setDeliveryCoords({ lat, lng })
-            setGpsDestLoading(false)
-          }
-        } catch {
-          if (field === 'pickup') setGpsPickupLoading(false)
-          else setGpsDestLoading(false)
-          toast.error('Could not get address for your location.')
+        // Set coords immediately — stops the spinner
+        if (field === 'pickup') {
+          setPickupCoords({ lat, lng })
+          setPickupValue(`${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+          setGpsPickupLoading(false)
+        } else {
+          setDeliveryCoords({ lat, lng })
+          setDeliveryValue(`${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+          setGpsDestLoading(false)
         }
+        // Then silently update the text to a real address
+        googleReverseGeocode(lat, lng).then((place) => {
+          if (!place) return
+          if (field === 'pickup') setPickupValue(place)
+          else setDeliveryValue(place)
+        }).catch(() => {})
       },
       () => {
         if (field === 'pickup') setGpsPickupLoading(false)
         else setGpsDestLoading(false)
         toast.error('Location permission denied. Please allow location access.')
-      }
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
     )
   }
 

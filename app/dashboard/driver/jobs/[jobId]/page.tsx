@@ -117,8 +117,10 @@ export default async function JobDetailPage({
                 pickup={pickup}
                 destination={destination}
                 customerId={job.customer_id ?? null}
+                deliveryId={jobId}
                 driverLabel="You"
                 followDriver
+                isDriverView
                 height={360}
               />
               <p className="text-[11px] text-muted-foreground mt-3">

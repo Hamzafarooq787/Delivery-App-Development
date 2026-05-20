@@ -36,6 +36,7 @@ type Props = {
   pickup?: LngLat | null
   destination?: LngLat | null
   routeGeometry?: GeoJSON.LineString | null
+  routeGeometry2?: GeoJSON.LineString | null  // driver to pickup segment (different color)
   height?: number | string
   followDriverId?: string | null
   customerLocation?: LngLat | null
@@ -108,6 +109,7 @@ export function MapboxLiveMap({
   pickup,
   destination,
   routeGeometry,
+  routeGeometry2,
   height = 400,
   followDriverId,
   customerLocation,
@@ -148,7 +150,7 @@ export function MapboxLiveMap({
     }
     if (points.length === 1) {
       map.panTo(points[0])
-      map.setZoom(15)
+      map.setZoom(14)
       return
     }
     const bounds = new google.maps.LatLngBounds()
@@ -167,6 +169,10 @@ export function MapboxLiveMap({
     ? routeGeometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
     : null
 
+  const routeCoords2 = routeGeometry2
+    ? routeGeometry2.coordinates.map(([lng, lat]) => ({ lat, lng }))
+    : null
+
   const defaultCenter = userLocation
     ? { lat: userLocation.lat, lng: userLocation.lng }
     : { lat: 33.1, lng: 73.75 } // Mirpur, AJK
@@ -180,7 +186,7 @@ export function MapboxLiveMap({
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
         center={defaultCenter}
-        zoom={14}
+        zoom={11}
         onLoad={onMapLoad}
         options={{
           styles: DARK_STYLES,
@@ -195,6 +201,22 @@ export function MapboxLiveMap({
           <Polyline
             path={routeCoords}
             options={{ strokeColor: "#a3a6ff", strokeWeight: 4, strokeOpacity: 0.85 }}
+          />
+        )}
+
+        {routeCoords2 && routeCoords2.length > 1 && (
+          <Polyline
+            path={routeCoords2}
+            options={{
+              strokeColor: "#c180ff",
+              strokeWeight: 0,
+              strokeOpacity: 0,
+              icons: [{
+                icon: { path: "M 0,-1 0,1", strokeColor: "#c180ff", strokeWeight: 3, strokeOpacity: 0.75, scale: 3 },
+                offset: "0",
+                repeat: "16px",
+              }],
+            }}
           />
         )}
 
