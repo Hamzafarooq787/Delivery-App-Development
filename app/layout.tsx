@@ -49,12 +49,35 @@ export default function RootLayout({
         <Toaster
           position="top-right"
           theme="dark"
+          gap={8}
           toastOptions={{
+            duration: 5000,
             style: {
-              background: '#1a1919',
-              border: '1px solid rgba(73,72,71,0.3)',
-              color: '#fff',
-              borderRadius: '14px',
+              background: 'rgba(17,17,17,0.96)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              border: '1px solid rgba(73,72,71,0.25)',
+              color: '#ffffff',
+              borderRadius: '16px',
+              padding: '14px 16px',
+              fontSize: '13px',
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: '500',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(163,166,255,0.06)',
+              minWidth: '300px',
+              maxWidth: '380px',
+            },
+            classNames: {
+              title: 'font-bold text-white text-sm',
+              description: 'text-[#adaaaa] text-xs mt-0.5 leading-relaxed',
+              icon: 'text-base',
+              actionButton: 'bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs rounded-lg px-3 py-1.5 hover:brightness-110',
+              cancelButton: 'bg-[#262626] text-[#adaaaa] font-bold text-xs rounded-lg px-3 py-1.5',
+              closeButton: 'text-[#adaaaa] hover:text-white hover:bg-[#262626] rounded-lg',
+              success: 'border-l-2 border-l-emerald-500',
+              error: 'border-l-2 border-l-[#ff6e84]',
+              warning: 'border-l-2 border-l-amber-400',
+              info: 'border-l-2 border-l-[#4a9fd4]',
             },
           }}
         />
