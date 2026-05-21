@@ -95,10 +95,12 @@ function TrackingPageInner() {
         Layout:
         ┌──────────────────────────────────────┐
         │ Desktop: [Info Panel 300px] [Map]     │
-        │ Mobile:  [Map top 45vh] [Panel btm]  │
+        │ Mobile:  [Map flex-4] [Panel flex-5] │
+        │ Mobile main: top-16 bottom-16 (clear │
+        │ header + BottomNav both 64px)         │
         └──────────────────────────────────────┘
       */}
-      <main className="fixed top-16 left-0 md:left-64 right-0 bottom-0 overflow-hidden flex flex-col md:flex-row">
+      <main className="fixed top-16 left-0 md:left-64 right-0 bottom-16 md:bottom-0 overflow-hidden flex flex-col md:flex-row">
 
         {/* ── Info Panel ─────────────────────────────────────
             Mobile: order-2 = appears at bottom
@@ -107,7 +109,7 @@ function TrackingPageInner() {
         <aside className={`
           order-2 md:order-1
           md:w-[300px] md:flex-shrink-0
-          h-[52vh] md:h-full
+          flex-[5] md:flex-none md:h-full
           flex flex-col
           bg-[#080e1a] md:border-r border-[#1a3a5c]/30
           rounded-t-2xl md:rounded-none
@@ -243,7 +245,7 @@ function TrackingPageInner() {
         </aside>
 
         {/* ── Map Area ─────────────────────────────────────── */}
-        <div className="order-1 md:order-2 flex-1 h-[48vh] md:h-full relative bg-[#0a1628]">
+        <div className="order-1 md:order-2 flex-[4] md:flex-1 md:h-full relative bg-[#0a1628]">
           <LiveTrackingPanel
             driverId={shipment?.driver_id ?? null}
             pickup={
