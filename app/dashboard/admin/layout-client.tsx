@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
+import { AdminBottomNav } from "@/components/admin/AdminBottomNav"
 import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
 import { ProfileDropdown } from "@/components/shared/profile-dropdown"
 
@@ -58,9 +59,10 @@ export function AdminLayoutClient({ children, user, pendingVerifications, userId
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto pt-16 pb-6 bg-[#131313]">
+        <main className="flex-1 overflow-y-auto pt-16 pb-24 lg:pb-6 bg-[#131313]">
           {children}
         </main>
+        <AdminBottomNav pendingVerifications={pendingVerifications} />
       </div>
     </div>
   )
