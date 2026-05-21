@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
+import { ProfileDropdown } from "@/components/shared/profile-dropdown"
 
 interface AdminLayoutClientProps {
   children: React.ReactNode
@@ -48,9 +49,12 @@ export function AdminLayoutClient({ children, user, pendingVerifications, userId
             <button className="hidden md:block text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Help">
               <span className="material-symbols-outlined">help_outline</span>
             </button>
-            <div className="h-8 w-8 rounded-full bg-[#262626] flex items-center justify-center border border-[#494847]/30">
-              <span className="material-symbols-outlined text-sm text-[#adaaaa]">person</span>
-            </div>
+            <ProfileDropdown
+              name={user.full_name}
+              email={user.email}
+              role="Admin"
+              profileHref="/dashboard/admin/settings"
+            />
           </div>
         </header>
 
