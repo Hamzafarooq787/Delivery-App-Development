@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { LogoutButton } from "@/components/auth/logout-button"
+import { useTheme, type Theme } from "@/components/shared/theme-provider"
+
+const THEMES: { value: Theme; icon: string; label: string }[] = [
+  { value: "dark",  icon: "dark_mode",  label: "Dark"  },
+  { value: "mix",   icon: "auto_awesome", label: "Mix"   },
+  { value: "light", icon: "light_mode", label: "Light" },
+]
 
 interface ProfileDropdownProps {
   name: string
@@ -23,6 +30,7 @@ function initials(name: string, email: string) {
 export function ProfileDropdown({ name, email, role, profileHref, supportHref }: ProfileDropdownProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const { theme, setTheme } = useTheme()
   const abbr = initials(name, email)
   const displayName = name || email?.split("@")[0] || "Account"
 
@@ -104,7 +112,32 @@ export function ProfileDropdown({ name, email, role, profileHref, supportHref }:
             )}
           </div>
 
-          {/* Divider + Logout */}
+          {/* Theme switcher */}
+          <div className="border-t border-[#494847]/15 px-4 py-3">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-[#adaaaa] mb-2">Appearance</p>
+            <div className="flex gap-1.5">
+              {THEMES.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setTheme(t.value)}
+                  className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${
+                    theme === t.value
+                      ? "bg-[#a3a6ff]/15 text-[#a3a6ff] border border-[#a3a6ff]/30"
+                      : "bg-[#262626]/60 text-[#adaaaa] border border-transparent hover:text-white hover:bg-[#262626]"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base"
+                    style={theme === t.value ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                  >
+                    {t.icon}
+                  </span>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Logout */}
           <div className="border-t border-[#494847]/15 py-1.5">
             <LogoutButton className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#ff6e84] hover:bg-[#ff6e84]/10 transition-colors disabled:opacity-50">
               <span className="material-symbols-outlined text-[18px]">logout</span>

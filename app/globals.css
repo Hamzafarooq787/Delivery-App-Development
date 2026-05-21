@@ -106,3 +106,136 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* ─────────────────────────────────────────────────────────
+   THEME SYSTEM
+   Dark  = default (all current styles apply — no overrides)
+   Light = bright white/grey backgrounds, dark text
+   Mix   = deep purple-dark tint
+   Applied via data-theme="dark|light|mix" on <html>
+   Two layers:
+     1. CSS custom property overrides → affects semantic Tailwind classes
+        (bg-surface-container-low, text-on-surface, text-primary, etc.)
+     2. [class*="..."] attribute selectors → affects hardcoded hex classes
+        (bg-[#131313], text-[#adaaaa], border-[#494847], etc.)
+───────────────────────────────────────────────────────── */
+
+/* ── LIGHT THEME ──────────────────────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* 1. Tailwind semantic token overrides */
+  --color-surface:                    #f8f8fc;
+  --color-surface-dim:                #f0f0f5;
+  --color-surface-variant:            #eaeaf2;
+  --color-surface-container-lowest:   #ffffff;
+  --color-surface-container-low:      #f2f2f7;
+  --color-surface-container:          #ffffff;
+  --color-surface-container-high:     #f5f5fa;
+  --color-surface-container-highest:  #eaeaf2;
+  --color-surface-bright:             #ffffff;
+  --color-background:                 #f2f2f7;
+  --color-on-surface:                 #0f0e1a;
+  --color-on-background:              #0f0e1a;
+  --color-on-surface-variant:         #6b6880;
+  --color-outline:                    #9090a8;
+  --color-outline-variant:            #d0cde8;
+  --color-primary:                    #4447bb;
+  --color-primary-dim:                #3335a0;
+  --color-primary-fixed:              #5558cc;
+  --color-primary-fixed-dim:          #4447bb;
+  --color-on-primary:                 #ffffff;
+  --color-primary-container:          #e8e8ff;
+  --color-secondary:                  #7722cc;
+  --color-on-secondary:               #ffffff;
+  --color-error:                      #cc2244;
+  --color-on-error:                   #ffffff;
+}
+
+[data-theme="light"] body {
+  background-color: #f2f2f7;
+  color: #0f0e1a;
+}
+
+/* 2. Hardcoded hex bg overrides — light */
+[data-theme="light"] [class*="bg-[#131313]"]   { background-color: #f2f2f7 !important; }
+[data-theme="light"] [class*="bg-[#1a1919]"]   { background-color: #ffffff !important; }
+[data-theme="light"] [class*="bg-[#201f1f]"]   { background-color: #f5f5fa !important; }
+[data-theme="light"] [class*="bg-[#262626]"]   { background-color: #eaeaf2 !important; }
+[data-theme="light"] [class*="bg-[#0e0e0e]"]   { background-color: rgba(248,248,252,0.92) !important; }
+[data-theme="light"] [class*="bg-[#0a0a0a]"]   { background-color: rgba(244,244,249,0.97) !important; }
+
+/* Text — light */
+[data-theme="light"] .text-white                      { color: #0f0e1a; }
+[data-theme="light"] [class*="text-[#adaaaa]"]        { color: #6b6880 !important; }
+[data-theme="light"] [class*="text-[#494847]"]        { color: #9090a8 !important; }
+[data-theme="light"] [class*="text-[#a3a6ff]"]        { color: #4447bb !important; }
+[data-theme="light"] [class*="text-[#c180ff]"]        { color: #7722cc !important; }
+[data-theme="light"] [class*="text-[#ff6e84]"]        { color: #cc2244 !important; }
+[data-theme="light"] [class*="text-[#6ee7b7]"]        { color: #0f7a5a !important; }
+[data-theme="light"] [class*="text-[#fbbf24]"]        { color: #b45309 !important; }
+
+/* Restore white text ON coloured backgrounds (must come after text-white override) */
+[data-theme="light"] [class*="bg-[#a3a6ff]"]          { color: #ffffff; }
+[data-theme="light"] [class*="bg-[#0f00a4]"]          { color: #ffffff; }
+[data-theme="light"] [class*="bg-[#c180ff]"]          { color: #ffffff; }
+[data-theme="light"] [class*="bg-[#ff6e84]"]          { color: #ffffff; }
+[data-theme="light"] [class*="bg-[#6ee7b7]"]          { color: #0f3d2e; }
+[data-theme="light"] .bg-primary                       { color: #ffffff; }
+
+/* Borders — light */
+[data-theme="light"] [class*="border-[#494847]"]      { border-color: rgba(176,174,200,0.35) !important; }
+[data-theme="light"] [class*="divide-[#494847]"]      { border-color: rgba(176,174,200,0.2) !important; }
+[data-theme="light"] [class*="border-[#a3a6ff]"]      { border-color: #4447bb !important; }
+
+/* Shadow softening — light */
+[data-theme="light"] [class*="shadow-[0_-"]          { box-shadow: 0 -4px 20px rgba(0,0,0,0.06) !important; }
+[data-theme="light"] [class*="shadow-[0_1px"]        { box-shadow: 0 1px 0 0 rgba(0,0,0,0.08) !important; }
+
+
+/* ── MIX THEME (Deep Purple Dark) ────────────────────── */
+[data-theme="mix"] {
+  /* 1. Tailwind semantic token overrides */
+  --color-surface:                    #0d0a1a;
+  --color-surface-dim:                #090614;
+  --color-surface-variant:            #2e2452;
+  --color-surface-container-lowest:   #060412;
+  --color-surface-container-low:      #130e22;
+  --color-surface-container:          #1d1633;
+  --color-surface-container-high:     #261e42;
+  --color-surface-container-highest:  #2e2452;
+  --color-surface-bright:             #3a2e64;
+  --color-background:                 #130e22;
+  --color-on-surface:                 #f0eeff;
+  --color-on-background:              #f0eeff;
+  --color-on-surface-variant:         #c4b8e8;
+  --color-outline:                    #7060b0;
+  --color-outline-variant:            #4a3878;
+  --color-primary:                    #a3a6ff;
+  --color-on-primary:                 #0f00a4;
+  --color-secondary:                  #d49aff;
+  --color-error:                      #ff6e84;
+}
+
+[data-theme="mix"] body {
+  background-color: #130e22;
+  color: #f0eeff;
+}
+
+/* 2. Hardcoded hex bg overrides — mix */
+[data-theme="mix"] [class*="bg-[#131313]"]   { background-color: #130e22 !important; }
+[data-theme="mix"] [class*="bg-[#1a1919]"]   { background-color: #1d1633 !important; }
+[data-theme="mix"] [class*="bg-[#201f1f]"]   { background-color: #261e42 !important; }
+[data-theme="mix"] [class*="bg-[#262626]"]   { background-color: #2e2452 !important; }
+[data-theme="mix"] [class*="bg-[#0e0e0e]"]   { background-color: #0d0a1a !important; }
+[data-theme="mix"] [class*="bg-[#0a0a0a]"]   { background-color: rgba(9,6,20,0.97) !important; }
+
+/* Text — mix */
+[data-theme="mix"] .text-white                      { color: #f0eeff; }
+[data-theme="mix"] [class*="text-[#adaaaa]"]        { color: #c4b8e8 !important; }
+[data-theme="mix"] [class*="text-[#494847]"]        { color: #4a3878 !important; }
+
+/* Borders — mix */
+[data-theme="mix"] [class*="border-[#494847]"]      { border-color: rgba(74,56,120,0.4) !important; }
+[data-theme="mix"] [class*="divide-[#494847]"]      { border-color: rgba(74,56,120,0.2) !important; }
+
