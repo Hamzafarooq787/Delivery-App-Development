@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { RealtimeNotifications } from '@/components/shared/realtime-notifications'
+import { ProfileDropdown } from '@/components/shared/profile-dropdown'
 
 interface HeaderProps {
   onNewDelivery?: () => void
@@ -19,18 +20,28 @@ function getGreeting() {
 export default function Header({ onNewDelivery, userId }: HeaderProps) {
   const supabase = useMemo(() => createClient(), [])
   const [firstName, setFirstName] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
 
   useEffect(() => {
-    if (!userId) return
-    supabase
-      .from('users')
-      .select('full_name')
-      .eq('id', userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.full_name) setFirstName(data.full_name.split(' ')[0])
-      })
-  }, [userId, supabase])
+    let cancelled = false
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+      setEmail(user.email ?? '')
+      const { data } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!cancelled && data?.full_name) {
+        setFullName(data.full_name)
+        setFirstName(data.full_name.split(' ')[0])
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [supabase, userId])
 
   const greeting = getGreeting()
 
@@ -66,9 +77,9 @@ export default function Header({ onNewDelivery, userId }: HeaderProps) {
         </div>
       </div>
 
-      {/* ── Right: notifications (both) + desktop-only actions ── */}
-      <div className="flex items-center gap-3 md:gap-6">
-        {/* Notifications — shown on all screen sizes */}
+      {/* ── Right: notifications + profile dropdown ── */}
+      <div className="flex items-center gap-3 md:gap-4">
+        {/* Notifications */}
         {userId ? (
           <RealtimeNotifications role="customer" userId={userId} />
         ) : (
@@ -77,11 +88,7 @@ export default function Header({ onNewDelivery, userId }: HeaderProps) {
           </button>
         )}
 
-        {/* Desktop-only extras */}
-        <button className="hidden md:block text-on-surface-variant hover:text-white transition-colors">
-          <span className="material-symbols-outlined">help_outline</span>
-        </button>
-        <div className="hidden md:block h-4 w-px bg-outline-variant/30" />
+        {/* Desktop-only: New Delivery button */}
         {onNewDelivery && (
           <button
             onClick={onNewDelivery}
@@ -91,10 +98,16 @@ export default function Header({ onNewDelivery, userId }: HeaderProps) {
             NEW DELIVERY
           </button>
         )}
-        <button className="hidden md:block text-sm font-inter text-white font-semibold hover:text-primary transition-colors uppercase tracking-widest text-[11px]">
-          Support
-        </button>
+
+        {/* Profile dropdown — all screen sizes */}
+        <ProfileDropdown
+          name={fullName}
+          email={email}
+          role="Customer"
+          profileHref="/dashboard/customer/settings"
+        />
       </div>
     </header>
   )
 }
+
