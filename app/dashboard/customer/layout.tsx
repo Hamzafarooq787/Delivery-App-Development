@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Sidebar from '@/components/customer/Sidebar'
 import BottomNav from '@/components/customer/BottomNav'
+import { CustomerTopBar } from '@/components/customer/CustomerTopBar'
 import dynamic from 'next/dynamic'
 
 // Lazy-load so Google Maps SDK doesn't block layout hydration
@@ -24,6 +25,7 @@ export default function CustomerDashboardLayout({
 
   return (
     <div className="min-h-screen bg-surface-container-low">
+      <CustomerTopBar />
       <Sidebar />
       <BottomNav />
       {children}
