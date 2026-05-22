@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 
@@ -35,79 +36,102 @@ type FeedItem = {
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
+  const admin    = createAdminClient()
 
   const [
     earningsRes,           // driver_earnings → commission/payout KPIs
     deliveredPricesRes,    // delivered delivery_requests → fallback gross revenue
     driverProfilesRes,     // all driver_profiles → fleet stats + approval rate
     disputesCountRes,      // open disputes count
-    recentOrdersRes,       // last 5 orders → Recent Orders table
-    pendingDriversRes,     // pending drivers → Approval table + activity feed
+    recentOrdersRes,       // last 8 orders → Recent Orders table (full data)
+    pendingDriversRes,     // pending drivers → Approval table (full data)
     chartDeliveriesRes,    // last-7-days delivery_requests → Revenue chart
     allDeliveryStatusesRes,// all delivery statuses → fleet completion/active rates
     statusLogsRes,         // recent status_logs → activity feed (delivery events)
     disputesFeedRes,       // recent disputes → activity feed
     payoutsFeedRes,        // recent payouts → activity feed
   ] = await Promise.all([
-    supabase
+    admin
       .from("driver_earnings")
       .select("amount, commission_amount"),
 
-    supabase
+    admin
       .from("delivery_requests")
       .select("price")
       .eq("status", "delivered")
       .not("price", "is", null),
 
-    supabase
+    admin
       .from("driver_profiles")
       .select("id, status"),
 
-    supabase
+    admin
       .from("disputes")
       .select("id", { count: "exact", head: true })
       .eq("status", "open"),
 
-    supabase
+    // Full order data: addresses, item info, customer & driver ids
+    admin
       .from("delivery_requests")
-      .select("id, tracking_number, status, price, created_at")
+      .select("id, tracking_number, status, price, created_at, pickup_address, delivery_address, item_description, customer_id, driver_id")
+      .order("created_at", { ascending: false })
+      .limit(8),
+
+    // Full driver profile data including vehicle info and user details
+    admin
+      .from("driver_profiles")
+      .select("id, vehicle_type, vehicle_number, created_at, users(full_name, phone)")
+      .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(5),
 
-    supabase
-      .from("driver_profiles")
-      .select("id, created_at, users(full_name)")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(3),
-
-    supabase
+    admin
       .from("delivery_requests")
       .select("price, created_at, status")
       .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString()),
 
-    supabase
+    admin
       .from("delivery_requests")
       .select("status"),
 
-    supabase
+    admin
       .from("delivery_status_logs")
       .select("id, status, created_at, delivery_requests(tracking_number)")
       .order("created_at", { ascending: false })
       .limit(10),
 
-    supabase
+    admin
       .from("disputes")
       .select("id, issue, created_at")
       .order("created_at", { ascending: false })
       .limit(5),
 
-    supabase
+    admin
       .from("payouts")
       .select("id, amount, status, created_at, users(full_name)")
       .order("created_at", { ascending: false })
       .limit(5),
   ])
+
+  // ── Resolve customer & driver names for recent orders ─────────────────────
+  const recentOrders = recentOrdersRes.data ?? []
+  const userIdsNeeded = [
+    ...new Set([
+      ...recentOrders.map(o => o.customer_id).filter(Boolean),
+      ...recentOrders.map(o => o.driver_id).filter(Boolean),
+    ])
+  ] as string[]
+
+  let userNameMap: Record<string, string> = {}
+  if (userIdsNeeded.length > 0) {
+    const { data: userRows } = await admin
+      .from("users")
+      .select("id, full_name")
+      .in("id", userIdsNeeded)
+    for (const u of userRows ?? []) {
+      userNameMap[u.id] = u.full_name ?? "Unknown"
+    }
+  }
 
   // ── Revenue KPIs ──────────────────────────────────────────────────────────
 
@@ -380,19 +404,28 @@ export default async function AdminDashboardPage() {
               {(pendingDriversRes.data ?? []).length === 0 ? (
                 <p className="py-10 text-center text-[#adaaaa] text-sm">No pending applications</p>
               ) : (
-                (pendingDriversRes.data ?? []).map((driver: any) => (
-                  <a key={driver.id} href={`/dashboard/admin/drivers/${driver.id}`} className="flex items-center gap-3 px-4 py-4 hover:bg-[#262626] transition-colors">
-                    <div className="w-9 h-9 rounded-full bg-[#262626] flex items-center justify-center font-bold text-xs text-white shrink-0">
-                      {(driver.users?.full_name ?? "?").slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{driver.users?.full_name ?? "Unknown"}</p>
-                      <p className="text-xs text-[#adaaaa]">{new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#c180ff]/10 text-[#c180ff]">Pending</span>
-                    <span className="material-symbols-outlined text-[#a3a6ff] text-lg shrink-0">chevron_right</span>
-                  </a>
-                ))
+                (pendingDriversRes.data ?? []).map((driver: any) => {
+                  const user = Array.isArray(driver.users) ? driver.users[0] : driver.users
+                  const name = user?.full_name ?? "Unknown"
+                  const phone = user?.phone ?? null
+                  const vehicleType = driver.vehicle_type ?? null
+                  return (
+                    <a key={driver.id} href={`/dashboard/admin/drivers/${driver.id}`} className="flex items-center gap-3 px-4 py-4 hover:bg-[#262626] transition-colors">
+                      <div className="w-9 h-9 rounded-full bg-[#262626] flex items-center justify-center font-bold text-xs text-white shrink-0">
+                        {name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{name}</p>
+                        <p className="text-xs text-[#adaaaa]">
+                          {vehicleType ?? "Vehicle type not set"}{phone ? ` · ${phone}` : ""}
+                        </p>
+                        <p className="text-xs text-[#494847]">{new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#c180ff]/10 text-[#c180ff]">Pending</span>
+                      <span className="material-symbols-outlined text-[#a3a6ff] text-lg shrink-0">chevron_right</span>
+                    </a>
+                  )
+                })
               )}
             </div>
             {/* Desktop table */}
@@ -400,9 +433,11 @@ export default async function AdminDashboardPage() {
               <table className="w-full text-left">
                 <thead className="bg-[#201f1f]/50 text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
                   <tr>
-                    <th className="px-6 py-4">Driver Name</th>
-                    <th className="px-6 py-4">Fleet Class</th>
-                    <th className="px-6 py-4">Applied Date</th>
+                    <th className="px-6 py-4">Driver</th>
+                    <th className="px-6 py-4">Phone</th>
+                    <th className="px-6 py-4">Vehicle Type</th>
+                    <th className="px-6 py-4">Vehicle Reg</th>
+                    <th className="px-6 py-4">Applied</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
@@ -410,39 +445,55 @@ export default async function AdminDashboardPage() {
                 <tbody className="divide-y divide-[#494847]/10">
                   {(pendingDriversRes.data ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-[#adaaaa] text-sm">
+                      <td colSpan={7} className="py-10 text-center text-[#adaaaa] text-sm">
                         No pending applications
                       </td>
                     </tr>
                   ) : (
-                    (pendingDriversRes.data ?? []).map((driver: any) => (
-                      <tr key={driver.id} className="hover:bg-[#201f1f] transition-colors group">
-                        <td className="px-6 py-4 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#262626] flex items-center justify-center font-bold text-xs text-white">
-                            {(driver.users?.full_name ?? "?").slice(0, 2).toUpperCase()}
-                          </div>
-                          <span className="text-sm font-medium text-white">{driver.users?.full_name ?? "Unknown"}</span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-[#adaaaa]">Last Mile</td>
-                        <td className="px-6 py-4 text-sm text-[#adaaaa]">
-                          {new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#c180ff]/10 text-[#c180ff] uppercase">
-                            Pending
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <a
-                            href={`/dashboard/admin/drivers/${driver.id}`}
-                            className="p-2 text-[#a3a6ff] hover:bg-[#a3a6ff]/10 rounded-lg transition-colors inline-flex"
-                            title="Review driver"
-                          >
-                            <span className="material-symbols-outlined text-lg">arrow_forward</span>
-                          </a>
-                        </td>
-                      </tr>
-                    ))
+                    (pendingDriversRes.data ?? []).map((driver: any) => {
+                      const user = Array.isArray(driver.users) ? driver.users[0] : driver.users
+                      const name = user?.full_name ?? "Unknown"
+                      const phone = user?.phone ?? "—"
+                      const vehicleType = driver.vehicle_type ?? "—"
+                      const vehicleNumber = driver.vehicle_number ?? "—"
+                      return (
+                        <tr key={driver.id} className="hover:bg-[#201f1f] transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-[#262626] flex items-center justify-center font-bold text-xs text-white shrink-0">
+                                {name.slice(0, 2).toUpperCase()}
+                              </div>
+                              <span className="text-sm font-medium text-white">{name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#adaaaa]">{phone}</td>
+                          <td className="px-6 py-4 text-sm text-[#adaaaa]">
+                            {vehicleType !== "—" ? (
+                              <span className="px-2 py-0.5 rounded bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px] font-bold uppercase">{vehicleType}</span>
+                            ) : <span className="text-[#494847]">—</span>}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-mono text-[#adaaaa]">{vehicleNumber}</td>
+                          <td className="px-6 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
+                            {new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#c180ff]/10 text-[#c180ff] uppercase">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#c180ff] animate-pulse" />
+                              Pending
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <a
+                              href={`/dashboard/admin/drivers/${driver.id}`}
+                              className="p-2 text-[#a3a6ff] hover:bg-[#a3a6ff]/10 rounded-lg transition-colors inline-flex"
+                              title="Review driver"
+                            >
+                              <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                            </a>
+                          </td>
+                        </tr>
+                      )
+                    })
                   )}
                 </tbody>
               </table>
@@ -459,24 +510,42 @@ export default async function AdminDashboardPage() {
             </div>
             {/* Mobile list */}
             <div className="md:hidden divide-y divide-[#494847]/10">
-              {(recentOrdersRes.data ?? []).length === 0 ? (
+              {recentOrders.length === 0 ? (
                 <p className="py-10 text-center text-[#adaaaa] text-sm">No orders yet</p>
               ) : (
-                (recentOrdersRes.data ?? []).map((order) => (
-                  <div key={order.id} className="flex items-center gap-3 px-4 py-4">
-                    <div className="w-9 h-9 rounded-xl bg-[#262626] flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-[#a3a6ff] text-base">local_shipping</span>
+                recentOrders.map((order) => {
+                  const customerName = order.customer_id ? (userNameMap[order.customer_id] ?? "Unknown Customer") : "—"
+                  const driverName   = order.driver_id   ? (userNameMap[order.driver_id]   ?? "Unassigned")       : "Unassigned"
+                  return (
+                    <div key={order.id} className="px-4 py-4 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-mono text-[#a3a6ff] truncate">{order.tracking_number ?? "—"}</p>
+                        <StatusPill status={order.status} />
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-[#adaaaa] truncate">
+                          <span className="text-white font-semibold">{customerName}</span>
+                          {order.item_description ? ` · ${order.item_description}` : ""}
+                        </p>
+                        <p className="text-sm font-bold text-white shrink-0">{order.price != null ? fmt(order.price) : "—"}</p>
+                      </div>
+                      {(order.pickup_address || order.delivery_address) && (
+                        <div className="text-xs text-[#494847] space-y-0.5">
+                          {order.pickup_address && (
+                            <p className="truncate"><span className="text-[#adaaaa]/60">From:</span> {order.pickup_address}</p>
+                          )}
+                          {order.delivery_address && (
+                            <p className="truncate"><span className="text-[#adaaaa]/60">To:</span> {order.delivery_address}</p>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-[10px] text-[#494847]">
+                        {new Date(order.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}
+                        {order.driver_id ? ` · Driver: ${driverName}` : " · Unassigned"}
+                      </p>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-mono text-[#a3a6ff] truncate">{order.tracking_number ?? "—"}</p>
-                      <p className="text-xs text-[#adaaaa]">{new Date(order.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-white">{order.price != null ? fmt(order.price) : "—"}</p>
-                      <StatusPill status={order.status} />
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
             {/* Desktop table */}
@@ -484,32 +553,59 @@ export default async function AdminDashboardPage() {
               <table className="w-full text-left">
                 <thead className="bg-[#201f1f]/50 text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
                   <tr>
-                    <th className="px-6 py-4">Tracking #</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Price</th>
-                    <th className="px-6 py-4">Date</th>
+                    <th className="px-5 py-4">Tracking #</th>
+                    <th className="px-5 py-4">Customer</th>
+                    <th className="px-5 py-4">Item</th>
+                    <th className="px-5 py-4">Route</th>
+                    <th className="px-5 py-4">Driver</th>
+                    <th className="px-5 py-4">Status</th>
+                    <th className="px-5 py-4">Price</th>
+                    <th className="px-5 py-4">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#494847]/10">
-                  {(recentOrdersRes.data ?? []).length === 0 ? (
+                  {recentOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-10 text-center text-[#adaaaa] text-sm">No orders yet</td>
+                      <td colSpan={8} className="py-10 text-center text-[#adaaaa] text-sm">No orders yet</td>
                     </tr>
                   ) : (
-                    (recentOrdersRes.data ?? []).map((order) => (
-                      <tr key={order.id} className="hover:bg-[#201f1f] transition-colors">
-                        <td className="px-6 py-4 font-mono text-sm text-[#a3a6ff]">{order.tracking_number ?? "—"}</td>
-                        <td className="px-6 py-4">
-                          <StatusPill status={order.status} />
-                        </td>
-                        <td className="px-6 py-4 text-sm font-bold text-white">
-                          {order.price != null ? fmt(order.price) : "—"}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
-                          {new Date(order.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
-                        </td>
-                      </tr>
-                    ))
+                    recentOrders.map((order) => {
+                      const customerName = order.customer_id ? (userNameMap[order.customer_id] ?? "Unknown") : "—"
+                      const driverName   = order.driver_id   ? (userNameMap[order.driver_id]   ?? "—")       : "—"
+                      const pickup   = order.pickup_address   ?? "—"
+                      const delivery = order.delivery_address ?? "—"
+                      return (
+                        <tr key={order.id} className="hover:bg-[#201f1f] transition-colors">
+                          <td className="px-5 py-4 font-mono text-sm text-[#a3a6ff] whitespace-nowrap">{order.tracking_number ?? "—"}</td>
+                          <td className="px-5 py-4 text-sm text-white font-medium whitespace-nowrap">{customerName}</td>
+                          <td className="px-5 py-4 text-sm text-[#adaaaa] max-w-[120px]">
+                            <span className="truncate block" title={order.item_description ?? ""}>{order.item_description ?? <span className="text-[#494847]">—</span>}</span>
+                          </td>
+                          <td className="px-5 py-4 max-w-[180px]">
+                            <div className="space-y-0.5">
+                              <p className="text-xs text-[#adaaaa] truncate" title={pickup}>
+                                <span className="text-[#6ee7b7] font-bold text-[10px]">FROM </span>{pickup}
+                              </p>
+                              <p className="text-xs text-[#adaaaa] truncate" title={delivery}>
+                                <span className="text-[#a3a6ff] font-bold text-[10px]">TO </span>{delivery}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
+                            {order.driver_id ? driverName : <span className="text-[#494847] text-xs">Unassigned</span>}
+                          </td>
+                          <td className="px-5 py-4">
+                            <StatusPill status={order.status} />
+                          </td>
+                          <td className="px-5 py-4 text-sm font-bold text-white whitespace-nowrap">
+                            {order.price != null ? fmt(order.price) : <span className="text-[#494847]">—</span>}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
+                            {new Date(order.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
+                          </td>
+                        </tr>
+                      )
+                    })
                   )}
                 </tbody>
               </table>
