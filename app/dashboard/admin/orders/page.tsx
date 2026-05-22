@@ -59,16 +59,9 @@ export default async function AdminOrdersPage() {
             Live oversight of active logistical threads within the kinetic void.
           </p>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
-            <span className="material-symbols-outlined text-sm">filter_list</span>
-            <span className="hidden sm:inline">Filters</span>
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
-            <span className="material-symbols-outlined text-sm">calendar_month</span>
-            <span className="hidden sm:inline">Date Range</span>
-          </button>
-        </div>
+        <p className="text-xs text-[#adaaaa] bg-[#1a1919] border border-[#494847]/10 px-3 py-2 rounded-lg">
+          Use the search and filter controls below
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-8">

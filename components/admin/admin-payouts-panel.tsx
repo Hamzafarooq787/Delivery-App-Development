@@ -341,10 +341,13 @@ function PayoutDetailModal({
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Panel
 // ─────────────────────────────────────────────────────────────────────────────
+const PAYOUTS_PAGE_SIZE = 10
+
 export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayoutsPanelProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All")
   const [dateFilter,   setDateFilter]   = useState<DateFilter>("All Time")
   const [selected,     setSelected]     = useState<EnrichedPayout | null>(null)
+  const [page,         setPage]         = useState(1)
 
   const filtered = useMemo(() => {
     const now = Date.now()
@@ -360,6 +363,13 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
       return matchStatus && matchDate
     })
   }, [payouts, statusFilter, dateFilter])
+
+  // Reset page when filter changes
+  useEffect(() => { setPage(1) }, [statusFilter, dateFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAYOUTS_PAGE_SIZE))
+  const safePage   = Math.min(page, totalPages)
+  const pageRows   = filtered.slice((safePage - 1) * PAYOUTS_PAGE_SIZE, safePage * PAYOUTS_PAGE_SIZE)
 
   const pendingCount = payouts.filter(p => p.status === "pending").length
 
@@ -520,7 +530,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
                   </td>
                 </tr>
               ) : (
-                filtered.map(p => (
+                pageRows.map(p => (
                   <tr
                     key={p.id}
                     className="hover:bg-[#201f1f] transition-colors cursor-pointer group"
@@ -564,7 +574,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
           {filtered.length === 0 ? (
             <p className="py-12 text-center text-[#adaaaa] text-sm">No payout requests found.</p>
           ) : (
-            filtered.map(p => (
+            pageRows.map(p => (
               <div
                 key={p.id}
                 className="px-4 py-4 hover:bg-[#201f1f] transition-colors cursor-pointer"
@@ -602,13 +612,24 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
         {/* Footer */}
         <div className="px-4 md:px-8 py-4 bg-[#201f1f]/30 flex items-center justify-between">
           <p className="text-xs text-[#adaaaa]">
-            {filtered.length} of {payouts.length} requests
+            {filtered.length === 0
+              ? "No results"
+              : `${(safePage - 1) * PAYOUTS_PAGE_SIZE + 1}–${Math.min(safePage * PAYOUTS_PAGE_SIZE, filtered.length)} of ${filtered.length} requests`}
           </p>
-          <div className="flex gap-2">
-            <button className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[#a3a6ff] transition-colors">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[#a3a6ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <span className="material-symbols-outlined text-sm">chevron_left</span>
             </button>
-            <button className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[#a3a6ff] transition-colors">
+            <span className="text-xs text-[#adaaaa]">{safePage} / {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[#a3a6ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <span className="material-symbols-outlined text-sm">chevron_right</span>
             </button>
           </div>

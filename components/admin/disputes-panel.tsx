@@ -43,9 +43,19 @@ export function DisputesPanel({ disputes: initial, total }: { disputes: Dispute[
   const [activeTab, setActiveTab] = useState<Tab>("All Cases")
   const [disputes, setDisputes] = useState(initial)
   const [isPending, startTransition] = useTransition()
+  const [query, setQuery] = useState("")
 
   const filterStatus = TAB_FILTER[activeTab]
-  const filtered = filterStatus ? disputes.filter((d) => d.status === filterStatus) : disputes
+  const filtered = disputes.filter((d) => {
+    if (filterStatus && d.status !== filterStatus) return false
+    if (!query.trim()) return true
+    const q = query.toLowerCase()
+    return (
+      (d.description ?? "").toLowerCase().includes(q) ||
+      (d.category ?? "").toLowerCase().includes(q) ||
+      d.id.toLowerCase().includes(q)
+    )
+  })
 
   const openCount = disputes.filter((d) => d.status === "open").length
   const escalatedCount = disputes.filter((d) => d.status === "escalated").length
@@ -70,7 +80,18 @@ export function DisputesPanel({ disputes: initial, total }: { disputes: Dispute[
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-[#1a1919] border border-[#494847]/20 px-4 py-2 rounded-full text-sm">
             <span className="material-symbols-outlined text-xs text-[#adaaaa]">search</span>
-            <input type="text" placeholder="Search cases..." className="bg-transparent text-white text-xs placeholder-[#494847] outline-none w-32" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search cases..."
+              className="bg-transparent text-white text-xs placeholder-[#494847] outline-none w-32"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} className="text-[#adaaaa] hover:text-white">
+                <span className="material-symbols-outlined text-[12px]">close</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
