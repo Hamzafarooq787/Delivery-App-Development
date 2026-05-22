@@ -12,6 +12,7 @@ const navItems = [
   { href: '/dashboard/customer/tracking', icon: 'map', label: 'Live Tracking' },
   { href: '/dashboard/customer/history', icon: 'history', label: 'History' },
   { href: '/dashboard/customer/payments', icon: 'payments', label: 'Payments' },
+  { href: '/dashboard/customer/wallet', icon: 'account_balance_wallet', label: 'Wallet' },
   { href: '/dashboard/customer/addresses', icon: 'location_on', label: 'Addresses' },
   { href: '/dashboard/customer/settings', icon: 'settings', label: 'Settings' },
 ]

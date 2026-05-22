@@ -7,6 +7,7 @@ import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
 import { createClient } from '@/lib/supabase/client'
 import { getDriverNamesByIds } from '@/app/actions/driver'
+import { CancelOrderButton } from '@/components/customer/cancel-order-button'
 
 type DeliveryRow = {
   id: string
@@ -220,31 +221,43 @@ export default function ActiveDeliveriesPage() {
                 return (
                   <div
                     key={shipment.id}
-                    className="flex items-center gap-4 px-4 py-4 border-b border-outline-variant/8 last:border-b-0 active:bg-surface-container-high transition-colors"
-                    onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
+                    className="px-4 py-4 border-b border-outline-variant/8 last:border-b-0"
                   >
-                    {/* Driver avatar */}
-                    <div className={`w-11 h-11 rounded-full ${driverBg} flex items-center justify-center text-xs font-black text-on-primary shrink-0`}>
-                      {driverInitials}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-bold text-on-surface font-mono">{tid}</p>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${statusMeta.cls}`}>
-                          {statusMeta.label}
-                        </span>
+                    <div
+                      className="flex items-center gap-4 active:bg-surface-container-high transition-colors cursor-pointer"
+                      onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
+                    >
+                      {/* Driver avatar */}
+                      <div className={`w-11 h-11 rounded-full ${driverBg} flex items-center justify-center text-xs font-black text-on-primary shrink-0`}>
+                        {driverInitials}
                       </div>
-                      <p className="text-[11px] text-on-surface-variant truncate">
-                        {formatRoute(shipment.pickup_address)} → {formatRoute(shipment.delivery_address)}
-                      </p>
-                      {shipment.item_description && (
-                        <p className="text-[10px] text-on-surface-variant/70 truncate mt-0.5">{shipment.item_description}</p>
-                      )}
-                    </div>
 
-                    <span className="material-symbols-outlined text-on-surface-variant/40 text-lg shrink-0">chevron_right</span>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-sm font-bold text-on-surface font-mono">{tid}</p>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${statusMeta.cls}`}>
+                            {statusMeta.label}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-on-surface-variant truncate">
+                          {formatRoute(shipment.pickup_address)} → {formatRoute(shipment.delivery_address)}
+                        </p>
+                        {shipment.item_description && (
+                          <p className="text-[10px] text-on-surface-variant/70 truncate mt-0.5">{shipment.item_description}</p>
+                        )}
+                      </div>
+
+                      <span className="material-symbols-outlined text-on-surface-variant/40 text-lg shrink-0">chevron_right</span>
+                    </div>
+                    {/* Cancel button row */}
+                    <div className="mt-3 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <CancelOrderButton
+                        deliveryId={shipment.id}
+                        currentStatus={shipment.status ?? ''}
+                        onCancelled={() => setDeliveries(prev => prev.filter(d => d.id !== shipment.id))}
+                      />
+                    </div>
                   </div>
                 )
               })}
@@ -312,13 +325,20 @@ export default function ActiveDeliveriesPage() {
                             <p className="text-on-surface-variant">{shipment.created_at ? new Date(shipment.created_at).toLocaleDateString() : ''}</p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
-                          className="bg-primary text-on-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(163,166,255,0.2)]"
-                        >
-                          Track
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <CancelOrderButton
+                            deliveryId={shipment.id}
+                            currentStatus={shipment.status ?? ''}
+                            onCancelled={() => setDeliveries(prev => prev.filter(d => d.id !== shipment.id))}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
+                            className="bg-primary text-on-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(163,166,255,0.2)]"
+                          >
+                            Track
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

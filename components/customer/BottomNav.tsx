@@ -9,8 +9,8 @@ const LEFT_ITEMS = [
   { href: '/dashboard/customer/active-deliveries', icon: 'package_2', label: 'Shipments'},
 ]
 const RIGHT_ITEMS = [
-  { href: '/dashboard/customer/tracking',  icon: 'explore', label: 'Track'  },
-  { href: '/dashboard/customer/settings',  icon: 'person',  label: 'Profile'},
+  { href: '/dashboard/customer/wallet',   icon: 'account_balance_wallet', label: 'Wallet' },
+  { href: '/dashboard/customer/settings', icon: 'person',                 label: 'Profile'},
 ]
 
 function NavItem({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {

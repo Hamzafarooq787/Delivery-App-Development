@@ -176,9 +176,14 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  const updatePayload: Record<string, string> = { status }
+  if (status === "cancelled") {
+    updatePayload.cancelled_by = "driver"
+  }
+
   const { error } = await supabase
     .from("delivery_requests")
-    .update({ status })
+    .update(updatePayload)
     .eq("id", deliveryId)
     .eq("driver_id", user.id)
 
