@@ -134,23 +134,20 @@ export default function SignupPage() {
               </div>
 
               {role === "driver" && (
-                <div className="mb-6 flex items-start gap-2 bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-xs rounded-xl px-4 py-3">
+                <div className="mb-4 flex items-start gap-2 bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-xs rounded-xl px-4 py-3">
                   <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">info</span>
                   Driver accounts require admin approval before you can accept jobs.
                 </div>
               )}
 
-              {/* Google sign-up — customer only, shown right after tab selection */}
-              {role === "customer" && (
-                <>
-                  <SocialAuthButtons mode="signup" />
-                  <div className="flex items-center gap-3 my-5">
-                    <div className="flex-1 h-px bg-[#262626]" />
-                    <span className="text-xs text-[#494847]">or sign up with email</span>
-                    <div className="flex-1 h-px bg-[#262626]" />
-                  </div>
-                </>
-              )}
+              {/* Google sign-up — available for both Customer and Driver */}
+              <SocialAuthButtons mode="signup" role={role} />
+
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-[#262626]" />
+                <span className="text-xs text-[#494847]">or sign up with email</span>
+                <div className="flex-1 h-px bg-[#262626]" />
+              </div>
 
               {error && (
                 <div className="mb-6 flex items-center gap-2 bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] text-sm rounded-xl px-4 py-3">
