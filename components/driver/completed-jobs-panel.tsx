@@ -49,7 +49,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
     )
   }, [jobs, search, period])
 
-  const totalPayout = filtered.reduce((s, j) => s + (j.price ?? 0), 0)
+  const totalPayout = filtered.reduce((s, j) => s + (j.price ?? 0) * 0.75, 0)
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -141,7 +141,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
                     <td className="px-5 py-3.5 text-sm text-[#adaaaa] max-w-[160px]">
                       <span className="block truncate" title={job.delivery_address ?? ""}>{job.delivery_address || "—"}</span>
                     </td>
-                    <td className="px-5 py-3.5 text-sm font-semibold text-[#a3a6ff]">{fmt(job.price)}</td>
+                    <td className="px-5 py-3.5 text-sm font-semibold text-[#a3a6ff]">{fmt(job.price != null ? job.price * 0.75 : null)}</td>
                     <td className="px-5 py-3.5">
                       <Link
                         href={`/dashboard/driver/jobs/${job.id}`}

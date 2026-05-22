@@ -519,9 +519,13 @@ export default function CustomerDashboardPage() {
                   const statusKey  = (delivery.status || 'requested').toLowerCase()
                   const statusMeta = STATUS_DISPLAY[statusKey] ?? { label: statusKey.replace(/_/g, ' ').toUpperCase(), cls: 'bg-surface-container-highest text-on-surface-variant' }
                   const isActive   = ACTIVE_STATUSES.includes(delivery.status ?? '')
+                  const href = isActive
+                    ? `/dashboard/customer/tracking?id=${delivery.id}`
+                    : `/dashboard/customer/history`
                   return (
-                    <div
+                    <Link
                       key={delivery.id}
+                      href={href}
                       className="flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 md:py-4 hover:bg-surface-container-high active:bg-surface-container-high transition-colors group cursor-pointer"
                     >
                       {/* Icon */}
@@ -548,7 +552,7 @@ export default function CustomerDashboardPage() {
                       <span className="material-symbols-outlined text-on-surface-variant/40 text-lg group-hover:text-on-surface-variant transition-colors shrink-0">
                         chevron_right
                       </span>
-                    </div>
+                    </Link>
                   )
                 })}
               </div>

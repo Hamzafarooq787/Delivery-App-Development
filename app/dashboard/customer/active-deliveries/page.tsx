@@ -6,6 +6,7 @@ import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
 import { createClient } from '@/lib/supabase/client'
+import { getDriverNamesByIds } from '@/app/actions/driver'
 
 type DeliveryRow = {
   id: string
@@ -46,6 +47,7 @@ export default function ActiveDeliveriesPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [driverNames, setDriverNames] = useState<Record<string, string>>({})
 
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -86,7 +88,15 @@ export default function ActiveDeliveriesPage() {
         console.error('[v0] active deliveries fetch error', error)
         setDeliveries([])
       } else {
-        setDeliveries((data ?? []) as DeliveryRow[])
+        const rows = (data ?? []) as DeliveryRow[]
+        setDeliveries(rows)
+        // Fetch driver names for assigned drivers
+        const driverIds = [...new Set(rows.map((r) => r.driver_id).filter(Boolean) as string[])]
+        if (driverIds.length > 0) {
+          getDriverNamesByIds(driverIds).then((nameMap) => {
+            if (nameMap && !cancelled) setDriverNames(nameMap)
+          })
+        }
       }
       setLoading(false)
     }
@@ -202,6 +212,10 @@ export default function ActiveDeliveriesPage() {
                 const statusMeta = ACTIVE_STATUS_LABELS[statusKey] ?? { label: statusKey.replace(/_/g, ' '), cls: 'bg-surface-container-highest text-on-surface-variant' }
                 const tid        = formatTrackingId(shipment)
                 const driverBg   = DRIVER_BG_PALETTE[idx % DRIVER_BG_PALETTE.length]
+                const driverName = shipment.driver_id ? (driverNames[shipment.driver_id] ?? null) : null
+                const driverInitials = driverName
+                  ? driverName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+                  : shipment.driver_id ? 'DRV' : '?'
 
                 return (
                   <div
@@ -211,7 +225,7 @@ export default function ActiveDeliveriesPage() {
                   >
                     {/* Driver avatar */}
                     <div className={`w-11 h-11 rounded-full ${driverBg} flex items-center justify-center text-xs font-black text-on-primary shrink-0`}>
-                      {shipment.driver_id ? shipment.driver_id.slice(0, 2).toUpperCase() : '?'}
+                      {driverInitials}
                     </div>
 
                     {/* Info */}
@@ -243,6 +257,10 @@ export default function ActiveDeliveriesPage() {
                 const statusMeta = ACTIVE_STATUS_LABELS[statusKey] ?? { label: statusKey.replace(/_/g, ' '), cls: 'bg-surface-container-highest text-on-surface-variant' }
                 const trackingId = formatTrackingId(shipment)
                 const driverBg   = DRIVER_BG_PALETTE[idx % DRIVER_BG_PALETTE.length]
+                const driverNameDesktop = shipment.driver_id ? (driverNames[shipment.driver_id] ?? null) : null
+                const driverInitialsDesktop = driverNameDesktop
+                  ? driverNameDesktop.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+                  : shipment.driver_id ? 'DRV' : 'NA'
 
                 return (
                   <div
@@ -287,10 +305,10 @@ export default function ActiveDeliveriesPage() {
                       <div className="flex items-center justify-between pt-6 border-t border-outline-variant/10">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full ${driverBg} flex items-center justify-center text-[10px] font-bold text-on-primary`}>
-                            {shipment.driver_id ? shipment.driver_id.slice(0, 2).toUpperCase() : 'NA'}
+                            {driverInitialsDesktop}
                           </div>
                           <div className="text-xs">
-                            <p className="text-on-surface font-medium">{shipment.driver_id ? 'Driver assigned' : 'Awaiting driver'}</p>
+                            <p className="text-on-surface font-medium">{driverNameDesktop ?? (shipment.driver_id ? 'Driver assigned' : 'Awaiting driver')}</p>
                             <p className="text-on-surface-variant">{shipment.created_at ? new Date(shipment.created_at).toLocaleDateString() : ''}</p>
                           </div>
                         </div>

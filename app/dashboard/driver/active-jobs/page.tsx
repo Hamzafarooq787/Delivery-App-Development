@@ -3,7 +3,7 @@ import Link from "next/link"
 
 export const dynamic = "force-dynamic"
 
-const ACTIVE_STATUSES = ["accepted", "picked_up", "in_transit"]
+const ACTIVE_STATUSES = ["accepted", "collected", "in_transit"]
 
 function formatDate(value: string | null) {
   if (!value) return "—"
@@ -25,7 +25,7 @@ function statusLabel(status: string) {
 
 function statusColor(status: string) {
   if (status === "accepted") return "text-[#a3a6ff]"
-  if (status === "picked_up") return "text-[#c180ff]"
+  if (status === "collected") return "text-[#c180ff]"
   if (status === "in_transit") return "text-[#6ee7b7]"
   return "text-[#adaaaa]"
 }
