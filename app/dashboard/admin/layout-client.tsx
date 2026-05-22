@@ -54,6 +54,8 @@ export function AdminLayoutClient({ children, user, pendingVerifications, userId
               name={user.full_name}
               email={user.email}
               role="Admin"
+              activeRole="admin"
+              userId={userId}
               profileHref="/dashboard/admin/settings"
             />
           </div>

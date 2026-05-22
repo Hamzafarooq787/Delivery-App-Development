@@ -83,6 +83,8 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
               name={user.full_name}
               email={user.email}
               role="Driver"
+              activeRole="driver"
+              userId={userId}
               profileHref="/dashboard/driver/profile"
               supportHref="/dashboard/driver/support"
             />

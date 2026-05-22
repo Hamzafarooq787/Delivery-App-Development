@@ -55,11 +55,10 @@ export async function GET(request: Request) {
     .eq("id", user.id)
     .maybeSingle()
 
-  let role = existing?.role ?? "customer"
+  const admin = createAdminClient()
 
   // 5. First-time OAuth user — create profile rows via admin client (bypasses RLS)
   if (!existing) {
-    const admin = createAdminClient()
     const meta = user.user_metadata ?? {}
     const full_name =
       meta.full_name ||
@@ -69,30 +68,57 @@ export async function GET(request: Request) {
       "User"
 
     // Use the role passed from the signup page; fall back to "customer"
-    role = signupRole === "driver" ? "driver" : "customer"
+    const role = signupRole === "driver" ? "driver" : "customer"
 
-    // Create the shared users row
-    await admin
-      .from("users")
-      .upsert(
-        { id: user.id, full_name, role, email: user.email },
-        { onConflict: "id" }
-      )
-
-    // Create the role-specific profile row
+    await admin.from("users").upsert(
+      { id: user.id, full_name, role, email: user.email },
+      { onConflict: "id" }
+    )
     if (role === "driver") {
-      await admin
-        .from("driver_profiles")
-        .upsert({ id: user.id, status: "pending" }, { onConflict: "id" })
+      await admin.from("driver_profiles").upsert(
+        { id: user.id, status: "pending" }, { onConflict: "id" }
+      )
     } else {
-      await admin
-        .from("customer_profiles")
-        .upsert({ id: user.id }, { onConflict: "id" })
+      await admin.from("customer_profiles").upsert(
+        { id: user.id }, { onConflict: "id" }
+      )
     }
+
+    if (role === "admin")  return NextResponse.redirect(`${origin}/dashboard/admin`)
+    if (role === "driver") return NextResponse.redirect(`${origin}/dashboard/driver`)
+    return NextResponse.redirect(`${origin}/dashboard/customer`)
   }
 
-  // 6. Redirect to the correct dashboard based on role
-  if (role === "admin")  return NextResponse.redirect(`${origin}/dashboard/admin`)
-  if (role === "driver") return NextResponse.redirect(`${origin}/dashboard/driver`)
+  // 6. Returning user — check for role conflict (same Google account, different signup role)
+  const existingRole = existing.role as "customer" | "driver" | "admin"
+
+  if (signupRole && signupRole !== existingRole && existingRole !== "admin") {
+    // Auto-add the secondary profile — existing profile data stays untouched
+    if (signupRole === "driver") {
+      const { data: driverRow } = await supabase
+        .from("driver_profiles").select("id").eq("id", user.id).maybeSingle()
+      if (!driverRow) {
+        await admin.from("driver_profiles").upsert(
+          { id: user.id, status: "pending" }, { onConflict: "id" }
+        )
+      }
+    } else {
+      const { data: customerRow } = await supabase
+        .from("customer_profiles").select("id").eq("id", user.id).maybeSingle()
+      if (!customerRow) {
+        await admin.from("customer_profiles").upsert(
+          { id: user.id }, { onConflict: "id" }
+        )
+      }
+    }
+    // Show the user a confirmation page explaining what happened
+    return NextResponse.redirect(
+      `${origin}/auth/account-linked?existing=${existingRole}&added=${signupRole}`
+    )
+  }
+
+  // 7. Normal returning login — redirect to existing role's dashboard
+  if (existingRole === "admin")  return NextResponse.redirect(`${origin}/dashboard/admin`)
+  if (existingRole === "driver") return NextResponse.redirect(`${origin}/dashboard/driver`)
   return NextResponse.redirect(`${origin}/dashboard/customer`)
 }
