@@ -37,6 +37,8 @@ type NotifStyle = {
 }
 
 function notifStyle(title: string): NotifStyle {
+  if (title.includes("New Driver Message") || title.includes("Support Reply") || title.includes("Chat"))
+    return { icon: "chat_bubble", iconColor: "text-[#c180ff]", iconBg: "bg-[#c180ff]/10", accent: "border-[#c180ff]" }
   if (title.includes("Delivered") || title.includes("✅"))
     return { icon: "check_circle", iconColor: "text-emerald-400", iconBg: "bg-emerald-400/10", accent: "border-emerald-500" }
   if (title.includes("New Job") || title.includes("Available"))
@@ -63,6 +65,7 @@ function toastIcon(title: string) {
     : s.icon === "inventory" ? "📬"
     : s.icon === "payments" ? "💳"
     : s.icon === "error_outline" ? "❌"
+    : s.icon === "chat_bubble" ? "💬"
     : "🔔"
 }
 

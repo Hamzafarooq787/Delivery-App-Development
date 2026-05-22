@@ -8,6 +8,7 @@ import { DriverOnboarding } from "@/components/driver/driver-onboarding"
 import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
 import { ProfileDropdown } from "@/components/shared/profile-dropdown"
 import { InstallButton } from "@/components/pwa/install-button"
+import { FloatingLiveChat } from "@/components/driver/floating-live-chat"
 
 interface DriverLayoutClientProps {
   children: React.ReactNode
@@ -101,6 +102,7 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
           )}
         </main>
         <DriverBottomNav isLocked={isLocked} />
+        {isApproved && <FloatingLiveChat />}
       </div>
     </div>
   )

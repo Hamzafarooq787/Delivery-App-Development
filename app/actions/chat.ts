@@ -1,0 +1,149 @@
+"use server"
+
+import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+
+export type ChatMessage = {
+  id: string
+  session_id: string
+  sender_id: string
+  sender_role: "driver" | "admin"
+  content: string
+  created_at: string
+}
+
+export type ChatSession = {
+  id: string
+  driver_id: string
+  driver_unread: number
+  admin_unread: number
+  last_message_at: string
+  driver_name?: string
+  last_message?: string
+}
+
+// ── Driver: get or create their chat session ─────────────────────────────────
+export async function getOrCreateChatSession(): Promise<{ sessionId: string | null; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { sessionId: null, error: "Not authenticated" }
+
+  const admin = createAdminClient()
+
+  // Try to get existing session
+  const { data: existing } = await admin
+    .from("chat_sessions")
+    .select("id")
+    .eq("driver_id", user.id)
+    .single()
+
+  if (existing) return { sessionId: existing.id }
+
+  // Create new session
+  const { data: created, error } = await admin
+    .from("chat_sessions")
+    .insert({ driver_id: user.id })
+    .select("id")
+    .single()
+
+  if (error) return { sessionId: null, error: error.message }
+  return { sessionId: created.id }
+}
+
+// ── Get messages for a session ───────────────────────────────────────────────
+export async function getChatMessages(sessionId: string): Promise<{ data: ChatMessage[]; error?: string }> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("chat_messages")
+    .select("id, session_id, sender_id, sender_role, content, created_at")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true })
+    .limit(100)
+
+  if (error) return { data: [], error: error.message }
+  return { data: (data ?? []) as ChatMessage[] }
+}
+
+// ── Send a message ───────────────────────────────────────────────────────────
+export async function sendChatMessage(
+  sessionId: string,
+  content: string,
+  senderRole: "driver" | "admin"
+): Promise<{ data: ChatMessage | null; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: "Not authenticated" }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from("chat_messages")
+    .insert({ session_id: sessionId, sender_id: user.id, sender_role: senderRole, content: content.trim() })
+    .select()
+    .single()
+
+  if (error) return { data: null, error: error.message }
+  return { data: data as ChatMessage }
+}
+
+// ── Admin: get all sessions with last message + driver name ─────────────────
+export async function getAdminChatSessions(): Promise<{ data: ChatSession[] }> {
+  const admin = createAdminClient()
+
+  const { data: sessions } = await admin
+    .from("chat_sessions")
+    .select("id, driver_id, driver_unread, admin_unread, last_message_at")
+    .order("last_message_at", { ascending: false })
+    .limit(50)
+
+  if (!sessions || sessions.length === 0) return { data: [] }
+
+  // Fetch driver names
+  const driverIds = sessions.map((s: any) => s.driver_id)
+  const { data: users } = await admin.from("users").select("id, full_name, email").in("id", driverIds)
+  const userMap: Record<string, string> = {}
+  for (const u of users ?? []) {
+    userMap[(u as any).id] = (u as any).full_name || (u as any).email || "Driver"
+  }
+
+  // Fetch last message per session
+  const sessionIds = sessions.map((s: any) => s.id)
+  const lastMsgMap: Record<string, string> = {}
+  for (const sid of sessionIds) {
+    const { data: msgs } = await admin
+      .from("chat_messages")
+      .select("content, sender_role")
+      .eq("session_id", sid)
+      .order("created_at", { ascending: false })
+      .limit(1)
+    if (msgs && msgs.length > 0) {
+      const m = msgs[0] as any
+      lastMsgMap[sid] = (m.sender_role === "admin" ? "You: " : "") + m.content
+    }
+  }
+
+  const result: ChatSession[] = sessions.map((s: any) => ({
+    id: s.id,
+    driver_id: s.driver_id,
+    driver_unread: s.driver_unread,
+    admin_unread: s.admin_unread,
+    last_message_at: s.last_message_at,
+    driver_name: userMap[s.driver_id] ?? "Driver",
+    last_message: lastMsgMap[s.id] ?? "",
+  }))
+
+  return { data: result }
+}
+
+// ── Mark session read (reset unread counter) ────────────────────────────────
+export async function markChatSessionRead(sessionId: string, role: "driver" | "admin"): Promise<void> {
+  const admin = createAdminClient()
+  const field = role === "driver" ? "driver_unread" : "admin_unread"
+  await admin.from("chat_sessions").update({ [field]: 0 }).eq("id", sessionId)
+}
+
+// ── Get total admin unread count ─────────────────────────────────────────────
+export async function getAdminTotalUnread(): Promise<number> {
+  const admin = createAdminClient()
+  const { data } = await admin.from("chat_sessions").select("admin_unread")
+  return (data ?? []).reduce((s: number, r: any) => s + (r.admin_unread ?? 0), 0)
+}

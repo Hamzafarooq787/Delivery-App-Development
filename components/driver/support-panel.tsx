@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { LiveChat } from "@/components/driver/LiveChat"
 import { createSupportTicket } from "@/app/actions/driver"
 import type { SupportTicket } from "@/app/actions/driver"
 
@@ -118,43 +117,14 @@ export function SupportPanel({ initialTickets }: { initialTickets: SupportTicket
         </button>
       </div>
 
-      {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#a3a6ff]/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[#a3a6ff]">help</span>
-          </div>
-          <h3 className="text-sm font-bold text-white">Driver FAQs</h3>
-          <p className="text-xs text-[#adaaaa] leading-relaxed flex-1">Common questions about deliveries, payouts, and verification.</p>
-          <a
-            href="#faqs"
-            className="w-full py-2.5 text-center bg-[#262626] border border-[#494847]/20 text-white font-semibold text-sm rounded-xl hover:bg-[#2c2c2c] transition-all"
-          >
-            Browse FAQs
-          </a>
+      {/* Live chat hint */}
+      <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20">
+        <div className="w-9 h-9 rounded-xl bg-[#a3a6ff]/20 flex items-center justify-center shrink-0">
+          <span className="material-symbols-outlined text-[#a3a6ff] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
         </div>
-
-        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#c180ff]/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[#c180ff]">chat</span>
-          </div>
-          <h3 className="text-sm font-bold text-white">Live Chat</h3>
-          <p className="text-xs text-[#adaaaa] leading-relaxed flex-1">Connect with our AI-powered driver support assistant instantly.</p>
-          <LiveChat />
-        </div>
-
-        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 flex flex-col gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#6f00be]/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[#c180ff]">call</span>
-          </div>
-          <h3 className="text-sm font-bold text-white">Call Support</h3>
-          <p className="text-xs text-[#adaaaa] leading-relaxed flex-1">Speak directly to a driver support representative.</p>
-          <a
-            href="tel:+18005550000"
-            className="w-full py-2.5 text-center bg-[#262626] border border-[#494847]/20 text-white font-semibold text-sm rounded-xl hover:bg-[#2c2c2c] transition-all"
-          >
-            Call Now
-          </a>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-white">Need instant help?</p>
+          <p className="text-xs text-[#adaaaa] mt-0.5">Use the <span className="text-[#a3a6ff] font-semibold">chat bubble</span> in the bottom-right corner to talk directly with our support team.</p>
         </div>
       </div>
 

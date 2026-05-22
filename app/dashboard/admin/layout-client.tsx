@@ -6,6 +6,7 @@ import { AdminBottomNav } from "@/components/admin/AdminBottomNav"
 import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
 import { ProfileDropdown } from "@/components/shared/profile-dropdown"
 import { InstallButton } from "@/components/pwa/install-button"
+import { AdminChatPanel } from "@/components/admin/admin-chat-panel"
 
 interface AdminLayoutClientProps {
   children: React.ReactNode
@@ -48,6 +49,7 @@ export function AdminLayoutClient({ children, user, pendingVerifications, userId
             <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
               <span className="material-symbols-outlined">search</span>
             </button>
+            {userId && <AdminChatPanel userId={userId} />}
             {userId && <RealtimeNotifications role="admin" userId={userId} />}
             <button className="hidden md:block text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Help">
               <span className="material-symbols-outlined">help_outline</span>
