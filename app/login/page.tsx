@@ -4,6 +4,7 @@ import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "@/app/actions/auth"
+import { SocialAuthButtons } from "@/components/auth/social-auth-buttons"
 
 export default function LoginPage() {
   return (
@@ -145,12 +146,15 @@ function LoginPageContent() {
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-[#262626]" />
-            <span className="text-xs text-[#494847]">or</span>
+            <span className="text-xs text-[#494847]">or continue with</span>
             <div className="flex-1 h-px bg-[#262626]" />
           </div>
 
-          {/* Sign up */}
-          <p className="text-center text-sm text-[#adaaaa]">
+          {/* Social auth */}
+          <SocialAuthButtons mode="signin" />
+
+          {/* Sign up link */}
+          <p className="text-center text-sm text-[#adaaaa] mt-6">
             Don&apos;t have an account?{" "}
             <Link href="/signup" className="text-[#a3a6ff] hover:text-[#c180ff] font-semibold transition-colors">
               Create account
