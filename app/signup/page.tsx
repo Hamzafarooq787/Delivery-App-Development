@@ -301,18 +301,12 @@ export default function SignupPage() {
                 <div className="flex-1 h-px bg-[#262626]" />
               </div>
 
-              {/* Social auth — customer only (drivers must use email) */}
+              {/* Google sign-up — customer only */}
               {role === "customer" ? (
-                <>
-                  <SocialAuthButtons mode="signup" />
-                  <p className="text-center text-[10px] text-[#494847] mt-3 leading-relaxed">
-                    Social sign-up creates a <span className="text-[#adaaaa]">Customer</span> account.
-                    Driver accounts require email registration.
-                  </p>
-                </>
+                <SocialAuthButtons mode="signup" />
               ) : (
-                <p className="text-center text-xs text-[#adaaaa]/60">
-                  Driver accounts require email & password registration.
+                <p className="text-center text-xs text-[#adaaaa]/60 py-1">
+                  Driver accounts must use email & password.
                 </p>
               )}
 
