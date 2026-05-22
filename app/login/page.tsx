@@ -14,11 +14,21 @@ export default function LoginPage() {
   )
 }
 
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  missing_oauth_code: "OAuth sign-in failed: no authorisation code received. Please try again.",
+  no_user: "Could not retrieve your account after sign-in. Please try again.",
+  oauth_failed: "OAuth sign-in failed. Please try again.",
+}
+
 function LoginPageContent() {
   const searchParams = useSearchParams()
   const resetSuccess = searchParams.get("reset") === "success"
+  const oauthError = searchParams.get("error")
+  const oauthErrorMsg = oauthError
+    ? (OAUTH_ERROR_MESSAGES[oauthError] ?? decodeURIComponent(oauthError))
+    : null
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(oauthErrorMsg)
 
   async function handleLogin(formData: FormData) {
     setLoading(true)
