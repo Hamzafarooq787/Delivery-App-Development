@@ -9,14 +9,19 @@ import { createAdminClient } from "@/lib/supabase/admin"
  * We exchange the code for a session server-side (required by @supabase/ssr),
  * ensure the public.users row exists, then redirect to the right dashboard.
  *
+ * The `role` query param is set by SocialAuthButtons when the user picks
+ * Customer or Driver on the signup page. It controls which profile table
+ * row gets created for first-time OAuth sign-ups.
+ *
  * Using `origin` from the request URL means this NEVER hard-codes localhost
  * or any other domain — it always redirects back to wherever it was called from.
  */
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
-  const origin = requestUrl.origin                         // e.g. https://your-app.vercel.app
-  const code = requestUrl.searchParams.get("code")
-  const next = requestUrl.searchParams.get("next") ?? "/"  // optional post-auth redirect
+  const origin = requestUrl.origin   // e.g. https://your-app.vercel.app
+  const code   = requestUrl.searchParams.get("code")
+  // Role passed by the signup page via redirectTo URL — used only for new users
+  const signupRole = requestUrl.searchParams.get("role") as "customer" | "driver" | null
 
   // 1. Must have a code
   if (!code) {
@@ -24,7 +29,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=missing_oauth_code`)
   }
 
-  // 2. Exchange PKCE code for session (server-side — works with @supabase/ssr)
+  // 2. Exchange PKCE code for session (server-side — required by @supabase/ssr)
   const supabase = await createClient()
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
@@ -43,7 +48,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=no_user`)
   }
 
-  // 4. Check if a public.users row already exists
+  // 4. Check if a public.users row already exists (returning user)
   const { data: existing } = await supabase
     .from("users")
     .select("role")
@@ -63,8 +68,10 @@ export async function GET(request: Request) {
       user.email?.split("@")[0] ||
       "User"
 
-    role = "customer" // OAuth sign-ups default to customer
+    // Use the role passed from the signup page; fall back to "customer"
+    role = signupRole === "driver" ? "driver" : "customer"
 
+    // Create the shared users row
     await admin
       .from("users")
       .upsert(
@@ -72,9 +79,16 @@ export async function GET(request: Request) {
         { onConflict: "id" }
       )
 
-    await admin
-      .from("customer_profiles")
-      .upsert({ id: user.id }, { onConflict: "id" })
+    // Create the role-specific profile row
+    if (role === "driver") {
+      await admin
+        .from("driver_profiles")
+        .upsert({ id: user.id, status: "pending" }, { onConflict: "id" })
+    } else {
+      await admin
+        .from("customer_profiles")
+        .upsert({ id: user.id }, { onConflict: "id" })
+    }
   }
 
   // 6. Redirect to the correct dashboard based on role

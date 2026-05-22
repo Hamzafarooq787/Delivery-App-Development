@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client"
 
 type Props = {
   mode?: "signin" | "signup"
+  /** Pass the selected role on the signup page so the callback creates the right profile */
+  role?: "customer" | "driver"
 }
 
 function Spinner() {
@@ -27,7 +29,7 @@ function GoogleIcon() {
   )
 }
 
-export function SocialAuthButtons({ mode = "signin" }: Props) {
+export function SocialAuthButtons({ mode = "signin", role }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,22 +38,31 @@ export function SocialAuthButtons({ mode = "signin" }: Props) {
     setLoading(true)
     try {
       const supabase = createClient()
+
+      // Encode the selected role in the callback URL so the route handler
+      // creates the correct profile (customer_profiles vs driver_profiles)
+      const callbackUrl = new URL(`${window.location.origin}/auth/callback`)
+      if (mode === "signup" && role) callbackUrl.searchParams.set("role", role)
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+        options: { redirectTo: callbackUrl.toString() },
       })
+
       if (error) {
         setError(error.message)
         setLoading(false)
       }
-      // Success → browser redirects, no need to reset loading
+      // Success → browser redirects to Google, no need to reset loading
     } catch {
       setError("Something went wrong. Please try again.")
       setLoading(false)
     }
   }
+
+  const label = mode === "signup"
+    ? `Sign up as ${role === "driver" ? "Driver" : "Customer"} with Google`
+    : "Sign in with Google"
 
   return (
     <div className="flex flex-col gap-3">
@@ -69,7 +80,7 @@ export function SocialAuthButtons({ mode = "signin" }: Props) {
         className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-800 font-semibold text-sm rounded-xl py-3.5 px-4 border border-gray-200 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
       >
         {loading ? <Spinner /> : <GoogleIcon />}
-        <span>{loading ? "Redirecting…" : `${mode === "signup" ? "Sign up" : "Sign in"} with Google`}</span>
+        <span>{loading ? "Redirecting…" : label}</span>
       </button>
     </div>
   )
