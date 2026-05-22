@@ -322,6 +322,9 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
 
       const price = routeInfo ? getPrice(routeInfo.miles) : null
 
+      // Generate a unique tracking number — TRK-<timestamp><random4>
+      const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+
       const { error } = await supabase.from('delivery_requests').insert({
         customer_id: user.id,
         pickup_address: pickupValue,
@@ -333,6 +336,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
         item_description: selectedPayload,
         status: 'requested',
         price,
+        tracking_number,
       })
 
       if (error) { toast.error(error.message || 'Failed to create delivery.'); setSubmitting(false); return }

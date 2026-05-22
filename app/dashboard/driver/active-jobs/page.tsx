@@ -92,7 +92,7 @@ export default async function ActiveJobsPage() {
                       </h3>
                       <p className="text-xs text-[#adaaaa]">
                         Accepted {formatDate(job.updated_at as string | null)}
-                        {job.tracking_number ? ` • ${job.tracking_number}` : ""}
+                        {` • ${job.tracking_number ?? `KV-${job.id.slice(0, 8).toUpperCase()}`}`}
                       </p>
                     </div>
                   </div>

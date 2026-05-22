@@ -164,7 +164,7 @@ export default async function DriverPayoutsPage() {
                         <div key={e.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-[#201f1f] transition-colors">
                           <div className="col-span-5 min-w-0">
                             <p className="text-sm font-bold text-white truncate">
-                              {tracking ?? "Delivery"}
+                              {tracking ?? `KV-${e.id.slice(0, 8).toUpperCase()}`}
                             </p>
                             <p className="text-xs text-[#adaaaa]">
                               {new Date(e.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}

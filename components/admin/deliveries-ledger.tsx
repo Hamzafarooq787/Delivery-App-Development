@@ -92,12 +92,12 @@ export function DeliveriesLedger({
         <table className="w-full min-w-[820px] text-left border-collapse">
           <thead>
             <tr className="bg-[#131313]">
-              {["Pickup", "Delivery", "Item", "Status", "Assigned Driver", "Date"].map(
+              {["Tracking #", "Pickup", "Delivery", "Item", "Status", "Assigned Driver", "Date"].map(
                 (h, i) => (
                   <th
                     key={h}
                     className={`px-5 py-4 text-[11px] uppercase tracking-widest font-bold text-[#adaaaa] ${
-                      i === 5 ? "text-right" : ""
+                      i === 6 ? "text-right" : ""
                     }`}
                   >
                     {h}
@@ -109,13 +109,16 @@ export function DeliveriesLedger({
           <tbody className="divide-y divide-[#494847]/5">
             {deliveries.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-16 text-center text-[#adaaaa] text-sm">
+                <td colSpan={7} className="py-16 text-center text-[#adaaaa] text-sm">
                   No deliveries found
                 </td>
               </tr>
             ) : (
               deliveries.map((delivery) => (
                 <tr key={delivery.id} className="hover:bg-[#201f1f]/40 transition-colors group">
+                  <td className="px-5 py-4 font-mono text-xs text-[#a3a6ff] whitespace-nowrap">
+                    {delivery.tracking_number ?? `KV-${delivery.id.slice(0, 8).toUpperCase()}`}
+                  </td>
                   <td className="px-5 py-4 text-sm text-white max-w-[160px]">
                     <span className="block truncate" title={delivery.pickup_address ?? ""}>
                       {delivery.pickup_address ?? "—"}
