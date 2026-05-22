@@ -7,6 +7,7 @@ import { DriverBottomNav } from "@/components/driver/DriverBottomNav"
 import { DriverOnboarding } from "@/components/driver/driver-onboarding"
 import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
 import { ProfileDropdown } from "@/components/shared/profile-dropdown"
+import { InstallButton } from "@/components/pwa/install-button"
 
 interface DriverLayoutClientProps {
   children: React.ReactNode
@@ -70,6 +71,7 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
             )}
           </div>
           <div className="flex items-center gap-3 md:gap-5 shrink-0">
+            <InstallButton />
             {!isLocked && (
               <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
                 <span className="material-symbols-outlined">search</span>

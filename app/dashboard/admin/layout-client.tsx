@@ -5,6 +5,7 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { AdminBottomNav } from "@/components/admin/AdminBottomNav"
 import { RealtimeNotifications } from "@/components/shared/realtime-notifications"
 import { ProfileDropdown } from "@/components/shared/profile-dropdown"
+import { InstallButton } from "@/components/pwa/install-button"
 
 interface AdminLayoutClientProps {
   children: React.ReactNode
@@ -43,6 +44,7 @@ export function AdminLayoutClient({ children, user, pendingVerifications, userId
             </div>
           </div>
           <div className="flex items-center gap-3 md:gap-5 shrink-0">
+            <InstallButton />
             <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
               <span className="material-symbols-outlined">search</span>
             </button>

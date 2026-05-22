@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { RealtimeNotifications } from '@/components/shared/realtime-notifications'
 import { ProfileDropdown } from '@/components/shared/profile-dropdown'
+import { InstallButton } from '@/components/pwa/install-button'
 
 interface HeaderProps {
   onNewDelivery?: () => void
@@ -79,8 +80,9 @@ export default function Header({ onNewDelivery, userId: userIdProp }: HeaderProp
         </div>
       </div>
 
-      {/* ── Right: notifications + profile dropdown ── */}
+      {/* ── Right: install + notifications + profile dropdown ── */}
       <div className="flex items-center gap-3 md:gap-4">
+        <InstallButton />
         {/* Notifications — always shown once userId resolves */}
         {resolvedUserId ? (
           <RealtimeNotifications role="customer" userId={resolvedUserId} />
