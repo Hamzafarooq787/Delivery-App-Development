@@ -7,7 +7,7 @@ import { ProfileDropdown } from '@/components/shared/profile-dropdown'
 
 interface HeaderProps {
   onNewDelivery?: () => void
-  userId?: string
+  userId?: string  // optional — Header self-fetches if not provided
 }
 
 function getGreeting() {
@@ -17,11 +17,12 @@ function getGreeting() {
   return 'Good evening'
 }
 
-export default function Header({ onNewDelivery, userId }: HeaderProps) {
+export default function Header({ onNewDelivery, userId: userIdProp }: HeaderProps) {
   const supabase = useMemo(() => createClient(), [])
   const [firstName, setFirstName] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(userIdProp)
 
   useEffect(() => {
     let cancelled = false
@@ -29,6 +30,7 @@ export default function Header({ onNewDelivery, userId }: HeaderProps) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || cancelled) return
       setEmail(user.email ?? '')
+      if (!cancelled) setResolvedUserId(user.id)
       const { data } = await supabase
         .from('users')
         .select('full_name')
@@ -41,7 +43,7 @@ export default function Header({ onNewDelivery, userId }: HeaderProps) {
     }
     load()
     return () => { cancelled = true }
-  }, [supabase, userId])
+  }, [supabase])
 
   const greeting = getGreeting()
 
@@ -80,8 +82,8 @@ export default function Header({ onNewDelivery, userId }: HeaderProps) {
       {/* ── Right: notifications + profile dropdown ── */}
       <div className="flex items-center gap-3 md:gap-4">
         {/* Notifications */}
-        {userId ? (
-          <RealtimeNotifications role="customer" userId={userId} />
+        {resolvedUserId ? (
+          <RealtimeNotifications role="customer" userId={resolvedUserId} />
         ) : (
           <button className="relative text-on-surface-variant hover:text-white transition-colors">
             <span className="material-symbols-outlined">notifications</span>
@@ -99,13 +101,13 @@ export default function Header({ onNewDelivery, userId }: HeaderProps) {
           </button>
         )}
 
-        {/* Profile dropdown — all screen sizes */}
+        {/* Profile dropdown — always has userId via self-fetch */}
         <ProfileDropdown
           name={fullName}
           email={email}
           role="Customer"
           activeRole="customer"
-          userId={userId}
+          userId={resolvedUserId}
           profileHref="/dashboard/customer/settings"
         />
       </div>
