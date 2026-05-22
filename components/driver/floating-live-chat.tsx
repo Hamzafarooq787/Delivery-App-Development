@@ -68,6 +68,13 @@ export function FloatingLiveChat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, open])
 
+  // Open chat when notification is clicked
+  useEffect(() => {
+    function onOpenChat() { setOpen(true) }
+    window.addEventListener("open-driver-chat", onOpenChat)
+    return () => window.removeEventListener("open-driver-chat", onOpenChat)
+  }, [])
+
   // Mark read on open
   useEffect(() => {
     if (open && sessionId) {
