@@ -308,10 +308,19 @@ export function RealtimeNotifications({ role, userId }: Props) {
             ) : (
               notifs.map((n) => {
                 const s = notifStyle(n.title)
+                const isChatNotif = s.icon === "chat_bubble"
+                function handleNotifClick() {
+                  if (!isChatNotif) return
+                  setOpen(false)
+                  window.dispatchEvent(new CustomEvent("open-admin-chat"))
+                }
                 return (
                   <div
                     key={n.id}
-                    className={`relative mx-2 my-1 rounded-xl px-3.5 py-3 border-l-2 transition-all duration-150 cursor-default ${
+                    onClick={isChatNotif ? handleNotifClick : undefined}
+                    className={`relative mx-2 my-1 rounded-xl px-3.5 py-3 border-l-2 transition-all duration-150 ${
+                      isChatNotif ? "cursor-pointer" : "cursor-default"
+                    } ${
                       n.read
                         ? "bg-transparent hover:bg-[#1a1919] border-transparent"
                         : "bg-[#1a1919]/80 hover:bg-[#1e1e1e] " + s.accent
@@ -341,6 +350,11 @@ export function RealtimeNotifications({ role, userId }: Props) {
                         <p className="text-[11px] text-[#adaaaa] mt-0.5 leading-relaxed line-clamp-2">
                           {n.body}
                         </p>
+                        {isChatNotif && (
+                          <p className="text-[10px] text-[#c180ff] mt-1 font-semibold">
+                            Open chat →
+                          </p>
+                        )}
                       </div>
 
                       {/* Unread dot */}
