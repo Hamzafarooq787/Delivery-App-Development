@@ -69,7 +69,7 @@ function TrackingPageInner() {
       const cur = STATUS_ORDER.indexOf((data.status || 'requested').toLowerCase())
       setSteps(STATUS_ORDER.map((st, i) => ({
         label: st.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-        detail: data.tracking_number || 'Live',
+        detail: data.tracking_number || `KV-${data.id.slice(0, 8).toUpperCase()}`,
         done: cur !== -1 && i < cur,
         active: i === cur,
       })))
@@ -139,7 +139,9 @@ function TrackingPageInner() {
               )}
             </div>
             <p className="text-lg font-black font-headline text-white leading-tight">
-              {shipment?.tracking_number ?? 'No active shipment'}
+              {shipment
+                ? (shipment.tracking_number ?? `KV-${shipment.id.slice(0, 8).toUpperCase()}`)
+                : 'No active shipment'}
             </p>
             {shipment && (
               <p className="text-xs text-[#4a9fd4]/70 mt-1 leading-relaxed">
@@ -293,7 +295,7 @@ function TrackingPageInner() {
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
               <div className="flex items-center gap-2 bg-[#080e1a]/85 backdrop-blur-md border border-[#1a3a5c]/40 rounded-full px-4 py-2 shadow-lg">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${statusCfg.dot} ${shipment.status === 'in_transit' ? 'animate-pulse' : ''}`} />
-                <span className="text-xs font-bold text-white font-mono">{shipment.tracking_number}</span>
+                <span className="text-xs font-bold text-white font-mono">{shipment.tracking_number ?? `KV-${shipment.id.slice(0, 8).toUpperCase()}`}</span>
                 <span className="text-[10px] text-[#4a9fd4] uppercase tracking-wider">{shipment.status?.replace('_', ' ')}</span>
               </div>
             </div>

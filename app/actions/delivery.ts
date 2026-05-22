@@ -24,7 +24,7 @@ export async function createDeliveryRequest(formData: FormData) {
     price: parseFloat(formData.get("price") as string) || 0,
     is_safe_confirmed: formData.get("is_safe_confirmed") === "true",
     status: "requested",
-    tracking_number: `TRK-${Date.now()}`,
+    tracking_number: `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
   }
 
   const { data, error } = await supabase
