@@ -218,9 +218,46 @@ export function RealtimeNotifications({ role, userId }: Props) {
             if (!row) return
             const n: Notif = { id: row.id, title: row.title, body: row.body, at: new Date(row.created_at).getTime(), read: false }
             setNotifs((prev) => prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50))
-            toast(n.title, { description: n.body, duration: 6000, icon: toastIcon(n.title) })
             showBrowserNotification(n.title, n.body)
             playChime()
+            // Chat notifications → custom clickable toast with close button
+            const isChatToast = notifStyle(n.title).icon === "chat_bubble"
+            if (isChatToast) {
+              toast.custom(
+                (id) => (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast.dismiss(id)
+                      if (role === "admin") window.dispatchEvent(new CustomEvent("open-admin-chat"))
+                      else if (role === "driver") window.dispatchEvent(new CustomEvent("open-driver-chat"))
+                    }}
+                    className="w-full flex items-center gap-3 bg-[#1a1919] border border-[#c180ff]/30 rounded-2xl px-4 py-3.5 shadow-2xl shadow-black/50 text-left group hover:border-[#c180ff]/60 transition-all"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-[#c180ff]/15 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[#c180ff] text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white leading-snug">{n.title}</p>
+                      <p className="text-xs text-[#adaaaa] truncate mt-0.5">{n.body}</p>
+                      <p className="text-[11px] text-[#c180ff] font-semibold mt-1">Tap to open chat →</p>
+                    </div>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); toast.dismiss(id) }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); toast.dismiss(id) } }}
+                      className="w-6 h-6 rounded-full bg-[#262626] flex items-center justify-center text-[#adaaaa] hover:text-white hover:bg-[#333] shrink-0 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[13px]">close</span>
+                    </div>
+                  </button>
+                ),
+                { duration: 8000 }
+              )
+            } else {
+              toast(n.title, { description: n.body, duration: 6000, icon: toastIcon(n.title), closeButton: true })
+            }
           })
         .subscribe((_, err) => { if (err) console.error("[notif] subscription error", err) })
     })
