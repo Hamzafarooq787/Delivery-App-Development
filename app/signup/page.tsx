@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { signUp } from "@/app/actions/auth"
+import { SocialAuthButtons } from "@/components/auth/social-auth-buttons"
 import { googleReverseGeocode } from "@/lib/google"
 
 type Role = "customer" | "driver"
@@ -296,11 +297,20 @@ export default function SignupPage() {
               {/* Divider */}
               <div className="flex items-center gap-3 my-6">
                 <div className="flex-1 h-px bg-[#262626]" />
-                <span className="text-xs text-[#494847]">or</span>
+                <span className="text-xs text-[#494847]">or continue with</span>
                 <div className="flex-1 h-px bg-[#262626]" />
               </div>
 
-              <p className="text-center text-sm text-[#adaaaa]">
+              {/* Google sign-up — customer only */}
+              {role === "customer" ? (
+                <SocialAuthButtons mode="signup" />
+              ) : (
+                <p className="text-center text-xs text-[#adaaaa]/60 py-1">
+                  Driver accounts must use email & password.
+                </p>
+              )}
+
+              <p className="text-center text-sm text-[#adaaaa] mt-5">
                 Already have an account?{" "}
                 <Link href="/login" className="text-[#a3a6ff] hover:text-[#c180ff] font-semibold transition-colors">
                   Sign in

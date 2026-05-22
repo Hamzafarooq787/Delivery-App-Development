@@ -4,6 +4,48 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
 
+/**
+ * Called from /auth/callback after an OAuth sign-in.
+ * Ensures the `users` table has a row for this user —
+ * new OAuth users won't have one yet.
+ * Returns the user's role so the callback can redirect correctly.
+ */
+export async function ensureOAuthUserProfile(): Promise<{ role: string; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { role: "customer", error: "Not authenticated" }
+
+  // Check if profile already exists (returning user)
+  const { data: existing } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (existing) return { role: existing.role }
+
+  // New OAuth user — create profile row
+  const admin = createAdminClient()
+  const meta = user.user_metadata ?? {}
+  const full_name =
+    meta.full_name || meta.name ||
+    [meta.given_name, meta.family_name].filter(Boolean).join(" ") ||
+    user.email?.split("@")[0] || "User"
+
+  const role = "customer" // OAuth users default to customer
+
+  await admin.from("users").upsert(
+    { id: user.id, full_name, role, email: user.email },
+    { onConflict: "id" }
+  )
+  await admin.from("customer_profiles").upsert(
+    { id: user.id },
+    { onConflict: "id" }
+  )
+
+  return { role }
+}
+
 export async function signIn(formData: FormData) {
   const supabase = await createClient()
   const email = formData.get("email") as string

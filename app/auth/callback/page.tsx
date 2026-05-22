@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
+import { ensureOAuthUserProfile } from "@/app/actions/auth"
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -13,6 +13,7 @@ export default function AuthCallbackPage() {
     async function handleCallback() {
       const supabase = createClient()
 
+      // Exchange the auth code for a session (works for both email confirm & OAuth)
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(
         window.location.href
       )
@@ -22,36 +23,9 @@ export default function AuthCallbackPage() {
         return
       }
 
-      // Fetch the user's role to redirect to the correct dashboard
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        setError(true)
-        return
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-      // Log error for debugging but don't block login
-      if (profileError) {
-        console.error("Role fetch error:", profileError)
-      }
-
-      // Fallback to customer role if fetch fails or no data
-      const role = profile?.role || "customer"
-
-      // Ensure driver_profiles row exists for drivers (handles re-confirmation)
-      if (role === "driver") {
-        await supabase
-          .from("driver_profiles")
-          .upsert({ id: user.id, status: "pending" }, { onConflict: "id" })
-      }
+      // Ensure the users table row exists (critical for new OAuth sign-ins)
+      // and get back the user's role for correct redirect
+      const { role } = await ensureOAuthUserProfile()
 
       if (role === "admin") {
         router.push("/dashboard/admin")
@@ -67,20 +41,36 @@ export default function AuthCallbackPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="text-center">
-          <p className="text-sm font-medium text-foreground">Invalid or expired link</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Please request a new confirmation email.
-          </p>
+      <main className="min-h-screen bg-[#0e0e0e] flex items-center justify-center px-4">
+        <div className="text-center space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-[#ff6e84]/10 border border-[#ff6e84]/20 flex items-center justify-center mx-auto">
+            <span className="material-symbols-outlined text-[#ff6e84] text-2xl">link_off</span>
+          </div>
+          <p className="text-white font-bold text-base">Invalid or expired link</p>
+          <p className="text-[#adaaaa] text-sm">Please request a new confirmation or sign-in link.</p>
+          <a href="/login" className="inline-block mt-2 text-[#a3a6ff] hover:text-[#c180ff] font-semibold text-sm transition-colors">
+            Back to Sign In
+          </a>
         </div>
-      </div>
+      </main>
     )
   }
 
+  // Loading state while redirecting
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-    </div>
+    <main className="min-h-screen bg-[#0e0e0e] flex items-center justify-center px-4">
+      <div className="flex flex-col items-center gap-4">
+        {/* Animated logo */}
+        <div className="w-14 h-14 rounded-2xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#a3a6ff] text-2xl animate-pulse">bolt</span>
+        </div>
+        {/* Spinner */}
+        <svg className="animate-spin w-5 h-5 text-[#a3a6ff]" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+        <p className="text-[#adaaaa] text-sm">Signing you in…</p>
+      </div>
+    </main>
   )
 }
