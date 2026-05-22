@@ -2,6 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+
+function playChime() {
+  try {
+    const ctx = new AudioContext()
+    ;[880, 1100].forEach((freq, i) => {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain()
+      osc.connect(gain); gain.connect(ctx.destination); osc.type = "sine"; osc.frequency.value = freq
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12)
+      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.12 + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.35)
+      osc.start(ctx.currentTime + i * 0.12); osc.stop(ctx.currentTime + i * 0.12 + 0.35)
+    })
+  } catch {}
+}
 import {
   getAdminChatSessions,
   getChatMessages,
@@ -51,6 +65,10 @@ export function AdminChatPanel({ userId }: { userId: string }) {
         table: "chat_messages",
       }, (payload) => {
         const msg = payload.new as ChatMessage
+        if (msg.sender_role === "driver") {
+          // Play chime for every incoming driver message
+          playChime()
+        }
         if (msg.session_id === selectedId) {
           setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg])
           if (msg.sender_role === "driver") {
