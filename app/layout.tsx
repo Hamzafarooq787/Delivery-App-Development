@@ -1,8 +1,9 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Manrope, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/shared/theme-provider'
+import { SWRegister } from '@/components/pwa/sw-register'
 import './globals.css'
 
 const manrope = Manrope({
@@ -17,10 +18,29 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
+export const viewport: Viewport = {
+  themeColor: '#0e0e0e',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export const metadata: Metadata = {
   title: 'Kinetic Void | Premium Logistics',
   description:
     'Experience precision-engineered delivery solutions. From microscopic components to industrial fleets, we bridge the void with absolute speed.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Kinetic Void',
+    startupImage: '/icons/icon-512.png',
+  },
+  formatDetection: { telephone: false },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export default function RootLayout({
@@ -41,6 +61,14 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
           rel="stylesheet"
         />
+        {/* PWA — iOS specific */}
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Kinetic Void" />
       </head>
       <body className="bg-[#0e0e0e] font-inter text-white overflow-x-hidden antialiased">
         <ThemeProvider>
@@ -82,6 +110,7 @@ export default function RootLayout({
           }}
         />
         <Analytics />
+        <SWRegister />
       </body>
     </html>
   )

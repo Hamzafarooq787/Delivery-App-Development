@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { Search, Bell, Menu, X } from 'lucide-react'
+import { InstallButton } from '@/components/pwa/install-button'
 
 const navLinks = [
   { label: 'How It Works', href: '/how-it-works' },
@@ -56,6 +57,7 @@ export default function Header() {
 
         {/* Right: Actions (desktop) */}
         <div className="hidden md:flex items-center gap-6">
+          <InstallButton />
           <Bell className="w-5 h-5 text-[#9a9a9a] hover:text-white cursor-pointer transition-colors duration-200" />
           <Link href="/login" className="text-white text-sm font-medium hover:text-[#9a9a9a] transition-colors duration-200">
             Login

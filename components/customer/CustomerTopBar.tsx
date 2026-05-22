@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { ProfileDropdown } from "@/components/shared/profile-dropdown"
+import { InstallButton } from "@/components/pwa/install-button"
 
 export function CustomerTopBar() {
   const supabase = useMemo(() => createClient(), [])
@@ -41,6 +42,7 @@ export function CustomerTopBar() {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
+        <InstallButton />
         <ProfileDropdown
           name={name}
           email={email}
