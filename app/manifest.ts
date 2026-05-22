@@ -6,7 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Kinetic Void",
     description:
       "Experience precision-engineered delivery solutions. Real-time tracking, instant dispatch, zero compromise.",
-    start_url: "/",
+    start_url: "/dashboard",
+    scope: "/",
     display: "standalone",
     orientation: "portrait",
     background_color: "#0e0e0e",
