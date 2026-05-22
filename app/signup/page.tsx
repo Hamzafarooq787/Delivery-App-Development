@@ -140,6 +140,18 @@ export default function SignupPage() {
                 </div>
               )}
 
+              {/* Google sign-up — customer only, shown right after tab selection */}
+              {role === "customer" && (
+                <>
+                  <SocialAuthButtons mode="signup" />
+                  <div className="flex items-center gap-3 my-5">
+                    <div className="flex-1 h-px bg-[#262626]" />
+                    <span className="text-xs text-[#494847]">or sign up with email</span>
+                    <div className="flex-1 h-px bg-[#262626]" />
+                  </div>
+                </>
+              )}
+
               {error && (
                 <div className="mb-6 flex items-center gap-2 bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] text-sm rounded-xl px-4 py-3">
                   <span className="material-symbols-outlined text-[18px]">error</span>
@@ -294,23 +306,7 @@ export default function SignupPage() {
                 </button>
               </form>
 
-              {/* Divider */}
-              <div className="flex items-center gap-3 my-6">
-                <div className="flex-1 h-px bg-[#262626]" />
-                <span className="text-xs text-[#494847]">or continue with</span>
-                <div className="flex-1 h-px bg-[#262626]" />
-              </div>
-
-              {/* Google sign-up — customer only */}
-              {role === "customer" ? (
-                <SocialAuthButtons mode="signup" />
-              ) : (
-                <p className="text-center text-xs text-[#adaaaa]/60 py-1">
-                  Driver accounts must use email & password.
-                </p>
-              )}
-
-              <p className="text-center text-sm text-[#adaaaa] mt-5">
+              <p className="text-center text-sm text-[#adaaaa] mt-6">
                 Already have an account?{" "}
                 <Link href="/login" className="text-[#a3a6ff] hover:text-[#c180ff] font-semibold transition-colors">
                   Sign in
