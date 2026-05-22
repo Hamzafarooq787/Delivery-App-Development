@@ -31,6 +31,16 @@ export function AdminChatPanel({ userId }: { userId: string }) {
 
   useEffect(() => { loadSessions() }, [loadSessions])
 
+  // Open panel when a chat notification is clicked in the notifications bell
+  useEffect(() => {
+    function onOpenChat() {
+      setOpen(true)
+      loadSessions()
+    }
+    window.addEventListener("open-admin-chat", onOpenChat)
+    return () => window.removeEventListener("open-admin-chat", onOpenChat)
+  }, [loadSessions])
+
   // Realtime: new messages (admin sees all)
   useEffect(() => {
     const channel = supabase
