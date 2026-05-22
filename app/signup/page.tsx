@@ -140,17 +140,15 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Google sign-up — customer only, shown right after tab selection */}
-              {role === "customer" && (
-                <>
-                  <SocialAuthButtons mode="signup" />
-                  <div className="flex items-center gap-3 my-5">
-                    <div className="flex-1 h-px bg-[#262626]" />
-                    <span className="text-xs text-[#494847]">or sign up with email</span>
-                    <div className="flex-1 h-px bg-[#262626]" />
-                  </div>
-                </>
-              )}
+              {/* Google sign-up — shown for both Customer and Driver right after tab selection */}
+              <>
+                <SocialAuthButtons mode="signup" role={role} />
+                <div className="flex items-center gap-3 my-5">
+                  <div className="flex-1 h-px bg-[#262626]" />
+                  <span className="text-xs text-[#494847]">or sign up with email</span>
+                  <div className="flex-1 h-px bg-[#262626]" />
+                </div>
+              </>
 
               {error && (
                 <div className="mb-6 flex items-center gap-2 bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] text-sm rounded-xl px-4 py-3">

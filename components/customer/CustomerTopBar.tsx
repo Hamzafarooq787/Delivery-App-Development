@@ -8,6 +8,7 @@ export function CustomerTopBar() {
   const supabase = useMemo(() => createClient(), [])
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [userId, setUserId] = useState<string | undefined>()
 
   useEffect(() => {
     let cancelled = false
@@ -15,6 +16,7 @@ export function CustomerTopBar() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || cancelled) return
       setEmail(user.email ?? "")
+      setUserId(user.id)
       const { data } = await supabase
         .from("users")
         .select("full_name")
@@ -43,6 +45,8 @@ export function CustomerTopBar() {
           name={name}
           email={email}
           role="Customer"
+          activeRole="customer"
+          userId={userId}
           profileHref="/dashboard/customer/settings"
         />
       </div>

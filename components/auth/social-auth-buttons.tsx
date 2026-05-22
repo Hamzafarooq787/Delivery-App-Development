@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 
 type Props = {
   mode?: "signin" | "signup"
+  role?: "customer" | "driver"
 }
 
 function Spinner() {
@@ -27,7 +28,7 @@ function GoogleIcon() {
   )
 }
 
-export function SocialAuthButtons({ mode = "signin" }: Props) {
+export function SocialAuthButtons({ mode = "signin", role }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,10 +37,12 @@ export function SocialAuthButtons({ mode = "signin" }: Props) {
     setLoading(true)
     try {
       const supabase = createClient()
+      const callbackUrl = new URL(`${window.location.origin}/auth/callback`)
+      if (mode === "signup" && role) callbackUrl.searchParams.set("role", role)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl.toString(),
         },
       })
       if (error) {
@@ -69,7 +72,13 @@ export function SocialAuthButtons({ mode = "signin" }: Props) {
         className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-800 font-semibold text-sm rounded-xl py-3.5 px-4 border border-gray-200 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
       >
         {loading ? <Spinner /> : <GoogleIcon />}
-        <span>{loading ? "Redirecting…" : `${mode === "signup" ? "Sign up" : "Sign in"} with Google`}</span>
+        <span>
+          {loading
+            ? "Redirecting…"
+            : mode === "signup"
+              ? `Sign up as ${role === "driver" ? "Driver" : "Customer"} with Google`
+              : "Sign in with Google"}
+        </span>
       </button>
     </div>
   )

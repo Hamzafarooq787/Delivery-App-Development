@@ -104,6 +104,8 @@ export default function Header({ onNewDelivery, userId }: HeaderProps) {
           name={fullName}
           email={email}
           role="Customer"
+          activeRole="customer"
+          userId={userId}
           profileHref="/dashboard/customer/settings"
         />
       </div>

@@ -5,6 +5,45 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
 
 /**
+ * Switch the user's active role and redirect to the matching dashboard.
+ * The old profile's data is fully preserved.
+ */
+export async function switchActiveRole(newRole: "customer" | "driver") {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const admin = createAdminClient()
+  await admin.from("users").update({ role: newRole }).eq("id", user.id)
+
+  redirect(newRole === "driver" ? "/dashboard/driver" : "/dashboard/customer")
+}
+
+/**
+ * Add a secondary role profile without changing the active role.
+ * Creates driver_profiles (status=pending) or customer_profiles row.
+ */
+export async function addSecondaryRole(newRole: "customer" | "driver") {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const admin = createAdminClient()
+
+  if (newRole === "driver") {
+    await admin
+      .from("driver_profiles")
+      .upsert({ id: user.id, status: "pending" }, { onConflict: "id" })
+  } else {
+    await admin
+      .from("customer_profiles")
+      .upsert({ id: user.id }, { onConflict: "id" })
+  }
+
+  return { success: true }
+}
+
+/**
  * Called from /auth/callback after an OAuth sign-in.
  * Ensures the `users` table has a row for this user —
  * new OAuth users won't have one yet.
