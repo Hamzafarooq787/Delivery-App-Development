@@ -100,7 +100,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] pb-24">
+    <div className="min-h-screen bg-[#0e0e0e] pb-[10rem] lg:pb-28">
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-[#0e0e0e]/95 backdrop-blur-sm border-b border-[#494847]/15 px-4 py-3 flex items-center gap-3">
         <Link href="/dashboard/driver/active-jobs" className="flex items-center gap-1.5 text-[#adaaaa] hover:text-white transition-colors text-sm font-bold">
@@ -305,7 +305,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
 
       {/* Fixed action bar */}
       {!isDone && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-[#0e0e0e]/95 backdrop-blur-sm border-t border-[#494847]/15 px-4 py-4 md:pl-[272px]">
+        <div className="fixed bottom-16 lg:bottom-0 left-0 right-0 z-40 bg-[#0e0e0e]/95 backdrop-blur-sm border-t border-[#494847]/15 px-4 py-4 lg:pl-[272px]" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="flex gap-3 max-w-2xl mx-auto">
             {/* Safety cancel */}
             <SafetyCancelButton jobId={job.id} />

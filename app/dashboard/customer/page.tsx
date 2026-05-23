@@ -11,6 +11,7 @@ const GoogleMultiDriver = dynamic(
 )
 import { createClient } from '@/lib/supabase/client'
 import { getDriverNamesByIds } from '@/app/actions/driver'
+import { getWalletBalance } from '@/app/actions/wallet'
 
 type DeliveryRow = {
   id: string
@@ -89,6 +90,7 @@ export default function CustomerDashboardPage() {
   const [totalSpent,         setTotalSpent]         = useState(0)
   const [activeDeliveries,   setActiveDeliveries]   = useState<ActiveDelivery[]>([])
   const [focusedDeliveryId,  setFocusedDeliveryId]  = useState<string | null>(null)
+  const [walletBalance,      setWalletBalance]      = useState<number | null>(null)
 
   // Listen for FAB event from BottomNav (layout also listens, but this handles
   // the case where the user triggers via keyboard / other means on dashboard)
@@ -152,6 +154,9 @@ export default function CustomerDashboardPage() {
       setCompletedThisMonth(monthRes.count ?? 0)
       setTotalSpent(((deliveredRes.data ?? []) as any[]).reduce((s, r) => s + (Number(r.price) || 0), 0))
       if (profileRes.data?.full_name) setUserName(profileRes.data.full_name.split(' ')[0])
+
+      // Fetch wallet balance independently (non-blocking if wallet table doesn't exist yet)
+      getWalletBalance().then(({ balance }) => { if (!cancelled) setWalletBalance(balance) }).catch(() => {})
 
       const delivs = (activeDelivsRes.data ?? []) as Omit<ActiveDelivery, 'driver_name'>[]
       const driverIds = [...new Set(delivs.map((d) => d.driver_id).filter(Boolean))] as string[]
@@ -217,19 +222,25 @@ export default function CustomerDashboardPage() {
               </h2>
 
               {/* Inline quick stats */}
-              <div className="flex items-center gap-3 mt-4">
-                <div className="flex-1 bg-surface-container/60 rounded-2xl px-3 py-2.5 text-center backdrop-blur-sm">
+              <div className="flex items-center gap-2 mt-4">
+                <div className="flex-1 bg-surface-container/60 rounded-2xl px-2 py-2.5 text-center backdrop-blur-sm">
                   <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Active</p>
                   <p className="text-xl font-black font-headline text-primary">{activeCount}</p>
                 </div>
-                <div className="flex-1 bg-surface-container/60 rounded-2xl px-3 py-2.5 text-center backdrop-blur-sm">
+                <div className="flex-1 bg-surface-container/60 rounded-2xl px-2 py-2.5 text-center backdrop-blur-sm">
                   <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Done MTD</p>
                   <p className="text-xl font-black font-headline text-secondary">{completedThisMonth}</p>
                 </div>
-                <div className="flex-1 bg-surface-container/60 rounded-2xl px-3 py-2.5 text-center backdrop-blur-sm">
+                <div className="flex-1 bg-surface-container/60 rounded-2xl px-2 py-2.5 text-center backdrop-blur-sm">
                   <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">Spent</p>
                   <p className="text-xl font-black font-headline text-tertiary">{formattedSpent}</p>
                 </div>
+                <Link href="/dashboard/customer/wallet" className="flex-1 bg-[#6ee7b7]/10 border border-[#6ee7b7]/20 rounded-2xl px-2 py-2.5 text-center backdrop-blur-sm">
+                  <p className="text-[9px] font-bold text-[#6ee7b7] uppercase tracking-wider">Wallet</p>
+                  <p className="text-xl font-black font-headline text-[#6ee7b7]">
+                    {walletBalance === null ? '—' : `£${Math.abs(walletBalance).toFixed(0)}`}
+                  </p>
+                </Link>
               </div>
             </div>
           </div>
@@ -237,7 +248,7 @@ export default function CustomerDashboardPage() {
           {/* ══════════════════════════════════════════════════
               DESKTOP: stat cards grid
           ══════════════════════════════════════════════════ */}
-          <div className="hidden md:grid grid-cols-3 gap-4 mb-6">
+          <div className="hidden md:grid grid-cols-4 gap-4 mb-6">
             <div className="glass-card p-5 rounded-2xl flex items-center gap-4">
               <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
@@ -265,6 +276,17 @@ export default function CustomerDashboardPage() {
                 <p className="font-headline text-3xl font-extrabold text-on-surface">{formattedSpent}</p>
               </div>
             </div>
+            <Link href="/dashboard/customer/wallet" className="glass-card p-5 rounded-2xl flex items-center gap-4 border border-[#6ee7b7]/15 hover:border-[#6ee7b7]/30 transition-colors">
+              <div className="w-11 h-11 rounded-xl bg-[#6ee7b7]/10 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[#6ee7b7]" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.15em]">Wallet Balance</p>
+                <p className="font-headline text-3xl font-extrabold text-[#6ee7b7]">
+                  {walletBalance === null ? '—' : (walletBalance < 0 ? `-£${Math.abs(walletBalance).toFixed(2)}` : `£${walletBalance.toFixed(2)}`)}
+                </p>
+              </div>
+            </Link>
           </div>
 
           {/* ══════════════════════════════════════════════════
