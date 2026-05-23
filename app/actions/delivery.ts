@@ -783,3 +783,27 @@ export async function uploadParcelPhotoAndCollect(deliveryId: string, formData: 
   revalidatePath(`/dashboard/driver/jobs/${deliveryId}`)
   return { success: true, photoUrl: publicUrl }
 }
+
+// Lightweight version: photo already uploaded client-side, just record URL + advance status
+export async function markParcelCollected(deliveryId: string, photoUrl: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('delivery_requests')
+    .update({ status: 'collected', parcel_image_url: photoUrl })
+    .eq('id', deliveryId)
+    .eq('driver_id', user.id)
+
+  if (error) return { error: error.message }
+
+  await supabase.from('delivery_status_logs').insert({
+    delivery_id: deliveryId,
+    status: 'collected',
+    updated_by: user.id,
+  })
+
+  revalidatePath(`/dashboard/driver/jobs/${deliveryId}`)
+  return { success: true }
+}

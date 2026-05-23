@@ -1,9 +1,10 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { uploadParcelPhotoAndCollect } from "@/app/actions/delivery"
+import { createClient } from "@/lib/supabase/client"
+import { markParcelCollected } from "@/app/actions/delivery"
 
 const PROHIBITED = [
   { icon: "gavel", label: "Illegal goods" },
@@ -46,8 +47,10 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [compressedBlob, setCompressedBlob] = useState<Blob | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<string>("Uploading…")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -65,14 +68,38 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
   async function handleConfirm() {
     if (!compressedBlob) return
     setUploading(true)
-    const fd = new FormData()
-    fd.append("photo", new File([compressedBlob], "parcel.jpg", { type: "image/jpeg" }))
-    const result = await uploadParcelPhotoAndCollect(deliveryId, fd)
-    setUploading(false)
-    if (result.error) { toast.error(result.error); return }
-    toast.success("Parcel authenticated! Status updated to Collected.")
-    onClose()
-    router.refresh()
+
+    try {
+      // Step 1: get current user id for the storage path
+      setUploadProgress("Preparing upload…")
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { toast.error("Not authenticated"); setUploading(false); return }
+
+      // Step 2: upload directly from browser → Supabase Storage (no server relay)
+      setUploadProgress("Uploading photo…")
+      const path = `${user.id}/parcel-${deliveryId}-${Date.now()}.jpg`
+      const file = new File([compressedBlob], "parcel.jpg", { type: "image/jpeg" })
+      const { error: uploadError } = await supabase.storage
+        .from("driver-documents")
+        .upload(path, file, { contentType: "image/jpeg", upsert: true })
+
+      if (uploadError) { toast.error(uploadError.message); setUploading(false); return }
+
+      const { data: { publicUrl } } = supabase.storage.from("driver-documents").getPublicUrl(path)
+
+      // Step 3: lightweight server action — just the DB update + revalidate
+      setUploadProgress("Saving…")
+      const result = await markParcelCollected(deliveryId, publicUrl)
+      if (result.error) { toast.error(result.error); setUploading(false); return }
+
+      toast.success("Parcel authenticated! Status updated to Collected.")
+      onClose()
+      router.refresh()
+    } catch {
+      toast.error("Upload failed. Please check your connection and try again.")
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -226,7 +253,7 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
                 className="flex-1 py-2.5 rounded-xl bg-[#6ee7b7] text-[#0e0e0e] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">verified</span>
-                {uploading ? "Uploading…" : "Confirm & Mark Collected"}
+                {uploading ? uploadProgress : "Confirm & Mark Collected"}
               </button>
             </>
           )}
