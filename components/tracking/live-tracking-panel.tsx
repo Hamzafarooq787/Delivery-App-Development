@@ -58,15 +58,37 @@ export function LiveTrackingPanel({
     const channel = supabase
       .channel(`live-tracking-${driverId}`)
       .on("postgres_changes", {
-        event: "*",
+        event: "INSERT",
         schema: "public",
         table: "driver_locations",
         filter: `driver_id=eq.${driverId}`,
       }, (payload) => {
         const row = payload.new as any
-        if (!row) return
+        if (typeof row?.lat !== "number" || typeof row?.lng !== "number") return
         setDriverPos({ lat: row.lat, lng: row.lng })
         setLastUpdate(Date.now())
+        setStale(false)
+      })
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "driver_locations",
+        filter: `driver_id=eq.${driverId}`,
+      }, (payload) => {
+        const row = payload.new as any
+        if (typeof row?.lat !== "number" || typeof row?.lng !== "number") return
+        setDriverPos({ lat: row.lat, lng: row.lng })
+        setLastUpdate(Date.now())
+        setStale(false)
+      })
+      .on("postgres_changes", {
+        event: "DELETE",
+        schema: "public",
+        table: "driver_locations",
+        filter: `driver_id=eq.${driverId}`,
+      }, () => {
+        // Driver completed delivery — clear position gracefully (don't crash map)
+        setDriverPos(null)
         setStale(false)
       })
       .subscribe()
