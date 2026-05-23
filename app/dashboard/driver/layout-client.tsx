@@ -102,7 +102,7 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
           )}
         </main>
         <DriverBottomNav isLocked={isLocked} />
-        {isApproved && <FloatingLiveChat />}
+        {isApproved && !pathname.startsWith("/dashboard/driver/jobs/") && <FloatingLiveChat />}
       </div>
     </div>
   )
