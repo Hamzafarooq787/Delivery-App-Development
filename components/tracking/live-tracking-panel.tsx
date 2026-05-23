@@ -101,10 +101,10 @@ export function LiveTrackingPanel({
     return () => { supabase.removeChannel(channel) }
   }, [supabase, customerId, deliveryId])
 
-  // Stale detection — 2 minutes before showing "Signal lost"
+  // Stale detection — 45 seconds before showing "Signal lost"
   useEffect(() => {
     if (!lastUpdate) return
-    const t = setTimeout(() => setStale(true), 120_000)
+    const t = setTimeout(() => setStale(true), 45_000)
     return () => clearTimeout(t)
   }, [lastUpdate])
 
