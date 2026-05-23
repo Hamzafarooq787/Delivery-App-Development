@@ -39,7 +39,7 @@ export function SafetyCancelButton({ jobId }: { jobId: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-semibold text-red-400 hover:bg-red-500/20 transition-all"
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/25 bg-red-500/8 text-sm font-bold text-red-400 hover:bg-red-500/15 transition-all active:scale-[0.98]"
       >
         <span className="material-symbols-outlined text-base">shield_with_heart</span>
         Safety Cancel

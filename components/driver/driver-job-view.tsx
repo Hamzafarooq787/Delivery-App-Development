@@ -100,7 +100,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] pb-[10rem] lg:pb-28">
+    <div className="min-h-screen bg-[#0e0e0e] pb-[12rem] lg:pb-28">
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-[#0e0e0e]/95 backdrop-blur-sm border-b border-[#494847]/15 px-4 py-3 flex items-center gap-3">
         <Link href="/dashboard/driver/active-jobs" className="flex items-center gap-1.5 text-[#adaaaa] hover:text-white transition-colors text-sm font-bold">
@@ -305,16 +305,17 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
 
       {/* Fixed action bar */}
       {!isDone && (
-        <div className="fixed bottom-16 lg:bottom-0 left-0 right-0 z-40 bg-[#0e0e0e]/95 backdrop-blur-sm border-t border-[#494847]/15 px-4 py-4 lg:pl-[272px]" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
-          <div className="flex gap-3 max-w-2xl mx-auto">
-            {/* Safety cancel */}
-            <SafetyCancelButton jobId={job.id} />
+        <div
+          className="fixed bottom-16 lg:bottom-0 left-0 right-0 z-40 bg-[#0e0e0e]/95 backdrop-blur-sm border-t border-[#494847]/15 px-4 pt-3 lg:pl-[272px]"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="max-w-2xl mx-auto space-y-2">
 
-            {/* Main CTA — context sensitive */}
+            {/* Primary CTA — full width */}
             {job.status === "accepted" && (
               <button
                 onClick={() => setShowParcelAuth(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#a3a6ff] text-[#0f00a4] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98]"
                 style={{ boxShadow: "0 0 20px rgba(163,166,255,0.25)" }}
               >
                 <span className="material-symbols-outlined text-base">verified_user</span>
@@ -325,7 +326,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               <button
                 onClick={() => advanceStatus("in_transit")}
                 disabled={isPending}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#c180ff] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#c180ff] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
                 style={{ boxShadow: "0 0 20px rgba(193,128,255,0.25)" }}
               >
                 <span className="material-symbols-outlined text-base">directions_car</span>
@@ -336,13 +337,17 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               <button
                 onClick={() => advanceStatus("delivered")}
                 disabled={isPending}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#6ee7b7] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#6ee7b7] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
                 style={{ boxShadow: "0 0 20px rgba(110,231,183,0.25)" }}
               >
                 <span className="material-symbols-outlined text-base">check_circle</span>
                 {isPending ? "Completing…" : "Mark as Delivered"}
               </button>
             )}
+
+            {/* Safety cancel — slim secondary row */}
+            <SafetyCancelButton jobId={job.id} />
+
           </div>
         </div>
       )}
