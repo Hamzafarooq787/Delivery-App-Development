@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { playNotificationSound } from "@/lib/notification-sound"
+import { playNotificationSound, primeAudio, requestNotificationPermission } from "@/lib/notification-sound"
 
 export type NotifRole = "admin" | "driver" | "customer"
 
@@ -122,8 +122,7 @@ function showBrowserNotification(title: string, body: string) {
 }
 
 function requestNotifPermission() {
-  if (typeof window === "undefined" || !("Notification" in window)) return
-  if (Notification.permission === "default") Notification.requestPermission()
+  requestNotificationPermission().catch(() => {})
 }
 
 // ── Labels for action hint ─────────────────────────────────────────────────
@@ -170,6 +169,22 @@ export function RealtimeNotifications({ role, userId }: Props) {
   }, [])
 
   useEffect(() => { requestNotifPermission() }, [])
+
+  // Prime the Web Audio context on the user's first interaction so the
+  // singleton AudioContext is already "running" when a notification arrives.
+  useEffect(() => {
+    const prime = () => {
+      primeAudio()
+      document.removeEventListener("click", prime, true)
+      document.removeEventListener("keydown", prime, true)
+    }
+    document.addEventListener("click",   prime, true)
+    document.addEventListener("keydown", prime, true)
+    return () => {
+      document.removeEventListener("click",   prime, true)
+      document.removeEventListener("keydown", prime, true)
+    }
+  }, [])
 
   // Initial load
   useEffect(() => {
@@ -279,6 +294,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
   }
 
   function handleOpen() {
+    primeAudio()   // user gesture → unlocks AudioContext for future notifications
     const next = !open
     setOpen(next)
     if (next && unread > 0) markAllRead()
