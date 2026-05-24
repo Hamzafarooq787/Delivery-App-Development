@@ -341,6 +341,20 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
 
       if (error) { toast.error(error.message || 'Failed to create delivery.'); setSubmitting(false); return }
 
+      // Fire-and-forget: send Web Push to all subscribed drivers
+      // (non-blocking — delivery flow continues even if this fails)
+      fetch('/api/push/send', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role:  'driver',
+          title: '🚚 New Job Available',
+          body:  `${pickupValue} → ${deliveryValue || 'Live location'}`,
+          url:   '/dashboard/driver/jobs/available',
+          tag:   'new-job',
+        }),
+      }).catch(() => {}) // never block the UI on push errors
+
       // Stop live location if active when delivery is submitted
       if (liveLocationActive) await stopLiveLocation()
 

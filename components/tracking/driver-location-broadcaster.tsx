@@ -90,7 +90,8 @@ function startVideoKeepalive(): () => void {
 async function registerLocationSW(): Promise<ServiceWorkerRegistration | null> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null
   try {
-    const reg = await navigator.serviceWorker.register("/sw-location.js", { scope: "/" })
+    // Use unified sw.js — handles both location relay and push notifications
+    const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" })
     return reg
   } catch {
     return null
