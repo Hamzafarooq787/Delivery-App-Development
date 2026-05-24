@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { playNotificationSound } from "@/lib/notification-sound"
 
 export type NotifRole = "admin" | "driver" | "customer"
 
@@ -112,23 +113,7 @@ function getClickAction(
   return null
 }
 
-// ── Audio chime ───────────────────────────────────────────────────────────
-function playChime() {
-  try {
-    const ctx = new AudioContext()
-    ;[880, 1100].forEach((freq, i) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = "sine"; osc.frequency.value = freq
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12)
-      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.12 + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.35)
-      osc.start(ctx.currentTime + i * 0.12)
-      osc.stop(ctx.currentTime + i * 0.12 + 0.35)
-    })
-  } catch {}
-}
+// ── Audio chime — delegates to shared utility (respects user's volume + sound type prefs) ──
 
 function showBrowserNotification(title: string, body: string) {
   if (typeof window === "undefined" || !("Notification" in window)) return
@@ -219,7 +204,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
             const n: Notif = { id: row.id, title: row.title, body: row.body, at: new Date(row.created_at).getTime(), read: false }
             setNotifs((prev) => prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50))
             showBrowserNotification(n.title, n.body)
-            playChime()
+            playNotificationSound()
             // Chat notifications → custom clickable toast with close button
             const isChatToast = notifStyle(n.title).icon === "chat_bubble"
             if (isChatToast) {
