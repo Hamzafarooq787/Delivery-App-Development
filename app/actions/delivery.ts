@@ -44,6 +44,19 @@ export async function createDeliveryRequest(formData: FormData) {
     })
   }
 
+  // Fire Web Push notifications to all subscribed drivers (best-effort, non-blocking)
+  fetch(`${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/push/send`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      role:  "driver",
+      title: "🚚 New Job Available",
+      body:  `${payload.pickup_address} → ${payload.delivery_address}`,
+      url:   "/dashboard/driver/jobs/available",
+      tag:   "new-job",
+    }),
+  }).catch(() => {}) // never throw — keep the order creation flow clean
+
   revalidatePath("/customer/orders")
   revalidatePath("/dashboard/customer/payments")
   return { data }

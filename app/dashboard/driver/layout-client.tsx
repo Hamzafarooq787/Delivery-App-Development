@@ -9,6 +9,7 @@ import { RealtimeNotifications } from "@/components/shared/realtime-notification
 import { ProfileDropdown } from "@/components/shared/profile-dropdown"
 import { InstallButton } from "@/components/pwa/install-button"
 import { FloatingLiveChat } from "@/components/driver/floating-live-chat"
+import { PushNotificationManager } from "@/components/driver/push-notification-manager"
 
 interface DriverLayoutClientProps {
   children: React.ReactNode
@@ -103,6 +104,8 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
         </main>
         <DriverBottomNav isLocked={isLocked} />
         {isApproved && !pathname.startsWith("/dashboard/driver/jobs/") && <FloatingLiveChat />}
+        {/* Auto-subscribe approved drivers to Web Push (silent — fires on first interaction) */}
+        {isApproved && <PushNotificationManager />}
       </div>
     </div>
   )
