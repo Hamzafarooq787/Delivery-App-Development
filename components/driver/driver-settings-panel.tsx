@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { updateDriverProfile }        from "@/app/actions/delivery"
 import {
   updateVehicleInfo,
@@ -8,6 +8,15 @@ import {
   updateDriverNotifications,
   changeDriverPassword,
 }                                     from "@/app/actions/driver"
+import {
+  SOUND_OPTIONS,
+  SOUND_LS_TYPE,
+  SOUND_LS_VOLUME,
+  getSoundPrefs,
+  setSoundPrefs,
+  playNotificationSound,
+  type SoundType,
+}                                     from "@/lib/notification-sound"
 
 // ─────────── Shared primitives ─────────────────────────────────────────────
 
@@ -290,6 +299,177 @@ function NotificationsSection({
   )
 }
 
+// ─────────── Sound settings section ──────────────────────────────────────
+
+function SoundSettingsSection() {
+  const [selectedType,   setSelectedType]   = useState<SoundType>("chime")
+  const [volume,         setVolume]         = useState(70)
+  const [previewingId,   setPreviewingId]   = useState<SoundType | null>(null)
+  const [saved,          setSaved]          = useState(false)
+
+  // Hydrate from localStorage on mount (avoids SSR mismatch)
+  useEffect(() => {
+    const prefs = getSoundPrefs()
+    setSelectedType(prefs.type)
+    setVolume(prefs.volume)
+  }, [])
+
+  function handleSave() {
+    setSoundPrefs(selectedType, volume)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
+  function handlePreview(id: SoundType) {
+    // Temporarily write prefs so playNotificationSound picks them up
+    setSoundPrefs(id, Math.max(volume, 20)) // at least 20% so it's audible
+    setPreviewingId(id)
+    playNotificationSound(true)
+    setTimeout(() => setPreviewingId(null), 600)
+    // Restore actual saved state (in-memory only, user still needs to click Save)
+    // If user hasn't saved yet, put back the current in-progress volume
+    setTimeout(() => setSoundPrefs(selectedType, volume), 700)
+  }
+
+  return (
+    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-10 h-10 bg-[#c180ff]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#c180ff]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            volume_up
+          </span>
+        </div>
+        <div>
+          <h3 className="text-lg font-bold font-headline text-white">Notification Sound</h3>
+          <p className="text-xs text-[#adaaaa] mt-0.5">Choose a sound and set the volume for job alerts</p>
+        </div>
+      </div>
+
+      {/* Volume slider */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2.5">
+          <label className={LABEL}>Volume</label>
+          <span className="text-xs font-bold text-[#a3a6ff] tabular-nums">{volume}%</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_mute</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="flex-1 accent-[#a3a6ff] h-1.5 rounded-full cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #a3a6ff ${volume}%, #262626 ${volume}%)`,
+            }}
+          />
+          <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_up</span>
+        </div>
+        {volume === 0 && (
+          <p className="text-[11px] text-amber-400 mt-2 flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">warning</span>
+            Volume is muted — you won't hear any alerts
+          </p>
+        )}
+      </div>
+
+      {/* Sound type selector */}
+      <div className="mb-6">
+        <label className={`${LABEL} block mb-3`}>Sound Type</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {SOUND_OPTIONS.map((opt) => {
+            const isSelected = selectedType === opt.id
+            const isPreviewing = previewingId === opt.id
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setSelectedType(opt.id)}
+                className={`
+                  relative flex items-center gap-3 p-4 rounded-xl border text-left transition-all
+                  ${isSelected
+                    ? "bg-[#a3a6ff]/10 border-[#a3a6ff]/50 shadow-[0_0_12px_rgba(163,166,255,0.12)]"
+                    : "bg-[#262626] border-[#494847]/20 hover:border-[#494847]/50 hover:bg-[#2a2a2a]"
+                  }
+                `}
+              >
+                {/* Icon */}
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                  isSelected ? "bg-[#a3a6ff]/20" : "bg-[#1a1919]"
+                }`}>
+                  <span
+                    className={`material-symbols-outlined text-[18px] transition-colors ${isSelected ? "text-[#a3a6ff]" : "text-[#adaaaa]"}`}
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    {opt.icon}
+                  </span>
+                </div>
+
+                {/* Label + description */}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-bold transition-colors ${isSelected ? "text-[#a3a6ff]" : "text-white"}`}>
+                    {opt.label}
+                  </p>
+                  <p className="text-[11px] text-[#adaaaa] mt-0.5 leading-relaxed">{opt.description}</p>
+                </div>
+
+                {/* Preview play button */}
+                <button
+                  type="button"
+                  title="Preview sound"
+                  onClick={(e) => { e.stopPropagation(); handlePreview(opt.id) }}
+                  className={`
+                    w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all
+                    ${isPreviewing
+                      ? "bg-[#a3a6ff] scale-110"
+                      : "bg-[#1a1919] hover:bg-[#a3a6ff]/20 hover:scale-105"
+                    }
+                  `}
+                >
+                  <span
+                    className={`material-symbols-outlined text-[15px] ${isPreviewing ? "text-[#0f00a4]" : "text-[#adaaaa]"}`}
+                    style={{ fontVariationSettings: isPreviewing ? "'FILL' 1" : "'FILL' 0" }}
+                  >
+                    {isPreviewing ? "graphic_eq" : "play_arrow"}
+                  </span>
+                </button>
+
+                {/* Selected tick */}
+                {isSelected && (
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#a3a6ff] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[#0f00a4]" style={{ fontSize: 11 }}>check</span>
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Save */}
+      <div className="flex items-center gap-4 pt-1">
+        <button
+          type="button"
+          onClick={handleSave}
+          className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] flex items-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(163,166,255,0.35)]"
+        >
+          <span className="material-symbols-outlined text-[16px]">save</span>
+          Save Sound Settings
+        </button>
+        {saved && (
+          <p className="text-xs text-[#6ee7b7] flex items-center gap-1 font-semibold">
+            <span className="material-symbols-outlined text-sm">check_circle</span>
+            Saved!
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─────────── Security section ──────────────────────────────────────────────
 
 function SecuritySection() {
@@ -524,6 +704,7 @@ export function DriverSettingsPanel({
           notificationsEnabled={notificationsEnabled}
           deliveryAlerts={deliveryAlerts}
         />
+        <SoundSettingsSection />
         <SecuritySection />
       </section>
 

@@ -3,19 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 
-function playChime() {
-  try {
-    const ctx = new AudioContext()
-    ;[1100, 880].forEach((freq, i) => {
-      const osc = ctx.createOscillator(); const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination); osc.type = "sine"; osc.frequency.value = freq
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12)
-      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.12 + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.35)
-      osc.start(ctx.currentTime + i * 0.12); osc.stop(ctx.currentTime + i * 0.12 + 0.35)
-    })
-  } catch {}
-}
+import { playNotificationSound } from "@/lib/notification-sound"
 import {
   getOrCreateChatSession,
   getChatMessages,
@@ -66,7 +54,7 @@ export function FloatingLiveChat() {
         setMessages((prev) => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
         if (msg.sender_role === "admin") {
           // Play chime for every admin reply
-          playChime()
+          playNotificationSound()
           if (open) {
             markChatSessionRead(sessionId, "driver")
           } else {
