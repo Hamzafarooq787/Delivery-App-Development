@@ -10,11 +10,13 @@ import {
 }                                     from "@/app/actions/driver"
 import {
   SOUND_OPTIONS,
-  SOUND_LS_TYPE,
-  SOUND_LS_VOLUME,
   getSoundPrefs,
   setSoundPrefs,
   playNotificationSound,
+  primeAudio,
+  isNotificationSupported,
+  canUseSystemSound,
+  requestNotificationPermission,
   type SoundType,
 }                                     from "@/lib/notification-sound"
 
@@ -301,18 +303,34 @@ function NotificationsSection({
 
 // ─────────── Sound settings section ──────────────────────────────────────
 
-function SoundSettingsSection() {
-  const [selectedType,   setSelectedType]   = useState<SoundType>("chime")
-  const [volume,         setVolume]         = useState(70)
-  const [previewingId,   setPreviewingId]   = useState<SoundType | null>(null)
-  const [saved,          setSaved]          = useState(false)
+type NotifPerm = "granted" | "denied" | "default" | "unsupported"
 
-  // Hydrate from localStorage on mount (avoids SSR mismatch)
+function SoundSettingsSection() {
+  const [selectedType,  setSelectedType]  = useState<SoundType>("chime")
+  const [volume,        setVolume]        = useState(80)
+  const [previewingId,  setPreviewingId]  = useState<SoundType | null>(null)
+  const [saved,         setSaved]         = useState(false)
+  const [notifPerm,     setNotifPerm]     = useState<NotifPerm>("default")
+  const [requesting,    setRequesting]    = useState(false)
+
+  // Hydrate from localStorage and check notification permission (client-only)
   useEffect(() => {
     const prefs = getSoundPrefs()
     setSelectedType(prefs.type)
     setVolume(prefs.volume)
+    if (!isNotificationSupported()) {
+      setNotifPerm("unsupported")
+    } else {
+      setNotifPerm(Notification.permission as NotifPerm)
+    }
   }, [])
+
+  async function handleEnableSystemSound() {
+    setRequesting(true)
+    const perm = await requestNotificationPermission()
+    setNotifPerm(perm as NotifPerm)
+    setRequesting(false)
+  }
 
   function handleSave() {
     setSoundPrefs(selectedType, volume)
@@ -320,21 +338,32 @@ function SoundSettingsSection() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  function handlePreview(id: SoundType) {
-    // Temporarily write prefs so playNotificationSound picks them up
-    setSoundPrefs(id, Math.max(volume, 20)) // at least 20% so it's audible
+  async function handlePreview(id: SoundType) {
+    // Prime AudioContext (this IS a user gesture — safe to do here)
+    await primeAudio()
+    // Temporarily write this sound type so the utility picks it up
+    setSoundPrefs(id, Math.max(volume, 30))  // at least 30% so preview is audible
     setPreviewingId(id)
-    playNotificationSound(true)
-    setTimeout(() => setPreviewingId(null), 600)
-    // Restore actual saved state (in-memory only, user still needs to click Save)
-    // If user hasn't saved yet, put back the current in-progress volume
-    setTimeout(() => setSoundPrefs(selectedType, volume), 700)
+    await playNotificationSound(true)
+    setTimeout(() => setPreviewingId(null), 700)
+    // Restore in-memory prefs (user still needs to Save to persist)
+    setTimeout(() => setSoundPrefs(selectedType, volume), 750)
   }
+
+  const systemBadge = (() => {
+    switch (notifPerm) {
+      case "granted":     return { color: "bg-[#6ee7b7]", text: "Active",      pulse: true  }
+      case "denied":      return { color: "bg-[#ff6e84]", text: "Blocked",     pulse: false }
+      case "default":     return { color: "bg-amber-400", text: "Not enabled", pulse: false }
+      case "unsupported": return { color: "bg-[#494847]", text: "Unsupported", pulse: false }
+    }
+  })()
 
   return (
     <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-7">
         <div className="w-10 h-10 bg-[#c180ff]/10 rounded-lg flex items-center justify-center">
           <span className="material-symbols-outlined text-[#c180ff]" style={{ fontVariationSettings: "'FILL' 1" }}>
             volume_up
@@ -342,47 +371,133 @@ function SoundSettingsSection() {
         </div>
         <div>
           <h3 className="text-lg font-bold font-headline text-white">Notification Sound</h3>
-          <p className="text-xs text-[#adaaaa] mt-0.5">Choose a sound and set the volume for job alerts</p>
+          <p className="text-xs text-[#adaaaa] mt-0.5">System alert + in-app sound for every job notification</p>
         </div>
       </div>
 
-      {/* Volume slider */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2.5">
-          <label className={LABEL}>Volume</label>
-          <span className="text-xs font-bold text-[#a3a6ff] tabular-nums">{volume}%</span>
+      {/* ── System (OS) notification sound ─────────────────────────────────── */}
+      <div className="mb-7">
+        <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest mb-3">System Sound</p>
+        <div className="bg-[#262626] rounded-xl border border-[#494847]/20 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                notifPerm === "granted" ? "bg-[#6ee7b7]/15" : "bg-[#494847]/20"
+              }`}>
+                <span
+                  className={`material-symbols-outlined text-[18px] ${
+                    notifPerm === "granted" ? "text-[#6ee7b7]" : "text-[#adaaaa]"
+                  }`}
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  {notifPerm === "granted" ? "notifications_active" : "notifications_off"}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-bold text-white">Device Notification Sound</p>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    notifPerm === "granted"
+                      ? "bg-[#6ee7b7]/15 text-[#6ee7b7]"
+                      : notifPerm === "denied"
+                      ? "bg-[#ff6e84]/15 text-[#ff6e84]"
+                      : notifPerm === "unsupported"
+                      ? "bg-[#494847]/30 text-[#adaaaa]"
+                      : "bg-amber-400/15 text-amber-400"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${systemBadge.color} ${systemBadge.pulse ? "animate-pulse" : ""}`} />
+                    {systemBadge.text}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#adaaaa] mt-1 leading-relaxed">
+                  {notifPerm === "granted"
+                    ? "Your device plays its own notification ringtone for every alert. Works on Android, Windows & macOS."
+                    : notifPerm === "denied"
+                    ? "Blocked in browser settings. Open your browser's site settings and allow notifications, then reload."
+                    : notifPerm === "unsupported"
+                    ? "System notifications are not supported on this browser (iOS Safari). In-app sounds work instead."
+                    : "Allow notifications so your device plays its built-in alert sound for new job alerts."}
+                </p>
+              </div>
+            </div>
+
+            {/* Enable button — only show when actionable */}
+            {(notifPerm === "default") && (
+              <button
+                type="button"
+                onClick={handleEnableSystemSound}
+                disabled={requesting}
+                className="shrink-0 px-3 py-2 rounded-xl bg-[#6ee7b7]/15 border border-[#6ee7b7]/30 text-[#6ee7b7] text-xs font-bold hover:bg-[#6ee7b7]/25 transition-all disabled:opacity-60 flex items-center gap-1.5"
+              >
+                {requesting ? (
+                  <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                ) : (
+                  <span className="material-symbols-outlined text-[14px]">notifications</span>
+                )}
+                {requesting ? "Requesting…" : "Enable"}
+              </button>
+            )}
+          </div>
+
+          {/* iOS note */}
+          {notifPerm === "unsupported" && (
+            <div className="mt-3 flex items-start gap-2 bg-[#a3a6ff]/8 border border-[#a3a6ff]/15 rounded-lg px-3 py-2.5">
+              <span className="material-symbols-outlined text-[#a3a6ff] text-[14px] shrink-0 mt-0.5">info</span>
+              <p className="text-[11px] text-[#adaaaa] leading-relaxed">
+                On <span className="text-white font-semibold">iOS</span>, add this app to your Home Screen (Share → Add to Home Screen) to enable push notifications with system sounds.
+              </p>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_mute</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            className="flex-1 accent-[#a3a6ff] h-1.5 rounded-full cursor-pointer"
-            style={{
-              background: `linear-gradient(to right, #a3a6ff ${volume}%, #262626 ${volume}%)`,
-            }}
-          />
-          <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_up</span>
-        </div>
-        {volume === 0 && (
-          <p className="text-[11px] text-amber-400 mt-2 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[13px]">warning</span>
-            Volume is muted — you won't hear any alerts
-          </p>
-        )}
       </div>
 
-      {/* Sound type selector */}
-      <div className="mb-6">
+      {/* ── In-app sound (Web Audio) ───────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest">In-App Sound</p>
+          <span className="text-[10px] text-[#494847]">Plays while the app is open</span>
+        </div>
+
+        {/* Volume */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2.5">
+            <label className={LABEL}>Volume</label>
+            <span className="text-xs font-bold text-[#a3a6ff] tabular-nums">{volume}%</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_mute</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+              className="flex-1 h-2 rounded-full cursor-pointer appearance-none"
+              style={{
+                background: `linear-gradient(to right, #a3a6ff ${volume}%, #2a2a2a ${volume}%)`,
+                accentColor: "#a3a6ff",
+              }}
+            />
+            <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_up</span>
+          </div>
+          {volume === 0 && (
+            <p className="text-[11px] text-amber-400 mt-2 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[13px]">warning</span>
+              In-app sound is muted — only system notification will play
+            </p>
+          )}
+        </div>
+
+        {/* Sound type grid */}
         <label className={`${LABEL} block mb-3`}>Sound Type</label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           {SOUND_OPTIONS.map((opt) => {
-            const isSelected = selectedType === opt.id
-            const isPreviewing = previewingId === opt.id
+            const isSelected   = selectedType === opt.id
+            const isPreviewing = previewingId  === opt.id
             return (
               <button
                 key={opt.id}
@@ -401,7 +516,9 @@ function SoundSettingsSection() {
                   isSelected ? "bg-[#a3a6ff]/20" : "bg-[#1a1919]"
                 }`}>
                   <span
-                    className={`material-symbols-outlined text-[18px] transition-colors ${isSelected ? "text-[#a3a6ff]" : "text-[#adaaaa]"}`}
+                    className={`material-symbols-outlined text-[18px] transition-colors ${
+                      isSelected ? "text-[#a3a6ff]" : "text-[#adaaaa]"
+                    }`}
                     style={{ fontVariationSettings: "'FILL' 1" }}
                   >
                     {opt.icon}
@@ -416,10 +533,10 @@ function SoundSettingsSection() {
                   <p className="text-[11px] text-[#adaaaa] mt-0.5 leading-relaxed">{opt.description}</p>
                 </div>
 
-                {/* Preview play button */}
+                {/* ▶ Preview button */}
                 <button
                   type="button"
-                  title="Preview sound"
+                  title={`Preview ${opt.label}`}
                   onClick={(e) => { e.stopPropagation(); handlePreview(opt.id) }}
                   className={`
                     w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all
@@ -447,24 +564,24 @@ function SoundSettingsSection() {
             )
           })}
         </div>
-      </div>
 
-      {/* Save */}
-      <div className="flex items-center gap-4 pt-1">
-        <button
-          type="button"
-          onClick={handleSave}
-          className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] flex items-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(163,166,255,0.35)]"
-        >
-          <span className="material-symbols-outlined text-[16px]">save</span>
-          Save Sound Settings
-        </button>
-        {saved && (
-          <p className="text-xs text-[#6ee7b7] flex items-center gap-1 font-semibold">
-            <span className="material-symbols-outlined text-sm">check_circle</span>
-            Saved!
-          </p>
-        )}
+        {/* Save */}
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] flex items-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(163,166,255,0.35)]"
+          >
+            <span className="material-symbols-outlined text-[16px]">save</span>
+            Save Sound Settings
+          </button>
+          {saved && (
+            <p className="text-xs text-[#6ee7b7] flex items-center gap-1 font-semibold">
+              <span className="material-symbols-outlined text-sm">check_circle</span>
+              Saved!
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
