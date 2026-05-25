@@ -45,7 +45,8 @@ export async function createDeliveryRequest(formData: FormData) {
   }
 
   // Fire Web Push notifications to all subscribed drivers (best-effort, non-blocking)
-  fetch(`${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/push/send`, {
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "") // strip any trailing slash
+  fetch(`${siteUrl}/api/push/send`, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
