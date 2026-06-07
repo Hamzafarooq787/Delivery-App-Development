@@ -7,6 +7,11 @@ const nextConfig = {
     unoptimized: true,
   },
 
+  // firebase-admin uses native Node.js modules (crypto, http2, etc.) that cannot
+  // be bundled by webpack. Marking it external tells Next.js to require() it at
+  // runtime instead of bundling — required for Vercel deployment to succeed.
+  serverExternalPackages: ["firebase-admin"],
+
   // ── HTTP response headers ───────────────────────────────────────────────────
   async headers() {
     return [

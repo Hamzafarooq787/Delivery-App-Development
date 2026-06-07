@@ -61,17 +61,28 @@ const messaging = firebase.messaging();
 
 // ── Background Message Handler ────────────────────────────────────────────────
 // Fired when a push arrives and the app tab is NOT in the foreground.
-// Firebase SDK handles the raw push → calls this with a friendly payload.
+//
+// IMPORTANT: When a message includes a top-level notification payload, the
+// Firebase SDK / browser displays it automatically. Calling showNotification()
+// here as well would produce a duplicate. We use data-only messages (see
+// lib/notifications/send.ts) so this handler is always responsible for display.
 messaging.onBackgroundMessage((payload) => {
   console.log("[FCM-SW] Background message received:", payload.data?.tag ?? "(no tag)");
 
   const { notification, data } = payload;
 
-  // Resolve notification content from either notification or data fields
-  const title = notification?.title ?? data?.title ?? "Kinetic Void";
-  const body  = notification?.body  ?? data?.body  ?? "";
-  const icon  = notification?.icon  ?? data?.icon  ?? "/icons/icon-192.png";
-  const image = notification?.image ?? data?.image;
+  // Guard: if Firebase already displayed a notification from the payload
+  // notification field, skip manual display to prevent duplicates.
+  if (notification?.title) {
+    console.log("[FCM-SW] Notification field present — Firebase handles display.");
+    return;
+  }
+
+  // Data-only message — build and show the notification ourselves
+  const title = data?.title ?? "Kinetic Void";
+  const body  = data?.body  ?? "";
+  const icon  = data?.icon  ?? "/icons/icon-192.png";
+  const image = data?.image;
   const url   = data?.url ?? data?.clickAction ?? "/";
   const tag   = data?.tag ?? "kinetic-void-notification";
 

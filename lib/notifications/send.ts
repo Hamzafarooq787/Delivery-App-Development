@@ -94,7 +94,12 @@ export async function sendPushNotification({
     const response = await messaging.sendEachForMulticast({
       tokens,
 
-      // Base notification (shown on all platforms if platform-specific overrides absent)
+      // ── Top-level notification ─────────────────────────────────────────────
+      // REQUIRED for Chrome on Android to wake the device when the browser is
+      // fully closed. Data-only messages are silently dropped on Android in
+      // that state. The FCM service worker's onBackgroundMessage guard
+      // (if notification?.title → return early) prevents the SW from calling
+      // showNotification() a second time, so there is NO duplicate.
       notification: {
         title: notification.title,
         body: notification.body,
@@ -107,7 +112,7 @@ export async function sendPushNotification({
           title: notification.title,
           body: notification.body,
           icon: notification.icon ?? "/icons/icon-192.png",
-          badge: "/icons/icon-72.png",   // Monochrome icon shown in the status bar
+          badge: "/icons/icon-72.png",   // Monochrome badge icon in status bar
           image: notification.image,
           tag: notification.tag ?? "kinetic-void",
           renotify: false,               // Don't re-buzz for same tag
