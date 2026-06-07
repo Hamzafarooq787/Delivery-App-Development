@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import { notifyUser, notifyMultipleUsers } from "@/app/actions/notifications"
+import { NotificationTag } from "@/lib/notifications/types"
 
 // ── Customer actions ──────────────────────────────────────────────────────────
 
@@ -46,6 +48,36 @@ export async function createDeliveryRequest(formData: FormData) {
 
   revalidatePath("/customer/orders")
   revalidatePath("/dashboard/customer/payments")
+
+  // ── Push notification: notify all online/approved drivers about the new request ──
+  // Fire-and-forget — don't block the response if notifications fail
+  if (data?.id) {
+    const adminClient = createAdminClient()
+    try {
+      // Fetch IDs of all approved, online drivers
+      const { data: onlineDrivers } = await adminClient
+        .from("driver_profiles")
+        .select("id")
+        .eq("status", "approved")
+        .eq("is_online", true)
+
+      if (onlineDrivers && onlineDrivers.length > 0) {
+        const driverIds = onlineDrivers.map((d: { id: string }) => d.id)
+        // Non-blocking — notify in background without awaiting
+        notifyMultipleUsers({
+          userIds: driverIds,
+          title: "📦 New delivery available!",
+          body: `Pickup: ${payload.pickup_address.slice(0, 60)}`,
+          url: "/dashboard/driver",
+          tag: NotificationTag.NEW_DELIVERY,
+          data: { deliveryId: data.id },
+        }).catch(() => {/* silently ignore notification failures */})
+      }
+    } catch {
+      // Never fail the main action because of a notification error
+    }
+  }
+
   return { data }
 }
 
@@ -165,6 +197,27 @@ export async function acceptDelivery(deliveryId: string) {
     .from("driver_profiles")
     .upsert({ id: user.id, is_online: true }, { onConflict: "id" })
 
+  // ── Push notification: notify the customer their delivery was accepted ──────
+  // Fetch the customer ID from the delivery record (fire-and-forget)
+  admin
+    .from("delivery_requests")
+    .select("customer_id, tracking_number")
+    .eq("id", deliveryId)
+    .single()
+    .then(({ data: deliveryData }) => {
+      if (deliveryData?.customer_id) {
+        notifyUser({
+          userId: deliveryData.customer_id,
+          title: "🚗 Driver on the way!",
+          body: `Your delivery ${deliveryData.tracking_number ?? ""} has been accepted. Your driver is heading to collect the package.`,
+          url: "/dashboard/customer",
+          tag: NotificationTag.DELIVERY_ACCEPTED,
+          data: { deliveryId },
+        }).catch(() => {/* silently ignore */})
+      }
+    })
+    .catch(() => {/* silently ignore */})
+
   revalidatePath("/dashboard/driver/jobs/available")
   revalidatePath("/dashboard/driver/jobs/active")
   revalidatePath("/dashboard/driver/active-jobs")
@@ -195,6 +248,57 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
     status,
     updated_by: user.id,
   })
+
+  // ── Push notification: notify the customer of status updates ─────────────
+  // Map delivery statuses to human-friendly push notification content
+  const statusNotifications: Record<
+    string,
+    { title: string; body: string; tag: string }
+  > = {
+    collected: {
+      title: "📦 Package collected!",
+      body: "Your package has been collected and is on its way.",
+      tag: NotificationTag.DELIVERY_COLLECTED,
+    },
+    in_transit: {
+      title: "🚚 Package in transit",
+      body: "Your delivery is en route to the destination.",
+      tag: NotificationTag.DELIVERY_IN_TRANSIT,
+    },
+    delivered: {
+      title: "✅ Delivery complete!",
+      body: "Your package has been delivered successfully.",
+      tag: NotificationTag.DELIVERY_DELIVERED,
+    },
+    cancelled: {
+      title: "❌ Delivery cancelled",
+      body: "Your delivery has been cancelled. Please contact support if needed.",
+      tag: NotificationTag.DELIVERY_CANCELLED,
+    },
+  }
+
+  const notifContent = statusNotifications[status]
+  if (notifContent) {
+    // Fetch customer_id to notify them (fire-and-forget)
+    supabase
+      .from("delivery_requests")
+      .select("customer_id, tracking_number")
+      .eq("id", deliveryId)
+      .single()
+      .then(({ data: delData }) => {
+        if (delData?.customer_id) {
+          notifyUser({
+            userId: delData.customer_id,
+            title: notifContent.title,
+            body: `${notifContent.body} (${delData.tracking_number ?? deliveryId})`,
+            url: "/dashboard/customer",
+            tag: notifContent.tag,
+            data: { deliveryId, status },
+          }).catch(() => {/* silently ignore */})
+        }
+      })
+      .catch(() => {/* silently ignore */})
+  }
 
   // On delivery completion: record earnings with 75/25 commission split
   if (status === "delivered") {
