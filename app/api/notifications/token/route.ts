@@ -39,6 +39,17 @@ export async function POST(req: NextRequest) {
     // Use admin client to bypass RLS — the route is already auth-gated
     const admin = createAdminClient()
 
+    // ── Prevent cross-account token leakage on shared devices ────────────────
+    // If this FCM token was previously registered under a DIFFERENT user (e.g.
+    // user A logged out, user B logged in on the same browser), delete the old
+    // row first so user A stops receiving user B's notifications.
+    await admin
+      .from("user_notification_tokens")
+      .delete()
+      .eq("fcm_token", token)
+      .neq("user_id", user.id)
+
+    // Upsert the token for the current user — idempotent for same user/device
     const { error } = await admin
       .from("user_notification_tokens")
       .upsert(
@@ -49,7 +60,6 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         },
         {
-          // The UNIQUE constraint on (user_id, fcm_token) drives the upsert
           onConflict: "user_id,fcm_token",
           ignoreDuplicates: false, // Always update updated_at on refresh
         }

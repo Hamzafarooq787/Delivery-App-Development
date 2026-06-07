@@ -94,27 +94,16 @@ export async function sendPushNotification({
     const response = await messaging.sendEachForMulticast({
       tokens,
 
-      // Base notification (shown on all platforms if platform-specific overrides absent)
-      notification: {
-        title: notification.title,
-        body: notification.body,
-        imageUrl: notification.image,
-      },
+      // NOTE: No top-level `notification` field here for web.
+      // Including it would cause the browser to display the notification
+      // automatically AND trigger onBackgroundMessage → duplicate notifications.
+      // Instead we use a data-only approach for web: the FCM service worker's
+      // onBackgroundMessage handler reads from `data` and calls showNotification()
+      // exactly once. Android and iOS use their own platform-specific overrides below.
 
       // ── Web Push (Chrome, Edge, Firefox on desktop/Android) ──────────────
+      // No `webpush.notification` — the service worker handles display exclusively.
       webpush: {
-        notification: {
-          title: notification.title,
-          body: notification.body,
-          icon: notification.icon ?? "/icons/icon-192.png",
-          badge: "/icons/icon-72.png",   // Monochrome icon shown in the status bar
-          image: notification.image,
-          tag: notification.tag ?? "kinetic-void",
-          renotify: false,               // Don't re-buzz for same tag
-          requireInteraction: false,     // Auto-dismiss after ~4 s
-          vibrate: [200, 100, 200],
-          timestamp: Date.now(),
-        },
         fcmOptions: {
           link: notification.url ?? "/", // URL opened on notification click
         },
