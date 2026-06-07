@@ -66,6 +66,33 @@ const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY!
  *  Must NOT conflict with the existing caching SW at scope "/". */
 const FCM_SW_SCOPE = "/firebase-messaging-sw.js/"
 
+// ── Helper ────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns when the given ServiceWorkerRegistration has an active worker.
+ * Resolves immediately if already active, otherwise waits for "activated" state.
+ */
+function waitForSWActive(reg: ServiceWorkerRegistration): Promise<void> {
+  return new Promise((resolve) => {
+    if (reg.active) {
+      resolve()
+      return
+    }
+    // The SW might be installing → waiting → activating
+    const worker = reg.installing ?? reg.waiting
+    if (!worker) {
+      resolve()
+      return
+    }
+    worker.addEventListener("statechange", function handler() {
+      if ((this as ServiceWorker).state === "activated") {
+        worker.removeEventListener("statechange", handler)
+        resolve()
+      }
+    })
+  })
+}
+
 // ── Hook implementation ───────────────────────────────────────────────────────
 
 export function usePushNotifications({
@@ -116,6 +143,11 @@ export function usePushNotifications({
           updateViaCache: "none", // Always check for a new version
         }
       )
+
+      // Wait for the SW to reach "activated" state before calling getToken().
+      // getToken() calls pushManager.subscribe() internally — this fails if
+      // the SW is still in "installing" or "waiting" state.
+      await waitForSWActive(swReg)
 
       // Obtain (or refresh) the FCM token linked to this registration
       const fcmToken = await getToken(messaging, {
@@ -172,6 +204,8 @@ export function usePushNotifications({
     const unsub = onMessage(messaging, (payload) => {
       const { notification, data } = payload
 
+      // notification field is present (we include it in the FCM payload for
+      // Android wake support). Fall back to data fields as a safety net.
       const title = notification?.title ?? data?.title ?? "Kinetic Void"
       const body  = notification?.body  ?? data?.body  ?? ""
       const url   = data?.url ?? "/"
