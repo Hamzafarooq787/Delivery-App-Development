@@ -121,6 +121,16 @@ export function usePushNotifications({
     if (supported) {
       setPermission(Notification.permission as PushPermissionState)
     }
+
+    // Re-read permission when the user returns to the tab — they may have
+    // just granted or revoked it in browser settings while we were backgrounded.
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && "Notification" in window) {
+        setPermission(Notification.permission as PushPermissionState)
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => document.removeEventListener("visibilitychange", handleVisibility)
   }, [])
 
   // ── Register FCM service worker and obtain a device token ─────────────────

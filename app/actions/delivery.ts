@@ -69,7 +69,7 @@ export async function createDeliveryRequest(formData: FormData) {
           title: "📦 New delivery available!",
           body: `Pickup: ${payload.pickup_address.slice(0, 60)}`,
           url: "/dashboard/driver",
-          tag: NotificationTag.NEW_DELIVERY,
+          tag: `${NotificationTag.NEW_DELIVERY}-${data.id}`,
           data: { deliveryId: data.id },
         }).catch(() => {/* silently ignore notification failures */})
       }
@@ -211,7 +211,7 @@ export async function acceptDelivery(deliveryId: string) {
           title: "🚗 Driver on the way!",
           body: `Your delivery ${deliveryData.tracking_number ?? ""} has been accepted. Your driver is heading to collect the package.`,
           url: "/dashboard/customer",
-          tag: NotificationTag.DELIVERY_ACCEPTED,
+          tag: `${NotificationTag.DELIVERY_ACCEPTED}-${deliveryId}`,
           data: { deliveryId },
         }).catch(() => {/* silently ignore */})
       }
@@ -292,7 +292,7 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
             title: notifContent.title,
             body: `${notifContent.body} (${delData.tracking_number ?? deliveryId})`,
             url: "/dashboard/customer",
-            tag: notifContent.tag,
+            tag: `${notifContent.tag}-${deliveryId}`,
             data: { deliveryId, status },
           }).catch(() => {/* silently ignore */})
         }
