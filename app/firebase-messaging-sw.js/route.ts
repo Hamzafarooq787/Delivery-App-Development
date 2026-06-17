@@ -62,48 +62,37 @@ const messaging = firebase.messaging();
 // ── Background Message Handler ────────────────────────────────────────────────
 // Fired when a push arrives and the app tab is NOT in the foreground.
 //
-// IMPORTANT: When a message includes a top-level notification payload, the
-// Firebase SDK / browser displays it automatically. Calling showNotification()
-// here as well would produce a duplicate. We use data-only messages (see
-// lib/notifications/send.ts) so this handler is always responsible for display.
+// IMPORTANT: Registering onBackgroundMessage disables Firebase's automatic
+// notification display. This handler is solely responsible for calling
+// showNotification(). Do NOT return early here — doing so drops the notification.
 messaging.onBackgroundMessage((payload) => {
   console.log("[FCM-SW] Background message received:", payload.data?.tag ?? "(no tag)");
 
   const { notification, data } = payload;
 
-  // Guard: if Firebase already displayed a notification from the payload
-  // notification field, skip manual display to prevent duplicates.
-  if (notification?.title) {
-    console.log("[FCM-SW] Notification field present — Firebase handles display.");
-    return;
-  }
-
-  // Data-only message — build and show the notification ourselves
-  const title = data?.title ?? "Kinetic Void";
-  const body  = data?.body  ?? "";
+  // Prefer the richer data fields (set by send.ts) over the top-level
+  // notification object, which exists primarily to wake Android when the
+  // browser is fully closed.
+  const title = data?.title ?? notification?.title ?? "Kinetic Void";
+  const body  = data?.body  ?? notification?.body  ?? "";
   const icon  = data?.icon  ?? "/icons/icon-192.png";
-  const image = data?.image;
-  const url   = data?.url ?? data?.clickAction ?? "/";
-  const tag   = data?.tag ?? "kinetic-void-notification";
+  const image = data?.image ?? notification?.image;
+  const url   = data?.url   ?? "/";
+  const tag   = data?.tag   ?? "kinetic-void-notification";
 
-  const options = {
+  return self.registration.showNotification(title, {
     body,
     icon,
-    badge: "/icons/icon-72.png",   // Small monochrome icon in status bar
+    badge: "/icons/icon-72.png",
     image,
-    tag,                           // Replaces existing notification with same tag
-    renotify: false,               // No extra vibration when replacing
-    requireInteraction: false,     // Auto-dismiss after a few seconds
+    tag,
+    renotify: false,
+    requireInteraction: false,
     silent: false,
     vibrate: [200, 100, 200],
     timestamp: Date.now(),
-    data: {
-      url,                         // Stored so notificationclick can navigate
-      ...data,
-    },
-  };
-
-  return self.registration.showNotification(title, options);
+    data: { url, ...data },
+  });
 });
 
 // ── Notification Click Handler ────────────────────────────────────────────────
