@@ -211,7 +211,7 @@ export function usePushNotifications({
       const title = notification?.title ?? data?.title ?? "Kinetic Void"
       const body  = notification?.body  ?? data?.body  ?? ""
       const url   = data?.url ?? "/"
-      const image = notification?.imageUrl ?? data?.image
+      const image = notification?.image ?? data?.image
 
       const actionEl =
         url !== "/"
