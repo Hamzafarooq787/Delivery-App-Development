@@ -16,7 +16,7 @@
  */
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, createElement } from "react"
 import { getToken, onMessage } from "firebase/messaging"
 import { getFirebaseMessaging } from "@/lib/firebase/client"
 import { toast } from "sonner"
@@ -213,19 +213,46 @@ export function usePushNotifications({
       const url   = data?.url ?? "/"
       const image = notification?.imageUrl ?? data?.image
 
-      // Show a Sonner toast for messages received while the app is open
-      toast(title, {
-        description: body,
-        duration: 7000,
-        ...(image ? { icon: undefined } : {}),
-        action:
-          url !== "/"
-            ? {
-                label: "View",
+      const actionEl =
+        url !== "/"
+          ? createElement(
+              "button",
+              {
+                style: { fontSize: 12, fontWeight: 600, textDecoration: "underline", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 4 },
                 onClick: () => { window.location.href = url },
-              }
-            : undefined,
-      })
+              },
+              "View"
+            )
+          : null
+
+      if (image) {
+        // Render a rich toast with the notification image
+        toast.custom(
+          () =>
+            createElement(
+              "div",
+              { style: { display: "flex", flexDirection: "column", gap: 4, width: "100%" } },
+              createElement("img", {
+                src: image,
+                alt: "",
+                style: { width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 6 },
+              }),
+              createElement("p", { style: { fontWeight: 600, fontSize: 13, margin: 0 } }, title),
+              body ? createElement("p", { style: { fontSize: 12, opacity: 0.75, margin: 0 } }, body) : null,
+              actionEl,
+            ),
+          { duration: 7000 }
+        )
+      } else {
+        toast(title, {
+          description: body,
+          duration: 7000,
+          action:
+            url !== "/"
+              ? { label: "View", onClick: () => { window.location.href = url } }
+              : undefined,
+        })
+      }
     })
 
     unsubscribeRef.current = unsub
