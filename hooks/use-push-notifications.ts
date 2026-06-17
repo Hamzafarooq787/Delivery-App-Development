@@ -202,6 +202,8 @@ export function usePushNotifications({
     unsubscribeRef.current?.()
 
     const unsub = onMessage(messaging, (payload) => {
+      if (!payload) return
+
       const { notification, data } = payload
 
       // notification field is present (we include it in the FCM payload for
@@ -209,11 +211,13 @@ export function usePushNotifications({
       const title = notification?.title ?? data?.title ?? "Kinetic Void"
       const body  = notification?.body  ?? data?.body  ?? ""
       const url   = data?.url ?? "/"
+      const image = notification?.imageUrl ?? data?.image
 
       // Show a Sonner toast for messages received while the app is open
       toast(title, {
         description: body,
         duration: 7000,
+        ...(image ? { icon: undefined } : {}),
         action:
           url !== "/"
             ? {

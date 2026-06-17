@@ -172,6 +172,7 @@ export async function sendPushNotification({
         tag: notification.tag ?? "kinetic-void",
         title: notification.title,
         body: notification.body,
+        ...(notification.image ? { image: notification.image } : {}),
         ...(notification.data ?? {}),
       },
     })
