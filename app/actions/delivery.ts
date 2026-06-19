@@ -71,10 +71,10 @@ export async function createDeliveryRequest(formData: FormData) {
           url: "/dashboard/driver",
           tag: `${NotificationTag.NEW_DELIVERY}-${data.id}`,
           data: { deliveryId: data.id },
-        }).catch(() => {/* silently ignore notification failures */})
+        }).catch((err) => console.error("[Notify] Failed to send new-delivery push:", err))
       }
-    } catch {
-      // Never fail the main action because of a notification error
+    } catch (err) {
+      console.error("[Notify] createDeliveryRequest notification block failed:", err)
     }
   }
 
@@ -213,7 +213,7 @@ export async function acceptDelivery(deliveryId: string) {
           url: "/dashboard/customer",
           tag: `${NotificationTag.DELIVERY_ACCEPTED}-${deliveryId}`,
           data: { deliveryId },
-        }).catch(() => {/* silently ignore */})
+        }).catch((err) => console.error("[Notify] Failed to send delivery-accepted push:", err))
       }
     })
     .catch(() => {/* silently ignore */})
@@ -294,7 +294,7 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
             url: "/dashboard/customer",
             tag: `${notifContent.tag}-${deliveryId}`,
             data: { deliveryId, status },
-          }).catch(() => {/* silently ignore */})
+          }).catch((err) => console.error(`[Notify] Failed to send ${status} push:`, err))
         }
       })
       .catch(() => {/* silently ignore */})

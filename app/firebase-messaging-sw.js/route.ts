@@ -80,13 +80,15 @@ messaging.onBackgroundMessage((payload) => {
   const url   = data?.url   ?? "/";
   const tag   = data?.tag   ?? "kinetic-void-notification";
 
+  console.log("[FCM-SW] Showing notification:", title, "tag:", tag);
+
   return self.registration.showNotification(title, {
     body,
     icon,
     badge: "/icons/icon-72.png",
     image,
     tag,
-    renotify: false,
+    renotify: true,               // Re-alert even if a notification with this tag is already showing
     requireInteraction: false,
     silent: false,
     vibrate: [200, 100, 200],
