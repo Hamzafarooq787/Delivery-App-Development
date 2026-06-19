@@ -79,12 +79,16 @@ export async function sendPushNotification({
   userId: string
   notification: NotificationPayload
 }): Promise<MulticastResult> {
+  console.log(`[FCM] sendPushNotification → user=${userId} title="${notification.title}" tag=${notification.tag ?? "(none)"}`)
+
   const tokens = await getUserFCMTokens(userId)
 
   if (tokens.length === 0) {
     console.log(`[FCM] No registered tokens for user ${userId} — skipping send`)
     return { successCount: 0, failureCount: 0, failedTokens: [] }
   }
+
+  console.log(`[FCM] Sending to ${tokens.length} token(s) for user ${userId}`)
 
   const messaging = getFirebaseAdminMessaging()
   const failedTokens: string[] = []
@@ -97,9 +101,9 @@ export async function sendPushNotification({
       // ── Top-level notification ─────────────────────────────────────────────
       // REQUIRED for Chrome on Android to wake the device when the browser is
       // fully closed. Data-only messages are silently dropped on Android in
-      // that state. The FCM service worker's onBackgroundMessage guard
-      // (if notification?.title → return early) prevents the SW from calling
-      // showNotification() a second time, so there is NO duplicate.
+      // that state. The FCM SW's onBackgroundMessage handler is solely
+      // responsible for calling showNotification() — registering the handler
+      // disables Firebase's automatic display, so there is NO duplicate.
       notification: {
         title: notification.title,
         body: notification.body,
@@ -115,7 +119,7 @@ export async function sendPushNotification({
           badge: "/icons/icon-72.png",   // Monochrome badge icon in status bar
           image: notification.image,
           tag: notification.tag ?? "kinetic-void",
-          renotify: false,               // Don't re-buzz for same tag
+          renotify: true,                // Re-alert even if same tag still showing
           requireInteraction: false,     // Auto-dismiss after ~4 s
           vibrate: [200, 100, 200],
           timestamp: Date.now(),

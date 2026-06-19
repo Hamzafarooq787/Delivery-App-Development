@@ -71,6 +71,8 @@ const FCM_SW_SCOPE = "/firebase-messaging-sw.js/"
 /**
  * Returns when the given ServiceWorkerRegistration has an active worker.
  * Resolves immediately if already active, otherwise waits for "activated" state.
+ * Handles the race condition where register() returns before the SW enters
+ * the "installing" state (all three state fields momentarily null).
  */
 function waitForSWActive(reg: ServiceWorkerRegistration): Promise<void> {
   return new Promise((resolve) => {
@@ -78,18 +80,39 @@ function waitForSWActive(reg: ServiceWorkerRegistration): Promise<void> {
       resolve()
       return
     }
-    // The SW might be installing → waiting → activating
+
+    const trackWorker = (worker: ServiceWorker) => {
+      if (worker.state === "activated") { resolve(); return }
+      worker.addEventListener("statechange", function handler() {
+        if ((this as ServiceWorker).state === "activated") {
+          worker.removeEventListener("statechange", handler)
+          resolve()
+        }
+      })
+    }
+
     const worker = reg.installing ?? reg.waiting
-    if (!worker) {
-      resolve()
+    if (worker) {
+      trackWorker(worker)
       return
     }
-    worker.addEventListener("statechange", function handler() {
-      if ((this as ServiceWorker).state === "activated") {
-        worker.removeEventListener("statechange", handler)
-        resolve()
-      }
-    })
+
+    // Race condition: register() returned before the browser set reg.installing.
+    // Wait for updatefound which fires as soon as the browser starts installing.
+    const onUpdateFound = () => {
+      reg.removeEventListener("updatefound", onUpdateFound)
+      const installing = reg.installing
+      if (installing) { trackWorker(installing); return }
+      resolve() // should not happen, but don't hang
+    }
+    reg.addEventListener("updatefound", onUpdateFound)
+
+    // Safety net: don't hang indefinitely if SW is already activated by the
+    // time we attach the listener (another race window on very fast installs)
+    setTimeout(() => {
+      reg.removeEventListener("updatefound", onUpdateFound)
+      resolve()
+    }, 10_000)
   })
 }
 
