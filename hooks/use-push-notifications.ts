@@ -17,7 +17,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, createElement } from "react"
-import { getToken, onMessage } from "firebase/messaging"
+import { getToken } from "firebase/messaging"
 import { getFirebaseMessaging } from "@/lib/firebase/client"
 import { toast } from "sonner"
 
@@ -167,20 +167,29 @@ export function usePushNotifications({
       const messaging = getFirebaseMessaging()
       if (!messaging) return null
 
-      // Register the dedicated FCM service worker.
-      // We use a sub-scope so it doesn't conflict with sw.js at scope "/".
-      const swReg = await navigator.serviceWorker.register(
-        "/firebase-messaging-sw.js",
-        {
-          scope: FCM_SW_SCOPE,
-          updateViaCache: "none", // Always check for a new version
-        }
-      )
+      // Re-use an already-registered FCM SW instead of calling register() again.
+      // Repeated register() calls on the same scope are no-ops per spec, but
+      // some browsers briefly return a registration with all worker fields null
+      // (installing/waiting/active) on the second call, causing waitForSWActive
+      // to hang until the 10 s safety-net timeout fires.
+      let swReg = await navigator.serviceWorker.getRegistration(FCM_SW_SCOPE)
+
+      if (swReg) {
+        console.log("[FCM] Using existing service worker registration:", FCM_SW_SCOPE)
+      } else {
+        console.log("[FCM] Registering service worker at scope:", FCM_SW_SCOPE)
+        swReg = await navigator.serviceWorker.register(
+          "/firebase-messaging-sw.js",
+          { scope: FCM_SW_SCOPE, updateViaCache: "none" }
+        )
+      }
 
       // Wait for the SW to reach "activated" state before calling getToken().
       // getToken() calls pushManager.subscribe() internally — this fails if
       // the SW is still in "installing" or "waiting" state.
       await waitForSWActive(swReg)
+
+      console.log("[FCM] Using service worker registration: /firebase-messaging-sw.js scope:", FCM_SW_SCOPE)
 
       // Obtain (or refresh) the FCM token linked to this registration
       const fcmToken = await getToken(messaging, {
@@ -227,27 +236,28 @@ export function usePushNotifications({
   )
 
   // ── Foreground message listener → Sonner toast ────────────────────────────
+  // We listen on navigator.serviceWorker rather than Firebase's onMessage()
+  // because the FCM SW is registered at scope /firebase-messaging-sw.js/ and
+  // therefore has no controlled clients. Firebase's compat SDK determines
+  // "foreground vs background" by checking controlled clients — since ours has
+  // none, it always calls onBackgroundMessage (which correctly detects open
+  // windows and forwards via postMessage). We receive those messages here.
   const setupForegroundListener = useCallback(() => {
-    const messaging = getFirebaseMessaging()
-    if (!messaging) return
+    if (typeof navigator === "undefined" || !navigator.serviceWorker) return
 
     // Tear down any previous listener first
     unsubscribeRef.current?.()
 
-    const unsub = onMessage(messaging, (payload) => {
-      if (!payload) return
+    const handler = (event: MessageEvent) => {
+      if (!event.data || event.data.type !== "FCM_FOREGROUND") return
 
-      const { notification, data } = payload
+      const { title, body, url, image } = event.data.payload ?? {}
+      if (!title) return
 
-      // notification field is present (we include it in the FCM payload for
-      // Android wake support). Fall back to data fields as a safety net.
-      const title = notification?.title ?? data?.title ?? "Kinetic Void"
-      const body  = notification?.body  ?? data?.body  ?? ""
-      const url   = data?.url ?? "/"
-      const image = notification?.image ?? data?.image
+      console.log("[FCM] Foreground message received via postMessage:", title)
 
       const actionEl =
-        url !== "/"
+        url && url !== "/"
           ? createElement(
               "button",
               {
@@ -259,7 +269,6 @@ export function usePushNotifications({
           : null
 
       if (image) {
-        // Render a rich toast with the notification image
         toast.custom(
           () =>
             createElement(
@@ -278,17 +287,18 @@ export function usePushNotifications({
         )
       } else {
         toast(title, {
-          description: body,
+          description: body ?? "",
           duration: 7000,
           action:
-            url !== "/"
+            url && url !== "/"
               ? { label: "View", onClick: () => { window.location.href = url } }
               : undefined,
         })
       }
-    })
+    }
 
-    unsubscribeRef.current = unsub
+    navigator.serviceWorker.addEventListener("message", handler)
+    unsubscribeRef.current = () => navigator.serviceWorker.removeEventListener("message", handler)
   }, [])
 
   // ── Public: request permission + generate + save token ────────────────────
