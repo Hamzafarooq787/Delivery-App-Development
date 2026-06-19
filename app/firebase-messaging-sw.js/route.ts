@@ -60,27 +60,50 @@ if (!firebase.apps.length) {
 const messaging = firebase.messaging();
 
 // ── Background Message Handler ────────────────────────────────────────────────
-// Fired when a push arrives and the app tab is NOT in the foreground.
+// Fired for every FCM push — both when the app is open and when it's closed.
 //
 // IMPORTANT: Registering onBackgroundMessage disables Firebase's automatic
-// notification display. This handler is solely responsible for calling
-// showNotification(). Do NOT return early here — doing so drops the notification.
-messaging.onBackgroundMessage((payload) => {
-  console.log("[FCM-SW] Background message received:", payload.data?.tag ?? "(no tag)");
+// notification display. This handler is solely responsible for deciding whether
+// to show an OS notification or forward the message to an open page tab.
+//
+// Why the open-tab check?
+//   This SW is registered at scope /firebase-messaging-sw.js/ — it does NOT
+//   control any page. Chrome therefore always considers the app "backgrounded"
+//   and fires onBackgroundMessage even when a tab is open. Without the check,
+//   we'd show an OS notification on top of whatever the user is looking at,
+//   which triggers Chrome's notification quiet mode and suppresses subsequent
+//   notifications. Instead, when a tab is visible we forward via postMessage
+//   and let the page show a non-intrusive in-app toast.
+messaging.onBackgroundMessage(async (payload) => {
+  console.log("[FCM-SW] Push received:", payload.data?.tag ?? "(no tag)");
 
   const { notification, data } = payload;
 
-  // Prefer the richer data fields (set by send.ts) over the top-level
-  // notification object, which exists primarily to wake Android when the
-  // browser is fully closed.
   const title = data?.title ?? notification?.title ?? "Kinetic Void";
   const body  = data?.body  ?? notification?.body  ?? "";
   const icon  = data?.icon  ?? "/icons/icon-192.png";
   const image = data?.image ?? notification?.image;
-  const url   = data?.url   ?? "/";
+  const url   = data?.url   ?? data?.clickAction   ?? "/";
   const tag   = data?.tag   ?? "kinetic-void-notification";
 
-  console.log("[FCM-SW] Showing notification:", title, "tag:", tag);
+  // Check whether any app window is currently open.
+  // includeUncontrolled: true is required because this SW doesn't control pages.
+  const windowClients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+
+  if (windowClients.length > 0) {
+    // App is open — forward to the page so it can show an in-app toast.
+    // This avoids OS notifications while the user is actively using the app,
+    // which is what triggers Chrome's notification quiet mode.
+    console.log("[FCM-SW] App open (" + windowClients.length + " window(s)) — forwarding via postMessage");
+    const msg = { type: "FCM_FOREGROUND", payload: { title, body, url, image, tag } };
+    windowClients.forEach((client) => {
+      try { client.postMessage(msg); } catch (_) {}
+    });
+    return;
+  }
+
+  // No open tab — show the OS notification.
+  console.log("[FCM-SW] No open window — showing OS notification:", title, "tag:", tag);
 
   return self.registration.showNotification(title, {
     body,
