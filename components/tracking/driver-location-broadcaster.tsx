@@ -90,7 +90,10 @@ function startVideoKeepalive(): () => void {
 async function registerLocationSW(): Promise<ServiceWorkerRegistration | null> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null
   try {
-    const reg = await navigator.serviceWorker.register("/sw-location.js", { scope: "/" })
+    // Scope must be narrower than "/" so the location SW does not conflict with
+    // the FCM SW (firebase-messaging-sw.js) which owns scope "/". The postMessage
+    // pattern used by this file works regardless of scope.
+    const reg = await navigator.serviceWorker.register("/sw-location.js", { scope: "/sw-location/" })
     return reg
   } catch {
     return null
