@@ -140,8 +140,14 @@ export function usePushNotifications({
       // The old scope "/firebase-messaging-sw.js/" had no controlled clients,
       // so Firebase always took the background path and showed OS notifications
       // while the app was open, triggering Chrome's notification quiet mode.
+      //
+      // Must use getRegistrations() + scope check rather than getRegistration(url),
+      // because getRegistration(url) finds the SW whose scope CONTAINS the given
+      // URL — after migration, the new root SW at scope "/" also matches the URL
+      // "/firebase-messaging-sw.js/" and would be incorrectly unregistered.
       try {
-        const oldReg = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js/")
+        const allRegs = await navigator.serviceWorker.getRegistrations()
+        const oldReg = allRegs.find((r) => r.scope.endsWith("/firebase-messaging-sw.js/"))
         if (oldReg) {
           await oldReg.unregister()
           console.log("[FCM] Migrated: unregistered old FCM SW at /firebase-messaging-sw.js/ scope")
