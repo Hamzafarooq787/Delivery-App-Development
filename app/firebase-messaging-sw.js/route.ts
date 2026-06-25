@@ -187,7 +187,7 @@ messaging.onBackgroundMessage((payload) => {
   const icon  = data?.icon  ?? "/icons/icon-192.png";
   const image = data?.image ?? notification?.image;
   const url   = data?.url   ?? data?.clickAction   ?? "/";
-  const tag   = data?.tag   ?? "kinetic-void-notification";
+  const tag   = data?.tag   ?? "go-drop";
 
   console.log("[FCM-SW] Showing OS notification:", title, "| tag:", tag);
 

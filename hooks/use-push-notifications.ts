@@ -226,7 +226,7 @@ export function usePushNotifications({
       if (!payload) return
 
       const { notification, data } = payload
-      const title = notification?.title ?? data?.title ?? "Kinetic Void"
+      const title = notification?.title ?? data?.title ?? "Go Drop"
       const body  = notification?.body  ?? data?.body  ?? ""
       const url   = data?.url ?? "/"
       const image = notification?.image ?? data?.image
@@ -291,13 +291,15 @@ export function usePushNotifications({
       setPermission(result as PushPermissionState)
 
       if (result === "granted") {
+        // Register onMessage listener immediately so the very first push
+        // that arrives (even before token save completes) shows a toast.
+        setupForegroundListener()
         const fcmToken = await getFCMToken()
         if (fcmToken) {
           setToken(fcmToken)
           await saveToken(fcmToken)
-          setupForegroundListener()
-          return true
         }
+        return true
       }
 
       return false
@@ -314,6 +316,11 @@ export function usePushNotifications({
     if (!userId || !isSupported) return
     if (Notification.permission !== "granted") return
 
+    // Register onMessage listener immediately — this must not wait for the
+    // token fetch so that pushes arriving while the user is on ANY page
+    // (including the debug endpoint) are caught and shown as a toast.
+    setupForegroundListener()
+
     let cancelled = false
 
     const init = async () => {
@@ -321,7 +328,6 @@ export function usePushNotifications({
       if (cancelled || !fcmToken) return
       setToken(fcmToken)
       await saveToken(fcmToken)
-      setupForegroundListener()
     }
 
     init()
