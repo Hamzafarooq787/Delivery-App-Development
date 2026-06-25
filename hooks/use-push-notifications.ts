@@ -233,6 +233,29 @@ export function usePushNotifications({
 
       console.log("[FCM] Foreground message received:", title)
 
+      // Show OS notification even while the app is open so the driver never
+      // misses a delivery alert. The SW's onBackgroundMessage only fires when
+      // there are no visible clients — this fills that gap for foreground tabs.
+      if (Notification.permission === "granted" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.ready
+          .then((reg) =>
+            reg.showNotification(title, {
+              body,
+              icon: "/icons/icon-192.png",
+              badge: "/icons/icon-72.png",
+              // @ts-expect-error — image/vibrate/renotify are valid Web Notification options
+              image: image ?? undefined,
+              tag: (data?.tag as string) ?? "go-drop",
+              renotify: true,
+              requireInteraction: false,
+              silent: false,
+              vibrate: [200, 100, 200],
+              data: { url },
+            })
+          )
+          .catch(() => {})
+      }
+
       const actionEl =
         url && url !== "/"
           ? createElement(
