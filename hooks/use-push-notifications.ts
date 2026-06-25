@@ -233,42 +233,10 @@ export function usePushNotifications({
 
       console.log("[FCM] Foreground message received:", title)
 
-      // Show OS notification even while the app is open.
-      // We delegate to the SW via postMessage so it calls
-      // self.registration.showNotification() — the same code path as
-      // onBackgroundMessage, which is known to work correctly.
-      if (Notification.permission === "granted" && "serviceWorker" in navigator) {
-        const notifPayload = {
-          type: "FCM_SHOW_NOTIFICATION",
-          title,
-          body,
-          icon: "/icons/icon-192.png",
-          badge: "/icons/icon-72.png",
-          image: image ?? null,
-          tag: (data?.tag as string) ?? "go-drop",
-          url,
-        }
-
-        const sw = navigator.serviceWorker.controller
-        if (sw) {
-          sw.postMessage(notifPayload)
-          console.log("[FCM] Delegated OS notification to SW controller")
-        } else {
-          // No controller yet (first load / SW updating) — go direct
-          navigator.serviceWorker.ready
-            .then((reg) => reg.showNotification(title, {
-              body,
-              icon: "/icons/icon-192.png",
-              badge: "/icons/icon-72.png",
-              tag: (data?.tag as string) ?? "go-drop",
-              renotify: true,
-              requireInteraction: false,
-              silent: false,
-              data: { url },
-            }))
-            .catch((err) => console.error("[FCM] fallback showNotification failed:", err))
-        }
-      }
+      // OS notification for foreground pushes is handled by the SW's raw push
+      // event listener — it fires alongside Firebase's handler, checks for
+      // visible clients, and calls self.registration.showNotification() directly.
+      // Nothing needed here beyond the Sonner toast below.
 
       const actionEl =
         url && url !== "/"
