@@ -233,27 +233,41 @@ export function usePushNotifications({
 
       console.log("[FCM] Foreground message received:", title)
 
-      // Show OS notification even while the app is open so the driver never
-      // misses a delivery alert. The SW's onBackgroundMessage only fires when
-      // there are no visible clients — this fills that gap for foreground tabs.
+      // Show OS notification even while the app is open.
+      // We delegate to the SW via postMessage so it calls
+      // self.registration.showNotification() — the same code path as
+      // onBackgroundMessage, which is known to work correctly.
       if (Notification.permission === "granted" && "serviceWorker" in navigator) {
-        navigator.serviceWorker.ready
-          .then((reg) =>
-            reg.showNotification(title, {
+        const notifPayload = {
+          type: "FCM_SHOW_NOTIFICATION",
+          title,
+          body,
+          icon: "/icons/icon-192.png",
+          badge: "/icons/icon-72.png",
+          image: image ?? null,
+          tag: (data?.tag as string) ?? "go-drop",
+          url,
+        }
+
+        const sw = navigator.serviceWorker.controller
+        if (sw) {
+          sw.postMessage(notifPayload)
+          console.log("[FCM] Delegated OS notification to SW controller")
+        } else {
+          // No controller yet (first load / SW updating) — go direct
+          navigator.serviceWorker.ready
+            .then((reg) => reg.showNotification(title, {
               body,
               icon: "/icons/icon-192.png",
               badge: "/icons/icon-72.png",
-              // @ts-expect-error — image/vibrate/renotify are valid Web Notification options
-              image: image ?? undefined,
               tag: (data?.tag as string) ?? "go-drop",
               renotify: true,
               requireInteraction: false,
               silent: false,
-              vibrate: [200, 100, 200],
               data: { url },
-            })
-          )
-          .catch(() => {})
+            }))
+            .catch((err) => console.error("[FCM] fallback showNotification failed:", err))
+        }
       }
 
       const actionEl =

@@ -171,6 +171,29 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+// ── Foreground Notification Relay ─────────────────────────────────────────────
+// When a push arrives while the page is visible, Firebase routes to onMessage()
+// in the page instead of calling onBackgroundMessage here. The page posts a
+// FCM_SHOW_NOTIFICATION message so we can call self.registration.showNotification()
+// — identical to the background path — ensuring the OS popup always appears.
+self.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "FCM_SHOW_NOTIFICATION") return;
+  const { title, body, icon, badge, image, tag, url } = event.data;
+  console.log("[FCM-SW] Foreground notification relay — showing OS popup:", title);
+  self.registration.showNotification(title ?? "Go Drop", {
+    body: body ?? "",
+    icon: icon ?? "/icons/icon-192.png",
+    badge: badge ?? "/icons/icon-72.png",
+    image: image ?? undefined,
+    tag: tag ?? "go-drop",
+    renotify: true,
+    requireInteraction: false,
+    silent: false,
+    vibrate: [200, 100, 200],
+    data: { url: url ?? "/" },
+  });
+});
+
 // ── FCM: Background Message Handler ───────────────────────────────────────────
 // Firebase ONLY calls this handler when there is NO visible controlled client.
 // When the driver has the app open and visible, Firebase sends a "push-received"
