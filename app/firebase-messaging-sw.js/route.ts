@@ -171,28 +171,6 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-// ── Foreground Notification Relay ─────────────────────────────────────────────
-// When a push arrives while the page is visible, Firebase routes to onMessage()
-// in the page instead of calling onBackgroundMessage here. The page posts a
-// FCM_SHOW_NOTIFICATION message so we can call self.registration.showNotification()
-// — identical to the background path — ensuring the OS popup always appears.
-self.addEventListener("message", (event) => {
-  if (!event.data || event.data.type !== "FCM_SHOW_NOTIFICATION") return;
-  const { title, body, icon, badge, image, tag, url } = event.data;
-  console.log("[FCM-SW] Foreground notification relay — showing OS popup:", title);
-  self.registration.showNotification(title ?? "Go Drop", {
-    body: body ?? "",
-    icon: icon ?? "/icons/icon-192.png",
-    badge: badge ?? "/icons/icon-72.png",
-    image: image ?? undefined,
-    tag: tag ?? "go-drop",
-    renotify: true,
-    requireInteraction: false,
-    silent: false,
-    vibrate: [200, 100, 200],
-    data: { url: url ?? "/" },
-  });
-});
 
 // ── FCM: Background Message Handler ───────────────────────────────────────────
 // Firebase ONLY calls this handler when there is NO visible controlled client.
@@ -252,8 +230,17 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// ── Raw Push Fallback ──────────────────────────────────────────────────────────
-// Safety net for pushes not sent via Firebase SDK.
+// ── Raw Push Handler ──────────────────────────────────────────────────────────
+// This listener fires for EVERY push alongside Firebase's own push handler.
+// Firebase's handler either:
+//   • foreground (visible client): routes message to page → onMessage() → Sonner toast
+//                                  but does NOT show an OS notification
+//   • background (no visible client): calls onBackgroundMessage() → OS notification
+//
+// This handler fills the foreground gap: it shows the OS notification when the
+// app is open, which Firebase skips. For background pushes with a notification
+// payload it defers to onBackgroundMessage (no duplicate). For non-JSON pushes
+// or data-only messages it always shows a notification.
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
@@ -261,31 +248,50 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data.json();
   } catch {
+    // Non-JSON push — show a basic notification regardless of foreground state
     const text = event.data.text();
     event.waitUntil(
       self.registration.showNotification("Go Drop", {
         body: text,
         icon: "/icons/icon-192.png",
         badge: "/icons/icon-72.png",
-        tag: "kv-push-fallback",
+        tag: "go-drop-push-fallback",
         data: { url: "/" },
       })
     );
     return;
   }
 
-  if (payload.notification) return; // Firebase handles it via onBackgroundMessage
-
-  const { title, body, icon, url, tag } = payload.data ?? payload;
   event.waitUntil(
-    self.registration.showNotification(title ?? "Go Drop", {
-      body: body ?? "",
-      icon: icon ?? "/icons/icon-192.png",
-      badge: "/icons/icon-72.png",
-      tag: tag ?? "kv-push",
-      vibrate: [200, 100, 200],
-      data: { url: url ?? "/" },
-    })
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: false })
+      .then((clients) => {
+        const hasVisible = clients.some((c) => c.visibilityState === "visible");
+
+        // Background + notification payload: onBackgroundMessage() handles it — skip
+        if (!hasVisible && payload.notification) return;
+
+        const { notification, data } = payload;
+        const title = data?.title ?? notification?.title ?? "Go Drop";
+        const body  = data?.body  ?? notification?.body  ?? "";
+        const url   = data?.url   ?? "/";
+        const tag   = data?.tag   ?? "go-drop";
+
+        console.log("[FCM-SW] Push handler — showing OS notification:", title, "| foreground:", hasVisible);
+
+        return self.registration.showNotification(title, {
+          body,
+          icon:  "/icons/icon-192.png",
+          badge: "/icons/icon-72.png",
+          image: data?.image,
+          tag,
+          renotify: true,
+          requireInteraction: false,
+          silent: false,
+          vibrate: [200, 100, 200],
+          data: { url },
+        });
+      })
   );
 });
 `
