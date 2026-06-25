@@ -1,5 +1,5 @@
 /**
- * Kinetic Void Service Worker
+ * Go Drop Service Worker
  * Caches static assets + key pages for offline support.
  */
 

@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 export const metadata: Metadata = {
-  title: "How It Works | Kinetic Void",
-  description: "Kinetic Void is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.",
+  title: "How It Works | Go Drop",
+  description: "Go Drop is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.",
 }
 
 export default function HowItWorksPage() {
@@ -16,7 +16,7 @@ export default function HowItWorksPage() {
           <img
             className="w-full h-full object-cover opacity-40"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-g29a55dZuQD_mtN8IbGXYjpn579HD7D1BLJGU9aM2iUbkElTwh9ZlM28od6d3mbI6H-uMgvTx8lKcBFH3tUOfU39VlzsGhbQlsECBHR2T2I-ueYpNsUQ_MFSA7F_kzSnTbdI6rweXzJzX7Q8kBJMwXoJrc4dNEuUESMkVJmVnw6qEj4QjJkff-ldkAKqJLfcFZravdauuu2-ONfgF_fRxX_bYRgOSUtw9g1YwhQ-U6W4QZLeyzxhETxlnaI64FC7ujkSU1vRiA"
-            alt="Kinetic Void network"
+            alt="Go Drop network"
           />
           <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0e0e0e]/60 to-[#0e0e0e]" />
@@ -26,7 +26,7 @@ export default function HowItWorksPage() {
             ENGINEERED FOR <span className="text-[#a3a6ff] italic">VELOCITY</span>
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-[#adaaaa] max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">
-            Kinetic Void is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.
+            Go Drop is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
             <Link href="/signup" className="w-full sm:w-auto bg-[#a3a6ff] text-[#0f00a4] font-headline font-bold px-8 py-4 rounded-lg flex items-center justify-center gap-2 kinetic-glow transition-transform active:scale-95">
@@ -204,7 +204,7 @@ export default function HowItWorksPage() {
         <h2 className="font-headline text-3xl sm:text-4xl md:text-6xl font-black mb-6 sm:mb-8 tracking-tighter text-balance">
           READY TO <span className="text-[#a3a6ff]">ENTER THE VOID?</span>
         </h2>
-        <p className="text-[#adaaaa] text-lg max-w-xl mx-auto mb-12">Join the global leaders who trust Kinetic Void for their most critical logistics missions.</p>
+        <p className="text-[#adaaaa] text-lg max-w-xl mx-auto mb-12">Join the global leaders who trust Go Drop for their most critical logistics missions.</p>
         <Link href="/signup" className="inline-block bg-[#a3a6ff] text-[#0f00a4] font-bold px-10 py-5 rounded-lg kinetic-glow uppercase tracking-widest text-sm transition-all hover:brightness-110 active:scale-95">
           Request Onboarding
         </Link>

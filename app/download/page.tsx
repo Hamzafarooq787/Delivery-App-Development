@@ -68,7 +68,7 @@ export default function DownloadPage() {
             <span className="material-symbols-outlined text-[#a3a6ff] text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
           </div>
           <h1 className="font-headline text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
-            Get Kinetic Void
+            Get Go Drop
           </h1>
           <p className="text-[#adaaaa] text-sm sm:text-base max-w-md mx-auto leading-relaxed">
             Install the app on any device — no App Store required.
@@ -81,7 +81,7 @@ export default function DownloadPage() {
           <div className="glass-card rounded-2xl border border-[#6ee7b7]/20 bg-[#6ee7b7]/5 p-8 text-center mb-8">
             <span className="material-symbols-outlined text-[#6ee7b7] text-5xl mb-4 block" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
             <h2 className="text-white font-bold text-xl mb-2">Already Installed!</h2>
-            <p className="text-[#adaaaa] text-sm mb-6">Kinetic Void is running as an app on your device.</p>
+            <p className="text-[#adaaaa] text-sm mb-6">Go Drop is running as an app on your device.</p>
             <Link href="/dashboard" className="inline-flex items-center gap-2 milled-gradient text-white font-bold text-sm px-6 py-3 rounded-xl hover:opacity-90 transition-all glow-primary">
               <span className="material-symbols-outlined text-[18px]">dashboard</span>
               Open Dashboard
@@ -185,7 +185,7 @@ export default function DownloadPage() {
                     {[
                       "Open this page in Chrome or Edge",
                       'Click the install icon (⊕) in the address bar',
-                      'Or open menu (⋮) → "Install Kinetic Void"',
+                      'Or open menu (⋮) → "Install Go Drop"',
                       "Click Install to confirm",
                     ].map((s, i) => (
                       <div key={i} className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export default function DownloadPage() {
         </div>
 
         <p className="text-center text-xs text-[#494847] mt-8">
-          &copy; {new Date().getFullYear()} Kinetic Void. All rights reserved.
+          &copy; {new Date().getFullYear()} Go Drop. All rights reserved.
         </p>
       </div>
     </main>

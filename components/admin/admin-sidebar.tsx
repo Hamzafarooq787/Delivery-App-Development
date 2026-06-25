@@ -35,7 +35,7 @@ export function AdminSidebar({ onClose, user, pendingVerifications = 0 }: AdminS
     <aside className="flex h-full w-64 flex-col bg-[#0e0e0e] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
       <div className="px-6 py-6 mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-widest uppercase font-headline">Kinetic Void</h1>
+          <h1 className="text-xl font-bold text-white tracking-widest uppercase font-headline">Go Drop</h1>
           <p className="text-[10px] text-[#adaaaa] tracking-[0.2em] uppercase mt-1 font-headline">Command Center</p>
         </div>
         {onClose && (

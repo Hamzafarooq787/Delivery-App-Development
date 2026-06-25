@@ -8,7 +8,7 @@
  *   • Permission is still "default" (not yet granted or denied)
  *   • The user hasn't dismissed it before (localStorage key)
  *
- * Design principle: matches the existing Kinetic Void dark glass-card UI.
+ * Design principle: matches the existing Go Drop dark glass-card UI.
  * Does NOT modify any existing component or page layout.
  */
 "use client"
@@ -104,7 +104,7 @@ export function NotificationPermission({
         "fixed bottom-20 left-1/2 -translate-x-1/2 z-[60]",
         "flex items-center gap-3",
         "px-4 py-3 rounded-2xl",
-        // Kinetic Void glass-card style (matches existing UI)
+        // Go Drop glass-card style (matches existing UI)
         "bg-[rgba(17,17,17,0.96)] backdrop-blur-xl",
         "border border-[rgba(73,72,71,0.25)]",
         "shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(163,166,255,0.06)]",

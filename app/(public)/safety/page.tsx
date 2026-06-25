@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Safety & Prohibited Items | Kinetic Void",
+  title: "Safety & Prohibited Items | Go Drop",
   description: "Maintaining the integrity of our high-speed network requires absolute adherence to security standards.",
 }
 
@@ -71,7 +71,7 @@ export default function SafetyPage() {
               <span className="text-white/20">Protocols.</span>
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-[#adaaaa] max-w-3xl leading-relaxed font-medium">
-              Maintaining the integrity of our high-speed network requires absolute adherence to security standards. Explore our prohibited items guide to ensure your cargo moves safely through the Kinetic Void.
+              Maintaining the integrity of our high-speed network requires absolute adherence to security standards. Explore our prohibited items guide to ensure your cargo moves safely through the Go Drop.
             </p>
           </div>
           <div className="lg:col-span-4">

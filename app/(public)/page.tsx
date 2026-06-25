@@ -3,7 +3,7 @@ import Link from "next/link"
 import BookingCard from "@/components/home/BookingCard"
 
 export const metadata: Metadata = {
-  title: "Kinetic Void | Premium Logistics",
+  title: "Go Drop | Premium Logistics",
   description: "Experience precision-engineered delivery solutions. From microscopic components to industrial fleets, we bridge the void with absolute speed.",
 }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 export const metadata: Metadata = {
-  title: "Pricing | Kinetic Void",
+  title: "Pricing | Go Drop",
   description: "Choose your tier of logistical supremacy. Transparent, competitive pricing for every scale of operation.",
 }
 
@@ -83,7 +83,7 @@ export default function PricingPage() {
             Choose Your Tier of <span className="text-[#a3a6ff] italic">Supremacy</span>
           </h1>
           <p className="text-base sm:text-lg text-[#adaaaa] max-w-2xl mx-auto leading-relaxed">
-            From on-demand deliveries to enterprise-grade logistical architecture, Kinetic Void scales with your ambition.
+            From on-demand deliveries to enterprise-grade logistical architecture, Go Drop scales with your ambition.
           </p>
         </div>
       </section>
@@ -170,7 +170,7 @@ export default function PricingPage() {
         <h2 className="text-2xl sm:text-3xl font-black font-headline text-center mb-8 sm:mb-12 tracking-tight">FAQ: Eliminating Ambiguity</h2>
         <div className="space-y-4">
           {[
-            { q: "Can I upgrade or downgrade at any time?", a: "Yes. Your tier can be modified at any billing cycle boundary with no lock-in penalties. Kinetic Void believes in logistical freedom at every level." },
+            { q: "Can I upgrade or downgrade at any time?", a: "Yes. Your tier can be modified at any billing cycle boundary with no lock-in penalties. Go Drop believes in logistical freedom at every level." },
             { q: "What happens if I exceed my monthly shipment limit?", a: "Overage shipments are billed at standard pay-as-you-go rates. You will never experience service disruption for exceeding your quota." },
             { q: "Is there a free trial?", a: "All new accounts receive 5 free shipments on the Kinetic tier to experience our core capabilities. No credit card required." },
             { q: "How does the SLA-backed guarantee work on Quantum?", a: "If we miss a committed delivery window, you receive a service credit of 100% of the delivery cost. Our network maintains 99.9% on-time performance globally." },

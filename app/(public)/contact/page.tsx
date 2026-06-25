@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Contact | Kinetic Void",
-  description: "Get in touch with the Kinetic Void operations center. We&apos;re here to handle your most demanding logistical challenges.",
+  title: "Contact | Go Drop",
+  description: "Get in touch with the Go Drop operations center. We&apos;re here to handle your most demanding logistical challenges.",
 }
 
 export default function ContactPage() {

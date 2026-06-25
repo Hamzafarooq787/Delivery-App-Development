@@ -59,7 +59,7 @@ function LoginPageContent() {
               <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">bolt</span>
             </div>
             <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">
-              KINETIC VOID
+              GO DROP
             </h1>
           </Link>
           <p className="text-[#adaaaa] text-sm mt-1">Premium Logistics Platform</p>
@@ -174,7 +174,7 @@ function LoginPageContent() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} Kinetic Void. All rights reserved.
+          &copy; {new Date().getFullYear()} Go Drop. All rights reserved.
         </p>
       </div>
     </main>

@@ -84,7 +84,7 @@ export function DriverOnboarding({
           <div className="w-8 h-8 rounded-lg bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center">
             <span className="material-symbols-outlined text-[#a3a6ff] text-base">bolt</span>
           </div>
-          <span className="font-headline text-sm font-extrabold text-white tracking-widest uppercase">Kinetic Void</span>
+          <span className="font-headline text-sm font-extrabold text-white tracking-widest uppercase">Go Drop</span>
           <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 rounded-full text-[9px] font-bold text-[#a3a6ff] uppercase tracking-wider">Driver Portal</span>
         </div>
         <div className="flex items-center gap-3">
@@ -290,7 +290,7 @@ export function DriverOnboarding({
           )}
         </div>
 
-        <p className="text-xs text-[#494847] mt-10">&copy; {new Date().getFullYear()} Kinetic Void. All rights reserved.</p>
+        <p className="text-xs text-[#494847] mt-10">&copy; {new Date().getFullYear()} Go Drop. All rights reserved.</p>
       </main>
     </div>
   )

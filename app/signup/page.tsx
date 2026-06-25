@@ -77,7 +77,7 @@ export default function SignupPage() {
               <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">bolt</span>
             </div>
             <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">
-              KINETIC VOID
+              GO DROP
             </h1>
           </Link>
           <p className="text-[#adaaaa] text-sm mt-1">Premium Logistics Platform</p>
@@ -110,7 +110,7 @@ export default function SignupPage() {
           ) : (
             <>
               <h2 className="font-headline text-xl font-bold text-white mb-1">Create account</h2>
-              <p className="text-[#adaaaa] text-sm mb-6">Join Kinetic Void to get started</p>
+              <p className="text-[#adaaaa] text-sm mb-6">Join Go Drop to get started</p>
 
               {/* Role Toggle */}
               <div className="flex rounded-xl bg-[#1a1919] border border-[#262626] p-1 mb-6">
@@ -315,7 +315,7 @@ export default function SignupPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} Kinetic Void. All rights reserved.
+          &copy; {new Date().getFullYear()} Go Drop. All rights reserved.
         </p>
       </div>
     </main>

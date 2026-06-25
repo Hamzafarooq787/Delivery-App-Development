@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 export const metadata: Metadata = {
-  title: "About Us | Kinetic Void",
-  description: "Filling the void of global inefficiency. Kinetic Void re-engineers the world's logistical backbone through autonomous coordination and hyper-predictive analytics.",
+  title: "About Us | Go Drop",
+  description: "Filling the void of global inefficiency. Go Drop re-engineers the world's logistical backbone through autonomous coordination and hyper-predictive analytics.",
 }
 
 export default function AboutPage() {
@@ -16,7 +16,7 @@ export default function AboutPage() {
           <img
             className="w-full h-full object-cover grayscale opacity-40"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuAM_lVE4nkV8cerifRH__12c_48VhA2ytu0SAjlDo38VEwv1FRlRrQStOh3jcWl8SvGgb4UgA_zkIm5cChTvSWMOmxLjedjjrOLJfojpzylOkn5Zt0n5y6GoPBYUX4yfLPkvYltj9YsSJ0AKRqrfrUE6c1ouA4ZdIUZFS-qJJHyPjum7zS1MV5SExTR2YupSyIbKDMT_1yA6646cXGh-P48rcCIvgPV8McYPajZBv820RJWP3ACnE3rkrn4Zfysz_NUzE7a9ev5Nw"
-            alt="Kinetic Void logistics"
+            alt="Go Drop logistics"
           />
           <div className="absolute inset-0 bg-black/60" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent" />
@@ -30,7 +30,7 @@ export default function AboutPage() {
               of Global Inefficiency.
             </h1>
             <p className="text-[#adaaaa] text-base sm:text-lg md:text-xl max-w-2xl font-light leading-relaxed">
-              Kinetic Void was born from a singular obsession: that movement should be invisible. We are re-engineering the world&apos;s logistical backbone through autonomous coordination and hyper-predictive analytics.
+              Go Drop was born from a singular obsession: that movement should be invisible. We are re-engineering the world&apos;s logistical backbone through autonomous coordination and hyper-predictive analytics.
             </p>
             <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
               <Link href="/how-it-works" className="w-full sm:w-auto text-center bg-[#a3a6ff] text-[#0f00a4] font-headline font-bold px-10 py-5 rounded-xl shadow-[0_0_20px_rgba(163,166,255,0.3)] hover:scale-105 transition-transform">
@@ -94,7 +94,7 @@ export default function AboutPage() {
               {[
                 { num: "01", stat: "42 Countries", sub: "Active deployment of Kinetic infrastructure across all major shipping corridors." },
                 { num: "02", stat: "1.2M Daily Units", sub: "Seamlessly transitioned through our autonomous hubs with zero human friction." },
-                { num: "03", stat: "99.9% Uptime", sub: "The Kinetic Void never sleeps, ensuring global trade remains uninterrupted." },
+                { num: "03", stat: "99.9% Uptime", sub: "The Go Drop never sleeps, ensuring global trade remains uninterrupted." },
               ].map((item) => (
                 <div key={item.num} className="flex items-start gap-4 sm:gap-6 group">
                   <div className="text-4xl sm:text-5xl font-black font-headline text-[#a3a6ff]/40 group-hover:text-[#a3a6ff] transition-colors">{item.num}</div>
@@ -168,7 +168,7 @@ export default function AboutPage() {
             Ready to Enter the <span className="text-[#a3a6ff]">Void?</span>
           </h2>
           <p className="text-[#adaaaa] text-lg mb-10 leading-relaxed">
-            Join the global leaders who trust Kinetic Void for their most critical logistics missions.
+            Join the global leaders who trust Go Drop for their most critical logistics missions.
           </p>
           <Link href="/signup" className="inline-block bg-[#a3a6ff] text-[#0f00a4] font-bold px-10 py-5 rounded-xl shadow-[0_10px_30px_rgba(163,166,255,0.2)] hover:shadow-[0_15px_40px_rgba(163,166,255,0.3)] hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-[0.1em]">
             Get Started Today

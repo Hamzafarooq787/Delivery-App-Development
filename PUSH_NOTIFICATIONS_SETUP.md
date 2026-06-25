@@ -1,5 +1,5 @@
 # Push Notifications Setup Guide
-## Kinetic Void — Firebase Cloud Messaging (FCM)
+## Go Drop — Firebase Cloud Messaging (FCM)
 
 This guide walks you through the one-time setup required to enable full push
 notifications (foreground + background + browser closed + mobile).
@@ -40,7 +40,7 @@ Database (Supabase)
 ### 1.2 Register a Web App
 
 1. In the Firebase Console, click the **Web** icon (`</>`)
-2. App nickname: `Kinetic Void Web`
+2. App nickname: `Go Drop Web`
 3. ✅ Check **Also set up Firebase Hosting** — **NO** (we use Vercel)
 4. Click **Register app**
 5. Copy the `firebaseConfig` object — you'll need these values:

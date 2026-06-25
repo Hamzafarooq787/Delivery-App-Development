@@ -85,7 +85,7 @@ export default function Sidebar() {
   return (
     <aside className="h-screen w-64 fixed left-0 top-0 bg-[#0e0e0e] flex flex-col py-6 hidden md:flex z-50">
       <div className="px-6 mb-10">
-        <h1 className="text-xl font-black text-white tracking-tighter font-headline">Kinetic Void</h1>
+        <h1 className="text-xl font-black text-white tracking-tighter font-headline">Go Drop</h1>
         <p className="text-xs text-on-surface-variant font-label uppercase tracking-[0.2em] mt-1">Logistics HQ</p>
       </div>
       <nav className="flex-1 space-y-1">
