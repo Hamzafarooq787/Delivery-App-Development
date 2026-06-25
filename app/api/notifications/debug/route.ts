@@ -97,14 +97,44 @@ export async function GET(req: Request) {
     report.tokenQueryError = e?.message ?? String(e)
   }
 
-  // ── 6. Test send — only when ?send=1 is present (opt-in, avoids side effects on plain GET) ──
-  const sendTest = new URL(req.url).searchParams.get("send") === "1"
+  const params = new URL(req.url).searchParams
+
+  // ── 6. Token purge — ?purge=1 deletes ALL tokens so the browser re-registers ─
+  // Use this when FCM reports successCount > 0 but no notification appears.
+  // After purging, reload the dashboard — the auto-init will create fresh tokens.
+  const doPurge = params.get("purge") === "1"
+  if (doPurge) {
+    try {
+      const admin = createAdminClient()
+      await admin
+        .from("user_notification_tokens")
+        .delete()
+        .eq("user_id", userId)
+
+      return NextResponse.json({
+        purged: true,
+        message: "✅ All FCM tokens deleted for your account. " +
+          "Reload your dashboard to register a fresh push subscription — then test again.",
+      }, { status: 200 })
+    } catch (e: any) {
+      return NextResponse.json({ purged: false, error: e?.message ?? String(e) }, { status: 500 })
+    }
+  }
+
+  // ── 7. Test send — only when ?send=1 is present (opt-in, avoids side effects on plain GET) ──
+  // ⚠️  IMPORTANT: For the notification to appear you must keep the DASHBOARD open
+  //     in another tab while you load this URL. If this JSON page is the only
+  //     open tab, Firebase routes the push to onMessage() here (no Firebase SDK) →
+  //     silent drop. Close this tab before hitting ?send=1, or keep /dashboard open.
+  const sendTest = params.get("send") === "1"
   if (!sendTest) {
     report.testSend = "SKIPPED — add ?send=1 to the URL to fire a real test push"
+    report.testSendTip = "⚠️ Keep your dashboard tab open (or browser closed) when testing — " +
+      "if this JSON page is your only open tab the push is silently dropped."
   } else if (report.adminSdkInit !== "OK") {
     report.testSend = "SKIPPED — Admin SDK failed to initialize"
   } else if ((report.tokenCount as number) === 0) {
-    report.testSend = "SKIPPED — No FCM tokens registered for this user"
+    report.testSend = "SKIPPED — No FCM tokens registered for this user (hit ?purge=1 then reload dashboard)"
   } else {
     try {
       const { sendPushNotification } = await import("@/lib/notifications/send")
@@ -118,6 +148,7 @@ export async function GET(req: Request) {
         },
       })
       report.testSend = result
+      report.testSendTip = "Check your dashboard tab for a toast (foreground) or your OS notification area (background/closed)."
     } catch (e: any) {
       report.testSend = "FAILED"
       report.testSendError = e?.message ?? String(e)
