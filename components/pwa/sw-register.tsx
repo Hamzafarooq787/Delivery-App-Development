@@ -1,12 +1,13 @@
 /**
  * components/pwa/sw-register.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * Registers the main caching service worker on mount.
+ * Eagerly registers the combined FCM + PWA service worker at scope "/" so that
+ * offline caching works for ALL users regardless of push-notification permission.
+ * Users who deny or never see the notification prompt still get PWA caching.
  *
- * NOTE: The FCM push notification SW (/firebase-messaging-sw.js) is registered
- * inside use-push-notifications.ts when the user grants permission, so that it
- * is linked to the correct ServiceWorkerRegistration for getToken(). Registering
- * it here as well would create a duplicate that is not used by FCM.
+ * When the user later grants permission, use-push-notifications.ts calls
+ * register() again with the same script + scope. The browser returns the same
+ * existing ServiceWorkerRegistration, which getToken() then uses for FCM.
  */
 "use client"
 
@@ -17,9 +18,9 @@ export function SWRegister() {
     if (!("serviceWorker" in navigator)) return
 
     navigator.serviceWorker
-      .register("/sw.js", { scope: "/" })
-      .then(() => console.log("[SW] Caching service worker registered"))
-      .catch((err) => console.warn("[SW] Caching SW registration failed:", err))
+      .register("/firebase-messaging-sw.js", { scope: "/", updateViaCache: "none" })
+      .then(() => console.log("[SW] FCM/PWA service worker registered"))
+      .catch((err) => console.warn("[SW] FCM/PWA SW registration failed:", err))
   }, [])
 
   return null

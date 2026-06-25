@@ -33,7 +33,7 @@ export function CustomerTopBar() {
     <header className="fixed top-0 left-0 right-0 md:left-64 h-16 bg-[#0e0e0e]/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-8 z-40 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
       {/* Logo — mobile only */}
       <div className="md:hidden">
-        <p className="text-base font-black text-white tracking-tighter font-headline">Kinetic Void</p>
+        <p className="text-base font-black text-white tracking-tighter font-headline">Go Drop</p>
         <p className="text-[9px] text-[#adaaaa] uppercase tracking-[0.18em] font-headline -mt-0.5">Logistics</p>
       </div>
 

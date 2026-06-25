@@ -4,11 +4,18 @@
  * React hook that manages the full push notification lifecycle:
  *   1. Checks browser support for the Push API
  *   2. Requests / reads the current notification permission
- *   3. Registers the FCM service worker
+ *   3. Registers the FCM service worker at scope "/" (root)
  *   4. Generates a Firebase Cloud Messaging device token
  *   5. Saves the token to Supabase via /api/notifications/token
- *   6. Listens for foreground messages and shows Sonner toasts
+ *   6. Listens for foreground messages via Firebase onMessage() → Sonner toast
  *   7. Auto-refreshes the token when the user logs in
+ *
+ * Service worker architecture:
+ *   The FCM SW is registered at scope "/" so it controls all pages. This lets
+ *   Firebase SDK distinguish foreground (visible page) from background (hidden
+ *   or no page), routing accordingly:
+ *     visible page → onMessage() here → in-app Sonner toast (no OS notification)
+ *     hidden/closed → onBackgroundMessage() in SW → OS notification
  *
  * Usage:
  *   const { permission, requestPermission, isSupported } =
@@ -17,7 +24,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, createElement } from "react"
-import { getToken } from "firebase/messaging"
+import { getToken, onMessage } from "firebase/messaging"
 import { getFirebaseMessaging } from "@/lib/firebase/client"
 import { toast } from "sonner"
 
@@ -26,60 +33,32 @@ import { toast } from "sonner"
 export type PushPermissionState = "default" | "granted" | "denied"
 
 export interface UsePushNotificationsOptions {
-  /** Supabase user ID — required to save the token to the correct row. */
   userId?: string | null
-  /**
-   * When true, automatically requests permission 3 seconds after the
-   * user ID becomes available (first-time login experience).
-   * @default false
-   */
   autoRequest?: boolean
 }
 
 export interface UsePushNotificationsReturn {
-  /** Current browser notification permission state. */
   permission: PushPermissionState
-  /** Whether the current browser supports the Push / Notifications APIs. */
   isSupported: boolean
-  /** True while the permission dialog or token generation is in progress. */
   isLoading: boolean
-  /** The active FCM token for this device, or null if not yet obtained. */
   token: string | null
-  /**
-   * Prompt the user to grant notification permission, register the FCM
-   * service worker, and save the token. Returns true on success.
-   */
   requestPermission: () => Promise<boolean>
-  /**
-   * Unsubscribes from foreground messages and clears the token in state.
-   * Does NOT revoke browser permission (that must be done in browser settings).
-   */
   unsubscribe: () => void
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/** VAPID public key — from Firebase Console → Project Settings → Cloud Messaging */
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY!
-
-/** Scope under which the FCM service worker is registered.
- *  Must NOT conflict with the existing caching SW at scope "/". */
-const FCM_SW_SCOPE = "/firebase-messaging-sw.js/"
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 /**
- * Returns when the given ServiceWorkerRegistration has an active worker.
- * Resolves immediately if already active, otherwise waits for "activated" state.
- * Handles the race condition where register() returns before the SW enters
- * the "installing" state (all three state fields momentarily null).
+ * Resolves when the given ServiceWorkerRegistration has an active worker.
+ * Handles the race where register() returns before the browser sets reg.installing.
  */
 function waitForSWActive(reg: ServiceWorkerRegistration): Promise<void> {
   return new Promise((resolve) => {
-    if (reg.active) {
-      resolve()
-      return
-    }
+    if (reg.active) { resolve(); return }
 
     const trackWorker = (worker: ServiceWorker) => {
       if (worker.state === "activated") { resolve(); return }
@@ -92,23 +71,18 @@ function waitForSWActive(reg: ServiceWorkerRegistration): Promise<void> {
     }
 
     const worker = reg.installing ?? reg.waiting
-    if (worker) {
-      trackWorker(worker)
-      return
-    }
+    if (worker) { trackWorker(worker); return }
 
     // Race condition: register() returned before the browser set reg.installing.
-    // Wait for updatefound which fires as soon as the browser starts installing.
     const onUpdateFound = () => {
       reg.removeEventListener("updatefound", onUpdateFound)
       const installing = reg.installing
       if (installing) { trackWorker(installing); return }
-      resolve() // should not happen, but don't hang
+      resolve()
     }
     reg.addEventListener("updatefound", onUpdateFound)
 
-    // Safety net: don't hang indefinitely if SW is already activated by the
-    // time we attach the listener (another race window on very fast installs)
+    // Safety net: don't hang if SW is already activated when we attach the listener.
     setTimeout(() => {
       reg.removeEventListener("updatefound", onUpdateFound)
       resolve()
@@ -116,7 +90,7 @@ function waitForSWActive(reg: ServiceWorkerRegistration): Promise<void> {
   })
 }
 
-// ── Hook implementation ───────────────────────────────────────────────────────
+// ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function usePushNotifications({
   userId,
@@ -127,10 +101,9 @@ export function usePushNotifications({
   const [isLoading, setIsLoading] = useState(false)
   const [token, setToken] = useState<string | null>(null)
 
-  // Ref to unsubscribe from foreground message listener
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
-  // ── Initialise: check support and read existing permission ────────────────
+  // ── Browser support + initial permission read ─────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -140,13 +113,9 @@ export function usePushNotifications({
       "PushManager" in window
 
     setIsSupported(supported)
+    if (supported) setPermission(Notification.permission as PushPermissionState)
 
-    if (supported) {
-      setPermission(Notification.permission as PushPermissionState)
-    }
-
-    // Re-read permission when the user returns to the tab — they may have
-    // just granted or revoked it in browser settings while we were backgrounded.
+    // Re-read permission when the user switches back to the tab
     const handleVisibility = () => {
       if (document.visibilityState === "visible" && "Notification" in window) {
         setPermission(Notification.permission as PushPermissionState)
@@ -156,7 +125,7 @@ export function usePushNotifications({
     return () => document.removeEventListener("visibilitychange", handleVisibility)
   }, [])
 
-  // ── Register FCM service worker and obtain a device token ─────────────────
+  // ── Register FCM SW at root scope + get FCM token ─────────────────────────
   const getFCMToken = useCallback(async (): Promise<string | null> => {
     if (!VAPID_KEY) {
       console.error("[FCM] NEXT_PUBLIC_FIREBASE_VAPID_KEY is not set")
@@ -167,31 +136,40 @@ export function usePushNotifications({
       const messaging = getFirebaseMessaging()
       if (!messaging) return null
 
-      // Re-use an already-registered FCM SW instead of calling register() again.
-      // Repeated register() calls on the same scope are no-ops per spec, but
-      // some browsers briefly return a registration with all worker fields null
-      // (installing/waiting/active) on the second call, causing waitForSWActive
-      // to hang until the 10 s safety-net timeout fires.
-      let swReg = await navigator.serviceWorker.getRegistration(FCM_SW_SCOPE)
+      // Migrate: unregister the old narrow-scope FCM SW if it still exists.
+      // The old scope "/firebase-messaging-sw.js/" had no controlled clients,
+      // so Firebase always took the background path and showed OS notifications
+      // while the app was open, triggering Chrome's notification quiet mode.
+      //
+      // Must use getRegistrations() + scope check rather than getRegistration(url),
+      // because getRegistration(url) finds the SW whose scope CONTAINS the given
+      // URL — after migration, the new root SW at scope "/" also matches the URL
+      // "/firebase-messaging-sw.js/" and would be incorrectly unregistered.
+      try {
+        const allRegs = await navigator.serviceWorker.getRegistrations()
+        const oldReg = allRegs.find((r) => r.scope.endsWith("/firebase-messaging-sw.js/"))
+        if (oldReg) {
+          await oldReg.unregister()
+          console.log("[FCM] Migrated: unregistered old FCM SW at /firebase-messaging-sw.js/ scope")
+        }
+      } catch {}
 
-      if (swReg) {
-        console.log("[FCM] Using existing service worker registration:", FCM_SW_SCOPE)
-      } else {
-        console.log("[FCM] Registering service worker at scope:", FCM_SW_SCOPE)
-        swReg = await navigator.serviceWorker.register(
-          "/firebase-messaging-sw.js",
-          { scope: FCM_SW_SCOPE, updateViaCache: "none" }
-        )
-      }
+      // Register (or update) the FCM SW at root scope.
+      // Registered at scope "/" so it controls all pages — Firebase SDK can
+      // then distinguish foreground (onMessage) from background (onBackgroundMessage).
+      // skipWaiting() in the SW ensures it takes over immediately from sw.js.
+      const swReg = await navigator.serviceWorker.register(
+        "/firebase-messaging-sw.js",
+        { scope: "/", updateViaCache: "none" }
+      )
 
-      // Wait for the SW to reach "activated" state before calling getToken().
-      // getToken() calls pushManager.subscribe() internally — this fails if
-      // the SW is still in "installing" or "waiting" state.
       await waitForSWActive(swReg)
 
-      console.log("[FCM] Using service worker registration: /firebase-messaging-sw.js scope:", FCM_SW_SCOPE)
+      // Diagnostics — visible in DevTools console
+      console.log("[FCM] Controller SW:", navigator.serviceWorker.controller?.scriptURL)
+      console.log("[FCM] Ready SW:", swReg.active?.scriptURL)
+      console.log("[FCM] Registration Scope:", swReg.scope)
 
-      // Obtain (or refresh) the FCM token linked to this registration
       const fcmToken = await getToken(messaging, {
         vapidKey: VAPID_KEY,
         serviceWorkerRegistration: swReg,
@@ -204,7 +182,7 @@ export function usePushNotifications({
     }
   }, [])
 
-  // ── Persist the FCM token to Supabase ─────────────────────────────────────
+  // ── Save FCM token to Supabase ────────────────────────────────────────────
   const saveToken = useCallback(
     async (fcmToken: string): Promise<void> => {
       if (!userId) return
@@ -236,25 +214,24 @@ export function usePushNotifications({
   )
 
   // ── Foreground message listener → Sonner toast ────────────────────────────
-  // We listen on navigator.serviceWorker rather than Firebase's onMessage()
-  // because the FCM SW is registered at scope /firebase-messaging-sw.js/ and
-  // therefore has no controlled clients. Firebase's compat SDK determines
-  // "foreground vs background" by checking controlled clients — since ours has
-  // none, it always calls onBackgroundMessage (which correctly detects open
-  // windows and forwards via postMessage). We receive those messages here.
+  // Firebase SDK routes foreground pushes (visible controlled page) to onMessage().
+  // This only fires when the driver has the app open — no OS notification is shown.
   const setupForegroundListener = useCallback(() => {
-    if (typeof navigator === "undefined" || !navigator.serviceWorker) return
+    const messaging = getFirebaseMessaging()
+    if (!messaging) return
 
-    // Tear down any previous listener first
     unsubscribeRef.current?.()
 
-    const handler = (event: MessageEvent) => {
-      if (!event.data || event.data.type !== "FCM_FOREGROUND") return
+    const unsub = onMessage(messaging, (payload) => {
+      if (!payload) return
 
-      const { title, body, url, image } = event.data.payload ?? {}
-      if (!title) return
+      const { notification, data } = payload
+      const title = notification?.title ?? data?.title ?? "Kinetic Void"
+      const body  = notification?.body  ?? data?.body  ?? ""
+      const url   = data?.url ?? "/"
+      const image = notification?.image ?? data?.image
 
-      console.log("[FCM] Foreground message received via postMessage:", title)
+      console.log("[FCM] Foreground message received:", title)
 
       const actionEl =
         url && url !== "/"
@@ -287,7 +264,7 @@ export function usePushNotifications({
         )
       } else {
         toast(title, {
-          description: body ?? "",
+          description: body,
           duration: 7000,
           action:
             url && url !== "/"
@@ -295,13 +272,12 @@ export function usePushNotifications({
               : undefined,
         })
       }
-    }
+    })
 
-    navigator.serviceWorker.addEventListener("message", handler)
-    unsubscribeRef.current = () => navigator.serviceWorker.removeEventListener("message", handler)
+    unsubscribeRef.current = unsub
   }, [])
 
-  // ── Public: request permission + generate + save token ────────────────────
+  // ── Public: request permission → register SW → save token ─────────────────
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!isSupported) {
       toast.error("Push notifications are not supported in this browser.")
@@ -333,7 +309,7 @@ export function usePushNotifications({
     }
   }, [isSupported, getFCMToken, saveToken, setupForegroundListener])
 
-  // ── Auto-init when permission already granted (returning user) ────────────
+  // ── Auto-init for returning users (permission already granted) ────────────
   useEffect(() => {
     if (!userId || !isSupported) return
     if (Notification.permission !== "granted") return
@@ -352,25 +328,21 @@ export function usePushNotifications({
 
     return () => {
       cancelled = true
-      // Clean up foreground listener on unmount / userId change
       unsubscribeRef.current?.()
       unsubscribeRef.current = null
     }
   }, [userId, isSupported, getFCMToken, saveToken, setupForegroundListener])
 
-  // ── Auto-request (optional, delayed 3 s after login) ─────────────────────
+  // ── Auto-request (optional, 3 s after login) ──────────────────────────────
   useEffect(() => {
     if (!autoRequest || !userId || !isSupported) return
-    if (Notification.permission !== "default") return // Already decided
+    if (Notification.permission !== "default") return
 
-    const timer = setTimeout(() => {
-      requestPermission()
-    }, 3000)
-
+    const timer = setTimeout(() => { requestPermission() }, 3000)
     return () => clearTimeout(timer)
   }, [autoRequest, userId, isSupported, requestPermission])
 
-  // ── Unsubscribe helper ────────────────────────────────────────────────────
+  // ── Unsubscribe ───────────────────────────────────────────────────────────
   const unsubscribe = useCallback(() => {
     unsubscribeRef.current?.()
     unsubscribeRef.current = null

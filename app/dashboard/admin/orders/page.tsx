@@ -56,7 +56,7 @@ export default async function AdminOrdersPage() {
             Deliveries Management
           </h2>
           <p className="text-[#adaaaa] mt-1 text-sm">
-            Live oversight of active logistical threads within the kinetic void.
+            Live oversight of active logistical threads within the go drop.
           </p>
         </div>
         <div className="flex gap-3">

@@ -46,7 +46,7 @@ function AccountLinkedContent() {
             <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">bolt</span>
             </div>
-            <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">KINETIC VOID</h1>
+            <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">GO DROP</h1>
           </Link>
         </div>
 
@@ -119,7 +119,7 @@ function AccountLinkedContent() {
         </div>
 
         <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} Kinetic Void. All rights reserved.
+          &copy; {new Date().getFullYear()} Go Drop. All rights reserved.
         </p>
       </div>
     </main>

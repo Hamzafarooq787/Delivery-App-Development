@@ -27,14 +27,14 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Kinetic Void | Premium Logistics',
+  title: 'Go Drop | Premium Logistics',
   description:
     'Experience precision-engineered delivery solutions. From microscopic components to industrial fleets, we bridge the void with absolute speed.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Kinetic Void',
+    title: 'Go Drop',
     startupImage: '/icons/icon-512.png',
   },
   formatDetection: { telephone: false },
@@ -68,7 +68,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Kinetic Void" />
+        <meta name="apple-mobile-web-app-title" content="Go Drop" />
       </head>
       <body className="bg-[#0e0e0e] font-inter text-white overflow-x-hidden antialiased">
         <ThemeProvider>

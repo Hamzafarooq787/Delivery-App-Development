@@ -46,7 +46,7 @@ function DriverLoginContent() {
               <span className="material-symbols-outlined text-[#a3a6ff] text-3xl">local_shipping</span>
             </div>
             <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">
-              KINETIC VOID
+              GO DROP
             </h1>
           </Link>
           <div className="mt-2 flex items-center gap-2 px-3 py-1 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 rounded-full">
@@ -169,7 +169,7 @@ function DriverLoginContent() {
         </div>
 
         <p className="text-center text-xs text-[#494847] mt-4">
-          &copy; {new Date().getFullYear()} Kinetic Void. All rights reserved.
+          &copy; {new Date().getFullYear()} Go Drop. All rights reserved.
         </p>
       </div>
     </main>

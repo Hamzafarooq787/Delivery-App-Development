@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Kinetic Void — Premium Logistics",
-    short_name: "Kinetic Void",
+    name: "Go Drop — Premium Logistics",
+    short_name: "Go Drop",
     description:
       "Experience precision-engineered delivery solutions. Real-time tracking, instant dispatch, zero compromise.",
     start_url: "/dashboard",

@@ -30,7 +30,7 @@ export default function Header() {
                 <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span className="text-white font-semibold text-lg">Kinetic Void</span>
+            <span className="text-white font-semibold text-lg">Go Drop</span>
           </Link>
           <div className="hidden lg:flex items-center bg-[#2a2a2a] px-4 py-2 rounded-lg w-64">
             <Search className="w-4 h-4 text-[#6b6b6b] mr-2 flex-shrink-0" />

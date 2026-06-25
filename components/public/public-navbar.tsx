@@ -26,7 +26,7 @@ export function PublicNavbar() {
                 <path d="M13.13 22.19L11.5 18.36C13.07 17.78 14.54 17 15.9 16.09L13.13 22.19M5.64 12.5L1.81 10.87L7.91 8.1C7 9.46 6.22 10.93 5.64 12.5M19.22 4C19.5 4.78 19.65 5.61 19.65 6.5C19.65 12.39 14.67 17.31 8.74 17.95L6.5 15.71C6.93 12.87 8.5 10.35 10.95 8.72C11.35 8.45 11.63 8.04 11.71 7.57C11.79 7.1 11.66 6.62 11.36 6.26C11.06 5.89 10.62 5.67 10.15 5.66C9.68 5.65 9.23 5.86 8.92 6.22C8.16 7.1 7.58 8.13 7.2 9.22L4.78 6.8C5.94 4.37 8.32 2.71 11.08 2.51C11.79 2.43 12.5 2.45 13.2 2.56C15.53 2.94 17.6 4.14 19.22 4M12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14Z" />
               </svg>
             </div>
-            <span className="text-lg font-bold text-white tracking-tighter font-headline">Kinetic Void</span>
+            <span className="text-lg font-bold text-white tracking-tighter font-headline">Go Drop</span>
           </Link>
           <div className="hidden lg:flex items-center bg-[#262626] px-4 py-1.5 rounded-full border border-[#494847]/15 focus-within:ring-1 focus-within:ring-[#a3a6ff]/30 transition-all">
             <svg className="w-4 h-4 text-[#adaaaa] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 002_notification_tokens.sql
--- FCM push notification token storage for Kinetic Void
+-- FCM push notification token storage for Go Drop
 --
 -- Run this SQL in your Supabase project → SQL Editor → New Query
 -- ─────────────────────────────────────────────────────────────────────────────

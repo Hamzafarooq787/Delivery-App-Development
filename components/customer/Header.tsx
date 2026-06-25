@@ -61,7 +61,7 @@ export default function Header({ onNewDelivery, userId: userIdProp }: HeaderProp
         <div>
           <p className="text-[11px] text-on-surface-variant font-semibold tracking-wider leading-none">{greeting}</p>
           <h1 className="text-sm font-black text-white font-headline tracking-tight leading-tight">
-            {firstName ? firstName : 'Kinetic Void'}
+            {firstName ? firstName : 'Go Drop'}
           </h1>
         </div>
       </div>
