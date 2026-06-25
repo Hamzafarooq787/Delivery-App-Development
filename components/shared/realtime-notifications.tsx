@@ -150,6 +150,9 @@ function actionLabel(title: string, role: NotifRole): string | null {
 // Component
 // ══════════════════════════════════════════════════════════════════════════
 
+// Set to true to re-enable in-app realtime notifications and chat notification toasts.
+const REALTIME_NOTIFICATIONS_ENABLED = false
+
 export function RealtimeNotifications({ role, userId }: Props) {
   const router  = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -206,6 +209,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
 
   // Realtime subscription
   useEffect(() => {
+    if (!REALTIME_NOTIFICATIONS_ENABLED) return
     if (!userId) return
     let channel: ReturnType<typeof supabase.channel> | null = null
     supabase.auth.getSession().then(({ data: { session } }) => {
