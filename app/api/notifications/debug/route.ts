@@ -20,7 +20,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 
-export async function GET() {
+export async function GET(req: Request) {
   const report: Record<string, unknown> = {}
 
   // ── 1. Auth check ────────────────────────────────────────────────────────────
@@ -97,8 +97,15 @@ export async function GET() {
     report.tokenQueryError = e?.message ?? String(e)
   }
 
-  // ── 6. Test send (only if we have tokens and Admin SDK is working) ────────────
-  if (report.adminSdkInit === "OK" && (report.tokenCount as number) > 0) {
+  // ── 6. Test send — only when ?send=1 is present (opt-in, avoids side effects on plain GET) ──
+  const sendTest = new URL(req.url).searchParams.get("send") === "1"
+  if (!sendTest) {
+    report.testSend = "SKIPPED — add ?send=1 to the URL to fire a real test push"
+  } else if (report.adminSdkInit !== "OK") {
+    report.testSend = "SKIPPED — Admin SDK failed to initialize"
+  } else if ((report.tokenCount as number) === 0) {
+    report.testSend = "SKIPPED — No FCM tokens registered for this user"
+  } else {
     try {
       const { sendPushNotification } = await import("@/lib/notifications/send")
       const result = await sendPushNotification({
@@ -115,10 +122,6 @@ export async function GET() {
       report.testSend = "FAILED"
       report.testSendError = e?.message ?? String(e)
     }
-  } else if (report.adminSdkInit !== "OK") {
-    report.testSend = "SKIPPED — Admin SDK failed to initialize"
-  } else {
-    report.testSend = "SKIPPED — No FCM tokens registered for this user"
   }
 
   // ── Summary ───────────────────────────────────────────────────────────────────
