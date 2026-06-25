@@ -264,7 +264,7 @@ self.addEventListener("push", (event) => {
 
   event.waitUntil(
     self.clients
-      .matchAll({ type: "window", includeUncontrolled: false })
+      .matchAll({ type: "window", includeUncontrolled: true })
       .then((clients) => {
         const hasVisible = clients.some((c) => c.visibilityState === "visible");
 
