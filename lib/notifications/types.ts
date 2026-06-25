@@ -74,7 +74,7 @@ export const NotificationTag = {
   DELIVERY_DELIVERED: "delivery-delivered",
   DELIVERY_CANCELLED: "delivery-cancelled",
   DRIVER_APPROVED: "driver-approved",
-  SYSTEM: "kinetic-void-system",
+  SYSTEM: "go-drop-system",
 } as const
 
 export type NotificationTagValue = (typeof NotificationTag)[keyof typeof NotificationTag]

@@ -118,7 +118,7 @@ export async function sendPushNotification({
           icon: notification.icon ?? "/icons/icon-192.png",
           badge: "/icons/icon-72.png",   // Monochrome badge icon in status bar
           image: notification.image,
-          tag: notification.tag ?? "kinetic-void",
+          tag: notification.tag ?? "go-drop",
           renotify: true,                // Re-alert even if same tag still showing
           requireInteraction: false,     // Auto-dismiss after ~4 s
           vibrate: [200, 100, 200],
@@ -141,7 +141,7 @@ export async function sendPushNotification({
           body: notification.body,
           icon: notification.icon ?? "/icons/icon-192.png",
           sound: "default",
-          channelId: "kinetic-void-notifications",
+          channelId: "go-drop-notifications",
           tag: notification.tag,
           clickAction: notification.url ?? "/",
         },
@@ -173,7 +173,7 @@ export async function sendPushNotification({
       // All values MUST be strings (FCM spec).
       data: {
         url: notification.url ?? "/",
-        tag: notification.tag ?? "kinetic-void",
+        tag: notification.tag ?? "go-drop",
         title: notification.title,
         body: notification.body,
         ...(notification.image ? { image: notification.image } : {}),
