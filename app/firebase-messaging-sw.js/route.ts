@@ -244,6 +244,8 @@ self.addEventListener("notificationclick", (event) => {
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
+  console.log("[FCM-SW] Push event received");
+
   let payload;
   try {
     payload = event.data.json();
@@ -265,11 +267,17 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clients) => {
-        const hasVisible = clients.some((c) => c.visibilityState === "visible");
+      .then(async (clients) => {
+        const visibleClients = clients.filter((c) => c.visibilityState === "visible");
+        const hasVisible = visibleClients.length > 0;
+
+        console.log("[FCM-SW] clients:", clients.length, "| visible:", hasVisible);
 
         // Background + notification payload: onBackgroundMessage() handles it — skip
-        if (!hasVisible && payload.notification) return;
+        if (!hasVisible && payload.notification) {
+          console.log("[FCM-SW] Background push with notification payload — deferring to onBackgroundMessage");
+          return;
+        }
 
         const { notification, data } = payload;
         const title = data?.title ?? notification?.title ?? "Go Drop";
@@ -277,20 +285,37 @@ self.addEventListener("push", (event) => {
         const url   = data?.url   ?? "/";
         const tag   = data?.tag   ?? "go-drop";
 
-        console.log("[FCM-SW] Push handler — showing OS notification:", title, "| foreground:", hasVisible);
+        console.log("[FCM-SW] Calling showNotification:", title, "| foreground:", hasVisible);
 
-        return self.registration.showNotification(title, {
-          body,
-          icon:  "/icons/icon-192.png",
-          badge: "/icons/icon-72.png",
-          image: data?.image,
-          tag,
-          renotify: true,
-          requireInteraction: false,
-          silent: false,
-          vibrate: [200, 100, 200],
-          data: { url },
-        });
+        try {
+          await self.registration.showNotification(title, {
+            body,
+            icon:  "/icons/icon-192.png",
+            badge: "/icons/icon-72.png",
+            image: data?.image,
+            tag,
+            renotify: true,
+            requireInteraction: false,
+            silent: false,
+            vibrate: [200, 100, 200],
+            data: { url },
+          });
+          console.log("[FCM-SW] showNotification() succeeded");
+          // Tell the page the OS notification was shown
+          for (const c of visibleClients) {
+            c.postMessage({ type: "FCM_SW_NOTIFICATION_SHOWN", title });
+          }
+        } catch (err) {
+          console.error("[FCM-SW] showNotification() FAILED:", err && err.name, err && err.message);
+          // Tell the page exactly why it failed so we can surface it as a toast
+          for (const c of visibleClients) {
+            c.postMessage({
+              type: "FCM_SW_NOTIFICATION_BLOCKED",
+              errorName: (err && err.name) || "Unknown",
+              errorMessage: (err && err.message) || String(err),
+            });
+          }
+        }
       })
   );
 });

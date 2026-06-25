@@ -353,6 +353,36 @@ export function usePushNotifications({
     return () => clearTimeout(timer)
   }, [autoRequest, userId, isSupported, requestPermission])
 
+  // ── SW diagnostic messages ────────────────────────────────────────────────
+  // Receives postMessages from the SW push handler so we can surface the
+  // exact error when showNotification() fails (e.g. Chrome quiet mode).
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.serviceWorker) return
+
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === "FCM_SW_NOTIFICATION_BLOCKED") {
+        const { errorName, errorMessage } = event.data
+        console.error("[FCM] SW showNotification() blocked:", errorName, errorMessage)
+
+        if (errorName === "NotAllowedError") {
+          toast.error(
+            "OS notifications are blocked. Open Chrome Settings → Notifications and re-allow this site.",
+            { duration: 15000 }
+          )
+        } else {
+          toast.error(
+            `OS notification failed (${errorName}): ${errorMessage}`,
+            { duration: 12000 }
+          )
+        }
+      }
+      // FCM_SW_NOTIFICATION_SHOWN is informational — no extra toast needed
+    }
+
+    navigator.serviceWorker.addEventListener("message", handleSWMessage)
+    return () => navigator.serviceWorker.removeEventListener("message", handleSWMessage)
+  }, [])
+
   // ── Unsubscribe ───────────────────────────────────────────────────────────
   const unsubscribe = useCallback(() => {
     unsubscribeRef.current?.()
