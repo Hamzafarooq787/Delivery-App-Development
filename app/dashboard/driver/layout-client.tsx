@@ -9,6 +9,7 @@ import { RealtimeNotifications } from "@/components/shared/realtime-notification
 import { ProfileDropdown } from "@/components/shared/profile-dropdown"
 import { InstallButton } from "@/components/pwa/install-button"
 import { FloatingLiveChat } from "@/components/driver/floating-live-chat"
+import { TestPushButton } from "@/components/driver/test-push-button"
 
 interface DriverLayoutClientProps {
   children: React.ReactNode
@@ -72,6 +73,7 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
             )}
           </div>
           <div className="flex items-center gap-3 md:gap-5 shrink-0">
+            <TestPushButton />
             <InstallButton />
             {!isLocked && (
               <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
