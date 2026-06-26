@@ -300,10 +300,21 @@ self.addEventListener("push", (event) => {
             vibrate: [200, 100, 200],
             data: { url },
           });
-          console.log("[FCM-SW] showNotification() succeeded");
-          // Tell the page the OS notification was shown
-          for (const c of visibleClients) {
-            c.postMessage({ type: "FCM_SW_NOTIFICATION_SHOWN", title });
+          console.log("[FCM-SW] showNotification() resolved");
+          // Check if Chrome quietly swallowed the notification (quiet mode).
+          // showNotification() resolves successfully even when Chrome suppresses
+          // it, so we verify by checking if the notification actually exists.
+          const shown = await self.registration.getNotifications({ tag });
+          if (shown.length > 0) {
+            console.log("[FCM-SW] OS notification confirmed visible");
+            for (const c of visibleClients) {
+              c.postMessage({ type: "FCM_SW_NOTIFICATION_SHOWN", title });
+            }
+          } else {
+            console.warn("[FCM-SW] Notification swallowed — Chrome quiet mode is likely active for this origin");
+            for (const c of visibleClients) {
+              c.postMessage({ type: "FCM_SW_NOTIFICATION_QUIET_MODE" });
+            }
           }
         } catch (err) {
           console.error("[FCM-SW] showNotification() FAILED:", err && err.name, err && err.message);

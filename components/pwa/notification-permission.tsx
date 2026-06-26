@@ -48,9 +48,15 @@ export function NotificationPermission({
   useEffect(() => {
     if (!isSupported) return
     if (!userId) return
-    if (permission === "granted" || permission === "denied") return
+    if (permission === "granted") return
 
-    // Check if the user previously dismissed the banner
+    // For denied: show the banner so the user knows how to fix it
+    if (permission === "denied") {
+      const timer = setTimeout(() => setVisible(true), 4500)
+      return () => clearTimeout(timer)
+    }
+
+    // For default: check if the user previously dismissed the banner
     try {
       if (localStorage.getItem(DISMISSED_KEY)) return
     } catch {
@@ -73,7 +79,6 @@ export function NotificationPermission({
         duration: 4000,
       })
     } else {
-      // Permission was denied — let the user know how to re-enable
       toast("Notifications blocked", {
         description:
           "To enable later, click the lock icon in your browser's address bar.",
@@ -94,64 +99,82 @@ export function NotificationPermission({
 
   if (!visible) return null
 
+  const isBlocked = permission === "denied"
+
   return (
     <div
       role="alertdialog"
-      aria-label="Enable push notifications"
+      aria-label={isBlocked ? "Push notifications are blocked" : "Enable push notifications"}
       aria-live="polite"
       className={cn(
-        // Fixed position — bottom-center, above any bottom nav bars
         "fixed bottom-20 left-1/2 -translate-x-1/2 z-[60]",
         "flex items-center gap-3",
         "px-4 py-3 rounded-2xl",
-        // Go Drop glass-card style (matches existing UI)
         "bg-[rgba(17,17,17,0.96)] backdrop-blur-xl",
-        "border border-[rgba(73,72,71,0.25)]",
+        isBlocked
+          ? "border border-[#ff6e84]/40"
+          : "border border-[rgba(73,72,71,0.25)]",
         "shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(163,166,255,0.06)]",
-        // Responsive width
         "w-[min(22rem,calc(100vw-2rem))]",
-        // Entrance animation
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
         className
       )}
     >
-      {/* Bell icon */}
+      {/* Icon */}
       <div
         aria-hidden="true"
-        className="shrink-0 w-9 h-9 rounded-xl bg-[#a3a6ff]/10 flex items-center justify-center"
+        className={cn(
+          "shrink-0 w-9 h-9 rounded-xl flex items-center justify-center",
+          isBlocked ? "bg-[#ff6e84]/10" : "bg-[#a3a6ff]/10"
+        )}
       >
-        <Bell className="w-4 h-4 text-[#a3a6ff]" />
+        <Bell className={cn("w-4 h-4", isBlocked ? "text-[#ff6e84]" : "text-[#a3a6ff]")} />
       </div>
 
       {/* Copy */}
       <div className="flex-1 min-w-0">
-        <p className="text-white text-[13px] font-semibold leading-tight">
-          Enable notifications
-        </p>
-        <p className="text-[#adaaaa] text-[11px] leading-snug mt-0.5">
-          Get real‑time updates for your deliveries
-        </p>
+        {isBlocked ? (
+          <>
+            <p className="text-[#ff6e84] text-[13px] font-semibold leading-tight">
+              Notifications blocked
+            </p>
+            <p className="text-[#adaaaa] text-[11px] leading-snug mt-0.5">
+              Click the lock icon in your address bar to re‑enable
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-white text-[13px] font-semibold leading-tight">
+              Enable notifications
+            </p>
+            <p className="text-[#adaaaa] text-[11px] leading-snug mt-0.5">
+              Get real‑time updates for your deliveries
+            </p>
+          </>
+        )}
       </div>
 
       {/* Action buttons */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <button
-          onClick={handleEnable}
-          disabled={isLoading}
-          aria-label="Allow push notifications"
-          className={cn(
-            "px-3 py-1.5 rounded-lg text-[12px] font-bold",
-            "bg-[#a3a6ff] text-[#0f00a4]",
-            "hover:brightness-110 active:scale-95 transition-all",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-        >
-          {isLoading ? "Enabling…" : "Enable"}
-        </button>
+        {!isBlocked && (
+          <button
+            onClick={handleEnable}
+            disabled={isLoading}
+            aria-label="Allow push notifications"
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-[12px] font-bold",
+              "bg-[#a3a6ff] text-[#0f00a4]",
+              "hover:brightness-110 active:scale-95 transition-all",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {isLoading ? "Enabling…" : "Enable"}
+          </button>
+        )}
 
         <button
           onClick={handleDismiss}
-          aria-label="Dismiss notification prompt"
+          aria-label="Dismiss"
           className="p-1.5 rounded-lg text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-all active:scale-95"
         >
           <X className="w-3.5 h-3.5" />
