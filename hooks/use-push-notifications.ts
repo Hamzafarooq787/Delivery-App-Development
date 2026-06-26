@@ -122,7 +122,26 @@ export function usePushNotifications({
       }
     }
     document.addEventListener("visibilitychange", handleVisibility)
-    return () => document.removeEventListener("visibilitychange", handleVisibility)
+
+    // Also listen for permission changes via the Permissions API so the hook
+    // reacts immediately if permission is granted outside this hook (e.g. via
+    // the driver settings panel's "Enable System Sounds" button).
+    let permStatus: PermissionStatus | null = null
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "notifications" as PermissionName }).then((status) => {
+        permStatus = status
+        status.onchange = () => {
+          if ("Notification" in window) {
+            setPermission(Notification.permission as PushPermissionState)
+          }
+        }
+      }).catch(() => {})
+    }
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility)
+      if (permStatus) permStatus.onchange = null
+    }
   }, [])
 
   // ── Register FCM SW at root scope + get FCM token ─────────────────────────
@@ -317,9 +336,13 @@ export function usePushNotifications({
   }, [isSupported, getFCMToken, saveToken, setupForegroundListener])
 
   // ── Auto-init for returning users (permission already granted) ────────────
+  // `permission` is in the dep array so this effect re-runs when the driver
+  // grants permission outside this hook (e.g. via the settings panel's
+  // "Enable System Sounds" button), ensuring the FCM token is registered and
+  // the foreground listener is set up even in that case.
   useEffect(() => {
     if (!userId || !isSupported) return
-    if (Notification.permission !== "granted") return
+    if (permission !== "granted") return
 
     // Register onMessage listener immediately — this must not wait for the
     // token fetch so that pushes arriving while the user is on ANY page
@@ -342,7 +365,7 @@ export function usePushNotifications({
       unsubscribeRef.current?.()
       unsubscribeRef.current = null
     }
-  }, [userId, isSupported, getFCMToken, saveToken, setupForegroundListener])
+  }, [userId, isSupported, permission, getFCMToken, saveToken, setupForegroundListener])
 
   // ── Auto-request (optional, 3 s after login) ──────────────────────────────
   useEffect(() => {
@@ -375,6 +398,14 @@ export function usePushNotifications({
             { duration: 12000 }
           )
         }
+      } else if (event.data?.type === "FCM_SW_NOTIFICATION_QUIET_MODE") {
+        // Chrome silently swallowed the notification (showNotification resolved but
+        // no popup appeared). This is Chrome's notification quiet mode.
+        console.warn("[FCM] Chrome notification quiet mode detected")
+        toast.warning(
+          "OS popups are suppressed by Chrome. To fix: go to chrome://settings/content/notifications, find this site, and click Reset.",
+          { duration: 20000 }
+        )
       }
       // FCM_SW_NOTIFICATION_SHOWN is informational — no extra toast needed
     }
