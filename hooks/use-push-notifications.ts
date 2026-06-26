@@ -131,8 +131,14 @@ export function usePushNotifications({
       navigator.permissions.query({ name: "notifications" as PermissionName }).then((status) => {
         permStatus = status
         status.onchange = () => {
-          if ("Notification" in window) {
-            setPermission(Notification.permission as PushPermissionState)
+          if (!("Notification" in window)) return
+          const newPerm = Notification.permission as PushPermissionState
+          setPermission(newPerm)
+          // If Chrome permission was reset to "default" (user went to
+          // chrome://settings/content/notifications and cleared it), wipe the
+          // banner-dismissed flag so the "Enable notifications" prompt re-appears.
+          if (newPerm === "default") {
+            try { localStorage.removeItem("kv-notif-banner-dismissed") } catch {}
           }
         }
       }).catch(() => {})
