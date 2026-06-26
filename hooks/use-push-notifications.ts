@@ -113,7 +113,16 @@ export function usePushNotifications({
       "PushManager" in window
 
     setIsSupported(supported)
-    if (supported) setPermission(Notification.permission as PushPermissionState)
+    if (supported) {
+      const currentPerm = Notification.permission as PushPermissionState
+      setPermission(currentPerm)
+      // If Chrome permission was reset to "default" before this mount (e.g. user
+      // cleared it in chrome://settings while the app was closed), remove the
+      // banner-dismissed flag so the "Enable notifications" prompt re-appears.
+      if (currentPerm === "default") {
+        try { localStorage.removeItem("kv-notif-banner-dismissed") } catch {}
+      }
+    }
 
     // Re-read permission when the user switches back to the tab
     const handleVisibility = () => {
