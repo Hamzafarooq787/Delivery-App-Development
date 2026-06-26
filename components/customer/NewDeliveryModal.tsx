@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tracking'
+import { notifyDriversOfNewDelivery } from '@/app/actions/notifications'
 import {
   fetchRoute,
   googlePlacesAutocomplete,
@@ -325,7 +326,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
       // Generate a unique tracking number — TRK-<timestamp><random4>
       const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
-      const { error } = await supabase.from('delivery_requests').insert({
+      const { data: insertedDelivery, error } = await supabase.from('delivery_requests').insert({
         customer_id: user.id,
         pickup_address: pickupValue,
         delivery_address: deliveryValue,
@@ -337,9 +338,14 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
         status: 'requested',
         price,
         tracking_number,
-      })
+      }).select('id').single()
 
       if (error) { toast.error(error.message || 'Failed to create delivery.'); setSubmitting(false); return }
+
+      // Notify online/approved drivers — fire-and-forget, don't block UI
+      if (insertedDelivery?.id) {
+        notifyDriversOfNewDelivery(insertedDelivery.id, pickupValue).catch(console.error)
+      }
 
       // Stop live location if active when delivery is submitted
       if (liveLocationActive) await stopLiveLocation()

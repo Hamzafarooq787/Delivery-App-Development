@@ -131,6 +131,48 @@ export async function notifyUser({
 }
 
 /**
+ * Notify all approved, online drivers about a newly created delivery.
+ * Called from NewDeliveryModal after the client-side Supabase insert.
+ *
+ * @param deliveryId   UUID of the newly inserted delivery_requests row
+ * @param pickupAddress Human-readable pickup address (truncated to 60 chars in body)
+ */
+export async function notifyDriversOfNewDelivery(
+  deliveryId: string,
+  pickupAddress: string
+): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    const { data: onlineDrivers } = await admin
+      .from("driver_profiles")
+      .select("id")
+      .eq("status", "approved")
+      .eq("is_online", true)
+
+    if (!onlineDrivers || onlineDrivers.length === 0) {
+      console.log("[Notify] notifyDriversOfNewDelivery: no online/approved drivers")
+      return
+    }
+
+    const driverIds = onlineDrivers.map((d: { id: string }) => d.id)
+    console.log(`[Notify] notifyDriversOfNewDelivery: notifying ${driverIds.length} driver(s) for delivery ${deliveryId}`)
+
+    await sendPushNotificationToMultipleUsers({
+      userIds: driverIds,
+      notification: {
+        title: "📦 New delivery available!",
+        body: `Pickup: ${pickupAddress.slice(0, 60)}`,
+        url: "/dashboard/driver",
+        tag: `new-delivery-${deliveryId}`,
+        data: { deliveryId },
+      },
+    })
+  } catch (error) {
+    console.error("[Notify] notifyDriversOfNewDelivery failed:", error)
+  }
+}
+
+/**
  * Broadcast a push notification to multiple users at once.
  * Useful for notifying all available drivers about a new order.
  *
