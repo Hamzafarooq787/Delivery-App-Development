@@ -1,12 +1,16 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { createClient } from '@/lib/supabase/client'
+import { createCheckoutSession } from '@/app/actions/payments'
 
 type TxRow = {
   id: string
+  delivery_id: string | null
   amount: number
   status: string
   created_at: string | null
@@ -28,6 +32,11 @@ function fmt(n: number) {
   return `£${n.toFixed(2)}`
 }
 
+// Statuses that still need payment (failed = allow retry)
+function isPayable(status: string) {
+  return ['pending', 'requested', 'accepted', 'failed'].includes(status.toLowerCase())
+}
+
 function fmtDate(iso: string | null) {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -41,11 +50,59 @@ function fmtDateShort(iso: string | null) {
 }
 
 export default function PaymentsPage() {
+  // useSearchParams() requires a Suspense boundary during prerendering
+  return (
+    <Suspense fallback={null}>
+      <PaymentsPageInner />
+    </Suspense>
+  )
+}
+
+function PaymentsPageInner() {
   const [showModal, setShowModal] = useState(false)
   const supabase = useMemo(() => createClient(), [])
   const [transactions, setTransactions] = useState<TxRow[]>([])
   const [loading, setLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
+  const [payingId, setPayingId] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Handle redirect back from Stripe Checkout (?paid=1 / ?canceled=1)
+  useEffect(() => {
+    if (searchParams.get('paid') === '1') {
+      toast.success('Payment successful!', {
+        description: 'Your delivery payment has been processed.',
+        duration: 6000,
+      })
+      router.replace('/dashboard/customer/payments')
+    } else if (searchParams.get('canceled') === '1') {
+      toast('Payment cancelled', {
+        description: 'No charge was made. You can pay anytime from this page.',
+        duration: 5000,
+      })
+      router.replace('/dashboard/customer/payments')
+    }
+  }, [searchParams, router])
+
+  // Start Stripe Checkout for a pending charge
+  async function handlePay(tx: TxRow) {
+    const deliveryId = tx.source === 'payment' ? tx.delivery_id : tx.id
+    if (!deliveryId || payingId) return
+    setPayingId(tx.id)
+    try {
+      const result = await createCheckoutSession(deliveryId)
+      if ('url' in result) {
+        window.location.href = result.url
+      } else {
+        toast.error(result.error)
+        setPayingId(null)
+      }
+    } catch {
+      toast.error('Could not start the payment. Please try again.')
+      setPayingId(null)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -76,6 +133,7 @@ export default function PaymentsPage() {
             const dr = Array.isArray(p.delivery_requests) ? p.delivery_requests[0] : p.delivery_requests
             return {
               id: p.id,
+              delivery_id: p.delivery_id ?? null,
               amount: Number(p.amount ?? 0),
               status: (p.status ?? 'pending').toLowerCase(),
               created_at: p.created_at,
@@ -95,6 +153,7 @@ export default function PaymentsPage() {
           .filter((d: any) => d.price && Number(d.price) > 0)
           .map((d: any) => ({
             id: d.id,
+            delivery_id: d.id,
             amount: Number(d.price),
             status: d.status ?? 'requested',
             created_at: d.created_at,
@@ -205,6 +264,15 @@ export default function PaymentsPage() {
                         <div className="text-right shrink-0">
                           <p className="text-sm font-black text-white">{fmt(tx.amount)}</p>
                           <span className={`text-[10px] font-bold ${meta.color}`}>{meta.label}</span>
+                          {isPayable(tx.status) && (
+                            <button
+                              onClick={() => handlePay(tx)}
+                              disabled={payingId !== null}
+                              className="block ml-auto mt-1.5 px-3 py-1 rounded-lg bg-[#6ee7b7] text-[#003820] text-[11px] font-bold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                              {payingId === tx.id ? 'Opening…' : 'Pay now'}
+                            </button>
+                          )}
                         </div>
                       </div>
                     )
@@ -268,12 +336,23 @@ export default function PaymentsPage() {
                               <p className="text-xs text-[#adaaaa]">{fmtDate(tx.created_at)}</p>
                             </div>
                           </div>
-                          <div className="text-right ml-4 shrink-0">
-                            <p className="text-sm font-black text-white">{fmt(tx.amount)}</p>
-                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${meta.color}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-                              {meta.label}
-                            </span>
+                          <div className="flex items-center gap-4 ml-4 shrink-0">
+                            <div className="text-right">
+                              <p className="text-sm font-black text-white">{fmt(tx.amount)}</p>
+                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${meta.color}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+                                {meta.label}
+                              </span>
+                            </div>
+                            {isPayable(tx.status) && (
+                              <button
+                                onClick={() => handlePay(tx)}
+                                disabled={payingId !== null}
+                                className="px-3.5 py-1.5 rounded-lg bg-[#6ee7b7] text-[#003820] text-xs font-bold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                              >
+                                {payingId === tx.id ? 'Opening…' : 'Pay now'}
+                              </button>
+                            )}
                           </div>
                         </div>
                       )
