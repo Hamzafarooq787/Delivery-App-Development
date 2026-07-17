@@ -38,6 +38,11 @@ function getPrice(miles: number): number {
   return Math.round((20 + (miles - 12) * 1.5) * 100) / 100
 }
 
+// £10 stays "£10", £21.5 becomes "£21.50"
+function formatPrice(price: number): string {
+  return Number.isInteger(price) ? String(price) : price.toFixed(2)
+}
+
 const PROHIBITED_ITEMS = [
   { icon: 'gavel', label: 'Illegal goods' },
   { icon: 'security', label: 'Weapons & ammo' },
@@ -182,7 +187,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
   const [pickupCoords, setPickupCoords] = useState<LatLng | null>(null)
   const [deliveryCoords, setDeliveryCoords] = useState<LatLng | null>(null)
   const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null)
-  const [routeInfo, setRouteInfo] = useState<{ miles: number; duration_min: number } | null>(null)
+  const [routeInfo, setRouteInfo] = useState<{ miles: number; km: number; duration_min: number } | null>(null)
   const [selectedPayload, setSelectedPayload] = useState<string>(PAYLOAD_OPTIONS[0].label)
   const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -224,7 +229,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     fetchRoute(pickupCoords, deliveryCoords).then((r) => {
       if (!r) return
       setRouteGeometry(r.geometry)
-      setRouteInfo({ miles: r.distance_miles, duration_min: r.duration_min })
+      setRouteInfo({ miles: r.distance_miles, km: r.distance_km, duration_min: r.duration_min })
     })
   }, [pickupCoords, deliveryCoords])
 
@@ -486,7 +491,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-[#a3a6ff] text-base">straighten</span>
                         <div>
-                          <p className="text-xs font-black text-white">{routeInfo.miles} mi</p>
+                          <p className="text-xs font-black text-white">{routeInfo.miles} mi <span className="text-[#adaaaa] font-semibold">({routeInfo.km} km)</span></p>
                           <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Distance</p>
                         </div>
                       </div>
@@ -502,7 +507,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-[#6ee7b7] text-base">payments</span>
                         <div>
-                          <p className="text-xs font-black text-[#6ee7b7]">£{price}</p>
+                          <p className="text-xs font-black text-[#6ee7b7]">£{formatPrice(price)}</p>
                           <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Price</p>
                         </div>
                       </div>
@@ -514,7 +519,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                           : <>Delivery charge for <span className="text-white font-bold">{routeInfo.miles} miles</span></>
                         }
                       </p>
-                      <p className="text-lg font-black text-[#6ee7b7]">£{price}</p>
+                      <p className="text-lg font-black text-[#6ee7b7]">£{formatPrice(price)}</p>
                     </div>
                   </>
                 )
@@ -596,7 +601,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
             style={{ boxShadow: confirmed ? '0 0 20px rgba(163,166,255,0.25)' : 'none' }}
           >
             <span className="material-symbols-outlined text-base">bolt</span>
-            {submitting ? 'Requesting…' : routeInfo ? `Request Delivery — £${getPrice(routeInfo.miles)}` : 'Request Delivery'}
+            {submitting ? 'Requesting…' : routeInfo ? `Request Delivery — £${formatPrice(getPrice(routeInfo.miles))}` : 'Request Delivery'}
           </button>
         </div>
       </div>
