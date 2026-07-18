@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getAppOrigin } from "@/lib/get-app-origin"
 import { redirect } from "next/navigation"
 
 /**
@@ -122,11 +123,18 @@ export async function signUp(formData: FormData) {
   const phone = (formData.get("phone") as string) || null
   const address = (formData.get("address") as string) || null
 
+  const origin = await getAppOrigin()
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/callback`}`,
+      // Must point at this app's own callback route, which exchanges the
+      // PKCE code for a session — NOT Supabase's project URL. Pointing at
+      // the Supabase domain (or the bare app origin with no /auth/callback
+      // path) leaves an unexchanged ?code= sitting in the address bar and
+      // the user never gets signed in.
+      emailRedirectTo: `${origin}/auth/callback?role=${role}`,
       data: { full_name, role, phone },
     },
   })
@@ -190,9 +198,12 @@ export async function signOut() {
 export async function forgotPassword(formData: FormData) {
   const supabase = await createClient()
   const email = formData.get("email") as string
+  const origin = await getAppOrigin()
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/reset-password`,
+    // Same fix as signUp() above — must be this app's own page, not
+    // Supabase's project URL.
+    redirectTo: `${origin}/reset-password`,
   })
 
   if (error) return { error: error.message }
