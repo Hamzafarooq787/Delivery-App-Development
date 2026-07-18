@@ -51,40 +51,6 @@ export async function getWalletTransactions(): Promise<{ data: WalletTransaction
   return { data: (data ?? []) as WalletTransaction[] }
 }
 
-// ── Top up wallet (mocked payment) ───────────────────────────────────────
-export async function topUpWallet(amount: number): Promise<{ success: boolean; error?: string }> {
-  if (amount < 1 || amount > 500) return { success: false, error: "Amount must be between £1 and £500" }
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: "Not authenticated" }
-
-  const admin = createAdminClient()
-
-  // Use atomic RPC to add to balance (avoid race conditions)
-  const { error: rpcErr } = await admin.rpc("increment_wallet_balance", { p_user_id: user.id, p_amount: amount })
-
-  if (rpcErr) {
-    // Fallback: manual upsert
-    const { data: existing } = await admin.from("wallet_balances").select("balance").eq("user_id", user.id).single()
-    const newBalance = (existing ? Number(existing.balance) : 0) + amount
-    const { error: upsertErr } = await admin
-      .from("wallet_balances")
-      .upsert({ user_id: user.id, balance: newBalance, updated_at: new Date().toISOString() }, { onConflict: "user_id" })
-    if (upsertErr) return { success: false, error: upsertErr.message }
-  }
-
-  // Log transaction
-  await admin.from("wallet_transactions").insert({
-    user_id: user.id,
-    type: "topup",
-    amount,
-    description: `Wallet top-up of £${amount.toFixed(2)}`,
-  })
-
-  return { success: true }
-}
-
 // ── Cancel order (customer) ───────────────────────────────────────────────
 export type CancelOrderResult = {
   success: boolean
