@@ -67,35 +67,28 @@ export async function POST(request: NextRequest) {
             break
           }
 
-          // Idempotency: insert the transaction row first under a unique
-          // constraint on stripe_session_id. If Stripe redelivers this event,
-          // the insert fails and we skip crediting the balance a second time.
-          const { error: insertError } = await admin.from("wallet_transactions").insert({
-            user_id: userId,
-            type: "topup",
-            amount,
-            description: `Wallet top-up of £${amount.toFixed(2)} via Stripe`,
-            stripe_session_id: session.id,
-          })
-
-          if (insertError) {
-            if (insertError.code === "23505") {
-              // Unique violation — already processed this session, ignore.
-              console.log(`[Stripe Webhook] wallet_topup session ${session.id} already processed`)
-              break
-            }
-            console.error("[Stripe Webhook] Failed to log wallet top-up transaction:", insertError)
-            return NextResponse.json({ error: "DB insert failed" }, { status: 500 })
-          }
-
-          const { error: rpcError } = await admin.rpc("increment_wallet_balance", {
+          // Idempotency: credit_wallet_topup() logs the transaction AND
+          // credits the balance in a single DB transaction (see
+          // scripts/020_wallet_stripe_topup.sql). Either both happen or
+          // neither does, and a Stripe retry can safely call this again —
+          // it returns false without re-crediting once a session_id has
+          // already been recorded.
+          const { data: credited, error: creditError } = await admin.rpc("credit_wallet_topup", {
             p_user_id: userId,
             p_amount: amount,
+            p_stripe_session_id: session.id,
+            p_description: `Wallet top-up of £${amount.toFixed(2)} via Stripe`,
           })
 
-          if (rpcError) {
-            console.error("[Stripe Webhook] Failed to credit wallet balance:", rpcError)
-            return NextResponse.json({ error: "Balance update failed" }, { status: 500 })
+          if (creditError) {
+            console.error("[Stripe Webhook] Failed to credit wallet top-up:", creditError)
+            // Return 500 so Stripe retries — safe because credit_wallet_topup is idempotent
+            return NextResponse.json({ error: "Wallet credit failed" }, { status: 500 })
+          }
+
+          if (!credited) {
+            console.log(`[Stripe Webhook] wallet_topup session ${session.id} already processed`)
+            break
           }
 
           console.log(`[Stripe Webhook] Wallet topped up £${amount.toFixed(2)} for user ${userId}`)
