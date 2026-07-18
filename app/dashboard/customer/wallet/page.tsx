@@ -1,11 +1,12 @@
 "use client"
 
-import { Suspense, useEffect, useState, useTransition } from "react"
+import { Suspense, useEffect, useRef, useState, useTransition } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import Header from "@/components/customer/Header"
 import { getWalletBalance, getWalletTransactions } from "@/app/actions/wallet"
 import { createWalletTopUpSession } from "@/app/actions/payments"
+import { createClient } from "@/lib/supabase/client"
 import type { WalletTransaction } from "@/app/actions/wallet"
 
 const QUICK_AMOUNTS = [5, 10, 20, 50]
@@ -73,16 +74,43 @@ function WalletPageInner() {
   const [isPending, startTransition] = useTransition()
   const [topUpError, setTopUpError] = useState<string | null>(null)
 
+  const balanceRef = useRef(balance)
+  balanceRef.current = balance
+
   async function loadData() {
     setLoading(true)
     const [balRes, txRes] = await Promise.all([getWalletBalance(), getWalletTransactions()])
     setBalance(balRes.balance)
     setTransactions(txRes.data)
     setLoading(false)
+    return balRes.balance
   }
 
   useEffect(() => {
     loadData()
+  }, [])
+
+  // Live-update the balance the instant the Stripe webhook credits it —
+  // don't rely solely on a fixed timeout, since webhook delivery time varies
+  // (cold starts, retries). Falls back to polling below if the realtime
+  // socket can't connect.
+  useEffect(() => {
+    const supabase = createClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      channel = supabase
+        .channel(`wallet-balance-${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "wallet_balances", filter: `user_id=eq.${user.id}` },
+          () => { loadData() }
+        )
+        .subscribe()
+    })
+
+    return () => { if (channel) supabase.removeChannel(channel) }
   }, [])
 
   // Handle redirect back from Stripe Checkout (?topup=1 / ?canceled=1)
@@ -93,10 +121,25 @@ function WalletPageInner() {
         duration: 6000,
       })
       router.replace("/dashboard/customer/wallet")
-      // The Stripe webhook credits the balance asynchronously — reload now
-      // and once more shortly after to pick it up once it lands.
-      loadData()
-      setTimeout(loadData, 3000)
+
+      // Realtime (above) should pick this up instantly, but poll as a
+      // fallback in case the socket didn't connect in time — several
+      // attempts spread out further, since webhook delivery can be slow
+      // on a cold serverless start.
+      const startingBalance = balanceRef.current
+      const delays = [2000, 5000, 10000, 20000]
+      const timers = delays.map((ms) =>
+        setTimeout(async () => {
+          const updated = await loadData()
+          if (ms === delays[delays.length - 1] && updated === startingBalance) {
+            toast.warning("Still waiting on payment confirmation", {
+              description: "This is taking longer than expected. If your balance doesn't update in a minute, contact support with your payment receipt.",
+              duration: 10000,
+            })
+          }
+        }, ms)
+      )
+      return () => timers.forEach(clearTimeout)
     } else if (searchParams.get("canceled") === "1") {
       toast("Payment cancelled", {
         description: "No charge was made. You can top up anytime.",

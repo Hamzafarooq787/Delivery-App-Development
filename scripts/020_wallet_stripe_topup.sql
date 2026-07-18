@@ -60,3 +60,15 @@ begin
   return true;
 end;
 $$;
+
+-- Read-only check used by /api/stripe/debug to confirm this migration has
+-- actually been run in production (vs. the webhook silently 500-ing because
+-- credit_wallet_topup doesn't exist yet).
+create or replace function wallet_topup_fn_exists()
+returns boolean language sql stable as $$
+  select exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'credit_wallet_topup'
+  );
+$$;
