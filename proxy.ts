@@ -3,25 +3,48 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function proxy(request: NextRequest) {
-  const response = NextResponse.next()
+  // Per Supabase SSR docs: this response object is what carries any
+  // refreshed session cookies forward. If we return a *different* response
+  // (e.g. a redirect) further down, we must copy these cookies onto it —
+  // otherwise a session refresh gets silently dropped and the next request
+  // reads a stale/invalid token.
+  let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        // getAll/setAll (not the deprecated get/set/remove trio) — required
+        // for Supabase to correctly read/write session cookies that get
+        // split into multiple chunks (sb-<project>-auth-token.0, .1, ...)
+        // once the JWT grows past ~4KB. The old singular get/set/remove API
+        // only ever sees one chunk, which can silently corrupt or drop the
+        // session on the very next request after a successful sign-in.
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: any) {
-          response.cookies.set(name, value, options)
-        },
-        remove(name: string, options: any) {
-          response.cookies.set(name, "", options)
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
         },
       },
     },
   )
+
+  // Copies any refreshed-session cookies from supabaseResponse onto a
+  // redirect response before returning it, so a session refresh that
+  // happened during this request isn't lost.
+  function redirectWithCookies(url: URL) {
+    const redirectResponse = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie)
+    })
+    return redirectResponse
+  }
 
   const {
     data: { user },
@@ -41,31 +64,31 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api")
   ) {
-    return response
+    return supabaseResponse
   }
 
   // REDIRECT LOGGED-IN USERS AWAY FROM AUTH PAGES
   if (user && (pathname.startsWith("/login") || pathname.startsWith("/signup"))) {
-    return NextResponse.redirect(new URL("/dashboard", request.url))
+    return redirectWithCookies(new URL("/dashboard", request.url))
   }
 
   // Auth pages are public for logged-out users
   if (pathname.startsWith("/login") || pathname.startsWith("/signup")) {
-    return response
+    return supabaseResponse
   }
 
   // REDIRECT OLD ROUTES: /admin → /dashboard/admin, /driver → /dashboard/driver
   if (pathname.startsWith("/admin") && !pathname.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL(pathname.replace("/admin", "/dashboard/admin"), request.url))
+    return redirectWithCookies(new URL(pathname.replace("/admin", "/dashboard/admin"), request.url))
   }
   if (pathname.startsWith("/driver") && !pathname.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL(pathname.replace("/driver", "/dashboard/driver"), request.url))
+    return redirectWithCookies(new URL(pathname.replace("/driver", "/dashboard/driver"), request.url))
   }
 
   // PROTECTED ROUTES - require authentication + role check
   if (pathname.startsWith("/dashboard")) {
     if (!user) {
-      return NextResponse.redirect(new URL("/login", request.url))
+      return redirectWithCookies(new URL("/login", request.url))
     }
 
     // Fetch the user's role from the users table.
@@ -76,34 +99,34 @@ export async function proxy(request: NextRequest) {
 
     // Role-based restriction - block cross-role access.
     if (pathname.startsWith("/dashboard/admin") && role !== "admin") {
-      return NextResponse.redirect(new URL("/unauthorized", request.url))
+      return redirectWithCookies(new URL("/unauthorized", request.url))
     }
 
     if (pathname.startsWith("/dashboard/driver") && role !== "driver") {
-      return NextResponse.redirect(new URL("/unauthorized", request.url))
+      return redirectWithCookies(new URL("/unauthorized", request.url))
     }
 
     if (pathname.startsWith("/dashboard/customer") && role !== "customer") {
-      return NextResponse.redirect(new URL("/unauthorized", request.url))
+      return redirectWithCookies(new URL("/unauthorized", request.url))
     }
 
     // Bare /dashboard - route to the user's role-appropriate dashboard.
     if (pathname === "/dashboard" || pathname === "/dashboard/") {
       if (role === "admin") {
-        return NextResponse.redirect(new URL("/dashboard/admin", request.url))
+        return redirectWithCookies(new URL("/dashboard/admin", request.url))
       }
       if (role === "driver") {
-        return NextResponse.redirect(new URL("/dashboard/driver", request.url))
+        return redirectWithCookies(new URL("/dashboard/driver", request.url))
       }
       if (role === "customer") {
-        return NextResponse.redirect(new URL("/dashboard/customer", request.url))
+        return redirectWithCookies(new URL("/dashboard/customer", request.url))
       }
       // No role assigned yet
-      return NextResponse.redirect(new URL("/unauthorized", request.url))
+      return redirectWithCookies(new URL("/unauthorized", request.url))
     }
   }
 
-  return response
+  return supabaseResponse
 }
 
 export const config = {
