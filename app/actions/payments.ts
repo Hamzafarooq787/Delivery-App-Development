@@ -17,19 +17,10 @@
  */
 "use server"
 
-import { headers } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getStripe, isStripeConfigured } from "@/lib/stripe/server"
-
-/** Resolve the app's public origin for Stripe redirect URLs. */
-async function getAppOrigin(): Promise<string> {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
-  const h = await headers()
-  const proto = h.get("x-forwarded-proto") ?? "https"
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"
-  return `${proto}://${host}`
-}
+import { getAppOrigin } from "@/lib/get-app-origin"
 
 /**
  * Create a Stripe Checkout Session for a delivery's payment.

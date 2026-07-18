@@ -1,16 +1,47 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Package, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 
 export default function ResetPasswordPage() {
+  // useSearchParams() requires a Suspense boundary during prerendering
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordPageInner />
+    </Suspense>
+  )
+}
+
+function ResetPasswordPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [ready, setReady] = useState(false)
+
+  // The reset-password link can arrive either as an implicit-flow session
+  // (already usable) or a PKCE `?code=` that must be exchanged first — the
+  // project's other auth flows (see app/auth/callback/route.ts) use PKCE, so
+  // exchange defensively whenever a code is present before allowing the
+  // password update, rather than assuming a session already exists.
+  useEffect(() => {
+    const code = searchParams.get("code")
+    if (!code) {
+      setReady(true)
+      return
+    }
+    const supabase = createClient()
+    supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+      if (exchangeError) {
+        setError("This password reset link is invalid or has expired. Please request a new one.")
+      }
+      setReady(true)
+    })
+  }, [searchParams])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -58,21 +89,27 @@ export default function ResetPasswordPage() {
               {error}
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">New Password</label>
-              <input name="password" type="password" required minLength={8} placeholder="Min. 8 characters"
-                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+          {!ready ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">Confirm Password</label>
-              <input name="confirm" type="password" required minLength={8} placeholder="••••••••"
-                className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-            </div>
-            <Button className="w-full" size="sm" type="submit" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reset Password"}
-            </Button>
-          </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">New Password</label>
+                <input name="password" type="password" required minLength={8} placeholder="Min. 8 characters"
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Confirm Password</label>
+                <input name="confirm" type="password" required minLength={8} placeholder="••••••••"
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+              <Button className="w-full" size="sm" type="submit" disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reset Password"}
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     </div>
