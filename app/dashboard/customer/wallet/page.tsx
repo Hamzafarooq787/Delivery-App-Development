@@ -1,8 +1,11 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
+import { Suspense, useEffect, useState, useTransition } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { toast } from "sonner"
 import Header from "@/components/customer/Header"
-import { getWalletBalance, getWalletTransactions, topUpWallet } from "@/app/actions/wallet"
+import { getWalletBalance, getWalletTransactions } from "@/app/actions/wallet"
+import { createWalletTopUpSession } from "@/app/actions/payments"
 import type { WalletTransaction } from "@/app/actions/wallet"
 
 const QUICK_AMOUNTS = [5, 10, 20, 50]
@@ -48,16 +51,27 @@ function formatDate(iso: string) {
 }
 
 export default function WalletPage() {
+  // useSearchParams() requires a Suspense boundary during prerendering
+  return (
+    <Suspense fallback={null}>
+      <WalletPageInner />
+    </Suspense>
+  )
+}
+
+function WalletPageInner() {
   const [balance, setBalance] = useState<number>(0)
   const [transactions, setTransactions] = useState<WalletTransaction[]>([])
   const [loading, setLoading] = useState(true)
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
   // Top-up modal state
   const [showTopUp, setShowTopUp] = useState(false)
   const [topUpAmount, setTopUpAmount] = useState<number>(10)
   const [customAmount, setCustomAmount] = useState("")
   const [isPending, startTransition] = useTransition()
-  const [topUpResult, setTopUpResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [topUpError, setTopUpError] = useState<string | null>(null)
 
   async function loadData() {
     setLoading(true)
@@ -70,6 +84,27 @@ export default function WalletPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  // Handle redirect back from Stripe Checkout (?topup=1 / ?canceled=1)
+  useEffect(() => {
+    if (searchParams.get("topup") === "1") {
+      toast.success("Payment successful!", {
+        description: "Your wallet balance is updating — it'll appear in a few seconds.",
+        duration: 6000,
+      })
+      router.replace("/dashboard/customer/wallet")
+      // The Stripe webhook credits the balance asynchronously — reload now
+      // and once more shortly after to pick it up once it lands.
+      loadData()
+      setTimeout(loadData, 3000)
+    } else if (searchParams.get("canceled") === "1") {
+      toast("Payment cancelled", {
+        description: "No charge was made. You can top up anytime.",
+        duration: 5000,
+      })
+      router.replace("/dashboard/customer/wallet")
+    }
+  }, [searchParams, router])
 
   function handleQuickAmount(amt: number) {
     setTopUpAmount(amt)
@@ -85,22 +120,16 @@ export default function WalletPage() {
   function handleTopUp() {
     const finalAmount = customAmount ? parseFloat(customAmount) : topUpAmount
     if (isNaN(finalAmount) || finalAmount < 1 || finalAmount > 500) {
-      setTopUpResult({ success: false, message: "Please enter an amount between £1 and £500." })
+      setTopUpError("Please enter an amount between £1 and £500.")
       return
     }
+    setTopUpError(null)
     startTransition(async () => {
-      const res = await topUpWallet(finalAmount)
-      if (res.success) {
-        setTopUpResult({ success: true, message: `£${finalAmount.toFixed(2)} added to your wallet!` })
-        setTimeout(() => {
-          setShowTopUp(false)
-          setTopUpResult(null)
-          setCustomAmount("")
-          setTopUpAmount(10)
-          loadData()
-        }, 1800)
+      const res = await createWalletTopUpSession(finalAmount)
+      if ("url" in res) {
+        window.location.href = res.url
       } else {
-        setTopUpResult({ success: false, message: res.error ?? "Top-up failed. Please try again." })
+        setTopUpError(res.error)
       }
     })
   }
@@ -231,7 +260,7 @@ export default function WalletPage() {
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => { if (!isPending) { setShowTopUp(false); setTopUpResult(null) } }}
+            onClick={() => { if (!isPending) { setShowTopUp(false); setTopUpError(null) } }}
           />
           <div className="relative w-full max-w-sm bg-[#1a1919] border border-[#494847]/20 rounded-2xl overflow-hidden shadow-2xl">
 
@@ -247,7 +276,7 @@ export default function WalletPage() {
               </div>
               {!isPending && (
                 <button
-                  onClick={() => { setShowTopUp(false); setTopUpResult(null) }}
+                  onClick={() => { setShowTopUp(false); setTopUpError(null) }}
                   className="text-[#adaaaa] hover:text-white"
                 >
                   <span className="material-symbols-outlined text-lg">close</span>
@@ -256,78 +285,74 @@ export default function WalletPage() {
             </div>
 
             <div className="px-5 py-5 space-y-4">
-              {topUpResult ? (
-                <div className={`rounded-xl p-4 flex items-center gap-3 ${topUpResult.success ? "bg-[#6ee7b7]/10 border border-[#6ee7b7]/20" : "bg-[#ff6e84]/10 border border-[#ff6e84]/20"}`}>
-                  <span className={`material-symbols-outlined ${topUpResult.success ? "text-[#6ee7b7]" : "text-[#ff6e84]"}`}>
-                    {topUpResult.success ? "check_circle" : "error"}
-                  </span>
-                  <p className="text-sm font-semibold text-white">{topUpResult.message}</p>
+              {topUpError && (
+                <div className="rounded-xl p-4 flex items-center gap-3 bg-[#ff6e84]/10 border border-[#ff6e84]/20">
+                  <span className="material-symbols-outlined text-[#ff6e84]">error</span>
+                  <p className="text-sm font-semibold text-white">{topUpError}</p>
                 </div>
-              ) : (
-                <>
-                  {/* Quick amounts */}
-                  <div>
-                    <p className="text-xs text-[#adaaaa] mb-2 font-semibold uppercase tracking-wider">Quick Select</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {QUICK_AMOUNTS.map((amt) => (
-                        <button
-                          key={amt}
-                          onClick={() => handleQuickAmount(amt)}
-                          className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                            topUpAmount === amt && !customAmount
-                              ? "bg-[#6ee7b7] text-[#052e16]"
-                              : "bg-[#262626] text-[#adaaaa] hover:text-white"
-                          }`}
-                        >
-                          £{amt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Custom amount */}
-                  <div>
-                    <p className="text-xs text-[#adaaaa] mb-2 font-semibold uppercase tracking-wider">Custom Amount</p>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#adaaaa] font-bold">£</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max="500"
-                        value={customAmount}
-                        onChange={(e) => handleCustomAmountChange(e.target.value)}
-                        placeholder="Enter amount"
-                        className="w-full bg-[#262626] border border-[#494847]/30 rounded-xl py-3 pl-8 pr-4 text-sm text-white placeholder:text-[#adaaaa]/50 focus:outline-none focus:border-[#6ee7b7]/50 transition-colors"
-                      />
-                    </div>
-                    <p className="text-[10px] text-[#adaaaa]/60 mt-1">Min £1 — Max £500</p>
-                  </div>
-
-                  {/* Selected summary */}
-                  <div className="bg-[#262626] rounded-xl px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-[#adaaaa] font-semibold">Amount to Add</span>
-                    <span className="text-lg font-black text-[#6ee7b7]">
-                      £{customAmount ? (parseFloat(customAmount) || 0).toFixed(2) : topUpAmount.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <p className="text-[10px] text-[#adaaaa]/60 text-center leading-relaxed">
-                    This is a demo top-up. No real payment will be processed.
-                  </p>
-
-                  <button
-                    onClick={handleTopUp}
-                    disabled={isPending}
-                    className="w-full bg-[#6ee7b7] text-[#052e16] font-bold text-sm py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {isPending ? (
-                      <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Processing…</>
-                    ) : (
-                      <><span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>add_circle</span>Top Up Wallet</>
-                    )}
-                  </button>
-                </>
               )}
+
+              {/* Quick amounts */}
+              <div>
+                <p className="text-xs text-[#adaaaa] mb-2 font-semibold uppercase tracking-wider">Quick Select</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {QUICK_AMOUNTS.map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => handleQuickAmount(amt)}
+                      className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        topUpAmount === amt && !customAmount
+                          ? "bg-[#6ee7b7] text-[#052e16]"
+                          : "bg-[#262626] text-[#adaaaa] hover:text-white"
+                      }`}
+                    >
+                      £{amt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom amount */}
+              <div>
+                <p className="text-xs text-[#adaaaa] mb-2 font-semibold uppercase tracking-wider">Custom Amount</p>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#adaaaa] font-bold">£</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={customAmount}
+                    onChange={(e) => handleCustomAmountChange(e.target.value)}
+                    placeholder="Enter amount"
+                    className="w-full bg-[#262626] border border-[#494847]/30 rounded-xl py-3 pl-8 pr-4 text-sm text-white placeholder:text-[#adaaaa]/50 focus:outline-none focus:border-[#6ee7b7]/50 transition-colors"
+                  />
+                </div>
+                <p className="text-[10px] text-[#adaaaa]/60 mt-1">Min £1 — Max £500</p>
+              </div>
+
+              {/* Selected summary */}
+              <div className="bg-[#262626] rounded-xl px-4 py-3 flex items-center justify-between">
+                <span className="text-xs text-[#adaaaa] font-semibold">Amount to Add</span>
+                <span className="text-lg font-black text-[#6ee7b7]">
+                  £{customAmount ? (parseFloat(customAmount) || 0).toFixed(2) : topUpAmount.toFixed(2)}
+                </span>
+              </div>
+
+              <p className="text-[10px] text-[#adaaaa]/60 text-center leading-relaxed">
+                You'll be redirected to Stripe's secure checkout to complete payment.
+              </p>
+
+              <button
+                onClick={handleTopUp}
+                disabled={isPending}
+                className="w-full bg-[#6ee7b7] text-[#052e16] font-bold text-sm py-3 rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {isPending ? (
+                  <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Redirecting…</>
+                ) : (
+                  <><span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>add_circle</span>Continue to Payment</>
+                )}
+              </button>
             </div>
           </div>
         </div>

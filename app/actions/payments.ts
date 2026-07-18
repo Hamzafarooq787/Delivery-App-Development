@@ -109,6 +109,7 @@ export async function createCheckoutSession(deliveryId: string): Promise<
       ],
       // The webhook uses this metadata to mark the right payment row paid
       metadata: {
+        type: "delivery_payment",
         payment_id: payment.id,
         delivery_id: deliveryId,
         user_id: user.id,
@@ -128,6 +129,67 @@ export async function createCheckoutSession(deliveryId: string): Promise<
     return { url: session.url }
   } catch (error) {
     console.error("[Payments] createCheckoutSession failed:", error)
+    return { error: "Payment could not be started. Please try again." }
+  }
+}
+
+/**
+ * Create a Stripe Checkout Session to top up the customer's wallet.
+ * The wallet balance is credited by the webhook on checkout.session.completed
+ * — never client-side — so a customer can't fake a top-up.
+ */
+export async function createWalletTopUpSession(amount: number): Promise<
+  { url: string } | { error: string }
+> {
+  if (!isStripeConfigured()) {
+    return { error: "Online payments are not enabled yet. Please check back soon." }
+  }
+  if (!Number.isFinite(amount) || amount < 1 || amount > 500) {
+    return { error: "Amount must be between £1 and £500" }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  try {
+    const stripe = getStripe()
+    const origin = await getAppOrigin()
+    const roundedAmount = Math.round(amount * 100) / 100
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      customer_email: user.email ?? undefined,
+      line_items: [
+        {
+          price_data: {
+            currency: "gbp",
+            unit_amount: Math.round(roundedAmount * 100), // pence
+            product_data: {
+              name: "Go Drop Wallet Top-Up",
+              description: `Add £${roundedAmount.toFixed(2)} to your Go Drop wallet`,
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      // The webhook uses this metadata to credit the right wallet — the
+      // amount is carried in metadata (not re-derived from the session
+      // total) so a currency/rounding mismatch can never happen.
+      metadata: {
+        type: "wallet_topup",
+        user_id: user.id,
+        amount: roundedAmount.toFixed(2),
+      },
+      success_url: `${origin}/dashboard/customer/wallet?topup=1`,
+      cancel_url: `${origin}/dashboard/customer/wallet?canceled=1`,
+    })
+
+    if (!session.url) return { error: "Stripe did not return a checkout URL" }
+    return { url: session.url }
+  } catch (error) {
+    console.error("[Payments] createWalletTopUpSession failed:", error)
     return { error: "Payment could not be started. Please try again." }
   }
 }

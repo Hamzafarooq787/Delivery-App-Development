@@ -10,7 +10,9 @@
  *   Then copy the signing secret into STRIPE_WEBHOOK_SECRET.
  *
  * Handled events:
- *   checkout.session.completed → payments.status = "paid" (+ intent id, paid_at)
+ *   checkout.session.completed
+ *     metadata.type === "delivery_payment" → payments.status = "paid" (+ intent id, paid_at)
+ *     metadata.type === "wallet_topup"     → credits wallet_balances (idempotent — see below)
  *   payment_intent.payment_failed → payments.status = "failed"
  *
  * Signature verification requires the RAW request body — do not parse JSON
@@ -54,6 +56,62 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object
+        const metadataType = session.metadata?.type
+
+        if (metadataType === "wallet_topup") {
+          const userId = session.metadata?.user_id
+          const amount = Number(session.metadata?.amount ?? 0)
+
+          if (!userId || !amount || amount <= 0) {
+            console.error("[Stripe Webhook] wallet_topup missing/invalid metadata:", session.metadata)
+            break
+          }
+
+          // Idempotency: insert the transaction row first under a unique
+          // constraint on stripe_session_id. If Stripe redelivers this event,
+          // the insert fails and we skip crediting the balance a second time.
+          const { error: insertError } = await admin.from("wallet_transactions").insert({
+            user_id: userId,
+            type: "topup",
+            amount,
+            description: `Wallet top-up of £${amount.toFixed(2)} via Stripe`,
+            stripe_session_id: session.id,
+          })
+
+          if (insertError) {
+            if (insertError.code === "23505") {
+              // Unique violation — already processed this session, ignore.
+              console.log(`[Stripe Webhook] wallet_topup session ${session.id} already processed`)
+              break
+            }
+            console.error("[Stripe Webhook] Failed to log wallet top-up transaction:", insertError)
+            return NextResponse.json({ error: "DB insert failed" }, { status: 500 })
+          }
+
+          const { error: rpcError } = await admin.rpc("increment_wallet_balance", {
+            p_user_id: userId,
+            p_amount: amount,
+          })
+
+          if (rpcError) {
+            console.error("[Stripe Webhook] Failed to credit wallet balance:", rpcError)
+            return NextResponse.json({ error: "Balance update failed" }, { status: 500 })
+          }
+
+          console.log(`[Stripe Webhook] Wallet topped up £${amount.toFixed(2)} for user ${userId}`)
+
+          notifyUser({
+            userId,
+            title: "✅ Wallet topped up",
+            body: `£${amount.toFixed(2)} has been added to your Go Drop wallet.`,
+            url: "/dashboard/customer/wallet",
+            tag: `wallet-topup-${session.id}`,
+          }).catch((err) => console.error("[Stripe Webhook] Top-up notification failed:", err))
+
+          break
+        }
+
+        // Default: delivery payment
         const paymentId = session.metadata?.payment_id
         const deliveryId = session.metadata?.delivery_id
         const userId = session.metadata?.user_id
