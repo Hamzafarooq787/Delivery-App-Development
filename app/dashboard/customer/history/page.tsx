@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { SubTabs } from '@/components/ui/sub-tabs'
 import { createClient } from '@/lib/supabase/client'
 
 type DeliveryRow = {
@@ -207,9 +208,16 @@ export default function DeliveryHistoryPage() {
         <div className="pt-5 md:pt-8 mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h2 className="font-headline text-2xl md:text-4xl font-extrabold tracking-tight text-on-surface">
-              Shipment History
+              Shipments
             </h2>
-            <p className="text-on-surface-variant mt-1 md:mt-2 text-sm">
+            <SubTabs
+              className="mt-4"
+              tabs={[
+                { label: 'Active',  href: '/dashboard/customer/active-deliveries', icon: 'local_shipping' },
+                { label: 'History', href: '/dashboard/customer/history',           icon: 'history' },
+              ]}
+            />
+            <p className="text-on-surface-variant mt-3 text-sm">
               {loading
                 ? 'Loading completed transits...'
                 : `${filtered.length.toLocaleString()} completed ${filtered.length === 1 ? 'transit' : 'transits'}`}

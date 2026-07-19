@@ -91,7 +91,15 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
   )
 }
 
-export function SupportPanel({ initialTickets }: { initialTickets: SupportTicket[] }) {
+export function SupportPanel({
+  initialTickets,
+  subtitle = "Get help with your driver account.",
+  showChatHint = true,
+}: {
+  initialTickets: SupportTicket[]
+  subtitle?: string
+  showChatHint?: boolean
+}) {
   const [tickets, setTickets] = useState<SupportTicket[]>(initialTickets)
   const [showModal, setShowModal] = useState(false)
 
@@ -106,7 +114,7 @@ export function SupportPanel({ initialTickets }: { initialTickets: SupportTicket
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">Support</h1>
-          <p className="text-[#adaaaa] mt-1">Get help with your driver account.</p>
+          <p className="text-[#adaaaa] mt-1">{subtitle}</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -118,6 +126,7 @@ export function SupportPanel({ initialTickets }: { initialTickets: SupportTicket
       </div>
 
       {/* Live chat hint */}
+      {showChatHint && (
       <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20">
         <div className="w-9 h-9 rounded-xl bg-[#a3a6ff]/20 flex items-center justify-center shrink-0">
           <span className="material-symbols-outlined text-[#a3a6ff] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
@@ -127,6 +136,7 @@ export function SupportPanel({ initialTickets }: { initialTickets: SupportTicket
           <p className="text-xs text-[#adaaaa] mt-0.5">Use the <span className="text-[#a3a6ff] font-semibold">chat bubble</span> in the bottom-right corner to talk directly with our support team.</p>
         </div>
       </div>
+      )}
 
       {/* My Tickets */}
       <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl overflow-hidden">

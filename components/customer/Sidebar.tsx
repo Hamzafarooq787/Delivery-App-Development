@@ -6,14 +6,15 @@ import { usePathname } from 'next/navigation'
 import { LogoutButton } from '@/components/auth/logout-button'
 import { createClient } from '@/lib/supabase/client'
 
+// Shipments covers active + history (sub-tabs on the page); Payments covers
+// delivery charges + wallet (sub-tabs on the page). Live Tracking is reached
+// from each shipment's Track button rather than as a standalone tab.
 const navItems = [
   { href: '/dashboard/customer', icon: 'dashboard', label: 'Command Center' },
-  { href: '/dashboard/customer/active-deliveries', icon: 'local_shipping', label: 'Shipments' },
-  { href: '/dashboard/customer/tracking', icon: 'map', label: 'Live Tracking' },
-  { href: '/dashboard/customer/history', icon: 'history', label: 'History' },
-  { href: '/dashboard/customer/payments', icon: 'payments', label: 'Payments' },
-  { href: '/dashboard/customer/wallet', icon: 'account_balance_wallet', label: 'Wallet' },
+  { href: '/dashboard/customer/active-deliveries', icon: 'local_shipping', label: 'Shipments', activePrefixes: ['/dashboard/customer/history', '/dashboard/customer/tracking'] },
+  { href: '/dashboard/customer/payments', icon: 'payments', label: 'Payments', activePrefixes: ['/dashboard/customer/wallet'] },
   { href: '/dashboard/customer/addresses', icon: 'location_on', label: 'Addresses' },
+  { href: '/dashboard/customer/support', icon: 'headset_mic', label: 'Support' },
   { href: '/dashboard/customer/settings', icon: 'settings', label: 'Settings' },
 ]
 
@@ -90,7 +91,9 @@ export default function Sidebar() {
       </div>
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href
+          const isActive =
+            pathname === item.href ||
+            (item.activePrefixes?.some((p) => pathname.startsWith(p)) ?? false)
           return (
             <Link
               key={item.href}

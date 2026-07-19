@@ -219,7 +219,6 @@ export async function acceptDelivery(deliveryId: string) {
     .catch(() => {/* silently ignore */})
 
   revalidatePath("/dashboard/driver/jobs/available")
-  revalidatePath("/dashboard/driver/jobs/active")
   revalidatePath("/dashboard/driver/active-jobs")
   return { success: true, deliveryId: updatedDelivery.id }
 }
@@ -343,8 +342,7 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
     }
   }
 
-  revalidatePath("/driver/jobs/active")
-  revalidatePath("/driver/jobs/completed")
+  revalidatePath("/dashboard/driver/jobs/completed")
   revalidatePath("/dashboard/driver/active-jobs")
   revalidatePath("/dashboard/driver/earnings")
   return { success: true }
