@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { EarningsPanel } from "@/components/driver/earnings-panel"
+import { SubTabs } from "@/components/ui/sub-tabs"
 
 export const dynamic = "force-dynamic"
 
@@ -55,5 +56,16 @@ export default async function EarningsPage() {
 
   const allEarnings = [...earnings, ...syntheticEarnings]
 
-  return <EarningsPanel earnings={allEarnings as any} />
+  return (
+    <>
+      <SubTabs
+        className="mb-6"
+        tabs={[
+          { label: "Earnings", href: "/dashboard/driver/earnings", icon: "payments" },
+          { label: "Payouts",  href: "/dashboard/driver/payouts",  icon: "account_balance_wallet" },
+        ]}
+      />
+      <EarningsPanel earnings={allEarnings as any} />
+    </>
+  )
 }

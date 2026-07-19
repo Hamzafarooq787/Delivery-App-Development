@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LogoutButton } from "@/components/auth/logout-button"
 
+// Earnings covers earnings + payouts (sub-tabs on the page)
 const navItems = [
   { label: "Dashboard", href: "/dashboard/driver", icon: "dashboard" },
   { label: "Available Jobs", href: "/dashboard/driver/jobs/available", icon: "work" },
   { label: "Active Jobs", href: "/dashboard/driver/active-jobs", icon: "local_shipping" },
   { label: "Completed Jobs", href: "/dashboard/driver/jobs/completed", icon: "task_alt" },
-  { label: "Earnings", href: "/dashboard/driver/earnings", icon: "payments" },
-  { label: "Payouts", href: "/dashboard/driver/payouts", icon: "account_balance_wallet" },
+  { label: "Earnings", href: "/dashboard/driver/earnings", icon: "payments", activePrefixes: ["/dashboard/driver/payouts"] },
   { label: "Verification", href: "/dashboard/driver/verification", icon: "verified_user" },
   { label: "Profile", href: "/dashboard/driver/profile", icon: "person" },
   { label: "Settings", href: "/dashboard/driver/settings", icon: "settings" },
@@ -51,7 +51,8 @@ export function DriverSidebar({ onClose, user, isOnline = false, isLocked = fals
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/dashboard/driver" && pathname.startsWith(item.href))
+            (item.href !== "/dashboard/driver" && pathname.startsWith(item.href)) ||
+            (item.activePrefixes?.some((p) => pathname.startsWith(p)) ?? false)
           const itemLocked = isLocked && !UNLOCKED_ROUTES.some((r) => item.href.startsWith(r))
 
           if (itemLocked) {

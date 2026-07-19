@@ -9,8 +9,8 @@ const LEFT_ITEMS = [
   { href: '/dashboard/customer/active-deliveries', icon: 'package_2', label: 'Shipments'},
 ]
 const RIGHT_ITEMS = [
-  { href: '/dashboard/customer/wallet',   icon: 'account_balance_wallet', label: 'Wallet' },
-  { href: '/dashboard/customer/settings', icon: 'person',                 label: 'Profile'},
+  { href: '/dashboard/customer/payments', icon: 'payments', label: 'Payments' },
+  { href: '/dashboard/customer/settings', icon: 'person',   label: 'Profile'},
 ]
 
 function NavItem({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
@@ -50,6 +50,10 @@ export default function BottomNav() {
 
   function isActive(href: string) {
     if (href === '/dashboard/customer') return pathname === href
+    // Wallet is a sub-tab of the merged Payments tab
+    if (href === '/dashboard/customer/payments') {
+      return pathname.startsWith(href) || pathname.startsWith('/dashboard/customer/wallet')
+    }
     return pathname.startsWith(href)
   }
 

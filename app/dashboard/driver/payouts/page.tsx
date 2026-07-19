@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { RequestPayoutButton } from "@/components/driver/request-payout-button"
+import { SubTabs } from "@/components/ui/sub-tabs"
 
 function fmt(n: number) {
   return `£${n.toFixed(2)}`
@@ -86,6 +87,13 @@ export default async function DriverPayoutsPage() {
 
   return (
     <div className="pt-2 pb-12 px-2">
+      <SubTabs
+        className="mb-6"
+        tabs={[
+          { label: "Earnings", href: "/dashboard/driver/earnings", icon: "payments" },
+          { label: "Payouts",  href: "/dashboard/driver/payouts",  icon: "account_balance_wallet" },
+        ]}
+      />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 md:mb-10">
         <div>

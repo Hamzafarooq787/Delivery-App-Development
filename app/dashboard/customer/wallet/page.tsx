@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState, useTransition } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import Header from "@/components/customer/Header"
+import { SubTabs } from "@/components/ui/sub-tabs"
 import { getWalletBalance, getWalletTransactions } from "@/app/actions/wallet"
 import { createWalletTopUpSession } from "@/app/actions/payments"
 import { createClient } from "@/lib/supabase/client"
@@ -188,11 +189,18 @@ function WalletPageInner() {
           {/* ── Page Title ── */}
           <div className="mb-6 md:mb-8">
             <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-              Wallet
+              Payments
             </h2>
             <p className="text-[#adaaaa] text-sm mt-1">
               Manage your balance and view transaction history.
             </p>
+            <SubTabs
+              className="mt-4"
+              tabs={[
+                { label: "Charges", href: "/dashboard/customer/payments", icon: "receipt_long" },
+                { label: "Wallet",  href: "/dashboard/customer/wallet",   icon: "account_balance_wallet" },
+              ]}
+            />
           </div>
 
           {/* ── Balance Card ── */}

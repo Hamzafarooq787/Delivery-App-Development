@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { SubTabs } from '@/components/ui/sub-tabs'
 import { createClient } from '@/lib/supabase/client'
 import { createCheckoutSession } from '@/app/actions/payments'
 
@@ -205,6 +206,13 @@ function PaymentsPageInner() {
           <div className="pt-5 md:pt-8 mb-6 md:mb-10">
             <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-white">Payments</h2>
             <p className="text-[#adaaaa] mt-1 text-sm">Review your delivery charges and settlement history.</p>
+            <SubTabs
+              className="mt-4"
+              tabs={[
+                { label: 'Charges', href: '/dashboard/customer/payments', icon: 'receipt_long' },
+                { label: 'Wallet',  href: '/dashboard/customer/wallet',   icon: 'account_balance_wallet' },
+              ]}
+            />
           </div>
 
           {/* ── MOBILE: summary chips ── */}

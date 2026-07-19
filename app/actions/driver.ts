@@ -47,6 +47,7 @@ export async function createSupportTicket(formData: FormData) {
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/driver/support")
+  revalidatePath("/dashboard/customer/support")
   return { success: true }
 }
 

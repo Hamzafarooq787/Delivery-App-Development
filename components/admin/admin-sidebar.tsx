@@ -7,13 +7,14 @@ import { LogoutButton } from "@/components/auth/logout-button"
 
 const navItems = [
   { label: "Overview", href: "/dashboard/admin", icon: "dashboard" },
-  { label: "Deliveries", href: "/dashboard/admin/orders", icon: "local_shipping" },
+  { label: "Orders", href: "/dashboard/admin/orders", icon: "local_shipping" },
   { label: "Drivers", href: "/dashboard/admin/drivers", icon: "badge" },
   { label: "Customers", href: "/dashboard/admin/customers", icon: "group" },
   { label: "Verification Requests", href: "/dashboard/admin/verification", icon: "verified_user", badgeKey: "pendingVerifications" },
   { label: "Payments", href: "/dashboard/admin/payments", icon: "payments" },
   { label: "Payouts",  href: "/dashboard/admin/payouts",  icon: "account_balance_wallet" },
   { label: "Disputes", href: "/dashboard/admin/disputes", icon: "gavel" },
+  { label: "Support Tickets", href: "/dashboard/admin/support", icon: "support_agent" },
   { label: "Reports", href: "/dashboard/admin/reports", icon: "analytics" },
   { label: "Settings", href: "/dashboard/admin/settings", icon: "settings" },
 ]
