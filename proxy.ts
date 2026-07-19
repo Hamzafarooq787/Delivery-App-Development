@@ -52,6 +52,19 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // RESCUE STRANDED AUTH CODES
+  // When a Supabase auth redirect URL isn't in the dashboard's Redirect URLs
+  // allowlist, Supabase silently falls back to the Site URL (the home page)
+  // and appends ?code=... — leaving the PKCE code unexchanged and the user
+  // stuck logged-out on the marketing page. Forward the code to
+  // /auth/callback (preserving all query params, e.g. role) so it gets
+  // exchanged and the user lands on their dashboard.
+  if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/auth/callback"
+    return redirectWithCookies(url)
+  }
+
   // PUBLIC ROUTES - always allow access
   if (
     pathname === "/" ||
