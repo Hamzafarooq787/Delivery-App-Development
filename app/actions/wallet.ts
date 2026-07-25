@@ -57,13 +57,14 @@ export type CancelOrderResult = {
   freeCancel: boolean
   cancellationFee: number
   distanceMiles: number
+  refundAmount: number
   error?: string
 }
 
 export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, error: "Not authenticated" }
+  if (!user) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Not authenticated" }
 
   const admin = createAdminClient()
 
@@ -74,12 +75,12 @@ export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult
     .eq("id", deliveryId)
     .single()
 
-  if (fetchErr || !delivery) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, error: "Order not found" }
-  if ((delivery as any).customer_id !== user.id) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, error: "Not your order" }
+  if (fetchErr || !delivery) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Order not found" }
+  if ((delivery as any).customer_id !== user.id) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Not your order" }
 
   const status = (delivery as any).status as string
   if (status === "delivered" || status === "cancelled") {
-    return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, error: "This order cannot be cancelled" }
+    return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "This order cannot be cancelled" }
   }
 
   const freeStatuses = ["requested", "accepted"]
@@ -87,6 +88,34 @@ export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult
 
   let cancellationFee = 0
   let distanceMiles = 0
+  let refundAmount = 0
+
+  if (freeCancel) {
+    // The delivery price was deducted from the wallet at order creation —
+    // "free cancellation" must mean the customer gets that back, not that
+    // the prepayment silently vanishes. Only refund if this order was
+    // actually wallet-funded (has a matching deduction transaction);
+    // legacy orders created before wallet-funding was required have none.
+    const { data: deductionTx } = await admin
+      .from("wallet_transactions")
+      .select("amount")
+      .eq("delivery_id", deliveryId)
+      .eq("type", "deduction")
+      .limit(1)
+      .maybeSingle()
+
+    if (deductionTx?.amount) {
+      refundAmount = Math.abs(Number(deductionTx.amount))
+      await admin.rpc("increment_wallet_balance", { p_user_id: user.id, p_amount: refundAmount })
+      await admin.from("wallet_transactions").insert({
+        user_id: user.id,
+        type: "cashback",
+        amount: refundAmount,
+        description: `Refund for cancelled order ${(delivery as any).tracking_number ?? deliveryId.slice(0, 8).toUpperCase()}`,
+        delivery_id: deliveryId,
+      })
+    }
+  }
 
   if (!freeCancel) {
     // Calculate distance
@@ -133,11 +162,13 @@ export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult
     user_id: user.id,
     title: freeCancel ? "Order Cancelled" : "Order Cancelled — Fee Applied",
     body: freeCancel
-      ? "Your order has been cancelled at no charge."
+      ? refundAmount > 0
+        ? `Your order has been cancelled and £${refundAmount.toFixed(2)} was refunded to your wallet.`
+        : "Your order has been cancelled at no charge."
       : `Your order was cancelled. A £${cancellationFee} cancellation fee was deducted from your wallet.`,
   })
 
-  return { success: true, freeCancel, cancellationFee, distanceMiles }
+  return { success: true, freeCancel, cancellationFee, distanceMiles, refundAmount }
 }
 
 // ── Preview cancellation fee (before confirming) ──────────────────────────

@@ -41,7 +41,9 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
         setResult({
           success: true,
           message: res.freeCancel
-            ? "Order cancelled successfully. No charge applied."
+            ? res.refundAmount > 0
+              ? `Order cancelled. £${res.refundAmount.toFixed(2)} refunded to your wallet.`
+              : "Order cancelled successfully. No charge applied."
             : `Order cancelled. £${res.cancellationFee} cancellation fee deducted from your wallet.`,
         })
         setTimeout(() => {

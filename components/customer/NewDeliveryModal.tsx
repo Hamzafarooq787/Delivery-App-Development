@@ -4,9 +4,10 @@ import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tracking'
-import { notifyDriversOfNewDelivery } from '@/app/actions/notifications'
+import { createDeliveryRequest } from '@/app/actions/delivery'
+import { createWalletTopUpSession } from '@/app/actions/payments'
+import { getWalletBalance } from '@/app/actions/wallet'
 import {
   fetchRoute,
   googlePlacesAutocomplete,
@@ -15,6 +16,7 @@ import {
   googleDetectCountryCode,
   type PlaceSuggestion,
 } from '@/lib/google'
+import { saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
 
 const GoogleLiveMap = dynamic(
   () => import('@/components/maps/google-live-map').then((m) => m.GoogleLiveMap),
@@ -23,6 +25,8 @@ const GoogleLiveMap = dynamic(
 
 interface NewDeliveryModalProps {
   onClose: () => void
+  /** Pre-fills the form — used when resuming after a wallet top-up. */
+  initialDraft?: DeliveryDraft | null
 }
 
 const PAYLOAD_OPTIONS = [
@@ -179,18 +183,28 @@ function AddressInput({
   )
 }
 
-export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
+export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryModalProps) {
   const router = useRouter()
 
-  const [pickupValue, setPickupValue] = useState('')
-  const [deliveryValue, setDeliveryValue] = useState('')
-  const [pickupCoords, setPickupCoords] = useState<LatLng | null>(null)
-  const [deliveryCoords, setDeliveryCoords] = useState<LatLng | null>(null)
+  const [pickupValue, setPickupValue] = useState(initialDraft?.pickupValue ?? '')
+  const [deliveryValue, setDeliveryValue] = useState(initialDraft?.deliveryValue ?? '')
+  const [pickupCoords, setPickupCoords] = useState<LatLng | null>(initialDraft?.pickupCoords ?? null)
+  const [deliveryCoords, setDeliveryCoords] = useState<LatLng | null>(initialDraft?.deliveryCoords ?? null)
   const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null)
   const [routeInfo, setRouteInfo] = useState<{ miles: number; km: number; duration_min: number } | null>(null)
-  const [selectedPayload, setSelectedPayload] = useState<string>(PAYLOAD_OPTIONS[0].label)
+  const [selectedPayload, setSelectedPayload] = useState<string>(initialDraft?.selectedPayload ?? PAYLOAD_OPTIONS[0].label)
   const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  // Wallet balance — must cover the delivery price before an order can be
+  // placed. This is a UX gate only; the server re-checks and deducts
+  // atomically, so a stale/bypassed client value can't create a free order.
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [addingFunds, setAddingFunds] = useState(false)
+
+  useEffect(() => {
+    getWalletBalance().then((res) => setWalletBalance(res.balance)).catch(() => setWalletBalance(null))
+  }, [])
 
   // User's device GPS + detected country
   const [userCoords, setUserCoords] = useState<LatLng | null>(null)
@@ -314,25 +328,19 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     await clearCustomerLocation()
   }
 
+  const price = routeInfo ? getPrice(routeInfo.miles) : null
+  const insufficientFunds = price !== null && walletBalance !== null && walletBalance < price
+
   async function handleSubmit() {
     if (submitting) return
     if (!pickupValue) { toast.error('Enter a pickup address.'); return }
     if (!deliveryValue && !liveLocationActive) { toast.error('Enter a delivery address or use live location.'); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
+    if (insufficientFunds) { handleAddFunds(); return }
 
     setSubmitting(true)
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { toast.error('You must be signed in.'); setSubmitting(false); return }
-
-      const price = routeInfo ? getPrice(routeInfo.miles) : null
-
-      // Generate a unique tracking number — TRK-<timestamp><random4>
-      const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
-
-      const { data: insertedDelivery, error } = await supabase.from('delivery_requests').insert({
-        customer_id: user.id,
+      const result = await createDeliveryRequest({
         pickup_address: pickupValue,
         delivery_address: deliveryValue,
         pickup_lat: pickupCoords?.lat ?? null,
@@ -340,16 +348,20 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
         delivery_lat: deliveryCoords?.lat ?? null,
         delivery_lng: deliveryCoords?.lng ?? null,
         item_description: selectedPayload,
-        status: 'requested',
         price,
-        tracking_number,
-      }).select('id').single()
+      })
 
-      if (error) { toast.error(error.message || 'Failed to create delivery.'); setSubmitting(false); return }
-
-      // Notify online/approved drivers — fire-and-forget, don't block UI
-      if (insertedDelivery?.id) {
-        notifyDriversOfNewDelivery(insertedDelivery.id, pickupValue).catch(console.error)
+      if ('error' in result) {
+        if (result.code === 'insufficient_funds') {
+          // Balance changed since we last checked (e.g. another tab spent it) — refresh and re-gate.
+          const fresh = await getWalletBalance()
+          setWalletBalance(fresh.balance)
+          toast.error(result.error)
+        } else {
+          toast.error(result.error)
+        }
+        setSubmitting(false)
+        return
       }
 
       // Stop live location if active when delivery is submitted
@@ -362,6 +374,34 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unexpected error.')
       setSubmitting(false)
+    }
+  }
+
+  // Save the in-progress form, then send the customer to Stripe to top up
+  // exactly enough to cover this delivery. They land back with the modal
+  // reopened and pre-filled (see the dashboard layout's resume handling).
+  async function handleAddFunds() {
+    if (addingFunds || price === null) return
+    setAddingFunds(true)
+    try {
+      const needed = Math.max(1, Math.ceil((price - (walletBalance ?? 0)) * 100) / 100)
+      saveDeliveryDraft({
+        pickupValue,
+        deliveryValue,
+        pickupCoords,
+        deliveryCoords,
+        selectedPayload,
+      })
+      const result = await createWalletTopUpSession(Math.min(500, needed), 'new-delivery')
+      if ('url' in result) {
+        window.location.href = result.url
+      } else {
+        toast.error(result.error)
+        setAddingFunds(false)
+      }
+    } catch {
+      toast.error('Could not start the payment. Please try again.')
+      setAddingFunds(false)
     }
   }
 
@@ -482,8 +522,7 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                 routeGeometry={routeGeometry}
                 height={200}
               />
-              {routeInfo && (() => {
-                const price = getPrice(routeInfo.miles)
+              {routeInfo && price !== null && (() => {
                 const isPerMile = routeInfo.miles > 12
                 return (
                   <>
@@ -521,6 +560,17 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
                       </p>
                       <p className="text-lg font-black text-[#6ee7b7]">£{formatPrice(price)}</p>
                     </div>
+                    {walletBalance !== null && (
+                      <div className="px-4 py-2 bg-[#1a1919] border-t border-[#494847]/10 flex items-center justify-between">
+                        <p className="text-[10px] text-[#adaaaa] flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[13px]">account_balance_wallet</span>
+                          Wallet balance
+                        </p>
+                        <p className={`text-[11px] font-bold ${insufficientFunds ? 'text-[#fb923c]' : 'text-[#adaaaa]'}`}>
+                          £{walletBalance.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
                   </>
                 )
               })()}
@@ -587,6 +637,20 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
               I confirm that my package does <span className="text-white font-bold">not</span> contain any prohibited, illegal, or dangerous items. I accept full responsibility for the contents.
             </p>
           </label>
+
+          {/* Insufficient wallet balance */}
+          {insufficientFunds && price !== null && (
+            <div className="flex items-start gap-3 p-3.5 rounded-xl border border-[#fb923c]/30 bg-[#fb923c]/5">
+              <span className="material-symbols-outlined text-[#fb923c] text-lg mt-0.5 shrink-0">account_balance_wallet</span>
+              <div>
+                <p className="text-xs font-bold text-[#fb923c]">Insufficient wallet balance</p>
+                <p className="text-[11px] text-[#adaaaa] mt-0.5 leading-relaxed">
+                  This delivery costs £{formatPrice(price)} — your wallet has £{(walletBalance ?? 0).toFixed(2)}.
+                  Add funds to continue; you'll return here to finish this request.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -594,15 +658,26 @@ export default function NewDeliveryModal({ onClose }: NewDeliveryModalProps) {
           <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
             Cancel
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || !confirmed}
-            className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            style={{ boxShadow: confirmed ? '0 0 20px rgba(163,166,255,0.25)' : 'none' }}
-          >
-            <span className="material-symbols-outlined text-base">bolt</span>
-            {submitting ? 'Requesting…' : routeInfo ? `Request Delivery — £${formatPrice(getPrice(routeInfo.miles))}` : 'Request Delivery'}
-          </button>
+          {insufficientFunds ? (
+            <button
+              onClick={handleAddFunds}
+              disabled={addingFunds}
+              className="flex-1 py-2.5 rounded-xl bg-[#6ee7b7] text-[#052e16] font-bold text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-base">add_circle</span>
+              {addingFunds ? 'Redirecting…' : `Add Funds — £${formatPrice(Math.max(1, Math.ceil(((price ?? 0) - (walletBalance ?? 0)) * 100) / 100))} needed`}
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !confirmed}
+              className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{ boxShadow: confirmed ? '0 0 20px rgba(163,166,255,0.25)' : 'none' }}
+            >
+              <span className="material-symbols-outlined text-base">bolt</span>
+              {submitting ? 'Requesting…' : price !== null ? `Request Delivery — £${formatPrice(price)}` : 'Request Delivery'}
+            </button>
+          )}
         </div>
       </div>
     </div>
