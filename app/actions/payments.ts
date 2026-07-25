@@ -124,12 +124,27 @@ export async function createCheckoutSession(deliveryId: string): Promise<
   }
 }
 
+// Closed set of valid return destinations — never accept a raw path/URL from
+// the client here, that would be an open-redirect vector through Stripe.
+const TOPUP_RETURN_PATHS = {
+  wallet: "/dashboard/customer/wallet",
+  "new-delivery": "/dashboard/customer?resume_delivery=1",
+} as const
+export type TopUpReturnTo = keyof typeof TOPUP_RETURN_PATHS
+
 /**
  * Create a Stripe Checkout Session to top up the customer's wallet.
  * The wallet balance is credited by the webhook on checkout.session.completed
  * — never client-side — so a customer can't fake a top-up.
+ *
+ * @param returnTo Where to land after Stripe redirects back — "wallet" (the
+ *   normal top-up flow) or "new-delivery" (resumes an in-progress delivery
+ *   request that was paused to top up; see NewDeliveryModal).
  */
-export async function createWalletTopUpSession(amount: number): Promise<
+export async function createWalletTopUpSession(
+  amount: number,
+  returnTo: TopUpReturnTo = "wallet"
+): Promise<
   { url: string } | { error: string }
 > {
   if (!isStripeConfigured()) {
@@ -173,7 +188,7 @@ export async function createWalletTopUpSession(amount: number): Promise<
         user_id: user.id,
         amount: roundedAmount.toFixed(2),
       },
-      success_url: `${origin}/dashboard/customer/wallet?topup=1`,
+      success_url: `${origin}${TOPUP_RETURN_PATHS[returnTo]}${TOPUP_RETURN_PATHS[returnTo].includes("?") ? "&" : "?"}topup=1`,
       cancel_url: `${origin}/dashboard/customer/wallet?canceled=1`,
     })
 

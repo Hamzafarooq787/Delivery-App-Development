@@ -3,82 +3,75 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
-import { notifyUser, notifyMultipleUsers } from "@/app/actions/notifications"
+import { notifyUser, notifyDriversOfNewDelivery } from "@/app/actions/notifications"
 import { NotificationTag } from "@/lib/notifications/types"
 
 // ── Customer actions ──────────────────────────────────────────────────────────
 
-export async function createDeliveryRequest(formData: FormData) {
+export type CreateDeliveryParams = {
+  pickup_address: string
+  delivery_address: string
+  pickup_lat: number | null
+  pickup_lng: number | null
+  delivery_lat: number | null
+  delivery_lng: number | null
+  item_description: string
+  price: number | null
+}
+
+export type CreateDeliveryResult =
+  | { data: { id: string } }
+  | { error: string; code?: "insufficient_funds" | "not_authenticated" | "invalid_price" }
+
+/**
+ * Creates a delivery request and pays for it from the customer's wallet in a
+ * single atomic database transaction (see
+ * scripts/021_delivery_wallet_payment.sql create_delivery_with_wallet_payment).
+ * The wallet balance is verified and deducted server-side — client-side
+ * balance checks are UX-only and can't be trusted or bypassed.
+ */
+export async function createDeliveryRequest(params: CreateDeliveryParams): Promise<CreateDeliveryResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Not authenticated" }
+  if (!user) return { error: "Not authenticated", code: "not_authenticated" }
 
-  const payload = {
-    customer_id: user.id,
-    pickup_address: formData.get("pickup_address") as string,
-    delivery_address: formData.get("delivery_address") as string,
-    pickup_lat: parseFloat(formData.get("pickup_lat") as string) || 0,
-    pickup_lng: parseFloat(formData.get("pickup_lng") as string) || 0,
-    delivery_lat: parseFloat(formData.get("delivery_lat") as string) || 0,
-    delivery_lng: parseFloat(formData.get("delivery_lng") as string) || 0,
-    item_description: formData.get("item_description") as string,
-    item_value: parseFloat(formData.get("item_value") as string) || 0,
-    price: parseFloat(formData.get("price") as string) || 0,
-    is_safe_confirmed: formData.get("is_safe_confirmed") === "true",
-    status: "requested",
-    tracking_number: `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+  if (!params.price || params.price <= 0) {
+    return { error: "Could not calculate a price for this route. Please try again.", code: "invalid_price" }
   }
 
-  const { data, error } = await supabase
-    .from("delivery_requests")
-    .insert(payload)
-    .select()
-    .single()
+  const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
-  if (error) return { error: error.message }
+  const { data: deliveryId, error } = await supabase.rpc("create_delivery_with_wallet_payment", {
+    p_pickup_address: params.pickup_address,
+    p_delivery_address: params.delivery_address,
+    p_pickup_lat: params.pickup_lat,
+    p_pickup_lng: params.pickup_lng,
+    p_delivery_lat: params.delivery_lat,
+    p_delivery_lng: params.delivery_lng,
+    p_item_description: params.item_description,
+    p_price: params.price,
+    p_tracking_number: tracking_number,
+  })
 
-  // Auto-create a pending payment record so the customer can see charges in their Payments tab
-  if (data?.id && payload.price > 0) {
-    await supabase.from("payments").insert({
-      delivery_id: data.id,
-      amount: payload.price,
-      status: "pending",
-    })
-  }
-
-  revalidatePath("/customer/orders")
-  revalidatePath("/dashboard/customer/payments")
-
-  // ── Push notification: notify all online/approved drivers about the new request ──
-  // Fire-and-forget — don't block the response if notifications fail
-  if (data?.id) {
-    const adminClient = createAdminClient()
-    try {
-      // Fetch IDs of all approved, online drivers
-      const { data: onlineDrivers } = await adminClient
-        .from("driver_profiles")
-        .select("id")
-        .eq("status", "approved")
-        .eq("is_online", true)
-
-      if (onlineDrivers && onlineDrivers.length > 0) {
-        const driverIds = onlineDrivers.map((d: { id: string }) => d.id)
-        // Non-blocking — notify in background without awaiting
-        notifyMultipleUsers({
-          userIds: driverIds,
-          title: "📦 New delivery available!",
-          body: `Pickup: ${payload.pickup_address.slice(0, 60)}`,
-          url: "/dashboard/driver",
-          tag: `${NotificationTag.NEW_DELIVERY}-${data.id}`,
-          data: { deliveryId: data.id },
-        }).catch((err) => console.error("[Notify] Failed to send new-delivery push:", err))
-      }
-    } catch (err) {
-      console.error("[Notify] createDeliveryRequest notification block failed:", err)
+  if (error) {
+    if (error.message?.includes("insufficient_funds")) {
+      return { error: "Your wallet balance doesn't cover this delivery. Please add funds to continue.", code: "insufficient_funds" }
     }
+    console.error("[Delivery] createDeliveryRequest RPC failed:", error)
+    return { error: "Could not create the delivery. Please try again." }
   }
 
-  return { data }
+  revalidatePath("/dashboard/customer")
+  revalidatePath("/dashboard/customer/active-deliveries")
+  revalidatePath("/dashboard/customer/payments")
+  revalidatePath("/dashboard/customer/wallet")
+
+  // Notify online/approved drivers — fire-and-forget, don't block the response
+  notifyDriversOfNewDelivery(deliveryId as string, params.pickup_address).catch((err) =>
+    console.error("[Notify] Failed to send new-delivery push:", err)
+  )
+
+  return { data: { id: deliveryId as string } }
 }
 
 export async function getCustomerDeliveries() {
