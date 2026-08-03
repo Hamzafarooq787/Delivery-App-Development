@@ -13,6 +13,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { createPortal } from "react-dom"
 import { addVehicle, updateVehicle, deleteVehicle, type DriverVehicle, type VehicleInput } from "@/app/actions/vehicles"
 import { VEHICLE_TYPES, VEHICLE_INFO, isMotorVehicle, type VehicleType } from "@/lib/vehicles"
 
@@ -85,7 +86,13 @@ function VehicleFormModal({
     })
   }
 
-  return (
+  // Rendered via a portal to document.body — this modal is used inside cards
+  // that have backdrop-blur (a CSS filter), which makes that ancestor the
+  // containing block for any `position: fixed` descendant. Without the
+  // portal, "fixed inset-0" ends up clipped to that small card instead of
+  // covering the viewport, which is exactly the "modal looks broken/cut off"
+  // bug this fixes.
+  return createPortal(
     <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { if (!isPending) onClose() }} />
       <div className="relative w-full max-w-lg bg-[#1a1919] border border-[#494847]/20 rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
@@ -179,7 +186,8 @@ function VehicleFormModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
