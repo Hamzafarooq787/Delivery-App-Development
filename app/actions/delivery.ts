@@ -18,6 +18,7 @@ export type CreateDeliveryParams = {
   delivery_lat: number | null
   delivery_lng: number | null
   item_description: string
+  item_photo_urls?: string[]
   package_size: PackageSize
   price: number | null
 }
@@ -46,6 +47,10 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     return { error: "Select a package size." }
   }
 
+  if (!params.item_description?.trim()) {
+    return { error: "Describe the item being delivered." }
+  }
+
   const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
   const { data: deliveryId, error } = await supabase.rpc("create_delivery_with_wallet_payment", {
@@ -55,10 +60,11 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     p_pickup_lng: params.pickup_lng,
     p_delivery_lat: params.delivery_lat,
     p_delivery_lng: params.delivery_lng,
-    p_item_description: params.item_description,
+    p_item_description: params.item_description.trim(),
     p_price: params.price,
     p_tracking_number: tracking_number,
     p_package_size: params.package_size,
+    p_item_photo_urls: params.item_photo_urls && params.item_photo_urls.length > 0 ? params.item_photo_urls : null,
   })
 
   if (error) {

@@ -128,6 +128,19 @@ export default async function AdminOrderDetailPage({
                   })}
                 </p>
               </div>
+              {order.item_photo_urls && order.item_photo_urls.length > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="text-muted-foreground mb-2">Item Photos</p>
+                  <div className="flex flex-wrap gap-2">
+                    {order.item_photo_urls.map((url: string) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer" className="w-16 h-16 rounded-lg overflow-hidden border shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="Item" className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
