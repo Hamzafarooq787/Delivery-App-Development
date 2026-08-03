@@ -4,6 +4,8 @@ import { useRef, useState, useTransition } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { recordDriverDocument, submitForReview } from "@/app/actions/documents"
 import type { DriverDocument } from "@/app/actions/documents"
+import type { DriverVehicle } from "@/app/actions/vehicles"
+import { VehicleManager } from "@/components/driver/vehicle-manager"
 
 type DocType = "identity" | "insurance" | "vehicle_registration"
 type DriverStatus = "pending" | "approved" | "rejected"
@@ -68,14 +70,17 @@ function statusBadge(s: DriverStatus) {
 export function VerificationPanel({
   driverStatus: initialStatus,
   documents: initialDocs,
+  vehicles: initialVehicles,
   userId,
 }: {
   driverStatus: DriverStatus
   documents: DriverDocument[]
+  vehicles: DriverVehicle[]
   userId: string
 }) {
   const [driverStatus, setDriverStatus] = useState<DriverStatus>(initialStatus)
   const [docs, setDocs] = useState<DriverDocument[]>(initialDocs)
+  const [vehicles, setVehicles] = useState<DriverVehicle[]>(initialVehicles)
   const [uploading, setUploading] = useState<DocType | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [submitPending, startSubmitTransition] = useTransition()
@@ -85,8 +90,12 @@ export function VerificationPanel({
 
   const docMap = new Map(docs.map((d) => [d.document_type, d]))
   const uploadedCount = DOC_CONFIGS.filter((c) => docMap.has(c.type)).length
+  const hasVehicle = vehicles.length > 0
+  // Vehicle registration counts as one extra "step" alongside the 3 document types
+  const totalSteps = DOC_CONFIGS.length + 1
+  const completedSteps = uploadedCount + (hasVehicle ? 1 : 0)
   const pct =
-    driverStatus === "approved" ? 100 : Math.round((uploadedCount / DOC_CONFIGS.length) * 66) + (driverStatus === "rejected" ? 0 : uploadedCount > 0 ? 10 : 0)
+    driverStatus === "approved" ? 100 : Math.round((completedSteps / totalSteps) * 66) + (driverStatus === "rejected" ? 0 : completedSteps > 0 ? 10 : 0)
 
   async function handleUpload(docType: DocType, file: File) {
     setUploadError(null)
@@ -144,7 +153,7 @@ export function VerificationPanel({
     })
   }
 
-  const canSubmit = uploadedCount > 0 && driverStatus !== "approved"
+  const canSubmit = uploadedCount > 0 && hasVehicle && driverStatus !== "approved"
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -200,13 +209,19 @@ export function VerificationPanel({
                 ? "All documents verified. You are fully operational."
                 : driverStatus === "rejected"
                 ? "One or more documents require re-submission."
-                : uploadedCount === 0
-                ? "Upload your documents to begin the verification process."
-                : `${uploadedCount} of ${DOC_CONFIGS.length} documents uploaded.`}
+                : completedSteps === 0
+                ? "Register a vehicle and upload your documents to begin verification."
+                : `${completedSteps} of ${totalSteps} steps complete.`}
             </p>
 
-            {/* Docs checklist */}
+            {/* Checklist */}
             <div className="space-y-2 pt-2">
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`material-symbols-outlined text-sm ${hasVehicle ? "text-green-400" : "text-[#494847]"}`}>
+                  {hasVehicle ? "check_circle" : "radio_button_unchecked"}
+                </span>
+                <span className={hasVehicle ? "text-white" : "text-[#adaaaa]"}>Vehicle registered</span>
+              </div>
               {DOC_CONFIGS.map((c) => {
                 const uploaded = docMap.has(c.type)
                 return (
@@ -246,8 +261,21 @@ export function VerificationPanel({
           </div>
         </div>
 
-        {/* Document upload cards */}
+        {/* Vehicle + document upload cards */}
         <div className="md:col-span-8 space-y-4">
+          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-5 md:p-6 rounded-xl border border-[#494847]/15">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff] shrink-0">
+                <span className="material-symbols-outlined">directions_car</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Vehicle Information</h3>
+                <p className="text-[#adaaaa] text-xs">Add at least one vehicle — you can register more later from Settings.</p>
+              </div>
+            </div>
+            <VehicleManager vehicles={vehicles} onChange={setVehicles} />
+          </div>
+
           {DOC_CONFIGS.map((config) => {
             const existing = docMap.get(config.type)
             const isUploading = uploading === config.type

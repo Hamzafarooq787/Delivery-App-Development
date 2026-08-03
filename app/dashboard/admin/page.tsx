@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { VEHICLE_INFO, isVehicleType } from "@/lib/vehicles"
 
 export const dynamic = "force-dynamic"
 
@@ -77,10 +78,10 @@ export default async function AdminDashboardPage() {
       .order("created_at", { ascending: false })
       .limit(8),
 
-    // Full driver profile data including vehicle info and user details
+    // Full driver profile data including vehicles and user details
     admin
       .from("driver_profiles")
-      .select("id, vehicle_type, vehicle_number, created_at, users(full_name, phone)")
+      .select("id, created_at, users(full_name, phone), driver_vehicles(vehicle_type, registration_number, make, model)")
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(5),
@@ -408,7 +409,10 @@ export default async function AdminDashboardPage() {
                   const user = Array.isArray(driver.users) ? driver.users[0] : driver.users
                   const name = user?.full_name ?? "Unknown"
                   const phone = user?.phone ?? null
-                  const vehicleType = driver.vehicle_type ?? null
+                  const vehicles = (driver.driver_vehicles ?? []) as { vehicle_type: string }[]
+                  const vehicleSummary = vehicles.length > 0
+                    ? vehicles.map((v) => isVehicleType(v.vehicle_type) ? VEHICLE_INFO[v.vehicle_type].label : v.vehicle_type).join(", ")
+                    : "No vehicle registered"
                   return (
                     <a key={driver.id} href={`/dashboard/admin/drivers/${driver.id}`} className="flex items-center gap-3 px-4 py-4 hover:bg-[#262626] transition-colors">
                       <div className="w-9 h-9 rounded-full bg-[#262626] flex items-center justify-center font-bold text-xs text-white shrink-0">
@@ -417,7 +421,7 @@ export default async function AdminDashboardPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white truncate">{name}</p>
                         <p className="text-xs text-[#adaaaa]">
-                          {vehicleType ?? "Vehicle type not set"}{phone ? ` · ${phone}` : ""}
+                          {vehicleSummary}{phone ? ` · ${phone}` : ""}
                         </p>
                         <p className="text-xs text-[#494847]">{new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
                       </div>
@@ -435,8 +439,7 @@ export default async function AdminDashboardPage() {
                   <tr>
                     <th className="px-6 py-4">Driver</th>
                     <th className="px-6 py-4">Phone</th>
-                    <th className="px-6 py-4">Vehicle Type</th>
-                    <th className="px-6 py-4">Vehicle Reg</th>
+                    <th className="px-6 py-4">Vehicles</th>
                     <th className="px-6 py-4">Applied</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4 text-right">Actions</th>
@@ -445,7 +448,7 @@ export default async function AdminDashboardPage() {
                 <tbody className="divide-y divide-[#494847]/10">
                   {(pendingDriversRes.data ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center text-[#adaaaa] text-sm">
+                      <td colSpan={6} className="py-10 text-center text-[#adaaaa] text-sm">
                         No pending applications
                       </td>
                     </tr>
@@ -454,8 +457,7 @@ export default async function AdminDashboardPage() {
                       const user = Array.isArray(driver.users) ? driver.users[0] : driver.users
                       const name = user?.full_name ?? "Unknown"
                       const phone = user?.phone ?? "—"
-                      const vehicleType = driver.vehicle_type ?? "—"
-                      const vehicleNumber = driver.vehicle_number ?? "—"
+                      const vehicles = (driver.driver_vehicles ?? []) as { vehicle_type: string }[]
                       return (
                         <tr key={driver.id} className="hover:bg-[#201f1f] transition-colors group">
                           <td className="px-6 py-4">
@@ -468,11 +470,16 @@ export default async function AdminDashboardPage() {
                           </td>
                           <td className="px-6 py-4 text-sm text-[#adaaaa]">{phone}</td>
                           <td className="px-6 py-4 text-sm text-[#adaaaa]">
-                            {vehicleType !== "—" ? (
-                              <span className="px-2 py-0.5 rounded bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px] font-bold uppercase">{vehicleType}</span>
+                            {vehicles.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {vehicles.map((v, i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px] font-bold uppercase">
+                                    {isVehicleType(v.vehicle_type) ? VEHICLE_INFO[v.vehicle_type].label : v.vehicle_type}
+                                  </span>
+                                ))}
+                              </div>
                             ) : <span className="text-[#494847]">—</span>}
                           </td>
-                          <td className="px-6 py-4 text-sm font-mono text-[#adaaaa]">{vehicleNumber}</td>
                           <td className="px-6 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
                             {new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
                           </td>

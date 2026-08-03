@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { notifyUser, notifyDriversOfNewDelivery } from "@/app/actions/notifications"
 import { NotificationTag } from "@/lib/notifications/types"
+import { isPackageSize, unionCapabilities, type PackageSize, type VehicleType } from "@/lib/vehicles"
+import type { DriverVehicle } from "@/app/actions/vehicles"
 
 // ── Customer actions ──────────────────────────────────────────────────────────
 
@@ -16,6 +18,7 @@ export type CreateDeliveryParams = {
   delivery_lat: number | null
   delivery_lng: number | null
   item_description: string
+  package_size: PackageSize
   price: number | null
 }
 
@@ -39,6 +42,10 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     return { error: "Could not calculate a price for this route. Please try again.", code: "invalid_price" }
   }
 
+  if (!isPackageSize(params.package_size)) {
+    return { error: "Select a package size." }
+  }
+
   const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
   const { data: deliveryId, error } = await supabase.rpc("create_delivery_with_wallet_payment", {
@@ -51,6 +58,7 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     p_item_description: params.item_description,
     p_price: params.price,
     p_tracking_number: tracking_number,
+    p_package_size: params.package_size,
   })
 
   if (error) {
@@ -67,7 +75,7 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
   revalidatePath("/dashboard/customer/wallet")
 
   // Notify online/approved drivers — fire-and-forget, don't block the response
-  notifyDriversOfNewDelivery(deliveryId as string, params.pickup_address).catch((err) =>
+  notifyDriversOfNewDelivery(deliveryId as string, params.pickup_address, params.package_size).catch((err) =>
     console.error("[Notify] Failed to send new-delivery push:", err)
   )
 
@@ -138,15 +146,40 @@ export async function submitSupportTicket(formData: FormData) {
 // ── Driver actions ────────────────────────────────────────────────────────────
 
 export async function getAvailableDeliveries() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   // Use admin client: RLS has no policy allowing drivers to read unassigned delivery_requests
   const admin = createAdminClient()
 
-  const { data, error } = await admin
+  // Job matching: only show deliveries this driver's vehicles can carry.
+  // Uses the UNION of capabilities across ALL of the driver's registered
+  // vehicles — a driver with both a car and a van is matched to jobs either
+  // one can handle, with no "active vehicle" switch.
+  let allowedSizes: string[] = []
+  if (user) {
+    const { data: vehicles } = await admin
+      .from("driver_vehicles")
+      .select("vehicle_type")
+      .eq("driver_id", user.id)
+    const types = (vehicles ?? []).map((v) => v.vehicle_type as VehicleType)
+    allowedSizes = unionCapabilities(types)
+  }
+
+  let query = admin
     .from("delivery_requests")
-    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng")
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size")
     .eq("status", "requested")
     .is("driver_id", null)
     .order("created_at", { ascending: false })
+
+  // Legacy rows created before package_size existed have no size — shown to
+  // everyone. Sized rows are filtered to what this driver's vehicles carry.
+  query = allowedSizes.length > 0
+    ? query.or(`package_size.is.null,package_size.in.(${allowedSizes.join(",")})`)
+    : query.is("package_size", null)
+
+  const { data, error } = await query
 
   if (error) return { error: error.message, data: [] }
   return { data: data ?? [] }
@@ -769,8 +802,7 @@ export type PendingVerificationDriver = {
   full_name: string
   email: string
   phone: string
-  vehicle_type: string
-  vehicle_number: string
+  vehicles: DriverVehicle[]
   submitted_at: string
   documents: { document_type: string; file_url: string }[]
 }
@@ -780,7 +812,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
 
   const { data: profiles, error: profilesErr } = await admin
     .from("driver_profiles")
-    .select("id, vehicle_type, vehicle_number, created_at")
+    .select("id, created_at")
     .eq("status", "pending")
     .order("created_at", { ascending: false })
 
@@ -789,9 +821,12 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
 
   const ids = profiles.map((p) => p.id)
 
-  const [usersRes, docsRes, authRes] = await Promise.all([
+  const [usersRes, docsRes, vehiclesRes, authRes] = await Promise.all([
     admin.from("users").select("id, full_name, phone, email").in("id", ids),
     admin.from("driver_documents").select("driver_id, document_type, file_url").in("driver_id", ids),
+    admin.from("driver_vehicles").select(
+      "id, driver_id, vehicle_type, make, model, colour, registration_number, driving_licence_details, insurance_details, created_at"
+    ).in("driver_id", ids),
     admin.auth.admin.listUsers({ perPage: 1000 }),
   ])
 
@@ -805,6 +840,13 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
     arr.push({ document_type: doc.document_type, file_url: doc.file_url })
     docsMap.set(doc.driver_id, arr)
   }
+  const vehiclesMap = new Map<string, DriverVehicle[]>()
+  for (const v of vehiclesRes.data ?? []) {
+    const { driver_id, ...vehicle } = v
+    const arr = vehiclesMap.get(driver_id) ?? []
+    arr.push(vehicle as DriverVehicle)
+    vehiclesMap.set(driver_id, arr)
+  }
 
   const data: PendingVerificationDriver[] = profiles.map((p) => {
     const u = userMap.get(p.id)
@@ -813,8 +855,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
       full_name: u?.full_name ?? "Unknown",
       email: emailMap.get(p.id) ?? u?.email ?? "",
       phone: u?.phone ?? "",
-      vehicle_type: p.vehicle_type ?? "",
-      vehicle_number: p.vehicle_number ?? "",
+      vehicles: vehiclesMap.get(p.id) ?? [],
       submitted_at: p.created_at ?? "",
       documents: docsMap.get(p.id) ?? [],
     }
