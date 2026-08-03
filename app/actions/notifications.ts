@@ -15,6 +15,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { isPackageSize, VEHICLE_CAPABILITIES, type VehicleType } from "@/lib/vehicles"
 import {
   sendPushNotification,
   sendPushNotificationToMultipleUsers,
@@ -131,15 +132,19 @@ export async function notifyUser({
 }
 
 /**
- * Notify all approved, online drivers about a newly created delivery.
- * Called from NewDeliveryModal after the client-side Supabase insert.
+ * Notify all approved, online drivers about a newly created delivery whose
+ * vehicle(s) can carry it. Called from createDeliveryRequest() after insert.
  *
- * @param deliveryId   UUID of the newly inserted delivery_requests row
+ * @param deliveryId    UUID of the newly inserted delivery_requests row
  * @param pickupAddress Human-readable pickup address (truncated to 60 chars in body)
+ * @param packageSize   The delivery's package size — drivers are only
+ *   notified if at least one of their registered vehicles can carry it.
+ *   Omit/null for legacy deliveries with no size (notifies everyone, as before).
  */
 export async function notifyDriversOfNewDelivery(
   deliveryId: string,
-  pickupAddress: string
+  pickupAddress: string,
+  packageSize?: string | null
 ): Promise<void> {
   try {
     const admin = createAdminClient()
@@ -154,7 +159,28 @@ export async function notifyDriversOfNewDelivery(
       return
     }
 
-    const driverIds = onlineDrivers.map((d: { id: string }) => d.id)
+    let driverIds = onlineDrivers.map((d: { id: string }) => d.id)
+
+    // Job matching: narrow to drivers whose vehicle(s) can carry this size.
+    if (packageSize && isPackageSize(packageSize)) {
+      const { data: vehicles } = await admin
+        .from("driver_vehicles")
+        .select("driver_id, vehicle_type")
+        .in("driver_id", driverIds)
+
+      const matchingIds = new Set<string>()
+      for (const v of vehicles ?? []) {
+        const caps = VEHICLE_CAPABILITIES[v.vehicle_type as VehicleType] ?? []
+        if (caps.includes(packageSize)) matchingIds.add(v.driver_id)
+      }
+      driverIds = driverIds.filter((id) => matchingIds.has(id))
+    }
+
+    if (driverIds.length === 0) {
+      console.log("[Notify] notifyDriversOfNewDelivery: no online drivers with a matching vehicle")
+      return
+    }
+
     console.log(`[Notify] notifyDriversOfNewDelivery: notifying ${driverIds.length} driver(s) for delivery ${deliveryId}`)
 
     await sendPushNotificationToMultipleUsers({

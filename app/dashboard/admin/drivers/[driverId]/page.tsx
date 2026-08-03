@@ -2,7 +2,9 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { adminApproveDriver, adminRejectDriver, adminGetDriverById } from "@/app/actions/delivery"
 import { getDriverDocumentsById } from "@/app/actions/documents"
+import { adminGetDriverVehicles } from "@/app/actions/vehicles"
 import { DriverDocumentsPanel } from "@/components/admin/driver-documents-panel"
+import { VEHICLE_INFO } from "@/lib/vehicles"
 
 function fmtDate(v: string) {
   if (!v) return "—"
@@ -39,9 +41,10 @@ export default async function AdminDriverDetailPage({
   params: Promise<{ driverId: string }>
 }) {
   const { driverId } = await params
-  const [{ data: driver, error }, documents] = await Promise.all([
+  const [{ data: driver, error }, documents, vehicles] = await Promise.all([
     adminGetDriverById(driverId),
     getDriverDocumentsById(driverId),
+    adminGetDriverVehicles(driverId),
   ])
 
   if (error || !driver) notFound()
@@ -100,8 +103,6 @@ export default async function AdminDriverDetailPage({
               {[
                 { label: "Phone", value: driver.phone ?? "—" },
                 { label: "Joined", value: fmtDate(driver.created_at) },
-                { label: "Vehicle Type", value: (driver as any).vehicle_type ?? "—" },
-                { label: "Plate Number", value: (driver as any).vehicle_number ?? "—" },
                 { label: "Jobs Completed", value: String(driver.jobsCompleted) },
                 { label: "Total Earned", value: fmt(driver.totalEarned) },
               ].map(({ label, value }) => (
@@ -111,6 +112,35 @@ export default async function AdminDriverDetailPage({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Vehicles card */}
+          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <span className="material-symbols-outlined text-[#a3a6ff]">directions_car</span>
+              <p className="text-sm font-bold text-white">Vehicles</p>
+              <span className="ml-auto text-xs text-[#adaaaa]">{vehicles.length} registered</span>
+            </div>
+            {vehicles.length === 0 ? (
+              <p className="text-xs text-[#adaaaa]">No vehicles registered.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {vehicles.map((v) => (
+                  <div key={v.id} className="flex items-start gap-2.5 bg-[#131313] border border-[#494847]/15 rounded-lg px-3 py-2.5">
+                    <span className="text-base shrink-0">{VEHICLE_INFO[v.vehicle_type].emoji}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate">
+                        {VEHICLE_INFO[v.vehicle_type].label}
+                        {(v.make || v.model) && <span className="text-[#adaaaa] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
+                      </p>
+                      <p className="text-[10px] text-[#adaaaa] truncate">
+                        {[v.colour, v.registration_number].filter(Boolean).join(" · ") || "No details"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Documents card */}

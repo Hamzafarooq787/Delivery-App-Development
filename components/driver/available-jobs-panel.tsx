@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { AcceptJobButton } from "@/components/driver/accept-job-button"
+import { PACKAGE_SIZE_INFO, isPackageSize } from "@/lib/vehicles"
 
 type Job = {
   id: string
@@ -16,6 +17,7 @@ type Job = {
   driver_id?: string | null
   pickup_lat?: number | null
   pickup_lng?: number | null
+  package_size?: string | null
 }
 
 type SortKey = "newest" | "oldest" | "payout_high" | "payout_low"
@@ -151,7 +153,14 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                         <span className="material-symbols-outlined text-[#a3a6ff]">inventory_2</span>
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-base font-bold text-white truncate">{job.item_description || "Delivery request"}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-white truncate">{job.item_description || "Delivery request"}</h3>
+                          {job.package_size && isPackageSize(job.package_size) && (
+                            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#a3a6ff]/10 text-[#a3a6ff] border border-[#a3a6ff]/20">
+                              {PACKAGE_SIZE_INFO[job.package_size].label}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-[#adaaaa]">
                           Posted {fmtDate(job.created_at)}
                           {job.tracking_number ? ` · ${job.tracking_number}` : ""}

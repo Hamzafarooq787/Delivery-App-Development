@@ -8,6 +8,7 @@ import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tra
 import { createDeliveryRequest } from '@/app/actions/delivery'
 import { createWalletTopUpSession } from '@/app/actions/payments'
 import { getWalletBalance } from '@/app/actions/wallet'
+import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
 import {
   fetchRoute,
   googlePlacesAutocomplete,
@@ -193,6 +194,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
   const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null)
   const [routeInfo, setRouteInfo] = useState<{ miles: number; km: number; duration_min: number } | null>(null)
   const [selectedPayload, setSelectedPayload] = useState<string>(initialDraft?.selectedPayload ?? PAYLOAD_OPTIONS[0].label)
+  const [packageSize, setPackageSize] = useState<PackageSize | null>(initialDraft?.packageSize ?? null)
   const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -335,6 +337,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
     if (submitting) return
     if (!pickupValue) { toast.error('Enter a pickup address.'); return }
     if (!deliveryValue && !liveLocationActive) { toast.error('Enter a delivery address or use live location.'); return }
+    if (!packageSize) { toast.error('Select a package size.'); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
     if (insufficientFunds) { handleAddFunds(); return }
 
@@ -348,6 +351,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
         delivery_lat: deliveryCoords?.lat ?? null,
         delivery_lng: deliveryCoords?.lng ?? null,
         item_description: selectedPayload,
+        package_size: packageSize,
         price,
       })
 
@@ -391,6 +395,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
         pickupCoords,
         deliveryCoords,
         selectedPayload,
+        packageSize,
       })
       const result = await createWalletTopUpSession(Math.min(500, needed), 'new-delivery')
       if ('url' in result) {
@@ -602,6 +607,32 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
             </div>
           </div>
 
+          {/* Package size — determines which drivers (by vehicle) get matched */}
+          <div>
+            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider mb-2">Package Size</p>
+            <div className="grid grid-cols-2 gap-2">
+              {PACKAGE_SIZES.map((size) => {
+                const active = packageSize === size
+                const info = PACKAGE_SIZE_INFO[size]
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setPackageSize(size)}
+                    className={`flex flex-col items-start gap-0.5 py-2.5 px-3 rounded-xl border text-left transition-all ${
+                      active
+                        ? 'bg-[#a3a6ff]/10 border-[#a3a6ff]/40'
+                        : 'bg-[#262626] border-[#494847]/20 hover:border-[#494847]/40'
+                    }`}
+                  >
+                    <span className={`text-xs font-bold ${active ? 'text-[#a3a6ff]' : 'text-white'}`}>{info.label}</span>
+                    <span className="text-[10px] text-[#adaaaa] leading-snug">{info.description}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {/* Prohibited Items */}
           <div className="rounded-xl border border-red-500/20 bg-red-500/5 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-red-500/15">
@@ -670,7 +701,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={submitting || !confirmed}
+              disabled={submitting || !confirmed || !packageSize}
               className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{ boxShadow: confirmed ? '0 0 20px rgba(163,166,255,0.25)' : 'none' }}
             >

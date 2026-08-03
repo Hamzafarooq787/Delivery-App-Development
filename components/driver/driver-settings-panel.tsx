@@ -3,11 +3,12 @@
 import { useState, useTransition, useEffect } from "react"
 import { updateDriverProfile }        from "@/app/actions/delivery"
 import {
-  updateVehicleInfo,
   toggleDriverOnline,
   updateDriverNotifications,
   changeDriverPassword,
 }                                     from "@/app/actions/driver"
+import type { DriverVehicle }        from "@/app/actions/vehicles"
+import { VehicleManager }            from "@/components/driver/vehicle-manager"
 import {
   SOUND_OPTIONS,
   getSoundPrefs,
@@ -136,29 +137,11 @@ function ProfileSection({
 }
 
 // ─────────── Vehicle section ───────────────────────────────────────────────
+// A driver can register multiple vehicles — job matching uses the union of
+// capabilities across all of them, so this is a list, not a single-vehicle form.
 
-function VehicleSection({
-  vehicleType,
-  vehicleNumber,
-}: {
-  vehicleType: string
-  vehicleNumber: string
-}) {
-  const [isPending, start] = useTransition()
-  const [saved,  setSaved] = useState(false)
-  const [error,  setError] = useState<string | null>(null)
-
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setError(null)
-    setSaved(false)
-    start(async () => {
-      const r = await updateVehicleInfo(new FormData(e.currentTarget))
-      if (r.error) { setError(r.error); return }
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    })
-  }
+function VehicleSection({ vehicles }: { vehicles: DriverVehicle[] }) {
+  const [list, setList] = useState<DriverVehicle[]>(vehicles)
 
   return (
     <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
@@ -166,34 +149,12 @@ function VehicleSection({
         <div className="w-10 h-10 bg-[#c180ff]/10 rounded-lg flex items-center justify-center">
           <span className="material-symbols-outlined text-[#c180ff]">directions_car</span>
         </div>
-        <h3 className="text-lg font-bold font-headline text-white">Vehicle Details</h3>
-      </div>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className={LABEL}>Vehicle Type</label>
-            <input
-              name="vehicle_type"
-              type="text"
-              defaultValue={vehicleType}
-              placeholder="e.g. Sedan, SUV, Motorcycle"
-              className={INPUT}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className={LABEL}>Plate / Vehicle Number</label>
-            <input
-              name="vehicle_number"
-              type="text"
-              defaultValue={vehicleNumber}
-              placeholder="e.g. AB12 CDE"
-              className={INPUT}
-            />
-          </div>
+        <div>
+          <h3 className="text-lg font-bold font-headline text-white">My Vehicles</h3>
+          <p className="text-xs text-[#adaaaa] mt-0.5">You'll only be matched to jobs your registered vehicles can carry.</p>
         </div>
-        <Feedback saved={saved} error={error} />
-        <div className="pt-1"><SaveBtn isPending={isPending} label="Save Vehicle" /></div>
-      </form>
+      </div>
+      <VehicleManager vehicles={list} onChange={setList} />
     </div>
   )
 }
@@ -792,8 +753,7 @@ export type DriverSettingsPanelProps = {
   phone: string
   email: string
   role: string
-  vehicleType: string
-  vehicleNumber: string
+  vehicles: DriverVehicle[]
   isOnline: boolean
   notificationsEnabled: boolean
   deliveryAlerts: boolean
@@ -804,8 +764,7 @@ export function DriverSettingsPanel({
   phone,
   email,
   role,
-  vehicleType,
-  vehicleNumber,
+  vehicles,
   isOnline,
   notificationsEnabled,
   deliveryAlerts,
@@ -816,7 +775,7 @@ export function DriverSettingsPanel({
       {/* ── Main column ── */}
       <section className="lg:col-span-8 space-y-6">
         <ProfileSection      fullName={fullName}  phone={phone}   email={email} />
-        <VehicleSection      vehicleType={vehicleType}  vehicleNumber={vehicleNumber} />
+        <VehicleSection      vehicles={vehicles} />
         <NotificationsSection
           notificationsEnabled={notificationsEnabled}
           deliveryAlerts={deliveryAlerts}

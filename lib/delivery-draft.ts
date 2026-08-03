@@ -9,6 +9,8 @@
  * land back with funds in place.
  */
 
+import type { PackageSize } from "@/lib/vehicles"
+
 const STORAGE_KEY = "godrop_pending_delivery_draft"
 
 export type DeliveryDraft = {
@@ -17,6 +19,7 @@ export type DeliveryDraft = {
   pickupCoords: { lat: number; lng: number } | null
   deliveryCoords: { lat: number; lng: number } | null
   selectedPayload: string
+  packageSize: PackageSize | null
 }
 
 export function saveDeliveryDraft(draft: DeliveryDraft) {

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
 import type { PendingVerificationDriver } from "@/app/actions/delivery"
 import { DocumentPreviewModal } from "@/components/admin/document-preview-modal"
+import { VEHICLE_INFO } from "@/lib/vehicles"
 
 const DOC_TYPES = [
   { type: "identity",            label: "Identity",       icon: "badge",   color: "text-[#a3a6ff]", bg: "bg-[#a3a6ff]/10", border: "border-[#a3a6ff]/20" },
@@ -208,14 +209,50 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
               <p className="text-xs text-white">{driver.phone || "—"}</p>
             </div>
             <div>
-              <p className="text-[9px] text-[#adaaaa] uppercase font-bold">Vehicle</p>
-              <p className="text-xs text-white">{driver.vehicle_type || "—"}</p>
+              <p className="text-[9px] text-[#adaaaa] uppercase font-bold">Vehicles</p>
+              <p className="text-xs text-white">
+                {driver.vehicles.length > 0
+                  ? driver.vehicles.map((v) => VEHICLE_INFO[v.vehicle_type].label).join(", ")
+                  : "—"}
+              </p>
             </div>
             <div>
               <p className="text-[9px] text-[#adaaaa] uppercase font-bold">Submitted</p>
               <p className="text-xs text-white">{fmtDate(driver.submitted_at)}</p>
             </div>
           </div>
+        </div>
+
+        {/* Vehicles */}
+        <div className="px-4 pt-3.5 pb-1">
+          <p className="text-[10px] text-[#adaaaa] uppercase font-bold tracking-widest mb-3">Vehicles</p>
+          {driver.vehicles.length === 0 ? (
+            <p className="text-xs text-[#adaaaa] pb-2">No vehicles registered.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-1">
+              {driver.vehicles.map((v) => (
+                <div key={v.id} className="flex items-start gap-2.5 bg-[#131313] border border-[#494847]/15 rounded-lg px-3 py-2.5">
+                  <span className="text-base shrink-0">{VEHICLE_INFO[v.vehicle_type].emoji}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">
+                      {VEHICLE_INFO[v.vehicle_type].label}
+                      {(v.make || v.model) && <span className="text-[#adaaaa] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
+                    </p>
+                    <p className="text-[10px] text-[#adaaaa] truncate">
+                      {[v.colour, v.registration_number].filter(Boolean).join(" · ") || "No details"}
+                    </p>
+                    {(v.driving_licence_details || v.insurance_details) && (
+                      <p className="text-[10px] text-[#adaaaa]/70 truncate mt-0.5">
+                        {v.driving_licence_details && `Licence: ${v.driving_licence_details}`}
+                        {v.driving_licence_details && v.insurance_details && " · "}
+                        {v.insurance_details && `Insurance: ${v.insurance_details}`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Document cards */}

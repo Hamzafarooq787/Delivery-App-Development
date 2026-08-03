@@ -1,6 +1,7 @@
 import { createClient }      from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect }          from "next/navigation"
+import { getMyVehicles }     from "@/app/actions/vehicles"
 import {
   DriverSettingsPanel,
   type DriverSettingsPanelProps,
@@ -16,8 +17,8 @@ export default async function DriverSettingsPage() {
 
   const admin = createAdminClient()
 
-  // ── Load user row + driver_profiles in parallel ────────────────────────────
-  const [userRes, profileRes] = await Promise.all([
+  // ── Load user row + driver_profiles + vehicles in parallel ─────────────────
+  const [userRes, profileRes, vehiclesRes] = await Promise.all([
     admin
       .from("users")
       .select("full_name, phone, email, role")
@@ -25,9 +26,10 @@ export default async function DriverSettingsPage() {
       .single(),
     admin
       .from("driver_profiles")
-      .select("vehicle_type, vehicle_number, is_online, notifications_enabled, delivery_alerts")
+      .select("is_online, notifications_enabled, delivery_alerts")
       .eq("id", user.id)
       .single(),
+    getMyVehicles(),
   ])
 
   // ── Defaults ───────────────────────────────────────────────────────────────
@@ -39,8 +41,7 @@ export default async function DriverSettingsPage() {
     phone:                u?.phone                  ?? "",
     email:                u?.email ?? user.email    ?? "",
     role:                 u?.role                   ?? "driver",
-    vehicleType:          p?.vehicle_type           ?? "",
-    vehicleNumber:        p?.vehicle_number         ?? "",
+    vehicles:             vehiclesRes.data,
     isOnline:             p?.is_online              ?? false,
     // notification columns added by scripts/014_driver_settings.sql
     // default to true if columns don't exist yet

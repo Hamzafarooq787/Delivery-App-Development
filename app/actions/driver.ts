@@ -51,25 +51,6 @@ export async function createSupportTicket(formData: FormData) {
   return { success: true }
 }
 
-export async function updateVehicleInfo(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Not authenticated" }
-
-  const vehicle_type = (formData.get("vehicle_type") as string ?? "").trim()
-  const vehicle_number = (formData.get("vehicle_number") as string ?? "").trim()
-
-  const admin = createAdminClient()
-  const { error } = await admin
-    .from("driver_profiles")
-    .upsert({ id: user.id, vehicle_type, vehicle_number }, { onConflict: "id" })
-
-  if (error) return { error: error.message }
-  revalidatePath("/dashboard/driver/profile")
-  revalidatePath("/dashboard/driver/settings")
-  return { success: true }
-}
-
 export async function toggleDriverOnline(isOnline: boolean) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
