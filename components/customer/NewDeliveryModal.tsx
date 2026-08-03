@@ -8,6 +8,7 @@ import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tra
 import { createDeliveryRequest } from '@/app/actions/delivery'
 import { createWalletTopUpSession } from '@/app/actions/payments'
 import { getWalletBalance } from '@/app/actions/wallet'
+import { createClient } from '@/lib/supabase/client'
 import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
 import {
   fetchRoute,
@@ -30,11 +31,16 @@ interface NewDeliveryModalProps {
   initialDraft?: DeliveryDraft | null
 }
 
-const PAYLOAD_OPTIONS = [
-  { icon: 'package_2', label: 'Standard Box' },
-  { icon: 'pallet', label: 'Heavy Pallet' },
-  { icon: 'precision_manufacturing', label: 'Fragile' },
+// Quick-fill starting points for the item description — clicking one sets
+// the textarea to this text, which the customer can then edit/expand.
+const DESCRIPTION_TEMPLATES = [
+  { icon: 'package_2', label: 'Standard Box', text: 'Standard box' },
+  { icon: 'pallet', label: 'Heavy Pallet', text: 'Heavy pallet' },
+  { icon: 'precision_manufacturing', label: 'Fragile', text: 'Fragile item — handle with care' },
 ] as const
+
+const MAX_ITEM_PHOTOS = 5
+const MAX_PHOTO_SIZE_MB = 10
 
 function getPrice(miles: number): number {
   if (miles <= 3) return 10
@@ -193,7 +199,10 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
   const [deliveryCoords, setDeliveryCoords] = useState<LatLng | null>(initialDraft?.deliveryCoords ?? null)
   const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null)
   const [routeInfo, setRouteInfo] = useState<{ miles: number; km: number; duration_min: number } | null>(null)
-  const [selectedPayload, setSelectedPayload] = useState<string>(initialDraft?.selectedPayload ?? PAYLOAD_OPTIONS[0].label)
+  const [itemDescription, setItemDescription] = useState<string>(initialDraft?.itemDescription ?? '')
+  const [itemPhotos, setItemPhotos] = useState<string[]>(initialDraft?.itemPhotos ?? [])
+  const [uploadingPhotos, setUploadingPhotos] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const [packageSize, setPackageSize] = useState<PackageSize | null>(initialDraft?.packageSize ?? null)
   const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -330,6 +339,66 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
     await clearCustomerLocation()
   }
 
+  // Upload selected item photos directly to Supabase Storage — the delivery
+  // doesn't exist yet at this point, so photos live under the customer's own
+  // folder and their public URLs are attached to the delivery on submit.
+  async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (files.length === 0) return
+
+    const remaining = MAX_ITEM_PHOTOS - itemPhotos.length
+    if (remaining <= 0) {
+      setPhotoError(`You can attach up to ${MAX_ITEM_PHOTOS} photos.`)
+      return
+    }
+
+    setPhotoError(null)
+    const toUpload = files.slice(0, remaining)
+    if (files.length > remaining) {
+      setPhotoError(`Only ${remaining} more photo${remaining === 1 ? '' : 's'} can be added (max ${MAX_ITEM_PHOTOS}).`)
+    }
+
+    setUploadingPhotos(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { toast.error('You must be signed in.'); return }
+
+      const uploadedUrls: string[] = []
+      for (const file of toUpload) {
+        if (!file.type.startsWith('image/')) {
+          setPhotoError('Only image files are supported.')
+          continue
+        }
+        if (file.size > MAX_PHOTO_SIZE_MB * 1024 * 1024) {
+          setPhotoError(`${file.name} is larger than ${MAX_PHOTO_SIZE_MB}MB.`)
+          continue
+        }
+        const ext = file.name.split('.').pop() ?? 'jpg'
+        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
+        const { error: uploadErr } = await supabase.storage
+          .from('delivery-item-photos')
+          .upload(path, file, { contentType: file.type, upsert: true })
+        if (uploadErr) {
+          setPhotoError(uploadErr.message)
+          continue
+        }
+        const { data: { publicUrl } } = supabase.storage.from('delivery-item-photos').getPublicUrl(path)
+        uploadedUrls.push(publicUrl)
+      }
+      if (uploadedUrls.length > 0) {
+        setItemPhotos((prev) => [...prev, ...uploadedUrls])
+      }
+    } finally {
+      setUploadingPhotos(false)
+    }
+  }
+
+  function removePhoto(url: string) {
+    setItemPhotos((prev) => prev.filter((u) => u !== url))
+  }
+
   const price = routeInfo ? getPrice(routeInfo.miles) : null
   const insufficientFunds = price !== null && walletBalance !== null && walletBalance < price
 
@@ -337,6 +406,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
     if (submitting) return
     if (!pickupValue) { toast.error('Enter a pickup address.'); return }
     if (!deliveryValue && !liveLocationActive) { toast.error('Enter a delivery address or use live location.'); return }
+    if (!itemDescription.trim()) { toast.error('Describe the item being delivered.'); return }
     if (!packageSize) { toast.error('Select a package size.'); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
     if (insufficientFunds) { handleAddFunds(); return }
@@ -350,7 +420,8 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
         pickup_lng: pickupCoords?.lng ?? null,
         delivery_lat: deliveryCoords?.lat ?? null,
         delivery_lng: deliveryCoords?.lng ?? null,
-        item_description: selectedPayload,
+        item_description: itemDescription.trim(),
+        item_photo_urls: itemPhotos,
         package_size: packageSize,
         price,
       })
@@ -394,7 +465,8 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
         deliveryValue,
         pickupCoords,
         deliveryCoords,
-        selectedPayload,
+        itemDescription,
+        itemPhotos,
         packageSize,
       })
       const result = await createWalletTopUpSession(Math.min(500, needed), 'new-delivery')
@@ -582,29 +654,78 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
             </div>
           )}
 
-          {/* Package type */}
+          {/* Item description */}
           <div>
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider mb-2">Package Type</p>
-            <div className="grid grid-cols-3 gap-2">
-              {PAYLOAD_OPTIONS.map((item) => {
-                const active = selectedPayload === item.label
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => setSelectedPayload(item.label)}
-                    className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-bold transition-all ${
-                      active
-                        ? 'bg-[#a3a6ff]/10 border-[#a3a6ff]/40 text-[#a3a6ff]'
-                        : 'bg-[#262626] border-[#494847]/20 text-[#adaaaa] hover:border-[#494847]/40'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-lg">{item.icon}</span>
-                    {item.label}
-                  </button>
-                )
-              })}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Description</p>
+              <span className="text-[10px] text-[#494847]">{itemDescription.length}/300</span>
             </div>
+            <textarea
+              value={itemDescription}
+              onChange={(e) => setItemDescription(e.target.value.slice(0, 300))}
+              placeholder="Describe what's being delivered — e.g. 3 boxes of clothing, a fragile glass vase, a birthday cake…"
+              rows={3}
+              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors resize-none"
+            />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {DESCRIPTION_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.label}
+                  type="button"
+                  onClick={() => setItemDescription(tpl.text)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#494847]/20 bg-[#262626] text-[#adaaaa] hover:border-[#a3a6ff]/40 hover:text-[#a3a6ff] text-xs font-bold transition-all"
+                >
+                  <span className="material-symbols-outlined text-sm">{tpl.icon}</span>
+                  {tpl.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Item photos — optional */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Photos <span className="text-[#494847] normal-case">(optional)</span></p>
+              <span className="text-[10px] text-[#494847]">{itemPhotos.length}/{MAX_ITEM_PHOTOS}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {itemPhotos.map((url) => (
+                <div key={url} className="relative w-16 h-16 rounded-xl overflow-hidden border border-[#494847]/20 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="Item photo" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(url)}
+                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                    aria-label="Remove photo"
+                  >
+                    <span className="material-symbols-outlined text-white text-lg">delete</span>
+                  </button>
+                </div>
+              ))}
+              {itemPhotos.length < MAX_ITEM_PHOTOS && (
+                <label className={`w-16 h-16 rounded-xl border border-dashed flex items-center justify-center cursor-pointer transition-all ${
+                  uploadingPhotos
+                    ? 'border-[#494847]/20 opacity-50 cursor-wait'
+                    : 'border-[#494847]/30 hover:border-[#a3a6ff]/40 text-[#adaaaa] hover:text-[#a3a6ff]'
+                }`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={uploadingPhotos}
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                  />
+                  <span className="material-symbols-outlined text-xl">
+                    {uploadingPhotos ? 'hourglass_empty' : 'add_a_photo'}
+                  </span>
+                </label>
+              )}
+            </div>
+            {photoError && (
+              <p className="text-[10px] text-red-400 mt-1.5">{photoError}</p>
+            )}
           </div>
 
           {/* Package size — determines which drivers (by vehicle) get matched */}

@@ -43,6 +43,7 @@ type Job = {
   delivery_lat: number | null
   delivery_lng: number | null
   item_description: string | null
+  item_photo_urls: string[] | null
   price: number | null
   parcel_image_url: string | null
   customer_id: string | null
@@ -239,9 +240,9 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
         <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
           <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Package Info</p>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] text-[#494847] uppercase mb-0.5">Type</p>
-              <p className="text-sm font-semibold text-white">{job.item_description || "—"}</p>
+            <div className="col-span-2">
+              <p className="text-[10px] text-[#494847] uppercase mb-0.5">Description</p>
+              <p className="text-sm font-semibold text-white whitespace-pre-wrap">{job.item_description || "—"}</p>
             </div>
             <div>
               <p className="text-[10px] text-[#494847] uppercase mb-0.5">Payout</p>
@@ -250,6 +251,18 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               </p>
             </div>
           </div>
+          {job.item_photo_urls && job.item_photo_urls.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-[#494847]/10">
+              <p className="text-[10px] text-[#494847] uppercase mb-2">Customer's Photos</p>
+              <div className="flex flex-wrap gap-2">
+                {job.item_photo_urls.map((url) => (
+                  <a key={url} href={url} target="_blank" rel="noreferrer" className="w-16 h-16 rounded-lg overflow-hidden border border-[#494847]/20 shrink-0">
+                    <img src={url} alt="Item" className="w-full h-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Customer Info */}

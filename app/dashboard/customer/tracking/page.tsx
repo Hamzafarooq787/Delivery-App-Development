@@ -64,7 +64,7 @@ function TrackingPageInner() {
       // Always select parcel_image_url so we can show it when delivered
       let q = supabase
         .from('delivery_requests')
-        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url')
+        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,item_description,item_photo_urls')
         .eq('customer_id', user.id)
 
       if (requestedId) {
@@ -214,6 +214,30 @@ function TrackingPageInner() {
               </div>
               <div className="w-14 h-14 rounded-2xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[#a3a6ff] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Item description + photos submitted at booking ── */}
+          {(shipment?.item_description || (shipment?.item_photo_urls && shipment.item_photo_urls.length > 0)) && (
+            <div className="mx-4 my-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0 bg-[#1a1919]">
+              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#494847]/15">
+                <span className="material-symbols-outlined text-[#a3a6ff] text-base">inventory_2</span>
+                <p className="text-[11px] font-bold text-[#a3a6ff] uppercase tracking-wider">Item Details</p>
+              </div>
+              <div className="px-3 py-3 space-y-2.5">
+                {shipment?.item_description && (
+                  <p className="text-sm text-white whitespace-pre-wrap">{shipment.item_description}</p>
+                )}
+                {shipment?.item_photo_urls && shipment.item_photo_urls.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {shipment.item_photo_urls.map((url: string) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer" className="w-16 h-16 rounded-lg overflow-hidden border border-[#494847]/20 shrink-0">
+                        <img src={url} alt="Item" className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

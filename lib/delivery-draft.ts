@@ -18,7 +18,8 @@ export type DeliveryDraft = {
   deliveryValue: string
   pickupCoords: { lat: number; lng: number } | null
   deliveryCoords: { lat: number; lng: number } | null
-  selectedPayload: string
+  itemDescription: string
+  itemPhotos: string[]
   packageSize: PackageSize | null
 }
 
