@@ -13,6 +13,7 @@ const navItems = [
   { label: "Verification Requests", href: "/dashboard/admin/verification", icon: "verified_user", badgeKey: "pendingVerifications" },
   { label: "Payments", href: "/dashboard/admin/payments", icon: "payments" },
   { label: "Payouts",  href: "/dashboard/admin/payouts",  icon: "account_balance_wallet" },
+  { label: "Promotions & Pricing", href: "/dashboard/admin/promotions", icon: "sell" },
   { label: "Disputes", href: "/dashboard/admin/disputes", icon: "gavel" },
   { label: "Support Tickets", href: "/dashboard/admin/support", icon: "support_agent" },
   { label: "Reports", href: "/dashboard/admin/reports", icon: "analytics" },

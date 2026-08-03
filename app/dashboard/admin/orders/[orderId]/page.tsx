@@ -105,8 +105,16 @@ export default async function AdminOrderDetailPage({
               <div>
                 <p className="text-muted-foreground">Price</p>
                 <p className="font-medium">
-                  {order.price != null ? `$${Number(order.price).toFixed(2)}` : "—"}
+                  {order.price != null ? `£${Number(order.price).toFixed(2)}` : "—"}
                 </p>
+                {(order.surge_multiplier > 1 || order.discount_amount > 0) && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Base £{Number(order.base_price ?? order.price).toFixed(2)}
+                    {order.surge_multiplier > 1 && ` × ${order.surge_multiplier} surge`}
+                    {order.discount_amount > 0 && ` − £${Number(order.discount_amount).toFixed(2)} discount`}
+                    {order.promo_code && ` (${order.promo_code})`}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-muted-foreground">Tracking Number</p>

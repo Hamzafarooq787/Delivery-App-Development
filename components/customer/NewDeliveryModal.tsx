@@ -8,8 +8,10 @@ import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tra
 import { createDeliveryRequest } from '@/app/actions/delivery'
 import { createWalletTopUpSession } from '@/app/actions/payments'
 import { getWalletBalance } from '@/app/actions/wallet'
+import { getDeliveryQuote, type DeliveryQuote } from '@/app/actions/pricing'
 import { createClient } from '@/lib/supabase/client'
 import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
+import { formatPrice } from '@/lib/pricing'
 import {
   fetchRoute,
   googlePlacesAutocomplete,
@@ -41,18 +43,6 @@ const DESCRIPTION_TEMPLATES = [
 
 const MAX_ITEM_PHOTOS = 5
 const MAX_PHOTO_SIZE_MB = 10
-
-function getPrice(miles: number): number {
-  if (miles <= 3) return 10
-  if (miles <= 7) return 15
-  if (miles <= 12) return 20
-  return Math.round((20 + (miles - 12) * 1.5) * 100) / 100
-}
-
-// £10 stays "£10", £21.5 becomes "£21.50"
-function formatPrice(price: number): string {
-  return Number.isInteger(price) ? String(price) : price.toFixed(2)
-}
 
 const PROHIBITED_ITEMS = [
   { icon: 'gavel', label: 'Illegal goods' },
@@ -216,6 +206,35 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
   useEffect(() => {
     getWalletBalance().then((res) => setWalletBalance(res.balance)).catch(() => setWalletBalance(null))
   }, [])
+
+  // Authoritative price quote — computed server-side from distance, live
+  // surge factors, and any discount. This is what actually gets charged;
+  // nothing about price is trusted from the client at submission time.
+  const [quote, setQuote] = useState<DeliveryQuote | null>(null)
+  const [quoteLoading, setQuoteLoading] = useState(false)
+  const [promoCode, setPromoCode] = useState(initialDraft?.promoCode ?? '')
+  const [showPromoInput, setShowPromoInput] = useState(false)
+
+  useEffect(() => {
+    if (!pickupCoords || !deliveryCoords || !packageSize) {
+      setQuote(null)
+      return
+    }
+    setQuoteLoading(true)
+    const timer = setTimeout(async () => {
+      const result = await getDeliveryQuote({
+        pickupLat: pickupCoords.lat,
+        pickupLng: pickupCoords.lng,
+        deliveryLat: deliveryCoords.lat,
+        deliveryLng: deliveryCoords.lng,
+        packageSize,
+        promoCode: promoCode.trim() || null,
+      })
+      setQuote('data' in result ? result.data : null)
+      setQuoteLoading(false)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [pickupCoords, deliveryCoords, packageSize, promoCode])
 
   // User's device GPS + detected country
   const [userCoords, setUserCoords] = useState<LatLng | null>(null)
@@ -399,16 +418,17 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
     setItemPhotos((prev) => prev.filter((u) => u !== url))
   }
 
-  const price = routeInfo ? getPrice(routeInfo.miles) : null
+  const price = quote?.finalPrice ?? null
   const insufficientFunds = price !== null && walletBalance !== null && walletBalance < price
 
   async function handleSubmit() {
     if (submitting) return
-    if (!pickupValue) { toast.error('Enter a pickup address.'); return }
-    if (!deliveryValue && !liveLocationActive) { toast.error('Enter a delivery address or use live location.'); return }
+    if (!pickupValue || !pickupCoords) { toast.error('Select a pickup address from the suggestions list.'); return }
+    if ((!deliveryValue || !deliveryCoords) && !liveLocationActive) { toast.error('Select a delivery address from the suggestions list, or use live location.'); return }
     if (!itemDescription.trim()) { toast.error('Describe the item being delivered.'); return }
     if (!packageSize) { toast.error('Select a package size.'); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
+    if (!quote) { toast.error('Still calculating the price — please wait a moment.'); return }
     if (insufficientFunds) { handleAddFunds(); return }
 
     setSubmitting(true)
@@ -416,14 +436,14 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
       const result = await createDeliveryRequest({
         pickup_address: pickupValue,
         delivery_address: deliveryValue,
-        pickup_lat: pickupCoords?.lat ?? null,
-        pickup_lng: pickupCoords?.lng ?? null,
-        delivery_lat: deliveryCoords?.lat ?? null,
-        delivery_lng: deliveryCoords?.lng ?? null,
+        pickup_lat: pickupCoords.lat,
+        pickup_lng: pickupCoords.lng,
+        delivery_lat: deliveryCoords!.lat,
+        delivery_lng: deliveryCoords!.lng,
         item_description: itemDescription.trim(),
         item_photo_urls: itemPhotos,
         package_size: packageSize,
-        price,
+        promo_code: quote.promoCodeText,
       })
 
       if ('error' in result) {
@@ -468,6 +488,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
         itemDescription,
         itemPhotos,
         packageSize,
+        promoCode,
       })
       const result = await createWalletTopUpSession(Math.min(500, needed), 'new-delivery')
       if ('url' in result) {
@@ -599,58 +620,85 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
                 routeGeometry={routeGeometry}
                 height={200}
               />
-              {routeInfo && price !== null && (() => {
-                const isPerMile = routeInfo.miles > 12
-                return (
-                  <>
-                    <div className="flex items-center justify-around px-4 py-3 bg-[#262626] border-t border-[#494847]/20">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#a3a6ff] text-base">straighten</span>
-                        <div>
-                          <p className="text-xs font-black text-white">{routeInfo.miles} mi <span className="text-[#adaaaa] font-semibold">({routeInfo.km} km)</span></p>
-                          <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Distance</p>
-                        </div>
-                      </div>
-                      <div className="w-px h-8 bg-[#494847]/30" />
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#c180ff] text-base">schedule</span>
-                        <div>
-                          <p className="text-xs font-black text-white">{routeInfo.duration_min} min</p>
-                          <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Est. Drive</p>
-                        </div>
-                      </div>
-                      <div className="w-px h-8 bg-[#494847]/30" />
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#6ee7b7] text-base">payments</span>
-                        <div>
-                          <p className="text-xs font-black text-[#6ee7b7]">£{formatPrice(price)}</p>
-                          <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Price</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 bg-[#6ee7b7]/5 border-t border-[#6ee7b7]/20 flex items-center justify-between">
-                      <p className="text-[11px] text-[#adaaaa]">
-                        {isPerMile
-                          ? <>£20 + <span className="text-white font-bold">{(routeInfo.miles - 12).toFixed(1)} miles</span> × £1.50</>
-                          : <>Delivery charge for <span className="text-white font-bold">{routeInfo.miles} miles</span></>
-                        }
-                      </p>
-                      <p className="text-lg font-black text-[#6ee7b7]">£{formatPrice(price)}</p>
-                    </div>
-                    {walletBalance !== null && (
-                      <div className="px-4 py-2 bg-[#1a1919] border-t border-[#494847]/10 flex items-center justify-between">
-                        <p className="text-[10px] text-[#adaaaa] flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-[13px]">account_balance_wallet</span>
-                          Wallet balance
-                        </p>
-                        <p className={`text-[11px] font-bold ${insufficientFunds ? 'text-[#fb923c]' : 'text-[#adaaaa]'}`}>
-                          £{walletBalance.toFixed(2)}
-                        </p>
-                      </div>
+              {/* Distance / duration — from the quote once it lands, from the client route in the meantime */}
+              <div className="flex items-center justify-around px-4 py-3 bg-[#262626] border-t border-[#494847]/20">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#a3a6ff] text-base">straighten</span>
+                  <div>
+                    <p className="text-xs font-black text-white">
+                      {(quote?.distanceMiles ?? routeInfo?.miles) ?? '—'} mi
+                      {routeInfo && <span className="text-[#adaaaa] font-semibold"> ({routeInfo.km} km)</span>}
+                    </p>
+                    <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Distance</p>
+                  </div>
+                </div>
+                <div className="w-px h-8 bg-[#494847]/30" />
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#c180ff] text-base">schedule</span>
+                  <div>
+                    <p className="text-xs font-black text-white">{(quote?.durationMin ?? routeInfo?.duration_min) ?? '—'} min</p>
+                    <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Est. Drive</p>
+                  </div>
+                </div>
+                <div className="w-px h-8 bg-[#494847]/30" />
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#6ee7b7] text-base">payments</span>
+                  <div>
+                    {quoteLoading && !quote ? (
+                      <p className="text-xs font-black text-[#adaaaa]">…</p>
+                    ) : (
+                      <p className="text-xs font-black text-[#6ee7b7]">£{quote ? formatPrice(quote.finalPrice) : '—'}</p>
                     )}
-                  </>
-                )
-              })()}
+                    <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Price</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Price breakdown: base → surge → discount → total */}
+              {quote && (
+                <div className="border-t border-[#494847]/20">
+                  <div className="px-4 py-2.5 flex items-center justify-between">
+                    <p className="text-[11px] text-[#adaaaa]">Base fare</p>
+                    <p className="text-xs font-bold text-white">£{formatPrice(quote.basePrice)}</p>
+                  </div>
+                  {quote.surgeMultiplier > 1 && (
+                    <div className="px-4 py-2.5 border-t border-[#fb923c]/15 bg-[#fb923c]/5 flex items-center justify-between">
+                      <p className="text-[11px] text-[#fb923c] flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[13px]">trending_up</span>
+                        Surge pricing ({quote.surgeMultiplier}×) — {quote.surgeFactors.map((f) => f.label).join(', ')}
+                      </p>
+                      <p className="text-xs font-bold text-[#fb923c]">
+                        +£{formatPrice(quote.surgedPrice - quote.basePrice)}
+                      </p>
+                    </div>
+                  )}
+                  {quote.discountAmount > 0 && (
+                    <div className="px-4 py-2.5 border-t border-[#6ee7b7]/15 bg-[#6ee7b7]/5 flex items-center justify-between">
+                      <p className="text-[11px] text-[#6ee7b7] flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[13px]">local_offer</span>
+                        {quote.discountLabel}
+                      </p>
+                      <p className="text-xs font-bold text-[#6ee7b7]">-£{formatPrice(quote.discountAmount)}</p>
+                    </div>
+                  )}
+                  <div className="px-4 py-3 bg-[#6ee7b7]/5 border-t border-[#6ee7b7]/20 flex items-center justify-between">
+                    <p className="text-[11px] text-[#adaaaa]">Total</p>
+                    <p className="text-lg font-black text-[#6ee7b7]">£{formatPrice(quote.finalPrice)}</p>
+                  </div>
+                </div>
+              )}
+
+              {walletBalance !== null && (
+                <div className="px-4 py-2 bg-[#1a1919] border-t border-[#494847]/10 flex items-center justify-between">
+                  <p className="text-[10px] text-[#adaaaa] flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[13px]">account_balance_wallet</span>
+                    Wallet balance
+                  </p>
+                  <p className={`text-[11px] font-bold ${insufficientFunds ? 'text-[#fb923c]' : 'text-[#adaaaa]'}`}>
+                    £{walletBalance.toFixed(2)}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -754,6 +802,52 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
             </div>
           </div>
 
+          {/* Promo code */}
+          <div>
+            {!showPromoInput && !quote?.discountLabel ? (
+              <button
+                type="button"
+                onClick={() => setShowPromoInput(true)}
+                className="flex items-center gap-1.5 text-xs font-bold text-[#a3a6ff] hover:text-white transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">local_offer</span>
+                Have a promo code?
+              </button>
+            ) : (
+              <>
+                <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider mb-2">Promo Code</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. SUMMER10"
+                    className="flex-1 bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors uppercase"
+                  />
+                  {promoCode && (
+                    <button
+                      type="button"
+                      onClick={() => setPromoCode('')}
+                      className="px-3 py-2.5 rounded-xl text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors"
+                      aria-label="Clear promo code"
+                    >
+                      <span className="material-symbols-outlined text-base">close</span>
+                    </button>
+                  )}
+                </div>
+                {quote?.promoCodeError && (
+                  <p className="text-[10px] text-red-400 mt-1.5">{quote.promoCodeError}</p>
+                )}
+                {quote?.promoCodeText && quote.discountAmount > 0 && (
+                  <p className="text-[10px] text-[#6ee7b7] mt-1.5 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                    Code applied — £{formatPrice(quote.discountAmount)} off
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
           {/* Prohibited Items */}
           <div className="rounded-xl border border-red-500/20 bg-red-500/5 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-red-500/15">
@@ -822,7 +916,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={submitting || !confirmed || !packageSize}
+              disabled={submitting || !confirmed || !packageSize || !quote}
               className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{ boxShadow: confirmed ? '0 0 20px rgba(163,166,255,0.25)' : 'none' }}
             >

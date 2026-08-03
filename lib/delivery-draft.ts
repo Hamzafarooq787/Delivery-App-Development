@@ -21,6 +21,7 @@ export type DeliveryDraft = {
   itemDescription: string
   itemPhotos: string[]
   packageSize: PackageSize | null
+  promoCode: string
 }
 
 export function saveDeliveryDraft(draft: DeliveryDraft) {

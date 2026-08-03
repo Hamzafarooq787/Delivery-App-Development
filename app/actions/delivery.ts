@@ -7,20 +7,22 @@ import { notifyUser, notifyDriversOfNewDelivery } from "@/app/actions/notificati
 import { NotificationTag } from "@/lib/notifications/types"
 import { isPackageSize, unionCapabilities, type PackageSize, type VehicleType } from "@/lib/vehicles"
 import type { DriverVehicle } from "@/app/actions/vehicles"
+import { getDeliveryQuote } from "@/app/actions/pricing"
 
 // ── Customer actions ──────────────────────────────────────────────────────────
 
 export type CreateDeliveryParams = {
   pickup_address: string
   delivery_address: string
-  pickup_lat: number | null
-  pickup_lng: number | null
-  delivery_lat: number | null
-  delivery_lng: number | null
+  pickup_lat: number
+  pickup_lng: number
+  delivery_lat: number
+  delivery_lng: number
   item_description: string
   item_photo_urls?: string[]
   package_size: PackageSize
-  price: number | null
+  /** Optional — validated server-side; an invalid code is simply ignored, not an error. */
+  promo_code?: string | null
 }
 
 export type CreateDeliveryResult =
@@ -30,18 +32,19 @@ export type CreateDeliveryResult =
 /**
  * Creates a delivery request and pays for it from the customer's wallet in a
  * single atomic database transaction (see
- * scripts/021_delivery_wallet_payment.sql create_delivery_with_wallet_payment).
- * The wallet balance is verified and deducted server-side — client-side
- * balance checks are UX-only and can't be trusted or bypassed.
+ * scripts/024_promotions_and_surge_pricing.sql create_delivery_with_wallet_payment).
+ *
+ * The price is NEVER accepted from the client — it's recomputed here via
+ * getDeliveryQuote(), the same authoritative pricing engine used for the
+ * live quote shown while the customer fills out the form. This closes what
+ * was previously a real gap: a client could otherwise call this action
+ * directly with any price it wanted. Surge multipliers and discounts are
+ * only meaningful if the server, not the browser, has the final say.
  */
 export async function createDeliveryRequest(params: CreateDeliveryParams): Promise<CreateDeliveryResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated", code: "not_authenticated" }
-
-  if (!params.price || params.price <= 0) {
-    return { error: "Could not calculate a price for this route. Please try again.", code: "invalid_price" }
-  }
 
   if (!isPackageSize(params.package_size)) {
     return { error: "Select a package size." }
@@ -50,6 +53,20 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
   if (!params.item_description?.trim()) {
     return { error: "Describe the item being delivered." }
   }
+
+  const quoteResult = await getDeliveryQuote({
+    pickupLat: params.pickup_lat,
+    pickupLng: params.pickup_lng,
+    deliveryLat: params.delivery_lat,
+    deliveryLng: params.delivery_lng,
+    packageSize: params.package_size,
+    promoCode: params.promo_code,
+  })
+
+  if ("error" in quoteResult) {
+    return { error: quoteResult.error, code: "invalid_price" }
+  }
+  const quote = quoteResult.data
 
   const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
@@ -61,10 +78,15 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     p_delivery_lat: params.delivery_lat,
     p_delivery_lng: params.delivery_lng,
     p_item_description: params.item_description.trim(),
-    p_price: params.price,
+    p_price: quote.finalPrice,
     p_tracking_number: tracking_number,
     p_package_size: params.package_size,
     p_item_photo_urls: params.item_photo_urls && params.item_photo_urls.length > 0 ? params.item_photo_urls : null,
+    p_base_price: quote.basePrice,
+    p_surge_multiplier: quote.surgeMultiplier,
+    p_discount_amount: quote.discountAmount,
+    p_promo_code_id: quote.promoCodeId,
+    p_promo_code: quote.promoCodeText,
   })
 
   if (error) {
