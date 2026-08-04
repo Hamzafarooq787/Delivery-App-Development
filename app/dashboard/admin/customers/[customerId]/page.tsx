@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { ArrowLeft, User, Package } from "lucide-react"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { notFound } from "next/navigation"
 
 export default async function AdminCustomerDetailPage({
@@ -13,32 +13,35 @@ export default async function AdminCustomerDetailPage({
   params: Promise<{ customerId: string }>
 }) {
   const { customerId } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: customer, error } = await supabase
+  const { data: customer, error } = await admin
     .from("users")
-    .select("id, full_name, email, phone, created_at")
+    .select("id, full_name, phone, created_at, marketing_email_opt_in, marketing_push_opt_in")
     .eq("id", customerId)
     .single()
 
   if (error || !customer) notFound()
 
-  const [ordersRes, disputeRes] = await Promise.all([
-    supabase
+  const [ordersRes, disputeRes, authUserRes] = await Promise.all([
+    admin
       .from("delivery_requests")
       .select("id, tracking_number, status, price, created_at")
       .eq("customer_id", customerId)
       .order("created_at", { ascending: false }),
-    supabase
+    admin
       .from("disputes")
       .select("id", { count: "exact", head: true })
       .eq("user_id", customerId)
       .eq("status", "open"),
+    admin.auth.admin.getUserById(customerId),
   ])
 
   const orders = ordersRes.data ?? []
   const openDisputes = disputeRes.count ?? 0
   const totalSpent = orders.reduce((sum, o) => sum + (o.price ?? 0), 0)
+  const email = authUserRes.data.user?.email ?? null
+  const lastActive = orders[0]?.created_at ?? customer.created_at
 
   const statusMap: Record<string, Parameters<typeof StatusBadge>[0]["status"]> = {
     delivered: "completed",
@@ -79,7 +82,7 @@ export default async function AdminCustomerDetailPage({
               </div>
               <div>
                 <p className="text-muted-foreground">Email</p>
-                <p className="font-medium">{customer.email}</p>
+                <p className="font-medium">{email ?? "—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Phone</p>
@@ -206,7 +209,29 @@ export default async function AdminCustomerDetailPage({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Last Active</span>
-                <span className="font-medium text-muted-foreground/50">—</span>
+                <span className="font-medium">
+                  {new Date(lastActive).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Marketing Consent</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Email</span>
+                <span className={`font-medium ${customer.marketing_email_opt_in ? "text-primary" : "text-muted-foreground/60"}`}>
+                  {customer.marketing_email_opt_in ? "Opted in" : "Opted out"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Push</span>
+                <span className={`font-medium ${customer.marketing_push_opt_in ? "text-primary" : "text-muted-foreground/60"}`}>
+                  {customer.marketing_push_opt_in ? "Opted in" : "Opted out"}
+                </span>
               </div>
             </CardContent>
           </Card>
