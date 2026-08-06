@@ -33,14 +33,6 @@ interface NewDeliveryModalProps {
   initialDraft?: DeliveryDraft | null
 }
 
-// Quick-fill starting points for the item description — clicking one sets
-// the textarea to this text, which the customer can then edit/expand.
-const DESCRIPTION_TEMPLATES = [
-  { icon: 'package_2', label: 'Standard Box', text: 'Standard box' },
-  { icon: 'pallet', label: 'Heavy Pallet', text: 'Heavy pallet' },
-  { icon: 'precision_manufacturing', label: 'Fragile', text: 'Fragile item — handle with care' },
-] as const
-
 const MAX_ITEM_PHOTOS = 5
 const MAX_PHOTO_SIZE_MB = 10
 
@@ -212,15 +204,18 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
   // nothing about price is trusted from the client at submission time.
   const [quote, setQuote] = useState<DeliveryQuote | null>(null)
   const [quoteLoading, setQuoteLoading] = useState(false)
+  const [quoteError, setQuoteError] = useState<string | null>(null)
   const [promoCode, setPromoCode] = useState(initialDraft?.promoCode ?? '')
   const [showPromoInput, setShowPromoInput] = useState(false)
 
   useEffect(() => {
     if (!pickupCoords || !deliveryCoords || !packageSize) {
       setQuote(null)
+      setQuoteError(null)
       return
     }
     setQuoteLoading(true)
+    setQuoteError(null)
     const timer = setTimeout(async () => {
       const result = await getDeliveryQuote({
         pickupLat: pickupCoords.lat,
@@ -230,7 +225,13 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
         packageSize,
         promoCode: promoCode.trim() || null,
       })
-      setQuote('data' in result ? result.data : null)
+      if ('data' in result) {
+        setQuote(result.data)
+        setQuoteError(null)
+      } else {
+        setQuote(null)
+        setQuoteError(result.error)
+      }
       setQuoteLoading(false)
     }, 400)
     return () => clearTimeout(timer)
@@ -421,13 +422,24 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
   const price = quote?.finalPrice ?? null
   const insufficientFunds = price !== null && walletBalance !== null && walletBalance < price
 
+  // Explains exactly why the submit button is disabled, so it never just
+  // silently does nothing.
+  const missingReason =
+    !pickupCoords ? 'Select a pickup address from the suggestions list.'
+    : (!deliveryCoords && !liveLocationActive) ? 'Select a delivery address from the suggestions list, or use live location.'
+    : !packageSize ? 'Select a package size below to continue.'
+    : !confirmed ? 'Confirm your item is legal and safe to continue.'
+    : quoteError ? quoteError
+    : (!quote && !submitting) ? 'Calculating price…'
+    : null
+
   async function handleSubmit() {
     if (submitting) return
     if (!pickupValue || !pickupCoords) { toast.error('Select a pickup address from the suggestions list.'); return }
     if ((!deliveryValue || !deliveryCoords) && !liveLocationActive) { toast.error('Select a delivery address from the suggestions list, or use live location.'); return }
-    if (!itemDescription.trim()) { toast.error('Describe the item being delivered.'); return }
     if (!packageSize) { toast.error('Select a package size.'); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
+    if (quoteError) { toast.error(quoteError); return }
     if (!quote) { toast.error('Still calculating the price — please wait a moment.'); return }
     if (insufficientFunds) { handleAddFunds(); return }
 
@@ -654,6 +666,13 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
                 </div>
               </div>
 
+              {quoteError && (
+                <div className="px-4 py-2.5 border-t border-red-500/15 bg-red-500/5 flex items-start gap-2">
+                  <span className="material-symbols-outlined text-red-400 text-sm mt-0.5">error</span>
+                  <p className="text-[11px] text-red-400 leading-relaxed">{quoteError}</p>
+                </div>
+              )}
+
               {/* Price breakdown: base → surge → discount → total */}
               {quote && (
                 <div className="border-t border-[#494847]/20">
@@ -702,10 +721,10 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
             </div>
           )}
 
-          {/* Item description */}
+          {/* Item description — optional */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Description</p>
+              <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Description <span className="text-[#494847] normal-case">(optional)</span></p>
               <span className="text-[10px] text-[#494847]">{itemDescription.length}/300</span>
             </div>
             <textarea
@@ -715,19 +734,6 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
               rows={3}
               className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors resize-none"
             />
-            <div className="flex flex-wrap gap-2 mt-2">
-              {DESCRIPTION_TEMPLATES.map((tpl) => (
-                <button
-                  key={tpl.label}
-                  type="button"
-                  onClick={() => setItemDescription(tpl.text)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#494847]/20 bg-[#262626] text-[#adaaaa] hover:border-[#a3a6ff]/40 hover:text-[#a3a6ff] text-xs font-bold transition-all"
-                >
-                  <span className="material-symbols-outlined text-sm">{tpl.icon}</span>
-                  {tpl.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Item photos — optional */}
@@ -900,7 +906,14 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-[#494847]/15 flex items-center justify-between gap-3 shrink-0">
+        <div className="px-5 py-4 border-t border-[#494847]/15 shrink-0">
+          {!insufficientFunds && missingReason && (
+            <p className="text-[11px] text-[#fb923c] mb-3 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm">info</span>
+              {missingReason}
+            </p>
+          )}
+          <div className="flex items-center justify-between gap-3">
           <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
             Cancel
           </button>
@@ -924,6 +937,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
               {submitting ? 'Requesting…' : price !== null ? `Request Delivery — £${formatPrice(price)}` : 'Request Delivery'}
             </button>
           )}
+          </div>
         </div>
       </div>
     </div>
