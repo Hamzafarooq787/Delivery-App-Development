@@ -7,10 +7,18 @@ import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
 import { getDeliveryOtp } from '@/app/actions/delivery'
+import { getMyRatingForDelivery, getRatingSummary, type Rating } from '@/app/actions/ratings'
+import { RatingPrompt } from '@/components/shared/rating-prompt'
+import { formatPrice } from '@/lib/pricing'
 
 const OTP_VISIBLE_STATUSES = ['accepted', 'collected', 'in_transit']
 
 const STATUS_ORDER = ['requested', 'accepted', 'collected', 'in_transit', 'delivered']
+
+function formatLogTime(iso: string) {
+  const d = new Date(iso)
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
 
 type Driver = { full_name: string | null } | null
 
@@ -31,16 +39,20 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
   cancelled:  { bg: 'bg-[#ff6e84]/10', text: 'text-[#ff6e84]',  dot: 'bg-[#ff6e84]'  },
 }
 
-function buildSteps(status: string, tracking: string) {
+function buildSteps(status: string, logs: { status: string; created_at: string }[], createdAt: string) {
   const cur = STATUS_ORDER.indexOf(status.toLowerCase())
   const isDelivered = status === 'delivered'
-  return STATUS_ORDER.map((st, i) => ({
-    label: st.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-    detail: tracking,
-    // When delivered, ALL steps are done (including the last one)
-    done:   isDelivered ? true : (cur !== -1 && i < cur),
-    active: isDelivered ? false : i === cur,
-  }))
+  return STATUS_ORDER.map((st, i) => {
+    const log = logs.find((l) => l.status === st)
+    const timestamp = log?.created_at ?? (st === 'requested' ? createdAt : null)
+    return {
+      label: st.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      detail: timestamp ? formatLogTime(timestamp) : '',
+      // When delivered, ALL steps are done (including the last one)
+      done:   isDelivered ? true : (cur !== -1 && i < cur),
+      active: isDelivered ? false : i === cur,
+    }
+  })
 }
 
 function TrackingPageInner() {
@@ -50,8 +62,10 @@ function TrackingPageInner() {
   const [otp,       setOtp]         = useState<string | null>(null)
   const [steps,     setSteps]       = useState(STATUS_ORDER.map((s) => ({
     label: s.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-    detail: '—', done: false, active: false,
+    detail: '', done: false, active: false,
   })))
+  const [myRating,     setMyRating]     = useState<Rating | null>(null)
+  const [driverRating, setDriverRating] = useState<{ average: number | null; count: number }>({ average: null, count: 0 })
   const [userId,    setUserId]      = useState('')
   const supabase    = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
@@ -68,7 +82,7 @@ function TrackingPageInner() {
       // Always select parcel_image_url so we can show it when delivered
       let q = supabase
         .from('delivery_requests')
-        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls')
+        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls,price,base_price,surge_multiplier,discount_amount,promo_code')
         .eq('customer_id', user.id)
 
       if (requestedId) {
@@ -88,13 +102,28 @@ function TrackingPageInner() {
 
       applyShipment(data)
 
+      const { data: logs } = await supabase
+        .from('delivery_status_logs')
+        .select('status, created_at')
+        .eq('delivery_id', data.id)
+        .order('created_at', { ascending: true })
+      if (!cancelled) setSteps(buildSteps(data.status, logs ?? [], data.created_at))
+
       if (data.driver_id) {
         const { data: drv } = await supabase.from('users').select('full_name').eq('id', data.driver_id).maybeSingle()
         if (!cancelled) setDriver(drv as Driver)
+
+        const summary = await getRatingSummary(data.driver_id)
+        if (!cancelled) setDriverRating(summary)
       }
 
       const { data: code } = await getDeliveryOtp(data.id)
       if (!cancelled) setOtp(code)
+
+      if (data.status === 'delivered') {
+        const { data: rating } = await getMyRatingForDelivery(data.id)
+        if (!cancelled) setMyRating(rating)
+      }
     }
     load()
     return () => { cancelled = true }
@@ -117,16 +146,26 @@ function TrackingPageInner() {
 
         // Merge new fields into shipment state
         setShipment((prev: any) => ({ ...prev, ...updated }))
-        setSteps(buildSteps(
-          updated.status,
-          updated.tracking_number || `KV-${updated.id.slice(0, 8).toUpperCase()}`,
-        ))
 
-        // If driver changed (e.g. reassigned), re-fetch driver name
+        const { data: logs } = await supabase
+          .from('delivery_status_logs')
+          .select('status, created_at')
+          .eq('delivery_id', updated.id)
+          .order('created_at', { ascending: true })
+        setSteps(buildSteps(updated.status, logs ?? [], updated.created_at ?? shipment.created_at))
+
+        // If driver changed (e.g. reassigned), re-fetch driver name + rating
         if (updated.driver_id && updated.driver_id !== shipment.driver_id) {
           const { data: drv } = await supabase
             .from('users').select('full_name').eq('id', updated.driver_id).maybeSingle()
           setDriver(drv as Driver)
+          const summary = await getRatingSummary(updated.driver_id)
+          setDriverRating(summary)
+        }
+
+        if (updated.status === 'delivered') {
+          const { data: rating } = await getMyRatingForDelivery(updated.id)
+          setMyRating(rating)
         }
       })
       .subscribe()
@@ -136,10 +175,6 @@ function TrackingPageInner() {
 
   function applyShipment(data: any) {
     setShipment(data)
-    setSteps(buildSteps(
-      data.status,
-      data.tracking_number || `KV-${data.id.slice(0, 8).toUpperCase()}`,
-    ))
   }
 
   const statusCfg  = STATUS_COLORS[shipment?.status] ?? STATUS_COLORS.requested
@@ -206,6 +241,57 @@ function TrackingPageInner() {
               </p>
             )}
           </div>
+
+          {/* ── Payment breakdown ── */}
+          {shipment?.price != null && (
+            <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0 bg-[#1a1919]">
+              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#494847]/15">
+                <span className="material-symbols-outlined text-[#6ee7b7] text-base">payments</span>
+                <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Payment</p>
+              </div>
+              <div className="px-3 py-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#adaaaa]">Base fare</span>
+                  <span className="text-white font-semibold">£{formatPrice(shipment.base_price ?? shipment.price)}</span>
+                </div>
+                {shipment.surge_multiplier > 1 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#fb923c]">Surge pricing</span>
+                    <span className="text-[#fb923c] font-semibold">{shipment.surge_multiplier}× applied</span>
+                  </div>
+                )}
+                {shipment.discount_amount > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#6ee7b7]">Discount{shipment.promo_code ? ` (${shipment.promo_code})` : ''}</span>
+                    <span className="text-[#6ee7b7] font-semibold">−£{formatPrice(shipment.discount_amount)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-sm pt-1.5 border-t border-[#494847]/15">
+                  <span className="text-white font-bold">Total paid</span>
+                  <span className="text-white font-black">£{formatPrice(shipment.price)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Rate your driver ── */}
+          {isDelivered && shipment?.driver_id && (
+            <div className="mx-4 mt-3 shrink-0">
+              {myRating ? (
+                <div className="rounded-2xl border border-[#494847]/15 bg-[#1a1919] px-4 py-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                  <div>
+                    <p className="text-sm text-white">You rated this delivery {myRating.score}/5</p>
+                    <p className="text-[10px] text-[#adaaaa] mt-0.5">
+                      {myRating.status === 'pending' ? 'Pending admin review' : myRating.status === 'approved' ? 'Published' : 'Not published'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <RatingPrompt deliveryId={shipment.id} ratedLabel="your driver" />
+              )}
+            </div>
+          )}
 
           {/* ── Delivery code ── */}
           {otp && shipment && OTP_VISIBLE_STATUSES.includes(shipment.status) && (
@@ -347,8 +433,10 @@ function TrackingPageInner() {
                 </p>
                 <div className="flex items-center gap-1 mt-0.5">
                   <span className="material-symbols-outlined text-sm text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-sm font-bold text-white">4.92</span>
-                  <span className="text-xs text-[#adaaaa] ml-1">· 1.2k Jobs</span>
+                  <span className="text-sm font-bold text-white">{driverRating.average != null ? driverRating.average.toFixed(2) : 'New'}</span>
+                  {driverRating.count > 0 && (
+                    <span className="text-xs text-[#adaaaa] ml-1">· {driverRating.count} {driverRating.count === 1 ? 'rating' : 'ratings'}</span>
+                  )}
                 </div>
               </div>
             </div>

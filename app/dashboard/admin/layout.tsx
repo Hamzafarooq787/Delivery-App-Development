@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { adminGetPendingVerificationCount } from "@/app/actions/delivery"
+import { adminGetPendingReviewCount } from "@/app/actions/ratings"
 import { AdminLayoutClient } from "./layout-client"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -16,10 +17,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     profile.full_name = data?.full_name ?? ""
   }
 
-  const pendingVerifications = await adminGetPendingVerificationCount()
+  const [pendingVerifications, pendingReviews] = await Promise.all([
+    adminGetPendingVerificationCount(),
+    adminGetPendingReviewCount(),
+  ])
 
   return (
-    <AdminLayoutClient user={profile} pendingVerifications={pendingVerifications} userId={authUser?.id ?? ""}>
+    <AdminLayoutClient user={profile} pendingVerifications={pendingVerifications} pendingReviews={pendingReviews} userId={authUser?.id ?? ""}>
       {children}
     </AdminLayoutClient>
   )

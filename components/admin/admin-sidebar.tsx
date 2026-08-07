@@ -15,6 +15,7 @@ const navItems = [
   { label: "Payouts",  href: "/dashboard/admin/payouts",  icon: "account_balance_wallet" },
   { label: "Promotions & Pricing", href: "/dashboard/admin/promotions", icon: "sell" },
   { label: "Marketing", href: "/dashboard/admin/marketing", icon: "campaign" },
+  { label: "Reviews", href: "/dashboard/admin/reviews", icon: "rate_review", badgeKey: "pendingReviews" },
   { label: "Disputes", href: "/dashboard/admin/disputes", icon: "gavel" },
   { label: "Support Tickets", href: "/dashboard/admin/support", icon: "support_agent" },
   { label: "Reports", href: "/dashboard/admin/reports", icon: "analytics" },
@@ -25,13 +26,15 @@ interface AdminSidebarProps {
   onClose?: () => void
   user?: { full_name?: string; email?: string }
   pendingVerifications?: number
+  pendingReviews?: number
 }
 
-export function AdminSidebar({ onClose, user, pendingVerifications = 0 }: AdminSidebarProps) {
+export function AdminSidebar({ onClose, user, pendingVerifications = 0, pendingReviews = 0 }: AdminSidebarProps) {
   const pathname = usePathname()
 
   const badges: Record<string, number> = {
     pendingVerifications,
+    pendingReviews,
   }
 
   return (
