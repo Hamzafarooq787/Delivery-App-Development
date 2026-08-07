@@ -9,6 +9,7 @@ import { updateDeliveryStatus } from "@/app/actions/delivery"
 import { ParcelAuthModal } from "./parcel-auth-modal"
 import { SafetyCancelButton } from "./safety-cancel-button"
 import { DeliveryOtpModal } from "./delivery-otp-modal"
+import { RateCustomerCard } from "./rate-customer-card"
 
 const LiveTrackingPanel = dynamic(
   () => import("@/components/tracking/live-tracking-panel").then((m) => m.LiveTrackingPanel),
@@ -47,6 +48,7 @@ type Job = {
   item_photo_urls: string[] | null
   price: number | null
   parcel_image_url: string | null
+  delivered_image_url: string | null
   customer_id: string | null
 }
 
@@ -239,6 +241,17 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
           </div>
         )}
 
+        {/* Delivered photo (if already taken) */}
+        {job.delivered_image_url && (
+          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#6ee7b7]/15 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#6ee7b7]/10">
+              <span className="material-symbols-outlined text-[#6ee7b7] text-base">verified</span>
+              <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Proof of Delivery</p>
+            </div>
+            <img src={job.delivered_image_url} alt="Delivered package" className="w-full object-cover" style={{ maxHeight: 200 }} />
+          </div>
+        )}
+
         {/* Package Info */}
         <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
           <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Package Info</p>
@@ -290,6 +303,9 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
             )}
           </div>
         </div>
+
+        {/* Rate the customer — only once delivered */}
+        {job.status === "delivered" && <RateCustomerCard deliveryId={job.id} />}
 
         {/* Delivery Timeline */}
         <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">

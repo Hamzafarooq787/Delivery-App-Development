@@ -17,6 +17,7 @@ type DeliveryRow = {
   price: number | null
   status: string | null
   created_at: string | null
+  delivered_image_url: string | null
 }
 
 type DateFilter = 'all' | '30d'
@@ -48,10 +49,7 @@ function formatDate(iso: string | null) {
 
 function formatPrice(price: number | null) {
   if (price == null) return '—'
-  return price.toLocaleString(undefined, {
-    style: 'currency',
-    currency: 'USD',
-  })
+  return `£${price.toFixed(2)}`
 }
 
 function formatRoute(addr: string | null) {
@@ -93,7 +91,7 @@ export default function DeliveryHistoryPage() {
       const { data, error } = await supabase
         .from('delivery_requests')
         .select(
-          'id, tracking_number, customer_id, pickup_address, delivery_address, item_description, price, status, created_at'
+          'id, tracking_number, customer_id, pickup_address, delivery_address, item_description, price, status, created_at, delivered_image_url'
         )
         .eq('customer_id', user.id)
         .eq('status', 'delivered')
@@ -305,6 +303,11 @@ export default function DeliveryHistoryPage() {
                           <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                             Delivered
                           </span>
+                          {row.delivered_image_url && (
+                            <span className="material-symbols-outlined text-primary text-sm" title="Proof of delivery photo available">
+                              photo_camera
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-on-surface-variant truncate">
                           {formatRoute(row.pickup_address)} → {formatRoute(row.delivery_address)}
@@ -388,10 +391,17 @@ export default function DeliveryHistoryPage() {
                             </span>
                           </td>
                           <td className="px-6 py-5 text-center">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold border uppercase tracking-tighter bg-primary/10 text-primary border-primary/20">
-                              <span className="w-1 h-1 rounded-full bg-primary mr-1.5 animate-pulse" />
-                              Delivered
-                            </span>
+                            <div className="flex items-center justify-center gap-2">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold border uppercase tracking-tighter bg-primary/10 text-primary border-primary/20">
+                                <span className="w-1 h-1 rounded-full bg-primary mr-1.5 animate-pulse" />
+                                Delivered
+                              </span>
+                              {row.delivered_image_url && (
+                                <span className="material-symbols-outlined text-primary text-sm" title="Proof of delivery photo available">
+                                  photo_camera
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-5 text-right">
                             <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">

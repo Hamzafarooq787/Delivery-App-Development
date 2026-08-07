@@ -8,6 +8,8 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { ResetDeliveryOtpButton } from "@/components/admin/reset-delivery-otp-button"
+import { getDeliveryRatings } from "@/app/actions/ratings"
+import { Star } from "lucide-react"
 
 const OTP_RESETTABLE_STATUSES = ["accepted", "collected", "in_transit"]
 
@@ -29,7 +31,7 @@ export default async function AdminOrderDetailPage({
 
   if (error || !order) notFound()
 
-  const [customerRes, driverRes, logsRes] = await Promise.all([
+  const [customerRes, driverRes, logsRes, ratingsRes] = await Promise.all([
     order.customer_id
       ? supabase.from("users").select("full_name, email, phone").eq("id", order.customer_id).single()
       : Promise.resolve({ data: null }),
@@ -41,11 +43,15 @@ export default async function AdminOrderDetailPage({
       .select("status, created_at")
       .eq("delivery_id", orderId)
       .order("created_at", { ascending: true }),
+    getDeliveryRatings(orderId),
   ])
 
   const customer = customerRes.data
   const driver = driverRes.data
   const logs: { status: string; created_at: string }[] = logsRes.data ?? []
+  const ratings = ratingsRes.data
+  const customerRating = ratings.find((r) => r.rater_role === "customer")
+  const driverRating = ratings.find((r) => r.rater_role === "driver")
 
   const currentIdx = STATUS_ORDER.indexOf(order.status)
   const timelineSteps = STATUS_ORDER.map((s, idx) => {
@@ -152,6 +158,31 @@ export default async function AdminOrderDetailPage({
                   </div>
                 </div>
               )}
+              {(order.parcel_image_url || order.delivered_image_url) && (
+                <div className="sm:col-span-2">
+                  <p className="text-muted-foreground mb-2">Proof Photos</p>
+                  <div className="flex flex-wrap gap-3">
+                    {order.parcel_image_url && (
+                      <a href={order.parcel_image_url} target="_blank" rel="noreferrer" className="block">
+                        <div className="w-24 h-24 rounded-lg overflow-hidden border">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={order.parcel_image_url} alt="Parcel at pickup" className="w-full h-full object-cover" />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1 text-center">Pickup</p>
+                      </a>
+                    )}
+                    {order.delivered_image_url && (
+                      <a href={order.delivered_image_url} target="_blank" rel="noreferrer" className="block">
+                        <div className="w-24 h-24 rounded-lg overflow-hidden border">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={order.delivered_image_url} alt="Delivered package" className="w-full h-full object-cover" />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1 text-center">Delivery</p>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -235,6 +266,41 @@ export default async function AdminOrderDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {(customerRating || driverRating) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  Ratings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                {customerRating && (
+                  <div>
+                    <p className="text-muted-foreground text-xs mb-1">Customer rated driver</p>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Star key={n} className={`h-3.5 w-3.5 ${n <= customerRating.score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                      ))}
+                    </div>
+                    {customerRating.comment && <p className="text-xs text-muted-foreground mt-1">"{customerRating.comment}"</p>}
+                  </div>
+                )}
+                {driverRating && (
+                  <div>
+                    <p className="text-muted-foreground text-xs mb-1">Driver rated customer</p>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Star key={n} className={`h-3.5 w-3.5 ${n <= driverRating.score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                      ))}
+                    </div>
+                    {driverRating.comment && <p className="text-xs text-muted-foreground mt-1">"{driverRating.comment}"</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
