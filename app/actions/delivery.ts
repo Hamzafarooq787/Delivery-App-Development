@@ -230,6 +230,21 @@ export async function acceptDelivery(deliveryId: string) {
     return { error: "This job is no longer available to accept." }
   }
 
+  // Payment before dispatch — defense-in-depth. Every delivery created
+  // through createDeliveryRequest() already has a "paid" payments row
+  // (inserted atomically with the delivery itself), but a driver must
+  // never be able to accept a job that somehow doesn't, regardless of how
+  // that happened.
+  const { data: paidPayment } = await admin
+    .from("payments")
+    .select("id")
+    .eq("delivery_id", deliveryId)
+    .eq("status", "paid")
+    .maybeSingle()
+  if (!paidPayment) {
+    return { error: "This delivery hasn't been paid for yet." }
+  }
+
   // Claim the delivery atomically — only succeeds if still unassigned
   const { data: updatedDelivery, error } = await admin
     .from("delivery_requests")
@@ -669,6 +684,20 @@ export async function adminRejectDriver(driverId: string) {
 
 export async function adminAssignDriver(deliveryId: string, driverId: string | null) {
   const admin = createAdminClient()
+
+  // Payment before dispatch — an admin can unassign freely, but assigning a
+  // driver requires the same payment guarantee as the normal accept flow.
+  if (driverId) {
+    const { data: paidPayment } = await admin
+      .from("payments")
+      .select("id")
+      .eq("delivery_id", deliveryId)
+      .eq("status", "paid")
+      .maybeSingle()
+    if (!paidPayment) {
+      return { error: "This delivery hasn't been paid for yet — a driver can't be assigned." }
+    }
+  }
 
   const update: Record<string, string | null> =
     driverId
