@@ -32,7 +32,10 @@ export function RatingPrompt({ deliveryId, ratedLabel, onSubmitted }: Props) {
     return (
       <div className="rounded-2xl border border-[#6ee7b7]/20 bg-[#6ee7b7]/5 px-4 py-4 flex items-center gap-3">
         <span className="material-symbols-outlined text-[#6ee7b7] text-xl">check_circle</span>
-        <p className="text-sm text-[#6ee7b7] font-bold">Thanks for your feedback!</p>
+        <div>
+          <p className="text-sm text-[#6ee7b7] font-bold">Thanks for your feedback!</p>
+          <p className="text-xs text-[#adaaaa] mt-0.5">It'll be visible once an admin reviews it.</p>
+        </div>
       </div>
     )
   }

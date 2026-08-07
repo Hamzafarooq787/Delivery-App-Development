@@ -12,23 +12,24 @@ interface AdminLayoutClientProps {
   children: React.ReactNode
   user: { full_name: string; email: string }
   pendingVerifications: number
+  pendingReviews: number
   userId: string
 }
 
-export function AdminLayoutClient({ children, user, pendingVerifications, userId }: AdminLayoutClientProps) {
+export function AdminLayoutClient({ children, user, pendingVerifications, pendingReviews, userId }: AdminLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#131313]">
       <div className="hidden lg:flex lg:shrink-0 h-full">
-        <AdminSidebar user={user} pendingVerifications={pendingVerifications} />
+        <AdminSidebar user={user} pendingVerifications={pendingVerifications} pendingReviews={pendingReviews} />
       </div>
 
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <div className="relative z-50 h-full">
-            <AdminSidebar user={user} pendingVerifications={pendingVerifications} onClose={() => setSidebarOpen(false)} />
+            <AdminSidebar user={user} pendingVerifications={pendingVerifications} pendingReviews={pendingReviews} onClose={() => setSidebarOpen(false)} />
           </div>
         </div>
       )}

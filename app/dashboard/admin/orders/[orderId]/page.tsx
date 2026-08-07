@@ -278,7 +278,16 @@ export default async function AdminOrderDetailPage({
               <CardContent className="space-y-4 text-sm">
                 {customerRating && (
                   <div>
-                    <p className="text-muted-foreground text-xs mb-1">Customer rated driver</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-muted-foreground text-xs">Customer rated driver</p>
+                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                        customerRating.status === "approved" ? "bg-green-500/10 text-green-600" :
+                        customerRating.status === "rejected" ? "bg-destructive/10 text-destructive" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                        {customerRating.status}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((n) => (
                         <Star key={n} className={`h-3.5 w-3.5 ${n <= customerRating.score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
@@ -289,7 +298,16 @@ export default async function AdminOrderDetailPage({
                 )}
                 {driverRating && (
                   <div>
-                    <p className="text-muted-foreground text-xs mb-1">Driver rated customer</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-muted-foreground text-xs">Driver rated customer</p>
+                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                        driverRating.status === "approved" ? "bg-green-500/10 text-green-600" :
+                        driverRating.status === "rejected" ? "bg-destructive/10 text-destructive" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                        {driverRating.status}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((n) => (
                         <Star key={n} className={`h-3.5 w-3.5 ${n <= driverRating.score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />

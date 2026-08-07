@@ -280,7 +280,12 @@ function TrackingPageInner() {
               {myRating ? (
                 <div className="rounded-2xl border border-[#494847]/15 bg-[#1a1919] px-4 py-3 flex items-center gap-2">
                   <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <p className="text-sm text-white">You rated this delivery {myRating.score}/5</p>
+                  <div>
+                    <p className="text-sm text-white">You rated this delivery {myRating.score}/5</p>
+                    <p className="text-[10px] text-[#adaaaa] mt-0.5">
+                      {myRating.status === 'pending' ? 'Pending admin review' : myRating.status === 'approved' ? 'Published' : 'Not published'}
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <RatingPrompt deliveryId={shipment.id} ratedLabel="your driver" />
