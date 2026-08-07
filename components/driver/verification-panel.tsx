@@ -7,7 +7,7 @@ import type { DriverDocument } from "@/app/actions/documents"
 import type { DriverVehicle } from "@/app/actions/vehicles"
 import { VehicleManager } from "@/components/driver/vehicle-manager"
 
-type DocType = "identity" | "insurance" | "vehicle_registration"
+type DocType = "identity" | "insurance" | "vehicle_registration" | "selfie"
 type DriverStatus = "pending" | "approved" | "rejected"
 
 const DOC_CONFIGS: {
@@ -25,6 +25,14 @@ const DOC_CONFIGS: {
     icon: "badge",
     iconColor: "text-[#a3a6ff]",
     iconBg: "bg-[#a3a6ff]/20",
+  },
+  {
+    type: "selfie",
+    label: "Selfie Verification",
+    description: "A clear photo of your face, taken live, matching your ID document.",
+    icon: "face",
+    iconColor: "text-[#6ee7b7]",
+    iconBg: "bg-[#6ee7b7]/20",
   },
   {
     type: "insurance",
@@ -289,7 +297,8 @@ export function VerificationPanel({
                 <input
                   ref={(el) => { fileInputRefs.current[config.type] = el }}
                   type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  accept={config.type === "selfie" ? "image/*" : ".pdf,.jpg,.jpeg,.png,.webp"}
+                  capture={config.type === "selfie" ? "user" : undefined}
                   className="hidden"
                   onChange={(e) => handleFileChange(config.type, e)}
                 />
