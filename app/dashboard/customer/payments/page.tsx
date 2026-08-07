@@ -1,13 +1,10 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { useEffect, useMemo, useState } from 'react'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { SubTabs } from '@/components/ui/sub-tabs'
 import { createClient } from '@/lib/supabase/client'
-import { createCheckoutSession } from '@/app/actions/payments'
 
 type TxRow = {
   id: string
@@ -16,26 +13,20 @@ type TxRow = {
   status: string
   created_at: string | null
   tracking_number: string | null
-  source: 'payment' | 'delivery'
 }
 
+// Every delivery is paid atomically at creation time from the customer's
+// wallet — there is no "pending" or "awaiting payment" state to show or act
+// on here anymore. These labels remain only to display any historical rows.
 const STATUS_STYLE: Record<string, { label: string; color: string; dot: string; bg: string }> = {
   pending:   { label: 'Pending',  color: 'text-[#c180ff]', dot: 'bg-[#c180ff]', bg: 'bg-[#c180ff]/10' },
   paid:      { label: 'Paid',     color: 'text-[#6ee7b7]', dot: 'bg-[#6ee7b7]', bg: 'bg-[#6ee7b7]/10' },
   released:  { label: 'Released', color: 'text-[#6ee7b7]', dot: 'bg-[#6ee7b7]', bg: 'bg-[#6ee7b7]/10' },
   failed:    { label: 'Failed',   color: 'text-[#ff6e84]', dot: 'bg-[#ff6e84]', bg: 'bg-[#ff6e84]/10' },
-  requested: { label: 'Awaiting', color: 'text-[#adaaaa]', dot: 'bg-[#adaaaa]', bg: 'bg-[#adaaaa]/10' },
-  accepted:  { label: 'Awaiting', color: 'text-[#adaaaa]', dot: 'bg-[#adaaaa]', bg: 'bg-[#adaaaa]/10' },
-  delivered: { label: 'Paid',     color: 'text-[#6ee7b7]', dot: 'bg-[#6ee7b7]', bg: 'bg-[#6ee7b7]/10' },
 }
 
 function fmt(n: number) {
   return `£${n.toFixed(2)}`
-}
-
-// Statuses that still need payment (failed = allow retry)
-function isPayable(status: string) {
-  return ['pending', 'requested', 'accepted', 'failed'].includes(status.toLowerCase())
 }
 
 function fmtDate(iso: string | null) {
@@ -51,59 +42,11 @@ function fmtDateShort(iso: string | null) {
 }
 
 export default function PaymentsPage() {
-  // useSearchParams() requires a Suspense boundary during prerendering
-  return (
-    <Suspense fallback={null}>
-      <PaymentsPageInner />
-    </Suspense>
-  )
-}
-
-function PaymentsPageInner() {
   const [showModal, setShowModal] = useState(false)
   const supabase = useMemo(() => createClient(), [])
   const [transactions, setTransactions] = useState<TxRow[]>([])
   const [loading, setLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
-  const [payingId, setPayingId] = useState<string | null>(null)
-  const searchParams = useSearchParams()
-  const router = useRouter()
-
-  // Handle redirect back from Stripe Checkout (?paid=1 / ?canceled=1)
-  useEffect(() => {
-    if (searchParams.get('paid') === '1') {
-      toast.success('Payment successful!', {
-        description: 'Your delivery payment has been processed.',
-        duration: 6000,
-      })
-      router.replace('/dashboard/customer/payments')
-    } else if (searchParams.get('canceled') === '1') {
-      toast('Payment cancelled', {
-        description: 'No charge was made. You can pay anytime from this page.',
-        duration: 5000,
-      })
-      router.replace('/dashboard/customer/payments')
-    }
-  }, [searchParams, router])
-
-  // Start Stripe Checkout for a pending charge
-  async function handlePay(tx: TxRow) {
-    const deliveryId = tx.source === 'payment' ? tx.delivery_id : tx.id
-    if (!deliveryId || payingId) return
-    setPayingId(tx.id)
-    try {
-      const result = await createCheckoutSession(deliveryId)
-      if ('url' in result) {
-        window.location.href = result.url
-      } else {
-        toast.error(result.error)
-        setPayingId(null)
-      }
-    } catch {
-      toast.error('Could not start the payment. Please try again.')
-      setPayingId(null)
-    }
-  }
 
   useEffect(() => {
     let cancelled = false
@@ -114,12 +57,10 @@ function PaymentsPageInner() {
 
       const { data: deliveries } = await supabase
         .from('delivery_requests')
-        .select('id, tracking_number, price, status, created_at')
+        .select('id')
         .eq('customer_id', user.id)
-        .order('created_at', { ascending: false })
 
-      const deliveryRows = deliveries ?? []
-      const ids = deliveryRows.map((d: any) => d.id)
+      const ids = (deliveries ?? []).map((d: any) => d.id)
 
       let paymentRows: TxRow[] = []
       if (ids.length > 0) {
@@ -129,41 +70,21 @@ function PaymentsPageInner() {
           .in('delivery_id', ids)
           .order('created_at', { ascending: false })
 
-        if (payments && payments.length > 0) {
-          paymentRows = payments.map((p: any) => {
-            const dr = Array.isArray(p.delivery_requests) ? p.delivery_requests[0] : p.delivery_requests
-            return {
-              id: p.id,
-              delivery_id: p.delivery_id ?? null,
-              amount: Number(p.amount ?? 0),
-              status: (p.status ?? 'pending').toLowerCase(),
-              created_at: p.created_at,
-              tracking_number: dr?.tracking_number ?? null,
-              source: 'payment' as const,
-            }
-          })
-        }
+        paymentRows = (payments ?? []).map((p: any) => {
+          const dr = Array.isArray(p.delivery_requests) ? p.delivery_requests[0] : p.delivery_requests
+          return {
+            id: p.id,
+            delivery_id: p.delivery_id ?? null,
+            amount: Number(p.amount ?? 0),
+            status: (p.status ?? 'paid').toLowerCase(),
+            created_at: p.created_at,
+            tracking_number: dr?.tracking_number ?? null,
+          }
+        })
       }
 
       if (cancelled) return
-
-      if (paymentRows.length > 0) {
-        setTransactions(paymentRows)
-      } else {
-        const fallback: TxRow[] = deliveryRows
-          .filter((d: any) => d.price && Number(d.price) > 0)
-          .map((d: any) => ({
-            id: d.id,
-            delivery_id: d.id,
-            amount: Number(d.price),
-            status: d.status ?? 'requested',
-            created_at: d.created_at,
-            tracking_number: d.tracking_number,
-            source: 'delivery' as const,
-          }))
-        setTransactions(fallback)
-      }
-
+      setTransactions(paymentRows)
       setLoading(false)
     }
     load()
@@ -177,8 +98,8 @@ function PaymentsPageInner() {
     const now = new Date()
     for (const tx of transactions) {
       const s = tx.status.toLowerCase()
-      const isPaid = s === 'paid' || s === 'released' || s === 'delivered'
-      const isPending = s === 'pending' || s === 'requested' || s === 'accepted'
+      const isPaid = s === 'paid' || s === 'released'
+      const isPending = s === 'pending'
       if (isPaid) {
         totalPaid += tx.amount
         if (tx.created_at) {
@@ -272,15 +193,6 @@ function PaymentsPageInner() {
                         <div className="text-right shrink-0">
                           <p className="text-sm font-black text-white">{fmt(tx.amount)}</p>
                           <span className={`text-[10px] font-bold ${meta.color}`}>{meta.label}</span>
-                          {isPayable(tx.status) && (
-                            <button
-                              onClick={() => handlePay(tx)}
-                              disabled={payingId !== null}
-                              className="block ml-auto mt-1.5 px-3 py-1 rounded-lg bg-[#6ee7b7] text-[#003820] text-[11px] font-bold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
-                            >
-                              {payingId === tx.id ? 'Opening…' : 'Pay now'}
-                            </button>
-                          )}
                         </div>
                       </div>
                     )
@@ -352,15 +264,6 @@ function PaymentsPageInner() {
                                 {meta.label}
                               </span>
                             </div>
-                            {isPayable(tx.status) && (
-                              <button
-                                onClick={() => handlePay(tx)}
-                                disabled={payingId !== null}
-                                className="px-3.5 py-1.5 rounded-lg bg-[#6ee7b7] text-[#003820] text-xs font-bold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
-                              >
-                                {payingId === tx.id ? 'Opening…' : 'Pay now'}
-                              </button>
-                            )}
                           </div>
                         </div>
                       )
