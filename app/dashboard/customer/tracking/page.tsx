@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
+import { getDeliveryOtp } from '@/app/actions/delivery'
+
+const OTP_VISIBLE_STATUSES = ['accepted', 'collected', 'in_transit']
 
 const STATUS_ORDER = ['requested', 'accepted', 'collected', 'in_transit', 'delivered']
 
@@ -44,6 +47,7 @@ function TrackingPageInner() {
   const [showModal, setShowModal]   = useState(false)
   const [shipment,  setShipment]    = useState<any>(null)
   const [driver,    setDriver]      = useState<Driver>(null)
+  const [otp,       setOtp]         = useState<string | null>(null)
   const [steps,     setSteps]       = useState(STATUS_ORDER.map((s) => ({
     label: s.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
     detail: '—', done: false, active: false,
@@ -88,6 +92,9 @@ function TrackingPageInner() {
         const { data: drv } = await supabase.from('users').select('full_name').eq('id', data.driver_id).maybeSingle()
         if (!cancelled) setDriver(drv as Driver)
       }
+
+      const { data: code } = await getDeliveryOtp(data.id)
+      if (!cancelled) setOtp(code)
     }
     load()
     return () => { cancelled = true }
@@ -199,6 +206,22 @@ function TrackingPageInner() {
               </p>
             )}
           </div>
+
+          {/* ── Delivery code ── */}
+          {otp && shipment && OTP_VISIBLE_STATUSES.includes(shipment.status) && (
+            <div className="mx-4 mt-3 rounded-2xl border border-[#a3a6ff]/25 bg-[#a3a6ff]/5 px-4 py-4 shrink-0">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a6ff] mb-1.5">Delivery Code</p>
+                  <p className="text-3xl font-black font-mono tracking-[0.3em] text-white">{otp}</p>
+                </div>
+                <span className="material-symbols-outlined text-[#a3a6ff] text-2xl shrink-0">lock</span>
+              </div>
+              <p className="text-[11px] text-[#adaaaa] mt-2.5 leading-relaxed">
+                Share this code with your driver only when they arrive with your package — they'll need it to confirm delivery.
+              </p>
+            </div>
+          )}
 
           {/* ── ETA / Completion row ── */}
           {!isDelivered && (

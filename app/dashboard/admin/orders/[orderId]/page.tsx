@@ -7,6 +7,9 @@ import { ArrowLeft, MapPin, Package, User, Car } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+import { ResetDeliveryOtpButton } from "@/components/admin/reset-delivery-otp-button"
+
+const OTP_RESETTABLE_STATUSES = ["accepted", "collected", "in_transit"]
 
 const STATUS_ORDER = ["requested", "accepted", "collected", "in_transit", "delivered"]
 
@@ -247,6 +250,9 @@ export default async function AdminOrderDetailPage({
               <Button variant="outline" className="w-full" size="sm">
                 Issue Refund
               </Button>
+              {OTP_RESETTABLE_STATUSES.includes(order.status) && (
+                <ResetDeliveryOtpButton deliveryId={order.id} />
+              )}
             </CardContent>
           </Card>
         </div>
