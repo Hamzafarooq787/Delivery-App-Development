@@ -18,7 +18,8 @@ export type CreateDeliveryParams = {
   pickup_lng: number
   delivery_lat: number
   delivery_lng: number
-  item_description: string
+  /** Optional — customers aren't required to describe the item. */
+  item_description?: string
   item_photo_urls?: string[]
   package_size: PackageSize
   /** Optional — validated server-side; an invalid code is simply ignored, not an error. */
@@ -50,10 +51,6 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     return { error: "Select a package size." }
   }
 
-  if (!params.item_description?.trim()) {
-    return { error: "Describe the item being delivered." }
-  }
-
   const quoteResult = await getDeliveryQuote({
     pickupLat: params.pickup_lat,
     pickupLng: params.pickup_lng,
@@ -77,7 +74,7 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     p_pickup_lng: params.pickup_lng,
     p_delivery_lat: params.delivery_lat,
     p_delivery_lng: params.delivery_lng,
-    p_item_description: params.item_description.trim(),
+    p_item_description: params.item_description?.trim() || null,
     p_price: quote.finalPrice,
     p_tracking_number: tracking_number,
     p_package_size: params.package_size,

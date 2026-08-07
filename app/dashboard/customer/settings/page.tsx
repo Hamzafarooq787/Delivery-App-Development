@@ -4,15 +4,22 @@ import { useEffect, useMemo, useState } from 'react'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { createClient } from '@/lib/supabase/client'
+import { getMarketingConsent, updateMarketingConsent } from '@/app/actions/marketing'
 
 const NOTIF_STORAGE_KEY = 'kv_notification_prefs'
 
 type NotifPrefs = { email: boolean; sms: boolean; push: boolean }
 const defaultNotifPrefs: NotifPrefs = { email: true, sms: true, push: false }
 
+type MarketingPrefs = { email: boolean; push: boolean }
+
 export default function SettingsPage() {
   const [showModal, setShowModal] = useState(false)
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(defaultNotifPrefs)
+  const [marketingPrefs, setMarketingPrefs] = useState<MarketingPrefs>({ email: false, push: false })
+  const [marketingLoaded, setMarketingLoaded] = useState(false)
+  const [savingMarketing, setSavingMarketing] = useState(false)
+  const [marketingMessage, setMarketingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
   const [userId, setUserId] = useState<string | null>(null)
@@ -59,6 +66,35 @@ export default function SettingsPage() {
     load()
     return () => { cancelled = true }
   }, [supabase])
+
+  // Load real marketing consent from the database
+  useEffect(() => {
+    let cancelled = false
+    async function loadMarketing() {
+      const { data } = await getMarketingConsent()
+      if (cancelled || !data) return
+      setMarketingPrefs({ email: data.marketing_email_opt_in, push: data.marketing_push_opt_in })
+      setMarketingLoaded(true)
+    }
+    loadMarketing()
+    return () => { cancelled = true }
+  }, [])
+
+  async function toggleMarketing(key: keyof MarketingPrefs) {
+    if (savingMarketing) return
+    const next = { ...marketingPrefs, [key]: !marketingPrefs[key] }
+    setMarketingPrefs(next)
+    setSavingMarketing(true)
+    setMarketingMessage(null)
+    const { error } = await updateMarketingConsent({ emailOptIn: next.email, pushOptIn: next.push })
+    setSavingMarketing(false)
+    if (error) {
+      setMarketingPrefs(marketingPrefs) // revert on failure
+      setMarketingMessage({ type: 'error', text: error })
+      return
+    }
+    setMarketingMessage({ type: 'success', text: 'Preferences saved.' })
+  }
 
   // Load saved notification prefs from localStorage
   useEffect(() => {
@@ -391,6 +427,54 @@ export default function SettingsPage() {
                   <p className="text-[10px] text-on-surface-variant mt-2">
                     Preferences are saved on this device.
                   </p>
+                </div>
+              </div>
+
+              <div className="glass-card border border-outline-variant/15 rounded-xl p-8">
+                <div className="flex items-center space-x-3 mb-2">
+                  <span className="material-symbols-outlined text-secondary">campaign</span>
+                  <h3 className="text-xl font-bold font-headline text-on-surface">
+                    Marketing Preferences
+                  </h3>
+                </div>
+                <p className="text-xs text-on-surface-variant mb-6">
+                  Promotional offers, discount codes, and reminders to come back. Off by default — opt in anytime.
+                </p>
+                <div className="space-y-6">
+                  {([
+                    { key: 'email' as const, label: 'Marketing Emails', desc: 'Promotions, discount codes, and updates by email.' },
+                    { key: 'push' as const, label: 'Marketing Push', desc: 'Promotions and reminders as push notifications.' },
+                  ]).map((toggle, idx) => (
+                    <div key={toggle.key}>
+                      {idx > 0 && <div className="h-px bg-outline-variant/10 mb-6" />}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1 pr-4">
+                          <p className="text-sm font-medium text-on-surface">{toggle.label}</p>
+                          <p className="text-xs text-on-surface-variant">{toggle.desc}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleMarketing(toggle.key)}
+                          disabled={!marketingLoaded || savingMarketing}
+                          aria-pressed={marketingPrefs[toggle.key]}
+                          className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${
+                            marketingPrefs[toggle.key] ? 'bg-primary' : 'bg-surface-container-highest'
+                          }`}
+                        >
+                          <div
+                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${
+                              marketingPrefs[toggle.key] ? 'right-0.5' : 'left-0.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {marketingMessage && (
+                    <p className={`text-xs font-medium ${marketingMessage.type === 'success' ? 'text-primary' : 'text-error'}`}>
+                      {marketingMessage.text}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>
