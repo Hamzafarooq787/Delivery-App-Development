@@ -294,18 +294,38 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  // Marking a delivery "delivered" requires the customer's OTP — see
+  // verifyDeliveryOtpAndComplete(). This action can never set that status
+  // directly, so there's exactly one path to completion, and it's the one
+  // that's actually gated.
+  if (status === "delivered") {
+    return { error: "Enter the customer's delivery code to confirm delivery." }
+  }
+
   const updatePayload: Record<string, string> = { status }
   if (status === "cancelled") {
     updatePayload.cancelled_by = "driver"
   }
 
-  const { error } = await supabase
+  let query = supabase
     .from("delivery_requests")
     .update(updatePayload)
     .eq("id", deliveryId)
     .eq("driver_id", user.id)
 
+  // Forward-only transition guard — a driver can't jump straight to
+  // in_transit without having collected the parcel first. Cancellation is
+  // intentionally allowed from any active status, so it isn't restricted.
+  if (status === "in_transit") {
+    query = query.eq("status", "collected")
+  }
+
+  const { data: updatedRows, error } = await query.select("id")
+
   if (error) return { error: error.message }
+  if (status === "in_transit" && (!updatedRows || updatedRows.length === 0)) {
+    return { error: "This delivery must be collected before it can start." }
+  }
 
   // Log status change
   await supabase.from("delivery_status_logs").insert({
@@ -329,11 +349,6 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
       title: "🚚 Package in transit",
       body: "Your delivery is en route to the destination.",
       tag: NotificationTag.DELIVERY_IN_TRANSIT,
-    },
-    delivered: {
-      title: "✅ Delivery complete!",
-      body: "Your package has been delivered successfully.",
-      tag: NotificationTag.DELIVERY_DELIVERED,
     },
     cancelled: {
       title: "❌ Delivery cancelled",
@@ -365,35 +380,8 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
       .catch(() => {/* silently ignore */})
   }
 
-  // On delivery completion: record earnings with 75/25 commission split
-  if (status === "delivered") {
-    const { data: delivery } = await supabase
-      .from("delivery_requests")
-      .select("price")
-      .eq("id", deliveryId)
-      .single()
-
-    const price = Number(delivery?.price ?? 0)
-    if (price > 0) {
-      const driverCut = Math.round(price * 0.75 * 100) / 100       // 75%
-      const commission = Math.round(price * 0.25 * 100) / 100      // 25%
-
-      // Upsert to avoid duplicates if action is called twice
-      await supabase.from("driver_earnings").upsert(
-        {
-          driver_id: user.id,
-          delivery_id: deliveryId,
-          amount: driverCut,
-          commission_amount: commission,
-          status: "pending",
-        },
-        { onConflict: "delivery_id" }
-      )
-    }
-  }
-
-  // Auto-offline when job is completed or cancelled — if no other active jobs remain
-  if (status === "delivered" || status === "cancelled") {
+  // Auto-offline when a job is cancelled — if no other active jobs remain
+  if (status === "cancelled") {
     const admin = createAdminClient()
     const ACTIVE = ["accepted", "collected", "picked_up", "in_transit"]
     const { count } = await admin
@@ -411,6 +399,178 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
   revalidatePath("/dashboard/driver/jobs/completed")
   revalidatePath("/dashboard/driver/active-jobs")
   revalidatePath("/dashboard/driver/earnings")
+  return { success: true }
+}
+
+// ── OTP / Delivery Verification ─────────────────────────────────────────────
+
+const MAX_OTP_ATTEMPTS = 5
+
+/**
+ * Fetch the current delivery's OTP for the CUSTOMER to read out to their
+ * driver. RLS-scoped via the regular authenticated client — only returns a
+ * code if the caller actually owns this delivery. Never call this with the
+ * admin client for a driver-facing surface.
+ */
+export async function getDeliveryOtp(deliveryId: string): Promise<{ data: string | null; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: "Not authenticated" }
+
+  const { data, error } = await supabase
+    .from("delivery_otps")
+    .select("otp")
+    .eq("delivery_id", deliveryId)
+    .maybeSingle()
+
+  if (error) return { data: null, error: error.message }
+  return { data: data?.otp ?? null }
+}
+
+/**
+ * The ONLY way a delivery can be marked "delivered" — the driver submits the
+ * code the customer read out to them. Verifies the driver is actually
+ * assigned, the delivery is at the right stage, and the code matches, all
+ * server-side. Attempts are capped at MAX_OTP_ATTEMPTS to resist brute force
+ * (see adminResetDeliveryOtp for the support recovery path).
+ */
+export async function verifyDeliveryOtpAndComplete(
+  deliveryId: string,
+  code: string
+): Promise<{ success?: boolean; error?: string; attemptsRemaining?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const admin = createAdminClient()
+
+  const { data: delivery, error: deliveryError } = await admin
+    .from("delivery_requests")
+    .select("id, status, driver_id, price, tracking_number, customer_id")
+    .eq("id", deliveryId)
+    .single()
+
+  if (deliveryError || !delivery) return { error: "Delivery not found" }
+  if (delivery.driver_id !== user.id) return { error: "This job isn't assigned to you" }
+  if (delivery.status !== "in_transit") {
+    return { error: "This delivery isn't ready to be marked delivered yet." }
+  }
+
+  const { data: otpRow, error: otpError } = await admin
+    .from("delivery_otps")
+    .select("otp, attempts")
+    .eq("delivery_id", deliveryId)
+    .maybeSingle()
+
+  if (otpError || !otpRow) return { error: "Could not verify the code. Please contact support." }
+
+  if (otpRow.attempts >= MAX_OTP_ATTEMPTS) {
+    return { error: "Too many incorrect attempts. Please contact support for a new code.", attemptsRemaining: 0 }
+  }
+
+  if (code.trim() !== otpRow.otp) {
+    const nextAttempts = otpRow.attempts + 1
+    await admin.from("delivery_otps").update({ attempts: nextAttempts }).eq("delivery_id", deliveryId)
+    const remaining = Math.max(0, MAX_OTP_ATTEMPTS - nextAttempts)
+    return {
+      error:
+        remaining > 0
+          ? `Incorrect code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
+          : "Too many incorrect attempts. Please contact support for a new code.",
+      attemptsRemaining: remaining,
+    }
+  }
+
+  // Correct code — mark delivered, but only if it's STILL in_transit and
+  // STILL assigned to this driver (atomic guard against a race).
+  const nowIso = new Date().toISOString()
+  const { data: updatedRows, error: updateError } = await admin
+    .from("delivery_requests")
+    .update({ status: "delivered", delivered_at: nowIso })
+    .eq("id", deliveryId)
+    .eq("driver_id", user.id)
+    .eq("status", "in_transit")
+    .select("id")
+
+  if (updateError) return { error: updateError.message }
+  if (!updatedRows || updatedRows.length === 0) {
+    return { error: "This delivery is no longer ready to be marked delivered." }
+  }
+
+  await admin.from("delivery_otps").update({ verified_at: nowIso }).eq("delivery_id", deliveryId)
+
+  await admin.from("delivery_status_logs").insert({
+    delivery_id: deliveryId,
+    status: "delivered",
+    updated_by: user.id,
+  })
+
+  // Record earnings with 75/25 commission split
+  const price = Number(delivery.price ?? 0)
+  if (price > 0) {
+    const driverCut = Math.round(price * 0.75 * 100) / 100
+    const commission = Math.round(price * 0.25 * 100) / 100
+    await admin.from("driver_earnings").upsert(
+      {
+        driver_id: user.id,
+        delivery_id: deliveryId,
+        amount: driverCut,
+        commission_amount: commission,
+        status: "pending",
+      },
+      { onConflict: "delivery_id" }
+    )
+  }
+
+  // Auto-offline if no other active jobs remain
+  const ACTIVE = ["accepted", "collected", "picked_up", "in_transit"]
+  const { count } = await admin
+    .from("delivery_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("driver_id", user.id)
+    .in("status", ACTIVE)
+  if ((count ?? 0) === 0) {
+    await admin.from("driver_profiles").upsert({ id: user.id, is_online: false }, { onConflict: "id" })
+  }
+
+  if (delivery.customer_id) {
+    notifyUser({
+      userId: delivery.customer_id,
+      title: "✅ Delivery complete!",
+      body: `Your package has been delivered successfully. (${delivery.tracking_number ?? deliveryId})`,
+      url: "/dashboard/customer",
+      tag: `${NotificationTag.DELIVERY_DELIVERED}-${deliveryId}`,
+      data: { deliveryId, status: "delivered" },
+    }).catch((err) => console.error("[Notify] Failed to send delivered push:", err))
+  }
+
+  revalidatePath("/dashboard/driver/jobs/completed")
+  revalidatePath("/dashboard/driver/active-jobs")
+  revalidatePath("/dashboard/driver/earnings")
+  revalidatePath("/dashboard/admin/orders")
+  return { success: true }
+}
+
+/**
+ * Admin recovery path — resets the attempt counter and issues a fresh code
+ * when a driver has been locked out after too many incorrect entries.
+ */
+export async function adminResetDeliveryOtp(deliveryId: string): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+  const { data: adminRow } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  if (adminRow?.role !== "admin") return { error: "Not authorized" }
+
+  const admin = createAdminClient()
+  const newOtp = Math.floor(Math.random() * 10000).toString().padStart(4, "0")
+  const { error } = await admin
+    .from("delivery_otps")
+    .update({ otp: newOtp, attempts: 0, verified_at: null })
+    .eq("delivery_id", deliveryId)
+
+  if (error) return { error: error.message }
+  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
   return { success: true }
 }
 

@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { updateDeliveryStatus } from "@/app/actions/delivery"
 import { ParcelAuthModal } from "./parcel-auth-modal"
 import { SafetyCancelButton } from "./safety-cancel-button"
+import { DeliveryOtpModal } from "./delivery-otp-modal"
 
 const LiveTrackingPanel = dynamic(
   () => import("@/components/tracking/live-tracking-panel").then((m) => m.LiveTrackingPanel),
@@ -62,6 +63,7 @@ type Props = {
 
 export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
   const [showParcelAuth, setShowParcelAuth] = useState(false)
+  const [showOtpModal, setShowOtpModal] = useState(false)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -82,14 +84,15 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
     startTransition(async () => {
       const result = await updateDeliveryStatus(job.id, nextStatus)
       if (result?.error) { toast.error(result.error); return }
-      if (nextStatus === "delivered") {
-        toast.success("Delivery complete! Great work.")
-        router.push("/dashboard/driver/jobs/completed")
-      } else {
-        toast.success("Status updated.")
-        router.refresh()
-      }
+      toast.success("Status updated.")
+      router.refresh()
     })
+  }
+
+  function handleDeliveryConfirmed() {
+    setShowOtpModal(false)
+    toast.success("Delivery complete! Great work.")
+    router.push("/dashboard/driver/jobs/completed")
   }
 
   function customerInitials() {
@@ -348,13 +351,12 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
             )}
             {job.status === "in_transit" && (
               <button
-                onClick={() => advanceStatus("delivered")}
-                disabled={isPending}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#6ee7b7] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+                onClick={() => setShowOtpModal(true)}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#6ee7b7] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98]"
                 style={{ boxShadow: "0 0 20px rgba(110,231,183,0.25)" }}
               >
-                <span className="material-symbols-outlined text-base">check_circle</span>
-                {isPending ? "Completing…" : "Mark as Delivered"}
+                <span className="material-symbols-outlined text-base">password</span>
+                Mark as Delivered
               </button>
             )}
 
@@ -367,6 +369,13 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
 
       {showParcelAuth && (
         <ParcelAuthModal deliveryId={job.id} onClose={() => setShowParcelAuth(false)} />
+      )}
+      {showOtpModal && (
+        <DeliveryOtpModal
+          deliveryId={job.id}
+          onClose={() => setShowOtpModal(false)}
+          onSuccess={handleDeliveryConfirmed}
+        />
       )}
     </div>
   )
