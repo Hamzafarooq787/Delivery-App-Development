@@ -177,6 +177,16 @@ export async function getAvailableDeliveries() {
   // Use admin client: RLS has no policy allowing drivers to read unassigned delivery_requests
   const admin = createAdminClient()
 
+  // Driver Identity Verification — only approved drivers can see jobs at
+  // all. This is defense-in-depth alongside the client-side onboarding
+  // gate in DriverLayoutClient, which only hides the UI.
+  if (user) {
+    const { data: profile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
+    if (profile?.status !== "approved") {
+      return { error: "Your account must be verified before you can view available jobs.", data: [] }
+    }
+  }
+
   // Job matching: only show deliveries this driver's vehicles can carry.
   // Uses the UNION of capabilities across ALL of the driver's registered
   // vehicles — a driver with both a car and a van is matched to jobs either
@@ -216,6 +226,12 @@ export async function acceptDelivery(deliveryId: string) {
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
+
+  // Driver Identity Verification — only approved drivers can accept jobs.
+  const { data: driverProfile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
+  if (driverProfile?.status !== "approved") {
+    return { error: "Your account must be verified before you can accept jobs." }
+  }
 
   // Verify the delivery is still available
   const { data: delivery, error: fetchError } = await admin
@@ -436,11 +452,16 @@ export async function getDeliveryOtp(deliveryId: string): Promise<{ data: string
  */
 export async function verifyDeliveryOtpAndComplete(
   deliveryId: string,
-  code: string
+  code: string,
+  photoUrl: string
 ): Promise<{ success?: boolean; error?: string; attemptsRemaining?: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
+
+  if (!photoUrl?.trim()) {
+    return { error: "A photo of the delivered package is required." }
+  }
 
   const admin = createAdminClient()
 
@@ -486,7 +507,7 @@ export async function verifyDeliveryOtpAndComplete(
   const nowIso = new Date().toISOString()
   const { data: updatedRows, error: updateError } = await admin
     .from("delivery_requests")
-    .update({ status: "delivered", delivered_at: nowIso })
+    .update({ status: "delivered", delivered_at: nowIso, delivered_image_url: photoUrl.trim() })
     .eq("id", deliveryId)
     .eq("driver_id", user.id)
     .eq("status", "in_transit")

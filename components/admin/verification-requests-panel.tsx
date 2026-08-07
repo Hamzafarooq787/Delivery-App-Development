@@ -8,6 +8,7 @@ import { VEHICLE_INFO } from "@/lib/vehicles"
 
 const DOC_TYPES = [
   { type: "identity",            label: "Identity",       icon: "badge",   color: "text-[#a3a6ff]", bg: "bg-[#a3a6ff]/10", border: "border-[#a3a6ff]/20" },
+  { type: "selfie",              label: "Selfie",         icon: "face",    color: "text-[#6ee7b7]", bg: "bg-[#6ee7b7]/10", border: "border-[#6ee7b7]/20" },
   { type: "insurance",           label: "Insurance",      icon: "shield",  color: "text-[#c180ff]", bg: "bg-[#c180ff]/10", border: "border-[#c180ff]/20" },
   { type: "vehicle_registration",label: "Vehicle Reg.",   icon: "commute", color: "text-[#a3a6ff]", bg: "bg-[#a3a6ff]/10", border: "border-[#a3a6ff]/20" },
 ]
@@ -270,7 +271,7 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
               </button>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {DOC_TYPES.map((cfg) => (
               <DocumentCard
                 key={cfg.type}

@@ -68,7 +68,7 @@ function TrackingPageInner() {
       // Always select parcel_image_url so we can show it when delivered
       let q = supabase
         .from('delivery_requests')
-        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,item_description,item_photo_urls')
+        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls')
         .eq('customer_id', user.id)
 
       if (requestedId) {
@@ -275,6 +275,22 @@ function TrackingPageInner() {
               <img
                 src={shipment.parcel_image_url}
                 alt="Parcel at pickup"
+                className="w-full object-cover"
+                style={{ maxHeight: 180 }}
+              />
+            </div>
+          )}
+
+          {/* ── Proof-of-delivery photo (shown once delivered) ── */}
+          {shipment?.delivered_image_url && (
+            <div className="mx-4 my-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0">
+              <div className="flex items-center gap-2 px-3 py-2.5 bg-[#1a1919] border-b border-[#494847]/15">
+                <span className="material-symbols-outlined text-[#6ee7b7] text-base" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Proof of Delivery</p>
+              </div>
+              <img
+                src={shipment.delivered_image_url}
+                alt="Delivered package"
                 className="w-full object-cover"
                 style={{ maxHeight: 180 }}
               />
