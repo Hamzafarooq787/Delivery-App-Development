@@ -4,6 +4,15 @@ import { createClient }      from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath }    from "next/cache"
 
+/** Every admin-only function below uses the service-role client — this must gate all of them. */
+async function requireAdmin(): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  return data?.role === "admin"
+}
+
 /**
  * Driver calls this to request a payout of all their pending earnings.
  *
@@ -23,23 +32,10 @@ export async function requestDriverPayout() {
 
   const admin = createAdminClient()
 
-  // ── 1. Get existing pending driver_earnings ──────────────────────────────
-  const { data: pendingEarnings, error: earnErr } = await supabase
-    .from("driver_earnings")
-    .select("id, amount, delivery_id")
-    .eq("driver_id", user.id)
-    .eq("status", "pending")
-
-  if (earnErr) return { error: earnErr.message }
-
-  // ── 2. Find completed deliveries with no driver_earnings row yet ──────────
-  //    (synthetic earnings — jobs done before the auto-earnings feature)
-  const allEarningsDeliveryIds: string[] = []
-  if (pendingEarnings && pendingEarnings.length > 0) {
-    pendingEarnings.forEach(e => { if (e.delivery_id) allEarningsDeliveryIds.push(e.delivery_id) })
-  }
-
-  // Also fetch ALL driver_earnings for this driver (paid + pending) to avoid re-creating already-processed rows
+  // ── 1. Find completed deliveries with no driver_earnings row yet ─────────
+  //    (synthetic earnings — jobs done before the auto-earnings feature).
+  //    Idempotent upsert (onConflict: delivery_id) — safe to run every time,
+  //    including concurrently.
   const { data: allDriverEarnings } = await supabase
     .from("driver_earnings")
     .select("delivery_id")
@@ -49,7 +45,6 @@ export async function requestDriverPayout() {
     (allDriverEarnings ?? []).map(e => e.delivery_id).filter(Boolean),
   )
 
-  // Completed deliveries not yet tracked in driver_earnings
   const { data: unclaimedDeliveries } = await supabase
     .from("delivery_requests")
     .select("id, price")
@@ -59,17 +54,6 @@ export async function requestDriverPayout() {
 
   const unclaimed = (unclaimedDeliveries ?? []).filter(d => !coveredDeliveryIds.has(d.id))
 
-  // ── 3. Calculate payout total ─────────────────────────────────────────────
-  const realPendingAmount   = (pendingEarnings ?? []).reduce((s, e) => s + (e.amount ?? 0), 0)
-  const syntheticAmount     = unclaimed.reduce(
-    (s, d) => s + Math.round((d.price ?? 0) * 0.75 * 100) / 100,
-    0,
-  )
-  const total = Math.round((realPendingAmount + syntheticAmount) * 100) / 100
-
-  if (total <= 0) return { error: "No pending earnings to withdraw" }
-
-  // ── 4. Create driver_earnings rows for unclaimed deliveries ───────────────
   if (unclaimed.length > 0) {
     await admin.from("driver_earnings").upsert(
       unclaimed.map(d => ({
@@ -83,25 +67,31 @@ export async function requestDriverPayout() {
     )
   }
 
-  // ── 5. Create payout record (admin client to bypass RLS on payouts) ───────
+  // ── 2. Atomically claim every pending earning in one statement ───────────
+  //    This UPDATE...RETURNING is the actual serialization point: if two
+  //    requests race, Postgres's row-level locking means only the first to
+  //    commit can match+claim each row — the second's WHERE clause finds
+  //    nothing left to claim. The payout amount is computed from what was
+  //    ACTUALLY claimed here, never from an earlier, now-stale read.
+  const { data: claimed, error: claimErr } = await admin
+    .from("driver_earnings")
+    .update({ status: "paid" })
+    .eq("driver_id", user.id)
+    .eq("status", "pending")
+    .select("id, amount")
+
+  if (claimErr) return { error: claimErr.message }
+
+  const total = Math.round((claimed ?? []).reduce((s, e) => s + (e.amount ?? 0), 0) * 100) / 100
+  if (total <= 0) return { error: "No pending earnings to withdraw" }
+
+  // ── 3. Create the payout record for exactly what was claimed ─────────────
   const { error: payoutErr } = await admin.from("payouts").insert({
     driver_id: user.id,
     amount:    total,
     status:    "pending",
   })
   if (payoutErr) return { error: payoutErr.message }
-
-  // ── 6. Mark all pending driver_earnings as paid ───────────────────────────
-  const { data: nowPending } = await admin
-    .from("driver_earnings")
-    .select("id")
-    .eq("driver_id", user.id)
-    .eq("status", "pending")
-
-  const idsToMark = (nowPending ?? []).map(e => e.id)
-  if (idsToMark.length > 0) {
-    await admin.from("driver_earnings").update({ status: "paid" }).in("id", idsToMark)
-  }
 
   revalidatePath("/dashboard/driver/payouts")
   revalidatePath("/dashboard/driver/earnings")
@@ -113,6 +103,7 @@ export async function requestDriverPayout() {
  * Admin marks a payout record as 'paid' (processed/disbursed).
  */
 export async function markPayoutPaid(payoutId: string) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
   const { error } = await admin
     .from("payouts")
@@ -127,6 +118,7 @@ export async function markPayoutPaid(payoutId: string) {
  * Admin processes all pending payout requests at once.
  */
 export async function markAllPayoutsPaid() {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
   const { error } = await admin
     .from("payouts")
@@ -141,6 +133,7 @@ export async function markAllPayoutsPaid() {
  * Admin approves a pending payout request (pending → approved).
  */
 export async function approveDriverPayout(payoutId: string) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
   const { error } = await admin
     .from("payouts")
@@ -158,6 +151,7 @@ export async function approveDriverPayout(payoutId: string) {
  * Admin rejects a pending or approved payout request.
  */
 export async function rejectDriverPayout(payoutId: string) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
   const { data: payout, error: fetchErr } = await admin
     .from("payouts")
@@ -185,6 +179,7 @@ export async function rejectDriverPayout(payoutId: string) {
  * Also accepts pending → paid for backwards-compat with the old single-step flow.
  */
 export async function completeDriverPayout(payoutId: string) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
   const { error } = await admin
     .from("payouts")
@@ -203,6 +198,7 @@ export async function completeDriverPayout(payoutId: string) {
  * Called lazily when an admin opens a payout detail view.
  */
 export async function getDriverPayoutDetails(driverId: string) {
+  if (!(await requireAdmin())) return { earnings: [], deliveries: [], payoutHistory: [], error: "Not authorized" }
   const admin = createAdminClient()
   const [earningsRes, deliveriesRes, payoutsHistoryRes] = await Promise.all([
     admin
@@ -238,6 +234,7 @@ export async function getDriverPayoutDetails(driverId: string) {
  * Also creates driver_earnings rows for any unclaimed completed deliveries.
  */
 export async function adminProcessDriverPayout(driverId: string) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
   // Existing pending driver_earnings

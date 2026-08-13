@@ -18,13 +18,17 @@ export const dynamic = "force-dynamic"
 export async function GET() {
   const report: Record<string, unknown> = {}
 
-  // ── 1. Auth check ──────────────────────────────────────────────────────────
+  // ── 1. Auth check — admin only, this discloses platform-wide payment data ───
   let userId: string | null = null
   try {
     const supabase = await createClient()
     const { data: { user }, error } = await supabase.auth.getUser()
     if (error || !user) {
       return NextResponse.json({ error: "Not authenticated — log in first, then visit this URL." }, { status: 401 })
+    }
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+    if (profile?.role !== "admin") {
+      return NextResponse.json({ error: "Admin only." }, { status: 403 })
     }
     userId = user.id
     report.userId = userId

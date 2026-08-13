@@ -1,10 +1,19 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
 
 const client = new Anthropic()
 
 export async function POST(req: NextRequest) {
   try {
+    // Require a session — this calls a paid API on every request, and was
+    // previously reachable by anyone on the internet with no auth or limit.
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Not authenticated." }, { status: 401 })
+    }
+
     const body = await req.json()
     const { messages } = body
 

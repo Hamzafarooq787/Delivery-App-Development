@@ -3,6 +3,12 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
+async function getCallerRole(userId: string): Promise<string | null> {
+  const admin = createAdminClient()
+  const { data } = await admin.from("users").select("role").eq("id", userId).maybeSingle()
+  return data?.role ?? null
+}
+
 export type ChatMessage = {
   id: string
   session_id: string
@@ -52,7 +58,19 @@ export async function getOrCreateChatSession(): Promise<{ sessionId: string | nu
 
 // ── Get messages for a session ───────────────────────────────────────────────
 export async function getChatMessages(sessionId: string): Promise<{ data: ChatMessage[]; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: [], error: "Not authenticated" }
+
   const admin = createAdminClient()
+
+  const role = await getCallerRole(user.id)
+  if (role !== "admin") {
+    // A driver may only read their own session.
+    const { data: session } = await admin.from("chat_sessions").select("driver_id").eq("id", sessionId).maybeSingle()
+    if (!session || session.driver_id !== user.id) return { data: [], error: "Not authorized" }
+  }
+
   const { data, error } = await admin
     .from("chat_messages")
     .select("id, session_id, sender_id, sender_role, content, created_at")
@@ -75,6 +93,19 @@ export async function sendChatMessage(
   if (!user) return { data: null, error: "Not authenticated" }
 
   const admin = createAdminClient()
+
+  // Never trust the caller's claimed role or session — verify both, so a
+  // driver can't post into another driver's session or impersonate admin.
+  const actualRole = await getCallerRole(user.id)
+  if (senderRole !== actualRole) return { data: null, error: "Role mismatch" }
+
+  if (senderRole === "driver") {
+    const { data: session } = await admin.from("chat_sessions").select("driver_id").eq("id", sessionId).maybeSingle()
+    if (!session || session.driver_id !== user.id) return { data: null, error: "Not authorized" }
+  } else if (senderRole !== "admin") {
+    return { data: null, error: "Invalid sender role" }
+  }
+
   const { data, error } = await admin
     .from("chat_messages")
     .insert({ session_id: sessionId, sender_id: user.id, sender_role: senderRole, content: content.trim() })
@@ -87,6 +118,10 @@ export async function sendChatMessage(
 
 // ── Admin: get all sessions with last message + driver name ─────────────────
 export async function getAdminChatSessions(): Promise<{ data: ChatSession[] }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || (await getCallerRole(user.id)) !== "admin") return { data: [] }
+
   const admin = createAdminClient()
 
   const { data: sessions } = await admin
@@ -136,13 +171,30 @@ export async function getAdminChatSessions(): Promise<{ data: ChatSession[] }> {
 
 // ── Mark session read (reset unread counter) ────────────────────────────────
 export async function markChatSessionRead(sessionId: string, role: "driver" | "admin"): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
   const admin = createAdminClient()
+  const actualRole = await getCallerRole(user.id)
+
+  if (role === "driver") {
+    const { data: session } = await admin.from("chat_sessions").select("driver_id").eq("id", sessionId).maybeSingle()
+    if (!session || session.driver_id !== user.id) return
+  } else if (actualRole !== "admin") {
+    return
+  }
+
   const field = role === "driver" ? "driver_unread" : "admin_unread"
   await admin.from("chat_sessions").update({ [field]: 0 }).eq("id", sessionId)
 }
 
 // ── Get total admin unread count ─────────────────────────────────────────────
 export async function getAdminTotalUnread(): Promise<number> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || (await getCallerRole(user.id)) !== "admin") return 0
+
   const admin = createAdminClient()
   const { data } = await admin.from("chat_sessions").select("admin_unread")
   return (data ?? []).reduce((s: number, r: any) => s + (r.admin_unread ?? 0), 0)

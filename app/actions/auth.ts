@@ -14,6 +14,12 @@ export async function switchActiveRole(newRole: "customer" | "driver") {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
+  // Server actions are callable directly with arbitrary arguments, bypassing
+  // the TypeScript param type — never trust it without a runtime check.
+  // Only customer/driver may ever be set here; admin is never reachable
+  // through this path.
+  if (newRole !== "customer" && newRole !== "driver") redirect("/login")
+
   const admin = createAdminClient()
   await admin.from("users").update({ role: newRole }).eq("id", user.id)
 
@@ -119,7 +125,10 @@ export async function signUp(formData: FormData) {
   const email = formData.get("email") as string
   const password = formData.get("password") as string
   const full_name = `${formData.get("first_name")} ${formData.get("last_name")}`.trim()
-  const role = (formData.get("role") as string) ?? "customer"
+  // Never trust the submitted role beyond this allowlist — 'admin' (or
+  // anything else) must never be reachable through public signup.
+  const requestedRole = formData.get("role") as string
+  const role = requestedRole === "driver" ? "driver" : "customer"
   const phone = (formData.get("phone") as string) || null
   const address = (formData.get("address") as string) || null
 

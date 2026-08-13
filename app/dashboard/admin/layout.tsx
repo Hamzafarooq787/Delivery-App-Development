@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 import { adminGetPendingVerificationCount } from "@/app/actions/delivery"
 import { adminGetPendingReviewCount } from "@/app/actions/ratings"
 import { AdminLayoutClient } from "./layout-client"
@@ -6,6 +7,12 @@ import { AdminLayoutClient } from "./layout-client"
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
+  if (!authUser) redirect("/login")
+
+  // Defense-in-depth alongside the middleware's role check — never render
+  // any admin page for a non-admin session.
+  const { data: roleRow } = await supabase.from("users").select("role").eq("id", authUser.id).maybeSingle()
+  if (roleRow?.role !== "admin") redirect("/login")
 
   let profile = { full_name: "", email: authUser?.email ?? "" }
   if (authUser) {

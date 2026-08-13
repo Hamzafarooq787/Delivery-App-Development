@@ -90,6 +90,12 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     if (error.message?.includes("insufficient_funds")) {
       return { error: "Your wallet balance doesn't cover this delivery. Please add funds to continue.", code: "insufficient_funds" }
     }
+    if (error.message?.includes("promo_code_limit_reached")) {
+      return { error: "This promo code has just reached its usage limit. Please try again without it.", code: "invalid_price" }
+    }
+    if (error.message?.includes("promo_code_already_used")) {
+      return { error: "You've already used this promo code. Please try again without it.", code: "invalid_price" }
+    }
     console.error("[Delivery] createDeliveryRequest RPC failed:", error)
     return { error: "Could not create the delivery. Please try again." }
   }
@@ -323,7 +329,13 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
     updatePayload.cancelled_by = "driver"
   }
 
-  let query = supabase
+  // Admin client — delivery_requests has no client-facing driver UPDATE
+  // policy (locked down for the same reason INSERT is): every legitimate
+  // mutation goes through a vetted server action with its own checks,
+  // never raw RLS. The ownership + transition checks below stand in for
+  // what the RLS policy used to (incompletely) enforce.
+  const admin = createAdminClient()
+  let query = admin
     .from("delivery_requests")
     .update(updatePayload)
     .eq("id", deliveryId)
@@ -398,7 +410,6 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
 
   // Auto-offline when a job is cancelled — if no other active jobs remain
   if (status === "cancelled") {
-    const admin = createAdminClient()
     const ACTIVE = ["accepted", "collected", "picked_up", "in_transit"]
     const { count } = await admin
       .from("delivery_requests")
@@ -670,6 +681,19 @@ export async function getDriverEarnings() {
 
 // ── Admin actions ─────────────────────────────────────────────────────────────
 
+/**
+ * Every admin* function below that uses the service-role client (bypasses
+ * RLS entirely) MUST call this first — it's the only thing standing between
+ * an arbitrary authenticated caller and full admin data/actions.
+ */
+async function requireAdmin(): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  return data?.role === "admin"
+}
+
 export async function adminGetAllDeliveries() {
   const supabase = await createClient()
 
@@ -743,6 +767,7 @@ export async function adminGetPayouts() {
 }
 
 export async function adminGetDrivers() {
+  if (!(await requireAdmin())) return { data: [], error: "Not authorized" }
   const admin = createAdminClient()
 
   // Fetch both sources in parallel: driver_profiles rows AND users with role='driver'
@@ -798,6 +823,7 @@ export async function adminGetDrivers() {
 }
 
 export async function adminCreateDriver(formData: FormData) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
   const email = (formData.get("email") as string).trim()
@@ -836,6 +862,7 @@ export async function adminCreateDriver(formData: FormData) {
 }
 
 export async function adminApproveDriver(driverId: string) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
   const { error } = await admin
@@ -850,6 +877,7 @@ export async function adminApproveDriver(driverId: string) {
 }
 
 export async function adminRejectDriver(driverId: string) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
   const { error } = await admin
@@ -864,6 +892,7 @@ export async function adminRejectDriver(driverId: string) {
 }
 
 export async function adminAssignDriver(deliveryId: string, driverId: string | null) {
+  if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
   // Payment before dispatch — an admin can unassign freely, but assigning a
@@ -897,6 +926,7 @@ export async function adminAssignDriver(deliveryId: string, driverId: string | n
 }
 
 export async function adminGetCustomers() {
+  if (!(await requireAdmin())) return { data: [], error: "Not authorized" }
   const admin = createAdminClient()
 
   // Get all users with role = customer from public.users
@@ -948,6 +978,7 @@ export async function adminGetCustomers() {
 }
 
 export async function adminGetDriverById(driverId: string) {
+  if (!(await requireAdmin())) return { error: "Not authorized", data: null }
   const admin = createAdminClient()
 
   const [userRes, profileRes, earningsRes, jobsRes, authUserRes] = await Promise.all([
@@ -1043,6 +1074,7 @@ export type PendingVerificationDriver = {
 }
 
 export async function adminGetPendingVerifications(): Promise<{ data: PendingVerificationDriver[]; error?: string }> {
+  if (!(await requireAdmin())) return { data: [], error: "Not authorized" }
   const admin = createAdminClient()
 
   const { data: profiles, error: profilesErr } = await admin
@@ -1100,6 +1132,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
 }
 
 export async function adminGetPendingVerificationCount(): Promise<number> {
+  if (!(await requireAdmin())) return 0
   const admin = createAdminClient()
   const { count } = await admin
     .from("driver_profiles")
@@ -1127,7 +1160,9 @@ export async function markParcelCollected(deliveryId: string, photoUrl: string) 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const { data: updated, error } = await supabase
+  // Admin client — see updateDeliveryStatus() for why.
+  const admin = createAdminClient()
+  const { data: updated, error } = await admin
     .from('delivery_requests')
     .update({ status: 'collected', parcel_image_url: photoUrl })
     .eq('id', deliveryId)
