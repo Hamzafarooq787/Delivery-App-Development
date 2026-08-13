@@ -1120,52 +1120,20 @@ export async function adminGetPayoutsWithDrivers() {
   return { data: data ?? [] }
 }
 
-export async function uploadParcelPhotoAndCollect(deliveryId: string, formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const file = formData.get('photo') as File
-  if (!file || file.size === 0) return { error: 'No photo provided' }
-
-  const path = `${user.id}/parcel-${deliveryId}-${Date.now()}.jpg`
-  const { error: uploadError } = await supabase.storage
-    .from('driver-documents')
-    .upload(path, file, { contentType: 'image/jpeg', upsert: true })
-
-  if (uploadError) return { error: uploadError.message }
-
-  const { data: { publicUrl } } = supabase.storage.from('driver-documents').getPublicUrl(path)
-
-  const { error } = await supabase
-    .from('delivery_requests')
-    .update({ status: 'collected', parcel_image_url: publicUrl })
-    .eq('id', deliveryId)
-    .eq('driver_id', user.id)
-
-  if (error) return { error: error.message }
-
-  await supabase.from('delivery_status_logs').insert({
-    delivery_id: deliveryId,
-    status: 'collected',
-    updated_by: user.id,
-  })
-
-  revalidatePath(`/dashboard/driver/jobs/${deliveryId}`)
-  return { success: true, photoUrl: publicUrl }
-}
-
-// Lightweight version: photo already uploaded client-side, just record URL + advance status
+// Photo is uploaded client-side (ParcelAuthModal); this just records the URL
+// and advances status to 'collected'.
 export async function markParcelCollected(deliveryId: string, photoUrl: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('delivery_requests')
     .update({ status: 'collected', parcel_image_url: photoUrl })
     .eq('id', deliveryId)
     .eq('driver_id', user.id)
+    .select('customer_id, tracking_number')
+    .single()
 
   if (error) return { error: error.message }
 
@@ -1174,6 +1142,19 @@ export async function markParcelCollected(deliveryId: string, photoUrl: string) 
     status: 'collected',
     updated_by: user.id,
   })
+
+  // Notify the customer — fire-and-forget, matches updateDeliveryStatus()'s
+  // notification for every other status transition.
+  if (updated?.customer_id) {
+    notifyUser({
+      userId: updated.customer_id,
+      title: "📦 Package collected!",
+      body: `Your package has been collected and is on its way. (${updated.tracking_number ?? deliveryId})`,
+      url: "/dashboard/customer",
+      tag: `${NotificationTag.DELIVERY_COLLECTED}-${deliveryId}`,
+      data: { deliveryId, status: "collected" },
+    }).catch((err) => console.error("[Notify] Failed to send collected push:", err))
+  }
 
   revalidatePath(`/dashboard/driver/jobs/${deliveryId}`)
   return { success: true }
