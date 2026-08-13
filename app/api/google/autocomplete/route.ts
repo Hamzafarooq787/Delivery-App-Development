@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 const KEY = process.env.GOOGLE_MAPS_KEY
 
 export async function POST(req: NextRequest) {
   if (!KEY) return NextResponse.json({ error: 'GOOGLE_MAPS_KEY not set' }, { status: 500 })
+
+  // Require a session — was previously reachable by anyone with no auth or
+  // rate limit, burning the Google Maps budget.
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
   const { input, locationBias, includedRegionCodes } = await req.json()
 

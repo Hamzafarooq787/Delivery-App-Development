@@ -66,109 +66,27 @@ export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Not authenticated" }
 
-  const admin = createAdminClient()
+  // Atomic RPC — locks the delivery row before doing anything, so concurrent
+  // cancel calls on the same order can't both read "still cancellable" and
+  // both credit a refund. See scripts/030_security_hardening.sql.
+  const { data, error } = await supabase.rpc("cancel_delivery_order", { p_delivery_id: deliveryId })
 
-  // Fetch the delivery
-  const { data: delivery, error: fetchErr } = await admin
-    .from("delivery_requests")
-    .select("id, status, customer_id, price, pickup_lat, pickup_lng, delivery_lat, delivery_lng, tracking_number")
-    .eq("id", deliveryId)
-    .single()
-
-  if (fetchErr || !delivery) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Order not found" }
-  if ((delivery as any).customer_id !== user.id) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Not your order" }
-
-  const status = (delivery as any).status as string
-  if (status === "delivered" || status === "cancelled") {
-    return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "This order cannot be cancelled" }
+  if (error) {
+    const msg = error.message ?? ""
+    let friendly = "Could not cancel this order. Please try again."
+    if (msg.includes("not_found")) friendly = "Order not found"
+    else if (msg.includes("not_your_order")) friendly = "Not your order"
+    else if (msg.includes("cannot_cancel")) friendly = "This order cannot be cancelled"
+    return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: friendly }
   }
 
-  const freeStatuses = ["requested", "accepted"]
-  const freeCancel = freeStatuses.includes(status)
-
-  let cancellationFee = 0
-  let distanceMiles = 0
-  let refundAmount = 0
-
-  if (freeCancel) {
-    // The delivery price was deducted from the wallet at order creation —
-    // "free cancellation" must mean the customer gets that back, not that
-    // the prepayment silently vanishes. Only refund if this order was
-    // actually wallet-funded (has a matching deduction transaction);
-    // legacy orders created before wallet-funding was required have none.
-    const { data: deductionTx } = await admin
-      .from("wallet_transactions")
-      .select("amount")
-      .eq("delivery_id", deliveryId)
-      .eq("type", "deduction")
-      .limit(1)
-      .maybeSingle()
-
-    if (deductionTx?.amount) {
-      refundAmount = Math.abs(Number(deductionTx.amount))
-      await admin.rpc("increment_wallet_balance", { p_user_id: user.id, p_amount: refundAmount })
-      await admin.from("wallet_transactions").insert({
-        user_id: user.id,
-        type: "cashback",
-        amount: refundAmount,
-        description: `Refund for cancelled order ${(delivery as any).tracking_number ?? deliveryId.slice(0, 8).toUpperCase()}`,
-        delivery_id: deliveryId,
-      })
-    }
+  return {
+    success: true,
+    freeCancel: data.freeCancel,
+    cancellationFee: Number(data.cancellationFee),
+    distanceMiles: Number(data.distanceMiles),
+    refundAmount: Number(data.refundAmount),
   }
-
-  if (!freeCancel) {
-    // Calculate distance
-    const d = delivery as any
-    if (d.pickup_lat && d.pickup_lng && d.delivery_lat && d.delivery_lng) {
-      distanceMiles = haversineMiles(
-        Number(d.pickup_lat), Number(d.pickup_lng),
-        Number(d.delivery_lat), Number(d.delivery_lng)
-      )
-      cancellationFee = Math.ceil(distanceMiles) // £1 per mile, rounded up
-    } else {
-      cancellationFee = 5 // fallback minimum fee if no coordinates
-      distanceMiles = 0
-    }
-
-    // Deduct from wallet
-    const { data: wallet } = await admin.from("wallet_balances").select("balance").eq("user_id", user.id).single()
-    const currentBalance = wallet ? Number(wallet.balance) : 0
-    const newBalance = currentBalance - cancellationFee
-
-    await admin.from("wallet_balances").upsert(
-      { user_id: user.id, balance: newBalance, updated_at: new Date().toISOString() },
-      { onConflict: "user_id" }
-    )
-
-    // Log fee transaction
-    await admin.from("wallet_transactions").insert({
-      user_id: user.id,
-      type: "cancellation_fee",
-      amount: -cancellationFee,
-      description: `Cancellation fee for order ${(delivery as any).tracking_number ?? deliveryId.slice(0, 8).toUpperCase()} (${distanceMiles.toFixed(1)} miles × £1)`,
-      delivery_id: deliveryId,
-    })
-  }
-
-  // Cancel the order
-  await admin
-    .from("delivery_requests")
-    .update({ status: "cancelled", cancelled_by: "customer" })
-    .eq("id", deliveryId)
-
-  // Notify customer
-  await admin.from("notifications").insert({
-    user_id: user.id,
-    title: freeCancel ? "Order Cancelled" : "Order Cancelled — Fee Applied",
-    body: freeCancel
-      ? refundAmount > 0
-        ? `Your order has been cancelled and £${refundAmount.toFixed(2)} was refunded to your wallet.`
-        : "Your order has been cancelled at no charge."
-      : `Your order was cancelled. A £${cancellationFee} cancellation fee was deducted from your wallet.`,
-  })
-
-  return { success: true, freeCancel, cancellationFee, distanceMiles, refundAmount }
 }
 
 // ── Preview cancellation fee (before confirming) ──────────────────────────

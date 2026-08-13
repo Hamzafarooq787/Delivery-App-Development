@@ -13,6 +13,14 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { VEHICLE_TYPES, isVehicleType, isMotorVehicle, type VehicleType } from "@/lib/vehicles"
 
+async function requireAdmin(): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  return data?.role === "admin"
+}
+
 export type DriverVehicle = {
   id: string
   vehicle_type: VehicleType
@@ -57,6 +65,7 @@ export async function getMyVehicles(): Promise<{ data: DriverVehicle[]; error?: 
 }
 
 export async function adminGetDriverVehicles(driverId: string): Promise<DriverVehicle[]> {
+  if (!(await requireAdmin())) return []
   const admin = createAdminClient()
   const { data } = await admin
     .from("driver_vehicles")
