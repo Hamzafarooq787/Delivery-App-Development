@@ -1,9 +1,12 @@
 "use client"
 
+import { useState, useTransition, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LogoutButton } from "@/components/auth/logout-button"
+import { toggleDriverOnline } from "@/app/actions/driver"
+import { toast } from "sonner"
 
 // Earnings covers earnings + payouts (sub-tabs on the page)
 const navItems = [
@@ -29,6 +32,27 @@ interface DriverSidebarProps {
 
 export function DriverSidebar({ onClose, user, isOnline = false, isLocked = false }: DriverSidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [online, setOnline] = useState(isOnline)
+  const [isPending, startTransition] = useTransition()
+
+  // Keep in sync if the server-rendered value changes (e.g. toggled from Settings)
+  useEffect(() => setOnline(isOnline), [isOnline])
+
+  function handleToggle() {
+    if (isPending) return
+    const next = !online
+    setOnline(next)
+    startTransition(async () => {
+      const result = await toggleDriverOnline(next)
+      if (result.error) {
+        setOnline(!next)
+        toast.error(result.error)
+      } else {
+        router.refresh()
+      }
+    })
+  }
 
   return (
     <aside className="flex h-full w-64 flex-col bg-[#0e0e0e] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
@@ -89,15 +113,19 @@ export function DriverSidebar({ onClose, user, isOnline = false, isLocked = fals
 
       <div className="px-6 pt-6 pb-6 mt-auto">
         {!isLocked && (
-          <div className={cn(
-            "w-full py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 border text-xs font-bold uppercase tracking-widest",
-            isOnline
-              ? "bg-green-500/10 border-green-500/30 text-green-400"
-              : "bg-[#262626] border-[#494847]/20 text-[#adaaaa]"
-          )}>
-            <span className={cn("w-2 h-2 rounded-full", isOnline ? "bg-green-400 animate-pulse" : "bg-[#494847]")} />
-            {isOnline ? "On Duty" : "Off Duty"}
-          </div>
+          <button
+            onClick={handleToggle}
+            disabled={isPending}
+            className={cn(
+              "w-full py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 border text-xs font-bold uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-60",
+              online
+                ? "bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20"
+                : "bg-[#262626] border-[#494847]/20 text-[#adaaaa] hover:bg-[#2e2e2e]"
+            )}
+          >
+            <span className={cn("w-2 h-2 rounded-full", online ? "bg-green-400 animate-pulse" : "bg-[#494847]")} />
+            {isPending ? "Updating…" : online ? "On Duty" : "Off Duty"}
+          </button>
         )}
 
         <LogoutButton className="mt-4 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#adaaaa] hover:text-white hover:bg-[#201f1f] rounded-lg transition-colors disabled:opacity-60">
