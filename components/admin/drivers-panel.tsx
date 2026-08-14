@@ -83,6 +83,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
   const [documents, setDocuments] = useState<DriverDocument[]>([])
   const [loadingDocs, setLoadingDocs] = useState(false)
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   // Sort: approved first, then by name
   const sorted = [...drivers].sort((a, b) => {
@@ -107,8 +108,10 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
 
   function handleApprove() {
     if (!selected || isPending) return
+    setActionError(null)
     startTransition(async () => {
-      await adminApproveDriver(selected.id)
+      const result = await adminApproveDriver(selected.id)
+      if (result.error) { setActionError(result.error); return }
       setSelectedId(null)
       router.refresh()
     })
@@ -116,8 +119,10 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
 
   function handleReject() {
     if (!selected || isPending) return
+    setActionError(null)
     startTransition(async () => {
-      await adminRejectDriver(selected.id)
+      const result = await adminRejectDriver(selected.id)
+      if (result.error) { setActionError(result.error); return }
       setSelectedId(null)
       router.refresh()
     })
@@ -289,6 +294,11 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                 </div>
 
                 {/* Actions */}
+                {actionError && (
+                  <p className="text-xs font-bold text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 rounded-lg px-3 py-2 -mt-1">
+                    {actionError}
+                  </p>
+                )}
                 <div className="flex gap-2 pt-3 border-t border-[#494847]/10">
                   <button
                     onClick={handleReject}
