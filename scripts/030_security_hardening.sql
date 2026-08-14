@@ -45,9 +45,32 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 1. users.role — lock down to a specific, safe column list
 -- ═══════════════════════════════════════════════════════════════════════════
-revoke update on public.users from authenticated;
-grant update (full_name, phone, marketing_email_opt_in, marketing_push_opt_in, marketing_consent_updated_at)
-  on public.users to authenticated;
+-- Built dynamically from whichever of these columns actually exist on your
+-- live users table right now — safe to run regardless of exactly which
+-- earlier numbered scripts you have or haven't run yet (e.g. the
+-- marketing_* columns only exist if 025 has been run). Never grants back
+-- role, id, or created_at, no matter what.
+do $$
+declare
+  candidate_cols text[] := array['full_name', 'phone', 'marketing_email_opt_in', 'marketing_push_opt_in', 'marketing_consent_updated_at'];
+  existing_cols text[] := '{}';
+  col text;
+begin
+  foreach col in array candidate_cols loop
+    if exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'users' and column_name = col
+    ) then
+      existing_cols := array_append(existing_cols, quote_ident(col));
+    end if;
+  end loop;
+
+  execute 'revoke update on public.users from authenticated';
+
+  if array_length(existing_cols, 1) > 0 then
+    execute format('grant update (%s) on public.users to authenticated', array_to_string(existing_cols, ', '));
+  end if;
+end $$;
 -- role, id, created_at, and every other column can now only ever be changed
 -- via the service-role client (which every legitimate role-changing code
 -- path — signUp, switchActiveRole, adminApproveDriver, etc. — already uses).
