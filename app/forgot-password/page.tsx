@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
             <div className="h-8 w-8 rounded-md bg-foreground flex items-center justify-center">
               <Package className="h-4 w-4 text-background" />
             </div>
-            <span className="text-sm font-semibold text-foreground">SwiftDeliver</span>
+            <span className="text-sm font-semibold text-foreground">Go Drop</span>
           </Link>
           <h1 className="text-2xl font-semibold text-foreground">Reset your password</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">

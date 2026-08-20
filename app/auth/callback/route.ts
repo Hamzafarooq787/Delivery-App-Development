@@ -22,6 +22,10 @@ export async function GET(request: Request) {
   const code   = requestUrl.searchParams.get("code")
   // Role passed by the signup page via redirectTo URL — used only for new users
   const signupRole = requestUrl.searchParams.get("role") as "customer" | "driver" | null
+  // Set when this code came from a password-recovery email (forgotPassword())
+  // that got rescued through here by proxy.ts's stranded-code handling — see
+  // below. Distinct from a normal sign-in/OAuth code.
+  const type = requestUrl.searchParams.get("type")
 
   // 1. Must have a code
   if (!code) {
@@ -38,6 +42,14 @@ export async function GET(request: Request) {
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(exchangeError.message)}`
     )
+  }
+
+  // 2b. Password-recovery codes must land on the "set new password" form, not
+  // fall through to the normal role-based dashboard redirect below — otherwise
+  // the user is silently logged in and never gets a chance to set a new
+  // password.
+  if (type === "recovery") {
+    return NextResponse.redirect(`${origin}/reset-password`)
   }
 
   // 3. Get the authenticated user
