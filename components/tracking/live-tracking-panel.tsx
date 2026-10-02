@@ -20,6 +20,10 @@ type Props = {
   height?: number | string
   followDriver?: boolean
   isDriverView?: boolean
+  /** Only show the driver's location while it is being broadcast for `deliveryId` (a driver can have several active jobs). */
+  matchDeliveryId?: boolean
+  /** Ask the viewer for their own location and show it on the map. Defaults to true. */
+  showViewerLocation?: boolean
 }
 
 export function LiveTrackingPanel({
@@ -32,6 +36,8 @@ export function LiveTrackingPanel({
   height = 400,
   followDriver = false,
   isDriverView = false,
+  matchDeliveryId = false,
+  showViewerLocation = true,
 }: Props) {
   const supabase = useMemo(() => createClient(), [])
   const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null)
@@ -46,11 +52,12 @@ export function LiveTrackingPanel({
     if (!driverId) return
     supabase
       .from("driver_locations")
-      .select("lat, lng, updated_at")
+      .select("lat, lng, updated_at, delivery_id")
       .eq("driver_id", driverId)
       .maybeSingle()
       .then(({ data }) => {
         if (!data) return
+        if (matchDeliveryId && deliveryId && data.delivery_id !== deliveryId) return
         setDriverPos({ lat: data.lat, lng: data.lng })
         setLastUpdate(Date.now())
       })
@@ -65,6 +72,11 @@ export function LiveTrackingPanel({
       }, (payload) => {
         const row = payload.new as any
         if (typeof row?.lat !== "number" || typeof row?.lng !== "number") return
+        if (matchDeliveryId && deliveryId && row.delivery_id !== deliveryId) {
+          // Driver is now broadcasting for a different delivery — don't show it against this route
+          setDriverPos(null)
+          return
+        }
         setDriverPos({ lat: row.lat, lng: row.lng })
         setLastUpdate(Date.now())
         setStale(false)
@@ -77,6 +89,11 @@ export function LiveTrackingPanel({
       }, (payload) => {
         const row = payload.new as any
         if (typeof row?.lat !== "number" || typeof row?.lng !== "number") return
+        if (matchDeliveryId && deliveryId && row.delivery_id !== deliveryId) {
+          // Driver is now broadcasting for a different delivery — don't show it against this route
+          setDriverPos(null)
+          return
+        }
         setDriverPos({ lat: row.lat, lng: row.lng })
         setLastUpdate(Date.now())
         setStale(false)
@@ -93,7 +110,7 @@ export function LiveTrackingPanel({
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [supabase, driverId])
+  }, [supabase, driverId, matchDeliveryId, deliveryId])
 
   // Subscribe to customer location
   useEffect(() => {
@@ -186,6 +203,7 @@ export function LiveTrackingPanel({
         routeGeometry2={isDriverView ? route2 : null}
         height="100%"
         followDriverId={followDriver && driverId ? driverId : null}
+        showUserLocation={showViewerLocation}
       />
     </div>
   )
