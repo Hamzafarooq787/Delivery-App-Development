@@ -236,6 +236,8 @@ export default async function AdminOrderDetailPage({
                   driverLabel={driver?.full_name ?? "Driver"}
                   height={380}
                   followDriver={false}
+                  matchDeliveryId
+                  showViewerLocation={false}
                 />
               </CardContent>
             </Card>

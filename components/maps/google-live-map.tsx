@@ -58,6 +58,8 @@ type Props = {
   height?: number | string
   followDriverId?: string | null
   customerLocation?: LngLat | null
+  /** Ask the viewer for their own location and show it on the map. Defaults to true. */
+  showUserLocation?: boolean
 }
 
 function initials(name: string) {
@@ -131,6 +133,7 @@ export function GoogleLiveMap({
   height = 400,
   followDriverId,
   customerLocation,
+  showUserLocation = true,
 }: Props) {
   const { isLoaded } = useJsApiLoader({ id: "google-map-script", googleMapsApiKey: GOOGLE_KEY })
   const mapRef = useRef<google.maps.Map | null>(null)
@@ -138,13 +141,13 @@ export function GoogleLiveMap({
   const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
-    if ("geolocation" in navigator) {
+    if (showUserLocation && "geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLocation({ lng: pos.coords.longitude, lat: pos.coords.latitude }),
         () => {}
       )
     }
-  }, [])
+  }, [showUserLocation])
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map
