@@ -123,7 +123,7 @@ export default async function AdminDashboardPage() {
     ])
   ] as string[]
 
-  let userNameMap: Record<string, string> = {}
+  const userNameMap: Record<string, string> = {}
   if (userIdsNeeded.length > 0) {
     const { data: userRows } = await admin
       .from("users")

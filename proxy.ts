@@ -90,6 +90,16 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse
   }
 
+  // Driver login is its own page (app/driver/login) — it must not fall into
+  // the legacy /driver → /dashboard/driver redirect below, which would send
+  // it to a non-existent /dashboard/driver/login.
+  if (pathname === "/driver/login") {
+    if (user) {
+      return redirectWithCookies(new URL("/dashboard", request.url))
+    }
+    return supabaseResponse
+  }
+
   // REDIRECT OLD ROUTES: /admin → /dashboard/admin, /driver → /dashboard/driver
   if (pathname.startsWith("/admin") && !pathname.startsWith("/dashboard")) {
     return redirectWithCookies(new URL(pathname.replace("/admin", "/dashboard/admin"), request.url))

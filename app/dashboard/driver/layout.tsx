@@ -6,7 +6,7 @@ export default async function DriverLayout({ children }: { children: React.React
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
 
-  let profile = { full_name: "", email: authUser?.email ?? "" }
+  const profile = { full_name: "", email: authUser?.email ?? "" }
   let isOnline = false
   let driverStatus = "pending"
   let hasDocuments = false
