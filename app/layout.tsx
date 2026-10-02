@@ -4,7 +4,14 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/shared/theme-provider'
 import { SWRegister } from '@/components/pwa/sw-register'
+import { MATERIAL_ICON_NAMES } from '@/lib/material-icon-names'
 import './globals.css'
+
+// Subset of Material Symbols: only the icons the app uses (see lib/material-icon-names.ts),
+// ~70 KB instead of the ~4 MB full font. Icon names MUST be alphabetical.
+const MATERIAL_SYMBOLS_URL =
+  'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@400..700,0..1' +
+  `&icon_names=${MATERIAL_ICON_NAMES.join(',')}&display=block`
 
 const manrope = Manrope({
   subsets: ['latin'],
@@ -60,14 +67,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* display=block: never render an icon's ligature name (e.g. "local_shipping") as text while the font loads */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
-          rel="stylesheet"
-        />
-        {/* Mark icons ready once the font has loaded (3s fallback so icons can't stay hidden if it fails) */}
+        <link href={MATERIAL_SYMBOLS_URL} rel="stylesheet" />
+        {/* Mark icons ready once the font has loaded (5s fallback so icons can't stay hidden if it fails) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var d=document.documentElement;function r(){d.setAttribute('data-icons','ready')}try{Promise.race([document.fonts.load('24px "Material Symbols Outlined"'),new Promise(function(x){setTimeout(x,3000)})]).then(r,r)}catch(e){r()}})();`,
+            __html: `(function(){var d=document.documentElement;function r(){d.setAttribute('data-icons','ready')}try{Promise.race([document.fonts.load('24px "Material Symbols Outlined"'),new Promise(function(x){setTimeout(x,5000)})]).then(r,r)}catch(e){r()}})();`,
           }}
         />
         {/* PWA — iOS specific */}
