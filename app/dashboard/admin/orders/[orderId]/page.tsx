@@ -10,8 +10,12 @@ import { notFound } from "next/navigation"
 import { ResetDeliveryOtpButton } from "@/components/admin/reset-delivery-otp-button"
 import { getDeliveryRatings } from "@/app/actions/ratings"
 import { Star } from "lucide-react"
+import { LiveTrackingPanel } from "@/components/tracking/live-tracking-panel"
 
 const OTP_RESETTABLE_STATUSES = ["accepted", "collected", "in_transit"]
+
+// Statuses where the driver is actively on the job and broadcasting a live location
+const LIVE_TRACKING_STATUSES = ["accepted", "collected", "in_transit", "picked_up"]
 
 const STATUS_ORDER = ["requested", "accepted", "collected", "in_transit", "delivered"]
 
@@ -204,6 +208,38 @@ export default async function AdminOrderDetailPage({
               </div>
             </CardContent>
           </Card>
+
+          {(order.driver_id || (order.pickup_lat != null && order.delivery_lat != null)) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  Live Tracking
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 overflow-hidden rounded-b-xl">
+                {/* Finished/cancelled orders show only the static route, no live driver marker */}
+                <LiveTrackingPanel
+                  driverId={LIVE_TRACKING_STATUSES.includes(order.status) ? (order.driver_id ?? null) : null}
+                  pickup={
+                    order.pickup_lat != null && order.pickup_lng != null
+                      ? { lat: Number(order.pickup_lat), lng: Number(order.pickup_lng) }
+                      : null
+                  }
+                  destination={
+                    order.delivery_lat != null && order.delivery_lng != null
+                      ? { lat: Number(order.delivery_lat), lng: Number(order.delivery_lng) }
+                      : null
+                  }
+                  customerId={null}
+                  deliveryId={order.id}
+                  driverLabel={driver?.full_name ?? "Driver"}
+                  height={380}
+                  followDriver={false}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
