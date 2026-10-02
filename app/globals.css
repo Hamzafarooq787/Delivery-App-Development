@@ -76,6 +76,16 @@
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
+/* Until the icon font has loaded, hide the ligature text and reserve the icon's
+   1em box so nothing shifts when the real glyph appears. */
+html:not([data-icons="ready"]) .material-symbols-outlined {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  visibility: hidden;
+}
+
 .glass-card {
   background: rgba(38, 38, 38, 0.6);
   backdrop-filter: blur(40px);
