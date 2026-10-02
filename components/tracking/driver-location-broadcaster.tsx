@@ -135,8 +135,9 @@ export function DriverLocationBroadcaster({
   async function acquireWakeLock() {
     if (!("wakeLock" in navigator)) return
     try {
-      wakeLockRef.current = await (navigator as any).wakeLock.request("screen")
-      wakeLockRef.current.addEventListener("release", () => { wakeLockRef.current = null })
+      const sentinel: WakeLockSentinel = await (navigator as any).wakeLock.request("screen")
+      wakeLockRef.current = sentinel
+      sentinel.addEventListener("release", () => { wakeLockRef.current = null })
     } catch { setWakeLockDenied(true) }
   }
   function releaseWakeLock() {

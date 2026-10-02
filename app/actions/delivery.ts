@@ -303,8 +303,7 @@ export async function acceptDelivery(deliveryId: string) {
           data: { deliveryId },
         }).catch((err) => console.error("[Notify] Failed to send delivery-accepted push:", err))
       }
-    })
-    .catch(() => {/* silently ignore */})
+    }, () => {/* silently ignore */})
 
   revalidatePath("/dashboard/driver/jobs/available")
   revalidatePath("/dashboard/driver/active-jobs")
@@ -404,8 +403,7 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
             data: { deliveryId, status },
           }).catch((err) => console.error(`[Notify] Failed to send ${status} push:`, err))
         }
-      })
-      .catch(() => {/* silently ignore */})
+      }, () => {/* silently ignore */})
   }
 
   // Auto-offline when a job is cancelled — if no other active jobs remain

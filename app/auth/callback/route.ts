@@ -96,7 +96,6 @@ export async function GET(request: Request) {
       )
     }
 
-    if (role === "admin")  return NextResponse.redirect(`${origin}/dashboard/admin`)
     if (role === "driver") return NextResponse.redirect(`${origin}/dashboard/driver`)
     return NextResponse.redirect(`${origin}/dashboard/customer`)
   }
