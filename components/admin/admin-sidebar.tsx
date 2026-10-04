@@ -8,6 +8,7 @@ import { LogoutButton } from "@/components/auth/logout-button"
 const navItems = [
   { label: "Overview", href: "/dashboard/admin", icon: "dashboard" },
   { label: "Orders", href: "/dashboard/admin/orders", icon: "local_shipping" },
+  { label: "Live Tracking", href: "/dashboard/admin/tracking", icon: "my_location" },
   { label: "Drivers", href: "/dashboard/admin/drivers", icon: "badge" },
   { label: "Customers", href: "/dashboard/admin/customers", icon: "group" },
   { label: "Verification Requests", href: "/dashboard/admin/verification", icon: "verified_user", badgeKey: "pendingVerifications" },
