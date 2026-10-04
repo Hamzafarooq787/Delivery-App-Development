@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { AssignDriverDropdown, type DriverOption } from "@/components/admin/assign-driver-dropdown"
 
@@ -92,12 +93,12 @@ export function DeliveriesLedger({
         <table className="w-full min-w-[820px] text-left border-collapse">
           <thead>
             <tr className="bg-[#131313]">
-              {["Tracking #", "Pickup", "Delivery", "Item", "Status", "Assigned Driver", "Date"].map(
+              {["Tracking #", "Pickup", "Delivery", "Item", "Status", "Assigned Driver", "Date", "Track"].map(
                 (h, i) => (
                   <th
                     key={h}
                     className={`px-5 py-4 text-[11px] uppercase tracking-widest font-bold text-[#adaaaa] ${
-                      i === 6 ? "text-right" : ""
+                      i >= 6 ? "text-right" : ""
                     }`}
                   >
                     {h}
@@ -109,7 +110,7 @@ export function DeliveriesLedger({
           <tbody className="divide-y divide-[#494847]/5">
             {deliveries.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-16 text-center text-[#adaaaa] text-sm">
+                <td colSpan={8} className="py-16 text-center text-[#adaaaa] text-sm">
                   No deliveries found
                 </td>
               </tr>
@@ -117,7 +118,9 @@ export function DeliveriesLedger({
               deliveries.map((delivery) => (
                 <tr key={delivery.id} className="hover:bg-[#201f1f]/40 transition-colors group">
                   <td className="px-5 py-4 font-mono text-xs text-[#a3a6ff] whitespace-nowrap">
-                    {delivery.tracking_number ?? `KV-${delivery.id.slice(0, 8).toUpperCase()}`}
+                    <Link href={`/dashboard/admin/orders/${delivery.id}`} className="hover:underline">
+                      {delivery.tracking_number ?? `KV-${delivery.id.slice(0, 8).toUpperCase()}`}
+                    </Link>
                   </td>
                   <td className="px-5 py-4 text-sm text-white max-w-[160px]">
                     <span className="block truncate" title={delivery.pickup_address ?? ""}>
@@ -152,6 +155,17 @@ export function DeliveriesLedger({
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
+                  </td>
+                  <td className="px-5 py-4 text-right whitespace-nowrap">
+                    <Link
+                      href={`/dashboard/admin/orders/${delivery.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#a3a6ff] hover:underline"
+                    >
+                      <span className="material-symbols-outlined text-base">
+                        {FINAL_STATUSES.has(delivery.status) ? "visibility" : "my_location"}
+                      </span>
+                      {FINAL_STATUSES.has(delivery.status) ? "View" : "Track"}
+                    </Link>
                   </td>
                 </tr>
               ))
