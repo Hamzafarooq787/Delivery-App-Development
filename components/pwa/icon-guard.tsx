@@ -33,19 +33,21 @@ function loadFullFont(): Promise<boolean> {
   return fullFont
 }
 
-// A rendered icon glyph is exactly 1em wide; leaked ligature text is several letters wide.
+// A rendered icon glyph is exactly 1em wide; leaked ligature text is several letters wide. Measure the text itself
+// (a Range over the element's content), not the element box: block-level icons stretch to their container.
 function leaksText(el: HTMLElement): boolean {
   const fontSize = parseFloat(getComputedStyle(el).fontSize) || 24
-  const width = Math.max(el.getBoundingClientRect().width, el.scrollWidth)
-  return width > fontSize * 1.25
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  return range.getBoundingClientRect().width > fontSize * 1.25
 }
 
-function scan() {
+function check(els: Iterable<HTMLElement>) {
   const broken: HTMLElement[] = []
-  document.querySelectorAll<HTMLElement>(SELECTOR).forEach((el) => {
+  for (const el of els) {
     const text = el.textContent ?? ""
-    if (el.dataset.iconChecked === text) return
-    if (!el.offsetParent && getComputedStyle(el).position !== "fixed") return // not laid out yet (hidden parent): re-checked when it appears
+    if (el.dataset.iconChecked === text) continue
+    if (!el.offsetParent && getComputedStyle(el).position !== "fixed") continue // not laid out yet (hidden parent): re-checked when it appears
     el.dataset.iconChecked = text
     if (leaksText(el)) {
       el.setAttribute("data-icon-broken", "")
@@ -53,7 +55,7 @@ function scan() {
     } else {
       el.removeAttribute("data-icon-broken")
     }
-  })
+  }
   if (broken.length === 0) return
   loadFullFont().then((ok) => {
     if (!ok) return // stay hidden: better a gap than raw text
@@ -64,17 +66,46 @@ function scan() {
   })
 }
 
+function scan() {
+  check(document.querySelectorAll<HTMLElement>(SELECTOR))
+}
+
+// Icons touched by a batch of mutations. Checked synchronously in the observer callback, which runs before the
+// browser paints, so a leaked name is hidden before it is ever visible.
+function iconsIn(records: MutationRecord[]): Set<HTMLElement> {
+  const found = new Set<HTMLElement>()
+  const addFrom = (node: Node | null) => {
+    if (!node) return
+    const el = node instanceof HTMLElement ? node : node.parentElement
+    if (!el) return
+    const self = el.closest<HTMLElement>(SELECTOR)
+    if (self) found.add(self)
+    if (node instanceof HTMLElement) node.querySelectorAll<HTMLElement>(SELECTOR).forEach((e) => found.add(e))
+  }
+  for (const r of records) {
+    if (r.type === "childList") {
+      addFrom(r.target)
+      r.addedNodes.forEach(addFrom)
+    } else {
+      addFrom(r.target)
+    }
+  }
+  return found
+}
+
 export function IconGuard() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     let domObserver: MutationObserver | undefined
-    const schedule = () => {
+    const onMutations = (records: MutationRecord[]) => {
+      check(iconsIn(records))
+      // Backup full pass for icons that were inside a hidden parent when they changed
       clearTimeout(timer)
       timer = setTimeout(scan, 120)
     }
     const start = () => {
       scan()
-      domObserver = new MutationObserver(schedule)
+      domObserver = new MutationObserver(onMutations)
       domObserver.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["class", "style", "hidden"] })
     }
 
