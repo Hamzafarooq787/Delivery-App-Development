@@ -78,6 +78,19 @@
 
 /* Until the icon font has loaded, hide the ligature text and reserve the icon's
    1em box so nothing shifts when the real glyph appears. */
+/* Icon guard (components/pwa/icon-guard.tsx): an icon that leaked its name as text stays hidden
+   (same 1em box as a glyph) until the full icon font renders it properly. */
+.material-symbols-outlined[data-icon-broken] {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  visibility: hidden;
+}
+.material-symbols-outlined[data-icon-full] {
+  font-family: 'Material Symbols Full' !important;
+}
+
 html:not([data-icons="ready"]) .material-symbols-outlined {
   display: inline-block;
   width: 1em;

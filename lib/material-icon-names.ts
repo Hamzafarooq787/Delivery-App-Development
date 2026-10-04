@@ -43,6 +43,7 @@ export const MATERIAL_ICON_NAMES = [
   "campaign",
   "cancel",
   "celebration",
+  "chat",
   "chat_bubble",
   "chat_bubble_outline",
   "check",

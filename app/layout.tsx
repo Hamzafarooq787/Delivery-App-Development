@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/shared/theme-provider'
 import { SWRegister } from '@/components/pwa/sw-register'
+import { IconGuard } from '@/components/pwa/icon-guard'
 import { MATERIAL_ICON_NAMES } from '@/lib/material-icon-names'
 import './globals.css'
 
@@ -124,6 +125,7 @@ export default function RootLayout({
         />
         <Analytics />
         <SWRegister />
+        <IconGuard />
       </body>
     </html>
   )
