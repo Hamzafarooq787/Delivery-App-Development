@@ -19,15 +19,48 @@ function walk(dir) {
 
 function scan(file) {
   const s = fs.readFileSync(file, "utf8")
-  // <span className="material-symbols-outlined ...">icon_name</span>
-  for (const m of s.matchAll(/material-symbols-outlined[^>]*>\s*([a-z][a-z0-9_]*)\s*</g)) add(m[1], file)
-  // {cond ? "icon_a" : "icon_b"} inside an icon span
-  for (const m of s.matchAll(/material-symbols-outlined[^>]*>\s*\{([^}]*)\}/g)) {
-    const expr = m[1].includes("?") ? m[1].slice(m[1].indexOf("?")) : m[1] // skip the condition
-    for (const l of expr.matchAll(/["'`]([a-z][a-z0-9_]*)["'`]/g)) add(l[1], file)
-  }
+  scanIconTags(s, file)
   // icon: "name" / icon="name" / Icon: 'name' properties
   for (const m of s.matchAll(/\b[iI]con\w*\s*[:=]\s*\{?\s*["'`]([a-z][a-z0-9_]*)["'`]/g)) add(m[1], file)
+}
+
+// Finds <span className="material-symbols-outlined ..."> and reads its text child. The end of the opening tag is
+// located by tracking braces/quotes, so a `>` inside an attribute expression (e.g. `count > 0 ? ...`) is not mistaken
+// for the end of the tag.
+function scanIconTags(s, file) {
+  const marker = "material-symbols-outlined"
+  let idx = 0
+  while ((idx = s.indexOf(marker, idx)) !== -1) {
+    // skip the rest of the className string the marker sits in
+    const before = s.lastIndexOf('"', idx), beforeS = s.lastIndexOf("'", idx), beforeT = s.lastIndexOf("`", idx)
+    const open = Math.max(before, beforeS, beforeT)
+    let i = idx + marker.length
+    if (open !== -1) {
+      const close = s.indexOf(s[open], idx + marker.length)
+      if (close !== -1) i = close + 1
+    }
+    let depth = 0
+    let quote = null
+    for (; i < s.length; i++) {
+      const c = s[i]
+      if (quote) {
+        if (c === quote && s[i - 1] !== "\\") quote = null
+        continue
+      }
+      if (c === '"' || c === "'" || c === "`") quote = c
+      else if (c === "{") depth++
+      else if (c === "}") depth--
+      else if (c === ">" && depth <= 0 && s[i - 1] !== "=") break
+    }
+    const end = s.indexOf("<", i)
+    const text = end === -1 ? "" : s.slice(i + 1, end).trim()
+    if (/^[a-z][a-z0-9_]*$/.test(text)) add(text, file)
+    else if (text.startsWith("{")) {
+      const expr = text.includes("?") ? text.slice(text.indexOf("?")) : text // skip the condition
+      for (const l of expr.matchAll(/["'`]([a-z][a-z0-9_]*)["'`]/g)) add(l[1], file)
+    }
+    idx += marker.length
+  }
 }
 
 for (const d of ["app", "components"]) walk(d)
