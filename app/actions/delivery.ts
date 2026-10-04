@@ -67,7 +67,10 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
 
   const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
-  const { data: deliveryId, error } = await supabase.rpc("create_delivery_with_wallet_payment", {
+  // Service-role only (scripts/032): the function trusts p_price, so it must never be
+  // callable from a browser session. The customer id comes from the verified session above.
+  const { data: deliveryId, error } = await createAdminClient().rpc("create_delivery_with_wallet_payment_v2", {
+    p_customer_id: user.id,
     p_pickup_address: params.pickup_address,
     p_delivery_address: params.delivery_address,
     p_pickup_lat: params.pickup_lat,
