@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { notFound } from "next/navigation"
 import { ResetDeliveryOtpButton } from "@/components/admin/reset-delivery-otp-button"
 import { getDeliveryRatings } from "@/app/actions/ratings"
 import { LiveTrackingPanel } from "@/components/tracking/live-tracking-panel"
+import { OrderActionsPanel } from "@/components/admin/order-actions-panel"
 
 const OTP_RESETTABLE_STATUSES = ["accepted", "collected", "in_transit"]
 const LIVE_TRACKING_STATUSES = ["accepted", "collected", "in_transit", "picked_up"]
@@ -24,9 +25,9 @@ export default async function AdminOrderDetailPage({
   params: Promise<{ orderId: string }>
 }) {
   const { orderId } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: order, error } = await supabase
+  const { data: order, error } = await admin
     .from("delivery_requests")
     .select("*")
     .eq("id", orderId)
@@ -34,25 +35,32 @@ export default async function AdminOrderDetailPage({
 
   if (error || !order) notFound()
 
-  const [customerRes, driverRes, logsRes, ratingsRes] = await Promise.all([
+  const [customerRes, driverRes, logsRes, ratingsRes, driversRes] = await Promise.all([
     order.customer_id
-      ? supabase.from("users").select("full_name, email, phone").eq("id", order.customer_id).single()
+      ? admin.from("users").select("full_name, email, phone").eq("id", order.customer_id).single()
       : Promise.resolve({ data: null }),
     order.driver_id
-      ? supabase.from("users").select("full_name, email").eq("id", order.driver_id).single()
+      ? admin.from("users").select("full_name, email").eq("id", order.driver_id).single()
       : Promise.resolve({ data: null }),
-    supabase
+    admin
       .from("delivery_status_logs")
       .select("status, created_at")
       .eq("delivery_id", orderId)
       .order("created_at", { ascending: true }),
     getDeliveryRatings(orderId),
+    admin
+      .from("users")
+      .select("id, full_name")
+      .eq("role", "driver")
+      .eq("is_approved", true)
+      .order("full_name", { ascending: true }),
   ])
 
   const customer = customerRes.data
   const driver = driverRes.data
   const logs: { status: string; created_at: string }[] = logsRes.data ?? []
   const ratings = ratingsRes.data
+  const drivers = (driversRes.data ?? []) as { id: string; full_name: string }[]
   const customerRating = ratings.find((r) => r.rater_role === "customer")
   const driverRating   = ratings.find((r) => r.rater_role === "driver")
 
@@ -377,25 +385,17 @@ export default async function AdminOrderDetailPage({
               <span className="material-symbols-outlined text-[#a3a6ff] text-lg">admin_panel_settings</span>
               <h3 className="text-sm font-bold text-white font-headline">Admin Actions</h3>
             </div>
-            <div className="space-y-2">
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
-                <span className="material-symbols-outlined text-sm text-[#a3a6ff]">person_add</span>
-                Assign Driver
-              </button>
-              {!["delivered", "cancelled"].includes(order.status) && (
-                <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
-                  <span className="material-symbols-outlined text-sm text-red-400">cancel</span>
-                  Cancel Order
-                </button>
-              )}
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
-                <span className="material-symbols-outlined text-sm text-emerald-400">payments</span>
-                Issue Refund
-              </button>
-              {OTP_RESETTABLE_STATUSES.includes(order.status) && (
+            <OrderActionsPanel
+              orderId={order.id}
+              orderStatus={order.status}
+              currentDriverId={order.driver_id ?? null}
+              drivers={drivers}
+            />
+            {OTP_RESETTABLE_STATUSES.includes(order.status) && (
+              <div className="mt-2">
                 <ResetDeliveryOtpButton deliveryId={order.id} />
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
