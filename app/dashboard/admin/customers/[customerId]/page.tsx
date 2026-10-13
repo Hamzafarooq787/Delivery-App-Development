@@ -1,11 +1,15 @@
-import { PageHeader } from "@/components/shared/page-header"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { ArrowLeft, User, Package } from "lucide-react"
 import Link from "next/link"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notFound } from "next/navigation"
+
+const STATUS_COLORS: Record<string, string> = {
+  requested:  "bg-[#a3a6ff]/10 text-[#a3a6ff]",
+  accepted:   "bg-[#c180ff]/10 text-[#c180ff]",
+  collected:  "bg-blue-500/10 text-blue-400",
+  in_transit: "bg-amber-500/10 text-amber-400",
+  delivered:  "bg-emerald-500/10 text-emerald-400",
+  cancelled:  "bg-red-500/10 text-red-400",
+}
 
 export default async function AdminCustomerDetailPage({
   params,
@@ -43,198 +47,173 @@ export default async function AdminCustomerDetailPage({
   const email = authUserRes.data.user?.email ?? null
   const lastActive = orders[0]?.created_at ?? customer.created_at
 
-  const statusMap: Record<string, Parameters<typeof StatusBadge>[0]["status"]> = {
-    delivered: "completed",
-    requested: "pending",
-    cancelled: "cancelled",
-    in_transit: "in_transit",
-    accepted: "active",
-    collected: "active",
-  }
+  const initials = (customer.full_name ?? email ?? "?").slice(0, 2).toUpperCase()
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/admin/customers">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6 md:mb-8">
+        <Link
+          href="/dashboard/admin/customers"
+          className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#1a1919] border border-[#494847]/15 hover:bg-[#262626] transition-colors"
+        >
+          <span className="material-symbols-outlined text-[#adaaaa] text-sm">arrow_back</span>
         </Link>
-        <PageHeader
-          title={customer.full_name}
-          description="Customer profile and order history."
-        />
+        <div>
+          <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-white">
+            {customer.full_name}
+          </h2>
+          <p className="text-[#adaaaa] mt-0.5 text-sm">Customer profile and order history.</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Profile
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Full Name</p>
-                <p className="font-medium">{customer.full_name}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6">
+        {/* Main column */}
+        <div className="lg:col-span-8 space-y-5">
+
+          {/* Profile */}
+          <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 md:p-6">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] text-lg font-bold shrink-0">
+                {initials}
               </div>
               <div>
-                <p className="text-muted-foreground">Email</p>
-                <p className="font-medium">{email ?? "—"}</p>
+                <p className="text-white font-bold text-lg">{customer.full_name}</p>
+                <p className="text-[#adaaaa] text-sm">{email ?? "—"}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Phone</p>
+                <p className="text-white">{customer.phone ?? "—"}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Phone</p>
-                <p className="font-medium">{customer.phone ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Joined</p>
-                <p className="font-medium">
+                <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Joined</p>
+                <p className="text-white">
                   {new Date(customer.created_at).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
+                    month: "long", day: "numeric", year: "numeric",
                   })}
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground">City</p>
-                <p className="font-medium text-muted-foreground/50">—</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Postcode</p>
-                <p className="font-medium text-muted-foreground/50">—</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Order History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-muted-foreground">
-                      <th className="text-left py-2 pr-4 font-medium">Order ID</th>
-                      <th className="text-left py-2 pr-4 font-medium">Date</th>
-                      <th className="text-left py-2 pr-4 font-medium">Status</th>
-                      <th className="text-left py-2 font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="py-10 text-center text-muted-foreground">
-                          No orders yet
-                        </td>
-                      </tr>
-                    ) : (
-                      orders.map((o) => (
-                        <tr key={o.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="py-3 pr-4 font-mono text-xs">
-                            <Link
-                              href={`/dashboard/admin/orders/${o.id}`}
-                              className="text-primary hover:underline"
-                            >
-                              {o.tracking_number ?? o.id.slice(0, 8)}
-                            </Link>
-                          </td>
-                          <td className="py-3 pr-4 text-muted-foreground">
-                            {new Date(o.created_at).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </td>
-                          <td className="py-3 pr-4">
-                            <StatusBadge status={statusMap[o.status] ?? "pending"} />
-                          </td>
-                          <td className="py-3">
-                            {o.price != null ? `$${Number(o.price).toFixed(2)}` : "—"}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Account Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full" size="sm">
-                Send Message
-              </Button>
-              <Button variant="outline" className="w-full" size="sm">
-                Suspend Account
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full text-destructive border-destructive/30 hover:bg-destructive/5"
-                size="sm"
-              >
-                Delete Account
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Orders</span>
-                <span className="font-medium">{orders.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Spent</span>
-                <span className="font-medium">${totalSpent.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Open Disputes</span>
-                <span className="font-medium">{openDisputes}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Last Active</span>
-                <span className="font-medium">
-                  {new Date(lastActive).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Marketing Consent</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Email</span>
-                <span className={`font-medium ${customer.marketing_email_opt_in ? "text-primary" : "text-muted-foreground/60"}`}>
+                <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Email Consent</p>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${customer.marketing_email_opt_in ? "bg-emerald-500/10 text-emerald-400" : "bg-[#494847]/20 text-[#adaaaa]"}`}>
                   {customer.marketing_email_opt_in ? "Opted in" : "Opted out"}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Push</span>
-                <span className={`font-medium ${customer.marketing_push_opt_in ? "text-primary" : "text-muted-foreground/60"}`}>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Push Consent</p>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${customer.marketing_push_opt_in ? "bg-emerald-500/10 text-emerald-400" : "bg-[#494847]/20 text-[#adaaaa]"}`}>
                   {customer.marketing_push_opt_in ? "Opted in" : "Opted out"}
                 </span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Order History */}
+          <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-5 md:px-6 py-4 border-b border-[#494847]/10">
+              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">local_shipping</span>
+              <h3 className="text-base font-bold text-white font-headline">Order History</h3>
+              <span className="ml-auto text-xs text-[#adaaaa] bg-[#494847]/20 px-2 py-0.5 rounded-full">
+                {orders.length} orders
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left min-w-[480px]">
+                <thead>
+                  <tr className="bg-[#201f1f] text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
+                    <th className="px-6 py-4">Order ID</th>
+                    <th className="px-6 py-4">Date</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#494847]/5">
+                  {orders.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-10 text-center text-[#adaaaa] text-sm">
+                        No orders yet
+                      </td>
+                    </tr>
+                  ) : (
+                    orders.map((o) => (
+                      <tr key={o.id} className="hover:bg-[#201f1f] transition-colors">
+                        <td className="px-6 py-4 font-mono text-xs">
+                          <Link
+                            href={`/dashboard/admin/orders/${o.id}`}
+                            className="text-[#a3a6ff] hover:underline"
+                          >
+                            {o.tracking_number ?? o.id.slice(0, 8)}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 text-[#adaaaa] text-sm">
+                          {new Date(o.created_at).toLocaleDateString("en-US", {
+                            month: "short", day: "numeric", year: "numeric",
+                          })}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[o.status] ?? "bg-[#494847]/20 text-[#adaaaa]"}`}>
+                            {o.status.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right text-white font-semibold text-sm">
+                          {o.price != null ? `£${Number(o.price).toFixed(2)}` : "—"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="lg:col-span-4 space-y-4">
+
+          {/* Stats */}
+          <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">bar_chart</span>
+              <h3 className="text-sm font-bold text-white font-headline">Stats</h3>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: "Total Orders",  value: orders.length.toString() },
+                { label: "Total Spent",   value: `£${totalSpent.toFixed(2)}` },
+                { label: "Open Disputes", value: openDisputes.toString() },
+                { label: "Last Active",   value: new Date(lastActive).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex justify-between items-center">
+                  <span className="text-[#adaaaa] text-xs">{label}</span>
+                  <span className="text-white text-sm font-semibold">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Account Actions */}
+          <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">manage_accounts</span>
+              <h3 className="text-sm font-bold text-white font-headline">Account Actions</h3>
+            </div>
+            <div className="space-y-2">
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
+                <span className="material-symbols-outlined text-sm text-[#a3a6ff]">mail</span>
+                Send Message
+              </button>
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
+                <span className="material-symbols-outlined text-sm text-amber-400">block</span>
+                Suspend Account
+              </button>
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-red-400 rounded-lg text-sm border border-red-500/10 hover:bg-red-500/5 transition-all">
+                <span className="material-symbols-outlined text-sm">delete</span>
+                Delete Account
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,10 +1,10 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { DisputesPanel } from "@/components/admin/disputes-panel"
 
 export default async function AdminDisputesPage() {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: disputes, count } = await supabase
+  const { data: disputes, count } = await admin
     .from("disputes")
     .select("id, status, category, description, created_at, user_id, delivery_request_id", { count: "exact" })
     .order("created_at", { ascending: false })

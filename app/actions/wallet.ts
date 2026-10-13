@@ -134,3 +134,113 @@ export async function previewCancellationFee(deliveryId: string): Promise<{
 
   return { freeCancel, cancellationFee, distanceMiles, status, canCancel: true }
 }
+
+// ── Admin: cancel an order and optionally refund the customer ─────────────
+export async function adminCancelOrder(deliveryId: string): Promise<{
+  success?: boolean
+  refunded?: boolean
+  refundAmount?: number
+  error?: string
+}> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+  const { data: adminRow } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  if (adminRow?.role !== "admin") return { error: "Not authorized" }
+
+  const admin = createAdminClient()
+
+  const { data: delivery, error: fetchErr } = await admin
+    .from("delivery_requests")
+    .select("id, status, customer_id, price")
+    .eq("id", deliveryId)
+    .single()
+
+  if (fetchErr || !delivery) return { error: "Order not found" }
+  if (["delivered", "cancelled"].includes(delivery.status))
+    return { error: "This order cannot be cancelled" }
+
+  const { error: cancelErr } = await admin
+    .from("delivery_requests")
+    .update({ status: "cancelled", driver_id: null })
+    .eq("id", deliveryId)
+
+  if (cancelErr) return { error: cancelErr.message }
+
+  // Refund full price to customer wallet if there's a price and a customer
+  let refunded = false
+  const refundAmount = Number(delivery.price ?? 0)
+  if (refundAmount > 0 && delivery.customer_id) {
+    const { data: wallet } = await admin
+      .from("wallet_balances")
+      .select("balance")
+      .eq("user_id", delivery.customer_id)
+      .maybeSingle()
+
+    const currentBalance = Number(wallet?.balance ?? 0)
+    await admin
+      .from("wallet_balances")
+      .upsert({ user_id: delivery.customer_id, balance: currentBalance + refundAmount }, { onConflict: "user_id" })
+
+    await admin.from("wallet_transactions").insert({
+      user_id:     delivery.customer_id,
+      type:        "cashback",
+      amount:      refundAmount,
+      description: "Admin cancellation refund",
+      delivery_id: deliveryId,
+    })
+    refunded = true
+  }
+
+  const { revalidatePath } = await import("next/cache")
+  revalidatePath("/dashboard/admin/orders")
+  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
+  return { success: true, refunded, refundAmount }
+}
+
+// ── Admin: issue a manual refund to the customer's wallet ─────────────────
+export async function adminIssueRefund(deliveryId: string, amount: number): Promise<{
+  success?: boolean
+  error?: string
+}> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+  const { data: adminRow } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+  if (adminRow?.role !== "admin") return { error: "Not authorized" }
+
+  if (!amount || amount <= 0) return { error: "Invalid refund amount" }
+
+  const admin = createAdminClient()
+
+  const { data: delivery, error: fetchErr } = await admin
+    .from("delivery_requests")
+    .select("id, customer_id")
+    .eq("id", deliveryId)
+    .single()
+
+  if (fetchErr || !delivery || !delivery.customer_id) return { error: "Order not found" }
+
+  const { data: wallet } = await admin
+    .from("wallet_balances")
+    .select("balance")
+    .eq("user_id", delivery.customer_id)
+    .maybeSingle()
+
+  const currentBalance = Number(wallet?.balance ?? 0)
+  await admin
+    .from("wallet_balances")
+    .upsert({ user_id: delivery.customer_id, balance: currentBalance + amount }, { onConflict: "user_id" })
+
+  await admin.from("wallet_transactions").insert({
+    user_id:     delivery.customer_id,
+    type:        "cashback",
+    amount,
+    description: "Admin manual refund",
+    delivery_id: deliveryId,
+  })
+
+  const { revalidatePath } = await import("next/cache")
+  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
+  return { success: true }
+}

@@ -1,15 +1,15 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { RevenueChart } from "@/components/admin/revenue-chart"
 import { OrderStatusChart } from "@/components/admin/order-status-chart"
 
 export default async function AdminReportsPage() {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
   const [deliveriesRes, earningsRes, driversRes, customersRes] = await Promise.all([
-    supabase.from("delivery_requests").select("id, status, created_at, price").order("created_at", { ascending: true }),
-    supabase.from("driver_earnings").select("amount, commission_amount, created_at"),
-    supabase.from("users").select("id, full_name, email").eq("role", "driver").limit(5),
-    supabase
+    admin.from("delivery_requests").select("id, status, created_at, price").order("created_at", { ascending: true }),
+    admin.from("driver_earnings").select("amount, commission_amount, created_at"),
+    admin.from("users").select("id, full_name, email").eq("role", "driver").limit(5),
+    admin
       .from("users")
       .select("id", { count: "exact" })
       .eq("role", "customer")
