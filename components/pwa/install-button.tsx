@@ -92,7 +92,7 @@ export function InstallButton() {
         onClick={handleInstall}
         disabled={installing}
         title="Install app"
-        className="flex items-center gap-1.5 bg-[#a3a6ff]/10 hover:bg-[#a3a6ff]/20 border border-[#a3a6ff]/25 text-[#a3a6ff] text-[11px] font-bold px-3 py-1.5 rounded-full transition-all active:scale-95 disabled:opacity-60 select-none"
+        className="flex items-center gap-1.5 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/25 text-[var(--color-primary)] text-[11px] font-bold px-3 py-1.5 rounded-full transition-all active:scale-95 disabled:opacity-60 select-none"
       >
         {installing ? (
           <svg className="animate-spin w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none">
@@ -111,12 +111,12 @@ export function InstallButton() {
       {showModal && (
         <div
           ref={modalRef}
-          className="absolute right-0 top-10 z-50 w-72 rounded-2xl border border-[#a3a6ff]/20 bg-[#141414] shadow-2xl p-5 animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute right-0 top-10 z-50 w-72 rounded-2xl border border-[var(--color-primary)]/20 bg-[#141414] shadow-2xl p-5 animate-in fade-in slide-in-from-top-2 duration-200"
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                 {platform === "ios" ? "phone_iphone" : "desktop_windows"}
               </span>
               <div>
@@ -136,7 +136,7 @@ export function InstallButton() {
           <div className="space-y-3">
             {steps.map((step, i) => (
               <div key={i} className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-[#a3a6ff]/15 text-[#a3a6ff] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                   {i + 1}
                 </div>
                 <p className="text-[#adaaaa] text-xs leading-relaxed">{step.text}</p>
@@ -154,3 +154,4 @@ export function InstallButton() {
     </div>
   )
 }
+

@@ -16,9 +16,9 @@ type Dispute = {
 type Tab = "All Cases" | "Open" | "Escalated" | "Resolved" | "Closed"
 
 const DISPUTE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  open: { bg: "bg-[#c180ff]/10", text: "text-[#c180ff]", dot: "bg-[#c180ff]" },
+  open: { bg: "bg-[var(--color-secondary)]/10", text: "text-[var(--color-secondary)]", dot: "bg-[var(--color-secondary)]" },
   escalated: { bg: "bg-[#ff6e84]/10", text: "text-[#ff6e84]", dot: "bg-[#ff6e84]" },
-  resolved: { bg: "bg-[#a3a6ff]/10", text: "text-[#a3a6ff]", dot: "bg-[#a3a6ff]" },
+  resolved: { bg: "bg-[var(--color-primary)]/10", text: "text-[var(--color-primary)]", dot: "bg-[var(--color-primary)]" },
   closed: { bg: "bg-[#494847]/10", text: "text-[#adaaaa]", dot: "bg-[#494847]" },
 }
 
@@ -103,7 +103,7 @@ export function DisputesPanel({ disputes: initial, total }: { disputes: Dispute[
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
               activeTab === tab
-                ? "bg-[#a3a6ff] text-[#0f00a4]"
+                ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                 : "bg-[#1a1919] text-[#adaaaa] hover:text-white border border-[#494847]/10"
             }`}
           >
@@ -137,7 +137,7 @@ export function DisputesPanel({ disputes: initial, total }: { disputes: Dispute[
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
-                    <span className="text-xs font-mono text-[#a3a6ff]">{shortId}</span>
+                    <span className="text-xs font-mono text-[var(--color-primary)]">{shortId}</span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusCfg.bg} ${statusCfg.text} flex items-center gap-1`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
                       {dispute.status}
@@ -181,3 +181,4 @@ export function DisputesPanel({ disputes: initial, total }: { disputes: Dispute[
     </div>
   )
 }
+

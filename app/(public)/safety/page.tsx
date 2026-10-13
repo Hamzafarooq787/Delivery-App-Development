@@ -61,11 +61,11 @@ export default function SafetyPage() {
       {/* Hero */}
       <section className="relative w-full min-h-[70vh] flex items-center pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-8 md:px-12 overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(163,166,255,0.3),transparent_60%)] blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(var(--brand-rgb),0.3),transparent_60%)] blur-3xl" />
         </div>
         <div className="max-w-screen-2xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center relative z-10">
           <div className="lg:col-span-8">
-            <span className="text-[#a3a6ff] font-bold tracking-[0.3em] text-xs mb-4 sm:mb-6 block uppercase">Safety &amp; Compliance Hub</span>
+            <span className="text-[var(--color-primary)] font-bold tracking-[0.3em] text-xs mb-4 sm:mb-6 block uppercase">Safety &amp; Compliance Hub</span>
             <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[8rem] font-extrabold font-headline tracking-tighter mb-6 sm:mb-10 leading-tight lg:leading-[0.85] text-balance break-words">
               Prohibited <br />
               <span className="text-white/20">Protocols.</span>
@@ -75,8 +75,8 @@ export default function SafetyPage() {
             </p>
           </div>
           <div className="lg:col-span-4">
-            <div className="bg-[#262626]/40 backdrop-blur-xl border border-white/5 border-l-4 border-l-[#a3a6ff] p-6 sm:p-8 lg:p-10 rounded-xl">
-              <div className="text-[#a3a6ff] mb-4 sm:mb-6 text-4xl sm:text-5xl leading-none">✦</div>
+            <div className="bg-[#262626]/40 backdrop-blur-xl border border-white/5 border-l-4 border-l-[var(--color-primary)] p-6 sm:p-8 lg:p-10 rounded-xl">
+              <div className="text-[var(--color-primary)] mb-4 sm:mb-6 text-4xl sm:text-5xl leading-none">✦</div>
               <h3 className="text-xl sm:text-2xl font-bold font-headline mb-3 sm:mb-4">Zero-Variance Policy</h3>
               <p className="text-[#adaaaa] leading-relaxed text-sm sm:text-base">We strictly enforce global logistics safety standards to protect our fleet and your business continuity. Every shipment is vetted by the Kinetic Shielding protocol.</p>
             </div>
@@ -103,12 +103,12 @@ export default function SafetyPage() {
                 <p className="text-base sm:text-lg lg:text-xl text-[#adaaaa] max-w-xl font-medium">Our protocol isn&apos;t just a manual — it&apos;s a commitment to the precision of every delivery. Every item screened, every route optimized, every risk neutralized.</p>
               </div>
             </div>
-            <div className="bg-[#a3a6ff] rounded-xl flex flex-col justify-between p-7 sm:p-10 lg:p-12 text-[#0f00a4] relative overflow-hidden shadow-2xl shadow-[#a3a6ff]/20 min-h-[260px]">
+            <div className="bg-[var(--color-primary)] rounded-xl flex flex-col justify-between p-7 sm:p-10 lg:p-12 text-[var(--color-on-primary)] relative overflow-hidden shadow-2xl shadow-[var(--color-primary)]/20 min-h-[260px]">
               <div className="absolute -right-16 -top-16 opacity-10 text-[240px] leading-none select-none">✦</div>
               <div className="text-4xl sm:text-5xl lg:text-6xl leading-none">🛡️</div>
               <div>
                 <h3 className="text-2xl sm:text-3xl font-black font-headline mb-4 sm:mb-6 tracking-tight">Kinetic Shielding</h3>
-                <p className="text-[#0f00a4]/90 text-base sm:text-lg font-medium leading-relaxed">Advanced molecular scanning and automated threat detection integrated into every hub infrastructure.</p>
+                <p className="text-[var(--color-on-primary)]/90 text-base sm:text-lg font-medium leading-relaxed">Advanced molecular scanning and automated threat detection integrated into every hub infrastructure.</p>
               </div>
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function SafetyPage() {
       <section className="px-4 sm:px-8 md:px-12 py-16 sm:py-24 lg:py-32 max-w-screen-2xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 sm:mb-16 lg:mb-20 gap-6 sm:gap-8">
           <div className="max-w-2xl">
-            <span className="text-[#a3a6ff] font-bold tracking-[0.2em] text-xs mb-4 block uppercase">Compliance Categories</span>
+            <span className="text-[var(--color-primary)] font-bold tracking-[0.2em] text-xs mb-4 block uppercase">Compliance Categories</span>
             <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-headline tracking-tight text-balance">Strict Cargo Controls</h2>
           </div>
           <div className="flex flex-wrap gap-3 sm:gap-4">
@@ -128,7 +128,7 @@ export default function SafetyPage() {
               <span className="text-[10px] font-black tracking-widest uppercase">Strictly Forbidden</span>
             </div>
             <div className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#201f1f] rounded-full border border-white/5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#c180ff] shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-secondary)] shrink-0" />
               <span className="text-[10px] font-black tracking-widest uppercase">Restricted Flow</span>
             </div>
           </div>
@@ -155,14 +155,14 @@ export default function SafetyPage() {
       <section className="px-4 sm:px-8 md:px-12 py-16 sm:py-24 lg:py-32">
         <div className="max-w-screen-2xl mx-auto bg-[#262626]/40 backdrop-blur-xl border border-white/5 rounded-2xl p-7 sm:p-12 md:p-16 lg:p-24 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-full md:w-1/2 h-full opacity-20 pointer-events-none">
-            <div className="w-full h-full bg-[radial-gradient(circle_at_center,rgba(163,166,255,1),transparent_60%)]" />
+            <div className="w-full h-full bg-[radial-gradient(circle_at_center,rgba(var(--brand-rgb),1),transparent_60%)]" />
           </div>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-14 lg:gap-20 items-center">
             <div>
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-headline mb-5 sm:mb-8 tracking-tight text-balance">Need a compliance check?</h2>
               <p className="text-[#adaaaa] mb-8 sm:mb-12 text-base sm:text-lg lg:text-xl leading-relaxed">Unsure if your cargo meets Kinetic standards? Our AI-driven compliance engine can analyze your manifest in real-time, providing immediate feedback on transportability.</p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 lg:gap-6">
-                <button className="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-[#a3a6ff] text-[#0f00a4] font-bold rounded-full hover:brightness-110 transition-all active:scale-95 shadow-lg shadow-[#a3a6ff]/20">Consult Expert</button>
+                <button className="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold rounded-full hover:brightness-110 transition-all active:scale-95 shadow-lg shadow-[var(--color-primary)]/20">Consult Expert</button>
                 <button className="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 border border-white/10 text-white font-bold rounded-full hover:bg-[#262626] transition-all active:scale-95">Download PDF Guide</button>
               </div>
             </div>
@@ -174,7 +174,7 @@ export default function SafetyPage() {
                 { stat: "ZERO", label: "Safety Breaches" },
               ].map((s) => (
                 <div key={s.label} className="p-5 sm:p-6 lg:p-8 bg-[#1a1919]/50 backdrop-blur-sm rounded-xl border border-white/5 flex flex-col items-center text-center">
-                  <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#a3a6ff] mb-2 sm:mb-3">{s.stat}</span>
+                  <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-[var(--color-primary)] mb-2 sm:mb-3">{s.stat}</span>
                   <span className="text-[10px] tracking-widest text-[#adaaaa] uppercase font-black">{s.label}</span>
                 </div>
               ))}
@@ -186,15 +186,15 @@ export default function SafetyPage() {
       {/* Security Protocols */}
       <section className="px-4 sm:px-8 md:px-12 py-16 sm:py-24 lg:py-32 max-w-screen-2xl mx-auto">
         <div className="text-center mb-12 sm:mb-16 lg:mb-24">
-          <span className="text-[#a3a6ff] font-bold tracking-[0.2em] text-xs mb-4 block uppercase">The Operational Standard</span>
+          <span className="text-[var(--color-primary)] font-bold tracking-[0.2em] text-xs mb-4 block uppercase">The Operational Standard</span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-headline tracking-tight text-balance">Security Protocols</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 sm:gap-x-12 gap-y-10 sm:gap-y-14 lg:gap-y-16">
           {protocols.map((p) => (
-            <div key={p.title} className="group border-b border-white/10 pb-8 sm:pb-10 lg:pb-12 hover:border-[#a3a6ff] transition-all duration-500">
+            <div key={p.title} className="group border-b border-white/10 pb-8 sm:pb-10 lg:pb-12 hover:border-[var(--color-primary)] transition-all duration-500">
               <div className="flex items-start justify-between gap-4 mb-4 sm:mb-6">
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-bold font-headline">{p.title}</h3>
-                <span className="text-[#a3a6ff] group-hover:rotate-90 transition-transform duration-500 text-2xl leading-none shrink-0">+</span>
+                <span className="text-[var(--color-primary)] group-hover:rotate-90 transition-transform duration-500 text-2xl leading-none shrink-0">+</span>
               </div>
               <p className="text-[#adaaaa] leading-relaxed text-sm sm:text-base lg:text-lg">{p.desc}</p>
             </div>
@@ -204,3 +204,4 @@ export default function SafetyPage() {
     </div>
   )
 }
+

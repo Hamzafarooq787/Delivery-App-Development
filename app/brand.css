@@ -1,0 +1,38 @@
+html { --brand-strong:#7957ff; --brand-soft:#a99aff; --brand-strong-hover:#6946e9; --brand-rgb:163,166,255; --brand-bg:#101112; --brand-panel:#19191e; --brand-ink:#fff; }
+html[data-brand="orange"] {
+ --brand-strong:#ff7900; --brand-soft:#ffb168; --brand-strong-hover:#e56b00; --brand-rgb:255,121,0; --brand-bg:#101214; --brand-panel:#1b1d20; --brand-ink:#201000;
+ --color-primary:#ff7900; --color-primary-dim:#e56b00; --color-primary-fixed:#ff9b3d; --color-primary-fixed-dim:#ff880f;
+ --color-on-primary:#201000; --color-on-primary-container:#301600; --color-on-primary-fixed:#201000; --color-on-primary-fixed-variant:#522400;
+ --color-primary-container:#ff9b3d; --color-inverse-primary:#b44e00; --color-surface-tint:#ff7900;
+ --color-secondary:#ffb168; --color-secondary-dim:#e58b38; --color-secondary-container:#733400; --color-secondary-fixed:#ffe0c0; --color-secondary-fixed-dim:#ffd1a1;
+ --color-on-secondary:#351800; --color-on-secondary-container:#ffe0c0; --color-on-secondary-fixed:#351800; --color-on-secondary-fixed-variant:#743700;
+ --color-tertiary:#ffc994; --color-tertiary-fixed:#ffd4ac; --color-tertiary-fixed-dim:#edb586; --color-tertiary-dim:#edb586; --color-tertiary-container:#ffd4ac;
+ --color-on-tertiary:#502a0c; --color-on-tertiary-container:#412106; --color-on-tertiary-fixed:#291300; --color-on-tertiary-fixed-variant:#63360f;
+}
+html[data-brand="orange"]:not([data-theme="light"]) {
+ --color-surface:#101214; --color-background:#101214; --color-surface-dim:#101214; --color-surface-container-lowest:#090a0b;
+ --color-surface-container-low:#141619; --color-surface-container:#1b1d20; --color-surface-container-high:#222428; --color-surface-container-highest:#2a2d31; --color-surface-variant:#2a2d31;
+ --color-on-surface:#fff; --color-on-background:#fff; --color-on-surface-variant:#b9bdc4; --color-outline:#787d86; --color-outline-variant:#44484f;
+}
+html[data-brand="orange"][data-theme="light"] { --brand-bg:#fff7ef; --brand-panel:#fff; --color-primary:#b44e00; --color-on-primary:#fff; --color-background:#fff7ef; --color-secondary:#985100; }
+html[data-brand="orange"]:not([data-theme="light"]) body {background:var(--color-background);color:var(--color-on-surface)}
+html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#0e0e0e]"] { background-color:#101214!important }
+html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#131313]"] { background-color:#141619!important }
+html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#1a1919]"] { background-color:#1b1d20!important }
+html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#201f1f]"] { background-color:#222428!important }
+.glow-primary {box-shadow:0 0 15px rgba(var(--brand-rgb),.2)}
+.milled-gradient {background:linear-gradient(180deg,var(--color-primary),var(--color-primary-dim))}
+.brand-logo {display:inline-flex;width:150px;height:42px;align-items:center;flex-shrink:0}
+.brand-logo img {width:100%;height:100%;object-fit:contain}
+.brand-logo-orange {display:none}
+html[data-brand="orange"] .brand-logo-purple {display:none}
+html[data-brand="orange"] .brand-logo-orange {display:block}
+.brand-preview[data-preview-brand="purple"] .brand-logo-purple {display:block}
+.brand-preview[data-preview-brand="purple"] .brand-logo-orange {display:none}
+.brand-preview[data-preview-brand="orange"] .brand-logo-purple {display:none}
+.brand-preview[data-preview-brand="orange"] .brand-logo-orange {display:block}
+.brand-preview[aria-pressed="true"] {border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary)}
+[data-theme="light"] .brand-logo {background:#101214;border-radius:6px}
+html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#1a1a1a]"] {background-color:#1b1d20!important}
+html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#2a2a2a]"],html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#262626]"] {background-color:#2a2d31!important}
+html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#0a0a0a]"] {background-color:#0d0f11!important}

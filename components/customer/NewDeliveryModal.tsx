@@ -31,6 +31,7 @@ interface NewDeliveryModalProps {
   onClose: () => void
   /** Pre-fills the form — used when resuming after a wallet top-up. */
   initialDraft?: DeliveryDraft | null
+  focusAddress?: 'pickup' | 'delivery'
 }
 
 const MAX_ITEM_PHOTOS = 5
@@ -125,7 +126,7 @@ function AddressInput({
           type="button"
           onClick={onGpsClick}
           disabled={gpsLoading || selecting}
-          className="flex items-center gap-1 text-[10px] font-bold text-[#a3a6ff] hover:text-white transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 text-[10px] font-bold text-[var(--color-primary)] hover:text-white transition-colors disabled:opacity-50"
         >
           <span className="material-symbols-outlined text-sm">
             {gpsLoading ? 'hourglass_empty' : 'my_location'}
@@ -136,7 +137,8 @@ function AddressInput({
       <div className="relative">
         <input
           ref={inputRef}
-          className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors"
+          data-delivery-address
+          className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors"
           placeholder={placeholder}
           value={value}
           onChange={(e) => handleChange(e.target.value)}
@@ -172,8 +174,16 @@ function AddressInput({
   )
 }
 
-export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryModalProps) {
+export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }: NewDeliveryModalProps) {
   const router = useRouter()
+  useEffect(() => {
+    if (!focusAddress) return
+    const timer = setTimeout(() => {
+      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('[data-delivery-address]'))
+      inputs[focusAddress === 'delivery' ? 1 : 0]?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [focusAddress])
 
   const [pickupValue, setPickupValue] = useState(initialDraft?.pickupValue ?? '')
   const [deliveryValue, setDeliveryValue] = useState(initialDraft?.deliveryValue ?? '')
@@ -526,8 +536,8 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#a3a6ff]/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">local_shipping</span>
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">local_shipping</span>
             </div>
             <div>
               <p className="text-sm font-bold text-white">New Delivery</p>
@@ -546,7 +556,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
           <AddressInput
             label="Pickup"
             icon="radio_button_checked"
-            color="text-[#a3a6ff]"
+            color="text-[var(--color-primary)]"
             placeholder="Search pickup address..."
             value={pickupValue}
             onChange={(v) => { setPickupValue(v); if (!v) setPickupCoords(null) }}
@@ -568,7 +578,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
           {liveLocationActive ? (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#c180ff]">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-secondary)]">
                   <span className="material-symbols-outlined text-sm">location_on</span>
                   Destination
                 </label>
@@ -598,7 +608,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
               <AddressInput
                 label="Destination"
                 icon="location_on"
-                color="text-[#c180ff]"
+                color="text-[var(--color-secondary)]"
                 placeholder="Search delivery address..."
                 value={deliveryValue}
                 onChange={(v) => { setDeliveryValue(v); if (!v) setDeliveryCoords(null) }}
@@ -635,7 +645,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
               {/* Distance / duration — from the quote once it lands, from the client route in the meantime */}
               <div className="flex items-center justify-around px-4 py-3 bg-[#262626] border-t border-[#494847]/20">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-base">straighten</span>
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-base">straighten</span>
                   <div>
                     <p className="text-xs font-black text-white">
                       {(quote?.distanceMiles ?? routeInfo?.miles) ?? '—'} mi
@@ -646,7 +656,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
                 </div>
                 <div className="w-px h-8 bg-[#494847]/30" />
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#c180ff] text-base">schedule</span>
+                  <span className="material-symbols-outlined text-[var(--color-secondary)] text-base">schedule</span>
                   <div>
                     <p className="text-xs font-black text-white">{(quote?.durationMin ?? routeInfo?.duration_min) ?? '—'} min</p>
                     <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Est. Drive</p>
@@ -732,7 +742,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
               onChange={(e) => setItemDescription(e.target.value.slice(0, 300))}
               placeholder="Describe what's being delivered — e.g. 3 boxes of clothing, a fragile glass vase, a birthday cake…"
               rows={3}
-              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors resize-none"
+              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors resize-none"
             />
           </div>
 
@@ -761,7 +771,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
                 <label className={`w-16 h-16 rounded-xl border border-dashed flex items-center justify-center cursor-pointer transition-all ${
                   uploadingPhotos
                     ? 'border-[#494847]/20 opacity-50 cursor-wait'
-                    : 'border-[#494847]/30 hover:border-[#a3a6ff]/40 text-[#adaaaa] hover:text-[#a3a6ff]'
+                    : 'border-[#494847]/30 hover:border-[var(--color-primary)]/40 text-[#adaaaa] hover:text-[var(--color-primary)]'
                 }`}>
                   <input
                     type="file"
@@ -796,11 +806,11 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
                     onClick={() => setPackageSize(size)}
                     className={`flex flex-col items-start gap-0.5 py-2.5 px-3 rounded-xl border text-left transition-all ${
                       active
-                        ? 'bg-[#a3a6ff]/10 border-[#a3a6ff]/40'
+                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/40'
                         : 'bg-[#262626] border-[#494847]/20 hover:border-[#494847]/40'
                     }`}
                   >
-                    <span className={`text-xs font-bold ${active ? 'text-[#a3a6ff]' : 'text-white'}`}>{info.label}</span>
+                    <span className={`text-xs font-bold ${active ? 'text-[var(--color-primary)]' : 'text-white'}`}>{info.label}</span>
                     <span className="text-[10px] text-[#adaaaa] leading-snug">{info.description}</span>
                   </button>
                 )
@@ -814,7 +824,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
               <button
                 type="button"
                 onClick={() => setShowPromoInput(true)}
-                className="flex items-center gap-1.5 text-xs font-bold text-[#a3a6ff] hover:text-white transition-colors"
+                className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:text-white transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">local_offer</span>
                 Have a promo code?
@@ -828,7 +838,7 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                     placeholder="e.g. SUMMER10"
-                    className="flex-1 bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors uppercase"
+                    className="flex-1 bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors uppercase"
                   />
                   {promoCode && (
                     <button
@@ -930,8 +940,8 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
             <button
               onClick={handleSubmit}
               disabled={submitting || !confirmed || !packageSize || !quote}
-              className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              style={{ boxShadow: confirmed ? '0 0 20px rgba(163,166,255,0.25)' : 'none' }}
+              className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{ boxShadow: confirmed ? '0 0 20px rgba(var(--brand-rgb),0.25)' : 'none' }}
             >
               <span className="material-symbols-outlined text-base">bolt</span>
               {submitting ? 'Requesting…' : price !== null ? `Request Delivery — £${formatPrice(price)}` : 'Request Delivery'}
@@ -943,3 +953,4 @@ export default function NewDeliveryModal({ onClose, initialDraft }: NewDeliveryM
     </div>
   )
 }
+

@@ -366,9 +366,9 @@ export default function DeliveryHistoryPage() {
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-3">
                               <div className="flex flex-col items-center">
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(163,166,255,0.6)]" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--brand-rgb),0.6)]" />
                                 <div className="w-[1px] h-4 border-l border-dashed border-outline-variant my-0.5" />
-                                <div className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(193,128,255,0.6)]" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_8px_rgba(var(--brand-rgb),0.6)]" />
                               </div>
                               <div className="min-w-0">
                                 <p className="text-xs font-semibold text-on-surface truncate max-w-[18rem]">
@@ -465,3 +465,4 @@ export default function DeliveryHistoryPage() {
     </>
   )
 }
+

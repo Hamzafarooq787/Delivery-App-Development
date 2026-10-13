@@ -31,8 +31,8 @@ const plans = [
     tagline: "The standard for serious operators.",
     price: "$299",
     sub: "/month",
-    color: "text-[#a3a6ff]",
-    glow: "shadow-[0_0_40px_rgba(163,166,255,0.2)] border-[#a3a6ff]/40",
+    color: "text-[var(--color-primary)]",
+    glow: "shadow-[0_0_40px_rgba(var(--brand-rgb),0.2)] border-[var(--color-primary)]/40",
     features: [
       "Flash 2-Hour Delivery",
       "Real-Time GPS Telemetry",
@@ -43,7 +43,7 @@ const plans = [
     ],
     disabledFeatures: ["Dedicated Account Manager"],
     cta: "Choose Kinetic",
-    ctaStyle: "bg-[#a3a6ff] text-[#0f00a4] hover:brightness-110",
+    ctaStyle: "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:brightness-110",
     popular: true,
   },
   {
@@ -51,8 +51,8 @@ const plans = [
     tagline: "Absolute logistical dominance.",
     price: "$999",
     sub: "/month",
-    color: "text-[#c180ff]",
-    glow: "shadow-[0_0_40px_rgba(193,128,255,0.1)] border-[#c180ff]/20",
+    color: "text-[var(--color-secondary)]",
+    glow: "shadow-[0_0_40px_rgba(var(--brand-rgb),0.1)] border-[var(--color-secondary)]/20",
     features: [
       "Quantum Instant Delivery",
       "End-to-End Encryption",
@@ -64,7 +64,7 @@ const plans = [
     ],
     disabledFeatures: [],
     cta: "Contact Sales",
-    ctaStyle: "bg-[#c180ff] text-[#33005b] hover:brightness-110",
+    ctaStyle: "bg-[var(--color-secondary)] text-[var(--color-on-secondary)] hover:brightness-110",
     popular: false,
   },
 ]
@@ -74,13 +74,13 @@ export default function PricingPage() {
     <div className="min-h-screen bg-[#0e0e0e] text-white">
       {/* Hero */}
       <section className="text-center pt-28 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,rgba(163,166,255,0.08),transparent_60%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,rgba(var(--brand-rgb),0.08),transparent_60%)] pointer-events-none" />
         <div className="relative z-10 max-w-3xl mx-auto">
-          <span className="inline-block px-4 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-xs font-bold tracking-widest uppercase mb-6">
+          <span className="inline-block px-4 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold tracking-widest uppercase mb-6">
             Transparent Pricing
           </span>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-black font-headline tracking-tighter mb-4 sm:mb-6 text-balance">
-            Choose Your Tier of <span className="text-[#a3a6ff] italic">Supremacy</span>
+            Choose Your Tier of <span className="text-[var(--color-primary)] italic">Supremacy</span>
           </h1>
           <p className="text-base sm:text-lg text-[#adaaaa] max-w-2xl mx-auto leading-relaxed">
             From on-demand deliveries to enterprise-grade logistical architecture, Go Drop scales with your ambition.
@@ -97,7 +97,7 @@ export default function PricingPage() {
               className={`relative bg-[#1a1919] rounded-3xl p-6 sm:p-8 border flex flex-col ${plan.popular ? plan.glow : "border-[#494847]/15"}`}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1 bg-[#a3a6ff] text-[#0f00a4] text-xs font-black uppercase tracking-widest rounded-full whitespace-nowrap">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1 bg-[var(--color-primary)] text-[var(--color-on-primary)] text-xs font-black uppercase tracking-widest rounded-full whitespace-nowrap">
                   Most Popular
                 </div>
               )}
@@ -142,12 +142,12 @@ export default function PricingPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { icon: "🛡️", colorClass: "text-[#a3a6ff] bg-[#a3a6ff]/10", title: "Insurance Boost", desc: "Extend cargo liability coverage to $1M per shipment.", price: "+$49/mo", priceColor: "text-[#a3a6ff]" },
-            { icon: "🌡️", colorClass: "text-[#c180ff] bg-[#c180ff]/10", title: "Cryo-Vault", desc: "Active temperature regulation for pharmaceutical-grade cargo.", price: "+$99/mo", priceColor: "text-[#c180ff]" },
-            { icon: "👁️", colorClass: "text-[#a3a6ff] bg-[#a3a6ff]/10", title: "Void Analytics Pro", desc: "Deep-dive operational intelligence and predictive forecasting.", price: "+$79/mo", priceColor: "text-[#a3a6ff]" },
-            { icon: "🤖", colorClass: "text-[#c180ff] bg-[#c180ff]/10", title: "AI Dispatch Brain", desc: "Let Kinetic AI fully automate your dispatch protocols.", price: "+$149/mo", priceColor: "text-[#c180ff]" },
-            { icon: "🔐", colorClass: "text-[#a3a6ff] bg-[#a3a6ff]/10", title: "Quantum Encryption", desc: "Post-quantum cryptographic security for ultra-sensitive cargo.", price: "+$199/mo", priceColor: "text-[#a3a6ff]" },
-            { icon: "📞", colorClass: "text-[#c180ff] bg-[#c180ff]/10", title: "White-Glove Service", desc: "Personal logistics concierge available 24/7 via direct line.", price: "+$299/mo", priceColor: "text-[#c180ff]" },
+            { icon: "🛡️", colorClass: "text-[var(--color-primary)] bg-[var(--color-primary)]/10", title: "Insurance Boost", desc: "Extend cargo liability coverage to $1M per shipment.", price: "+$49/mo", priceColor: "text-[var(--color-primary)]" },
+            { icon: "🌡️", colorClass: "text-[var(--color-secondary)] bg-[var(--color-secondary)]/10", title: "Cryo-Vault", desc: "Active temperature regulation for pharmaceutical-grade cargo.", price: "+$99/mo", priceColor: "text-[var(--color-secondary)]" },
+            { icon: "👁️", colorClass: "text-[var(--color-primary)] bg-[var(--color-primary)]/10", title: "Void Analytics Pro", desc: "Deep-dive operational intelligence and predictive forecasting.", price: "+$79/mo", priceColor: "text-[var(--color-primary)]" },
+            { icon: "🤖", colorClass: "text-[var(--color-secondary)] bg-[var(--color-secondary)]/10", title: "AI Dispatch Brain", desc: "Let Kinetic AI fully automate your dispatch protocols.", price: "+$149/mo", priceColor: "text-[var(--color-secondary)]" },
+            { icon: "🔐", colorClass: "text-[var(--color-primary)] bg-[var(--color-primary)]/10", title: "Quantum Encryption", desc: "Post-quantum cryptographic security for ultra-sensitive cargo.", price: "+$199/mo", priceColor: "text-[var(--color-primary)]" },
+            { icon: "📞", colorClass: "text-[var(--color-secondary)] bg-[var(--color-secondary)]/10", title: "White-Glove Service", desc: "Personal logistics concierge available 24/7 via direct line.", price: "+$299/mo", priceColor: "text-[var(--color-secondary)]" },
           ].map((addon) => (
             <div key={addon.title} className="bg-[#1a1919] p-5 sm:p-6 rounded-2xl border border-[#494847]/10 hover:border-[#494847]/30 transition-colors flex gap-4 sm:gap-5">
               <div className={`flex-shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-xl ${addon.colorClass}`}>
@@ -175,10 +175,10 @@ export default function PricingPage() {
             { q: "Is there a free trial?", a: "All new accounts receive 5 free shipments on the Kinetic tier to experience our core capabilities. No credit card required." },
             { q: "How does the SLA-backed guarantee work on Quantum?", a: "If we miss a committed delivery window, you receive a service credit of 100% of the delivery cost. Our network maintains 99.9% on-time performance globally." },
           ].map((item) => (
-            <details key={item.q} className="bg-[#1a1919] rounded-xl border border-[#494847]/10 group open:border-[#a3a6ff]/30 transition-colors">
+            <details key={item.q} className="bg-[#1a1919] rounded-xl border border-[#494847]/10 group open:border-[var(--color-primary)]/30 transition-colors">
               <summary className="p-5 sm:p-6 cursor-pointer flex justify-between items-center font-semibold list-none gap-4">
                 <span className="text-sm sm:text-base">{item.q}</span>
-                <span className="text-[#a3a6ff] transition-transform group-open:rotate-45 text-xl leading-none flex-shrink-0">+</span>
+                <span className="text-[var(--color-primary)] transition-transform group-open:rotate-45 text-xl leading-none flex-shrink-0">+</span>
               </summary>
               <p className="px-5 sm:px-6 pb-5 sm:pb-6 text-sm text-[#adaaaa] leading-relaxed">{item.a}</p>
             </details>
@@ -188,3 +188,4 @@ export default function PricingPage() {
     </div>
   )
 }
+

@@ -106,11 +106,11 @@ export default async function DriverPayoutsPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
         {/* Pending balance — highlighted */}
-        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden border border-[#a3a6ff]/20 shadow-lg">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#a3a6ff]/10 rounded-full blur-3xl" />
+        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden border border-[var(--color-primary)]/20 shadow-lg">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-[var(--color-primary)]/10 rounded-full blur-3xl" />
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#a3a6ff]">Available Balance</span>
-            <span className="material-symbols-outlined text-[#a3a6ff]">account_balance_wallet</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">Available Balance</span>
+            <span className="material-symbols-outlined text-[var(--color-primary)]">account_balance_wallet</span>
           </div>
           <p className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(pendingBalance)}</p>
           <p className="text-xs text-[#adaaaa] mt-1">Ready to withdraw</p>
@@ -145,7 +145,7 @@ export default async function DriverPayoutsPage() {
             {allEarnings.length === 0 ? (
               <div className="py-16 text-center px-8">
                 <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#262626] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[#a3a6ff]">local_shipping</span>
+                  <span className="material-symbols-outlined text-[var(--color-primary)]">local_shipping</span>
                 </div>
                 <p className="text-sm font-bold text-white mb-1">No earnings yet</p>
                 <p className="text-xs text-[#adaaaa]">Complete deliveries to see your earnings here.</p>
@@ -188,9 +188,9 @@ export default async function DriverPayoutsPage() {
                             <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${
                               isPaid
                                 ? "bg-[#6ee7b7]/10 text-[#6ee7b7]"
-                                : "bg-[#c180ff]/10 text-[#c180ff]"
+                                : "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]"
                             }`}>
-                              <span className={`w-1 h-1 rounded-full ${isPaid ? "bg-[#6ee7b7]" : "bg-[#c180ff] animate-pulse"}`} />
+                              <span className={`w-1 h-1 rounded-full ${isPaid ? "bg-[#6ee7b7]" : "bg-[var(--color-secondary)] animate-pulse"}`} />
                               {isPaid ? "Paid" : "Pending"}
                             </span>
                           </div>
@@ -227,7 +227,7 @@ export default async function DriverPayoutsPage() {
                   const STATUS_MAP: Record<StatusKey, { icon: string; iconColor: string; iconBg: string; label: string; labelColor: string }> = {
                     paid:     { icon: "check_circle",  iconColor: "text-[#6ee7b7]", iconBg: "bg-[#6ee7b7]/10", label: "Disbursed", labelColor: "text-[#6ee7b7]" },
                     approved: { icon: "task_alt",       iconColor: "text-[#60a5fa]", iconBg: "bg-[#60a5fa]/10", label: "Approved",  labelColor: "text-[#60a5fa]" },
-                    pending:  { icon: "schedule",       iconColor: "text-[#c180ff]", iconBg: "bg-[#c180ff]/10", label: "Pending",   labelColor: "text-[#c180ff]" },
+                    pending:  { icon: "schedule",       iconColor: "text-[var(--color-secondary)]", iconBg: "bg-[var(--color-secondary)]/10", label: "Pending",   labelColor: "text-[var(--color-secondary)]" },
                     rejected: { icon: "cancel",         iconColor: "text-[#ff6e84]", iconBg: "bg-[#ff6e84]/10", label: "Rejected",  labelColor: "text-[#ff6e84]" },
                   }
                   const statusCfg = STATUS_MAP[p.status as StatusKey] ?? STATUS_MAP.pending
@@ -272,12 +272,12 @@ export default async function DriverPayoutsPage() {
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-[#adaaaa]">Platform fee</span>
-                <span className="text-[#c180ff] font-bold">25%</span>
+                <span className="text-[var(--color-secondary)] font-bold">25%</span>
               </div>
             </div>
             <div className="mt-3 h-2 rounded-full bg-[#262626] overflow-hidden flex">
               <div className="h-full bg-[#6ee7b7] rounded-l-full" style={{ width: "75%" }} />
-              <div className="h-full bg-[#c180ff] rounded-r-full" style={{ width: "25%" }} />
+              <div className="h-full bg-[var(--color-secondary)] rounded-r-full" style={{ width: "25%" }} />
             </div>
           </div>
         </div>
@@ -285,3 +285,4 @@ export default async function DriverPayoutsPage() {
     </div>
   )
 }
+

@@ -17,7 +17,7 @@ import { createPortal } from "react-dom"
 import { addVehicle, updateVehicle, deleteVehicle, type DriverVehicle, type VehicleInput } from "@/app/actions/vehicles"
 import { VEHICLE_TYPES, VEHICLE_INFO, isMotorVehicle, type VehicleType } from "@/lib/vehicles"
 
-const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all"
+const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
 const LABEL = "text-xs font-semibold text-[#adaaaa] uppercase tracking-wider"
 
 const EMPTY_INPUT: VehicleInput = {
@@ -117,7 +117,7 @@ function VehicleFormModal({
                     onClick={() => set("vehicle_type", t)}
                     className={`flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-bold transition-all ${
                       active
-                        ? "bg-[#a3a6ff]/10 border-[#a3a6ff]/40 text-[#a3a6ff]"
+                        ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/40 text-[var(--color-primary)]"
                         : "bg-[#262626] border-[#494847]/20 text-[#adaaaa] hover:border-[#494847]/40"
                     }`}
                   >
@@ -180,7 +180,7 @@ function VehicleFormModal({
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all active:scale-[0.98] disabled:opacity-60 flex items-center gap-2"
+            className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] transition-all active:scale-[0.98] disabled:opacity-60 flex items-center gap-2"
           >
             {isPending ? "Saving…" : "Save Vehicle"}
           </button>
@@ -282,7 +282,7 @@ export function VehicleManager({
 
       <button
         onClick={() => setModalState({ input: EMPTY_INPUT })}
-        className="w-full py-2.5 rounded-xl border border-dashed border-[#494847]/30 text-[#a3a6ff] font-bold text-sm hover:border-[#a3a6ff]/40 hover:bg-[#a3a6ff]/5 transition-all flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-xl border border-dashed border-[#494847]/30 text-[var(--color-primary)] font-bold text-sm hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-center gap-2"
       >
         <span className="material-symbols-outlined text-base">add_circle</span>
         Add Vehicle
@@ -290,3 +290,4 @@ export function VehicleManager({
     </div>
   )
 }
+

@@ -8,12 +8,12 @@ export default function Footer() {
             Redefining the physical movement of assets through technology and precision.
           </p>
           <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#262626] flex items-center justify-center hover:bg-[#a3a6ff] transition-colors cursor-pointer">
+            <div className="w-10 h-10 rounded-full bg-[#262626] flex items-center justify-center hover:bg-[var(--color-primary)] transition-colors cursor-pointer">
               <span className="material-symbols-outlined text-sm" style={{ fontSize: '18px' }}>
                 language
               </span>
             </div>
-            <div className="w-10 h-10 rounded-full bg-[#262626] flex items-center justify-center hover:bg-[#a3a6ff] transition-colors cursor-pointer">
+            <div className="w-10 h-10 rounded-full bg-[#262626] flex items-center justify-center hover:bg-[var(--color-primary)] transition-colors cursor-pointer">
               <span className="material-symbols-outlined text-sm" style={{ fontSize: '18px' }}>
                 alternate_email
               </span>
@@ -25,17 +25,17 @@ export default function Footer() {
           <h6 className="font-bold mb-6">Network</h6>
           <ul className="space-y-4 text-sm text-[#adaaaa]">
             <li>
-              <a className="hover:text-[#a3a6ff]" href="/our-fleet">
+              <a className="hover:text-[var(--color-primary)]" href="/our-fleet">
                 Our Fleet
               </a>
             </li>
             <li>
-              <a className="hover:text-[#a3a6ff]" href="/pricing">
+              <a className="hover:text-[var(--color-primary)]" href="/pricing">
                 Pricing
               </a>
             </li>
             <li>
-              <a className="hover:text-[#a3a6ff]" href="/how-it-works">
+              <a className="hover:text-[var(--color-primary)]" href="/how-it-works">
                 How It Works
               </a>
             </li>
@@ -46,17 +46,17 @@ export default function Footer() {
           <h6 className="font-bold mb-6">Support</h6>
           <ul className="space-y-4 text-sm text-[#adaaaa]">
             <li>
-              <a className="hover:text-[#a3a6ff]" href="/contact">
+              <a className="hover:text-[var(--color-primary)]" href="/contact">
                 Contact Us
               </a>
             </li>
             <li>
-              <a className="hover:text-[#a3a6ff]" href="/safety">
+              <a className="hover:text-[var(--color-primary)]" href="/safety">
                 Safety
               </a>
             </li>
             <li>
-              <a className="hover:text-[#a3a6ff]" href="/prohibited-items">
+              <a className="hover:text-[var(--color-primary)]" href="/prohibited-items">
                 Prohibited Items
               </a>
             </li>
@@ -76,3 +76,4 @@ export default function Footer() {
     </footer>
   )
 }
+

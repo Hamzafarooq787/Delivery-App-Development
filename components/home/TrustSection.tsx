@@ -22,7 +22,7 @@ const features = [
 export default function TrustSection() {
   return (
     <section className="px-4 sm:px-8 py-16 sm:py-24 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-1/2 h-full bg-[#a3a6ff]/5 blur-[120px] rounded-full -translate-y-1/2 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-1/2 h-full bg-[var(--color-primary)]/5 blur-[120px] rounded-full -translate-y-1/2 pointer-events-none" />
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-center">
         {/* Image */}
         <div className="relative aspect-square rounded-[3rem] overflow-hidden">
@@ -35,7 +35,7 @@ export default function TrustSection() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent" />
           <div className="absolute bottom-4 sm:bottom-10 left-4 sm:left-10 right-4 sm:right-10 glass-card p-4 sm:p-6 rounded-2xl border border-[#494847]/20">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-[#c180ff] rounded-full text-[#33005b]">
+              <div className="p-3 bg-[var(--color-secondary)] rounded-full text-[var(--color-on-secondary)]">
                 <span className="material-symbols-outlined">verified_user</span>
               </div>
               <div>
@@ -54,7 +54,7 @@ export default function TrustSection() {
           <ul className="space-y-8">
             {features.map((f) => (
               <li key={f.title} className="flex gap-6">
-                <span className="material-symbols-outlined text-[#a3a6ff] mt-1">{f.icon}</span>
+                <span className="material-symbols-outlined text-[var(--color-primary)] mt-1">{f.icon}</span>
                 <div>
                   <h6 className="font-bold mb-1">{f.title}</h6>
                   <p className="text-sm text-[#adaaaa]">{f.description}</p>
@@ -67,3 +67,4 @@ export default function TrustSection() {
     </section>
   )
 }
+

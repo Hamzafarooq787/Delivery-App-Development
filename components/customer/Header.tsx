@@ -96,7 +96,7 @@ export default function Header({ onNewDelivery, userId: userIdProp }: HeaderProp
         {onNewDelivery && (
           <button
             onClick={onNewDelivery}
-            className="hidden md:flex bg-primary text-on-primary px-5 py-2 rounded-full font-bold text-xs items-center gap-2 hover:brightness-110 transition-all active:scale-95 shadow-[0_0_15px_rgba(163,166,255,0.2)]"
+            className="hidden md:flex bg-primary text-on-primary px-5 py-2 rounded-full font-bold text-xs items-center gap-2 hover:brightness-110 transition-all active:scale-95 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)]"
           >
             <span className="material-symbols-outlined text-[16px]">add_circle</span>
             NEW DELIVERY
@@ -116,3 +116,4 @@ export default function Header({ onNewDelivery, userId: userIdProp }: HeaderProp
     </header>
   )
 }
+

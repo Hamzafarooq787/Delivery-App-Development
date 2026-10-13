@@ -3,8 +3,9 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react"
-import { ArrowLeft, ArrowRight, Box, Check, KeyRound, Layers, Menu, ShoppingBag, Truck, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Box, Check, KeyRound, Menu, ShoppingBag, Truck, X } from "lucide-react"
 import { clampSlide, INTERACTIVE_SELECTOR, isDoubleTap, SLIDE_COUNT, swipeDirection, wheelDirection } from "./slide-gestures"
+import { BrandLogo } from '@/components/shared/brand-logo'
 import styles from "./HomeSlides.module.css"
 
 const names = ["Home", "Services", "How it works", "Buy for Me", "For business", "Help"]
@@ -169,7 +170,7 @@ export default function HomeSlides() {
         }
       }}>
       <header className={styles.header}>
-        <button className={styles.logo} onClick={() => go(0, true)} aria-label="GoDrop home"><Layers aria-hidden />GoDrop</button>
+        <button className={styles.logo} onClick={() => go(0, true)} aria-label="GoDrop home"><BrandLogo /></button>
         <nav aria-label="Homepage sections" className={styles.desktopNav}>
           {[1, 2, 3, 5].map(index => <button key={index} aria-current={active === index ? "page" : undefined} onClick={() => go(index, true)}>{names[index]}</button>)}
           <Link href="/signup?role=driver">For drivers</Link>

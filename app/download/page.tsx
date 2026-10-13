@@ -51,7 +51,7 @@ export default function DownloadPage() {
     <main className="min-h-screen bg-[#0e0e0e] flex flex-col items-center justify-start px-4 py-12">
       {/* Background glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-[#a3a6ff]/5 blur-[140px]" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-[var(--color-primary)]/5 blur-[140px]" />
         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-[#6ee7b7]/4 blur-[120px]" />
       </div>
 
@@ -64,8 +64,8 @@ export default function DownloadPage() {
 
         {/* Hero */}
         <div className="text-center mb-12">
-          <div className="w-20 h-20 rounded-2xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center mx-auto mb-5">
-            <span className="material-symbols-outlined text-[#a3a6ff] text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
+          <div className="w-20 h-20 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center mx-auto mb-5">
+            <span className="material-symbols-outlined text-[var(--color-primary)] text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
           </div>
           <h1 className="font-headline text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
             Get Go Drop
@@ -94,23 +94,23 @@ export default function DownloadPage() {
           <div className="space-y-4 mb-10">
 
             {/* Android */}
-            <div className={`glass-card rounded-2xl border p-6 transition-all ${platform === "android" ? "border-[#a3a6ff]/40 bg-[#a3a6ff]/5" : "border-[#262626]"}`}>
+            <div className={`glass-card rounded-2xl border p-6 transition-all ${platform === "android" ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/5" : "border-[#262626]"}`}>
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>android</span>
+                <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>android</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-white font-bold text-base">Android</h3>
                     {platform === "android" && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#a3a6ff]/15 text-[#a3a6ff]">Your device</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)]">Your device</span>
                     )}
                   </div>
                   <p className="text-[#adaaaa] text-xs leading-relaxed mb-4">Open in Chrome and tap the Install button below.</p>
                   <div className="space-y-2 text-xs text-[#adaaaa] mb-4">
                     {["Open this page in Chrome", "Tap the Install button", "Tap Install on the popup"].map((s, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-full bg-[#a3a6ff]/15 text-[#a3a6ff] text-[9px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                        <span className="w-4 h-4 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] text-[9px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                         {s}
                       </div>
                     ))}
@@ -137,16 +137,16 @@ export default function DownloadPage() {
             </div>
 
             {/* iOS */}
-            <div className={`glass-card rounded-2xl border p-6 transition-all ${platform === "ios" ? "border-[#a3a6ff]/40 bg-[#a3a6ff]/5" : "border-[#262626]"}`}>
+            <div className={`glass-card rounded-2xl border p-6 transition-all ${platform === "ios" ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/5" : "border-[#262626]"}`}>
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>phone_iphone</span>
+                <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>phone_iphone</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-white font-bold text-base">iPhone / iPad</h3>
                     {platform === "ios" && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#a3a6ff]/15 text-[#a3a6ff]">Your device</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)]">Your device</span>
                     )}
                   </div>
                   <p className="text-[#adaaaa] text-xs leading-relaxed mb-4">Open in Safari and follow these steps:</p>
@@ -158,7 +158,7 @@ export default function DownloadPage() {
                       'Tap "Add" to confirm',
                     ].map((s, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-full bg-[#a3a6ff]/15 text-[#a3a6ff] text-[9px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                        <span className="w-4 h-4 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] text-[9px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                         {s}
                       </div>
                     ))}
@@ -168,16 +168,16 @@ export default function DownloadPage() {
             </div>
 
             {/* Desktop */}
-            <div className={`glass-card rounded-2xl border p-6 transition-all ${platform === "desktop" ? "border-[#a3a6ff]/40 bg-[#a3a6ff]/5" : "border-[#262626]"}`}>
+            <div className={`glass-card rounded-2xl border p-6 transition-all ${platform === "desktop" ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/5" : "border-[#262626]"}`}>
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>desktop_windows</span>
+                <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>desktop_windows</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-white font-bold text-base">Windows / Mac / Linux</h3>
                     {platform === "desktop" && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#a3a6ff]/15 text-[#a3a6ff]">Your device</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)]">Your device</span>
                     )}
                   </div>
                   <p className="text-[#adaaaa] text-xs leading-relaxed mb-4">Open in Chrome or Edge for the best experience:</p>
@@ -189,7 +189,7 @@ export default function DownloadPage() {
                       "Click Install to confirm",
                     ].map((s, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-full bg-[#a3a6ff]/15 text-[#a3a6ff] text-[9px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                        <span className="w-4 h-4 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] text-[9px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                         {s}
                       </div>
                     ))}
@@ -245,10 +245,11 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={copy}
-      className="shrink-0 flex items-center gap-1.5 bg-[#a3a6ff]/10 hover:bg-[#a3a6ff]/20 border border-[#a3a6ff]/20 text-[#a3a6ff] text-xs font-bold px-3 py-2 rounded-lg transition-all"
+      className="shrink-0 flex items-center gap-1.5 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold px-3 py-2 rounded-lg transition-all"
     >
       <span className="material-symbols-outlined text-[15px]">{copied ? "check" : "content_copy"}</span>
       {copied ? "Copied!" : "Copy"}
     </button>
   )
 }
+

@@ -38,19 +38,19 @@ function makeDriverIcon(initials: string) {
       <div style="position:relative;width:38px;height:38px;">
         <div style="
           position:absolute;inset:0;
-          background:rgba(163,166,255,0.2);
+          background:rgba(var(--brand-rgb),0.2);
           border-radius:9999px;
           animation:kv-pulse 2s ease-out infinite;
         "></div>
         <div style="
           position:absolute;top:4px;left:4px;
           width:30px;height:30px;
-          background:#a3a6ff;
+          background:var(--color-primary);
           border:2.5px solid #0e0e0e;
           border-radius:9999px;
-          box-shadow:0 0 12px rgba(163,166,255,0.6);
+          box-shadow:0 0 12px rgba(var(--brand-rgb),0.6);
           display:flex;align-items:center;justify-content:center;
-          color:#0f00a4;font-size:11px;font-weight:800;font-family:system-ui;
+          color:var(--color-on-primary);font-size:11px;font-weight:800;font-family:system-ui;
         ">${initials}</div>
       </div>
       <style>
@@ -255,3 +255,4 @@ export function MultiDriverMap({ deliveries, height = 400, className }: Props) {
 
 export { AgeBadge }
 export type { DriverPin as DriverPinType }
+

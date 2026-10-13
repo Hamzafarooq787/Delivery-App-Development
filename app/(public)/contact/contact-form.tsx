@@ -56,7 +56,7 @@ export function ContactForm() {
               type="text"
               required
               placeholder="Marcus"
-              className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors"
+              className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-colors"
             />
           </div>
           <div>
@@ -66,7 +66,7 @@ export function ContactForm() {
               type="text"
               required
               placeholder="Chen"
-              className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors"
+              className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-colors"
             />
           </div>
         </div>
@@ -77,7 +77,7 @@ export function ContactForm() {
             type="email"
             required
             placeholder="ops@yourcompany.com"
-            className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors"
+            className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-colors"
           />
         </div>
         <div>
@@ -85,7 +85,7 @@ export function ContactForm() {
           <select
             name="subject"
             required
-            className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors"
+            className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-colors"
           >
             <option className="bg-[#1a1919]" value="">Select a topic...</option>
             <option className="bg-[#1a1919]">Enterprise Partnership</option>
@@ -102,7 +102,7 @@ export function ContactForm() {
             rows={6}
             required
             placeholder="Describe your logistical requirements in detail. The more data you provide, the faster we can mobilize a response."
-            className="w-full bg-black/40 border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors resize-none"
+            className="w-full bg-black/40 border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-colors resize-none"
           />
         </div>
         {error && (
@@ -111,7 +111,7 @@ export function ContactForm() {
         <button
           type="submit"
           disabled={pending}
-          className="w-full bg-[#a3a6ff] text-[#0f00a4] font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(163,166,255,0.2)] hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest text-sm disabled:opacity-60"
+          className="w-full bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(var(--brand-rgb),0.2)] hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest text-sm disabled:opacity-60"
         >
           {pending ? "Transmitting…" : "Transmit Signal"}
         </button>
@@ -119,3 +119,4 @@ export function ContactForm() {
     </div>
   )
 }
+

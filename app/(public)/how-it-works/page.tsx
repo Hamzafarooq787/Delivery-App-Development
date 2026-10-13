@@ -23,13 +23,13 @@ export default function HowItWorksPage() {
         </div>
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 flex flex-col items-center text-center">
           <h1 className="font-headline text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 text-balance break-words w-full">
-            ENGINEERED FOR <span className="text-[#a3a6ff] italic">VELOCITY</span>
+            ENGINEERED FOR <span className="text-[var(--color-primary)] italic">VELOCITY</span>
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-[#adaaaa] max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">
             Go Drop is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
-            <Link href="/signup" className="w-full sm:w-auto bg-[#a3a6ff] text-[#0f00a4] font-headline font-bold px-8 py-4 rounded-lg flex items-center justify-center gap-2 kinetic-glow transition-transform active:scale-95">
+            <Link href="/signup" className="w-full sm:w-auto bg-[var(--color-primary)] text-[var(--color-on-primary)] font-headline font-bold px-8 py-4 rounded-lg flex items-center justify-center gap-2 kinetic-glow transition-transform active:scale-95">
               INITIALIZE NETWORK ⚡
             </Link>
             <button className="w-full sm:w-auto border border-[#494847] text-white hover:bg-[#201f1f] font-headline font-bold px-8 py-4 rounded-lg transition-colors">
@@ -44,7 +44,7 @@ export default function HowItWorksPage() {
         {/* Step 1: Request */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           <div className="order-2 md:order-1">
-            <div className="inline-block px-3 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-[10px] tracking-[0.2em] uppercase mb-6">
+            <div className="inline-block px-3 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-[10px] tracking-[0.2em] uppercase mb-6">
               Phase 01
             </div>
             <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">The Void Signal</h3>
@@ -57,7 +57,7 @@ export default function HowItWorksPage() {
                 { icon: "📊", title: "Predictive Sizing", desc: "Automated volume analysis for perfect vehicle matching." },
               ].map((item) => (
                 <li key={item.title} className="flex items-start gap-3">
-                  <span className="text-[#a3a6ff] text-xl mt-1">{item.icon}</span>
+                  <span className="text-[var(--color-primary)] text-xl mt-1">{item.icon}</span>
                   <div>
                     <h4 className="text-white font-bold">{item.title}</h4>
                     <p className="text-sm text-[#adaaaa]">{item.desc}</p>
@@ -67,7 +67,7 @@ export default function HowItWorksPage() {
             </ul>
           </div>
           <div className="order-1 md:order-2 relative aspect-square group">
-            <div className="absolute inset-0 bg-[#a3a6ff]/20 rounded-full blur-[100px] opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="absolute inset-0 bg-[var(--color-primary)]/20 rounded-full blur-[100px] opacity-20 group-hover:opacity-40 transition-opacity" />
             <div className="relative h-full w-full rounded-2xl overflow-hidden border border-[#494847]/15">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -91,16 +91,16 @@ export default function HowItWorksPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-transparent to-transparent" />
             <div className="absolute bottom-6 left-6 right-6 glass-card p-6 rounded-xl border border-[#494847]/15">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-[#c180ff]/20 flex items-center justify-center text-[#c180ff]">🔀</div>
+                <div className="h-10 w-10 rounded-full bg-[var(--color-secondary)]/20 flex items-center justify-center text-[var(--color-secondary)]">🔀</div>
                 <div>
-                  <p className="text-xs text-[#c180ff] font-bold uppercase tracking-widest">Active Routing</p>
+                  <p className="text-xs text-[var(--color-secondary)] font-bold uppercase tracking-widest">Active Routing</p>
                   <p className="text-white font-headline font-medium">Calculating optimal trajectory through the void...</p>
                 </div>
               </div>
             </div>
           </div>
           <div className="md:col-span-5 md:pl-12">
-            <div className="inline-block px-3 py-1 rounded-full bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-[10px] tracking-[0.2em] uppercase mb-6">
+            <div className="inline-block px-3 py-1 rounded-full bg-[var(--color-secondary)]/10 border border-[var(--color-secondary)]/20 text-[var(--color-secondary)] text-[10px] tracking-[0.2em] uppercase mb-6">
               Phase 02
             </div>
             <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">Kinetic Routing</h3>
@@ -113,7 +113,7 @@ export default function HowItWorksPage() {
                 { icon: "🕸️", title: "Swarm Intelligence", desc: "Decentralized fleet coordination." },
               ].map((item) => (
                 <div key={item.title} className="p-4 bg-[#1a1919] rounded-lg border border-[#494847]/10">
-                  <span className="text-[#c180ff] text-xl mb-2 block">{item.icon}</span>
+                  <span className="text-[var(--color-secondary)] text-xl mb-2 block">{item.icon}</span>
                   <p className="text-white text-sm font-bold">{item.title}</p>
                   <p className="text-[10px] text-[#adaaaa]">{item.desc}</p>
                 </div>
@@ -125,7 +125,7 @@ export default function HowItWorksPage() {
         {/* Step 3: Delivery */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           <div>
-            <div className="inline-block px-3 py-1 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-[10px] tracking-[0.2em] uppercase mb-6">
+            <div className="inline-block px-3 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-[10px] tracking-[0.2em] uppercase mb-6">
               Phase 03
             </div>
             <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">The Final Handshake</h3>
@@ -138,7 +138,7 @@ export default function HowItWorksPage() {
                 { icon: "🧾", title: "Immutable Ledger", desc: "Instant digital confirmation and chain of custody." },
               ].map((item) => (
                 <div key={item.title} className="flex items-center gap-4 p-4 bg-[#201f1f] rounded-xl border border-[#494847]/15">
-                  <div className="h-12 w-12 rounded bg-[#a3a6ff]/20 flex items-center justify-center text-xl text-[#a3a6ff]">
+                  <div className="h-12 w-12 rounded bg-[var(--color-primary)]/20 flex items-center justify-center text-xl text-[var(--color-primary)]">
                     {item.icon}
                   </div>
                   <div>
@@ -156,7 +156,7 @@ export default function HowItWorksPage() {
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPStyOfoxMusw6DbLdvrDr-wyCYy-QRlnjHi-wVuU7O3ItU9mSNwUPTCsBafIfqH6YPj8VIc74x_zGvK0M948k2R6_qcDYfZzysiXh-BqwsHja2yBvEg43yUcVe9xaUatWkMCpzs7K_1qrCijYX5mmhT3bGRpC9I9uLeBdRxPyiC6XlNnPtHunXM8H8JvooSA83HX37-4mxScjnnddAuZgMXB8iXZFUcVpnsP5Q4RpKwB_XcHVlY_qm88EJgg8H3_FT9UYKI2hdQ"
               alt="Final delivery"
             />
-            <div className="absolute inset-0 bg-[#a3a6ff]/10 mix-blend-overlay" />
+            <div className="absolute inset-0 bg-[var(--color-primary)]/10 mix-blend-overlay" />
           </div>
         </div>
       </section>
@@ -173,7 +173,7 @@ export default function HowItWorksPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="absolute inset-0 w-full h-full object-cover opacity-20 grayscale group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxY2pI22h6pQ7i3zo3HXqoO9Bt4fxlWH9ph1vJFdsoCHQ6MxvLk5dP_7sFCgpalfHrV5xVE2g0shX8yS3nycQMUBBGOKbh-T2hrRWzxgvVgu9DuDha7pb33I33nP8vBvXqnNlKwBHK_42j1V5wIRSUK8OnvTM71ubJss_VEE_RPK-JP9Xjvr6hOD0L1gmDs_w65KdBDpbOQI_703PUui-B9qDWR3pXnCV7s5Fw31xhEG97mSS8-yANQsi5H6I9_nisH5K3CNqdqw" alt="Void Analytics" />
               <div className="relative z-10">
-                <span className="text-[#a3a6ff] text-4xl mb-4 block">📈</span>
+                <span className="text-[var(--color-primary)] text-4xl mb-4 block">📈</span>
                 <h4 className="text-2xl font-headline font-bold text-white mb-2">Void Analytics Hub</h4>
                 <p className="text-[#adaaaa] text-sm max-w-xs">Gain absolute visibility over your supply chain with real-time telemetry and deep-learning forecasts.</p>
               </div>
@@ -183,15 +183,15 @@ export default function HowItWorksPage() {
                 <h4 className="text-xl font-headline font-bold text-white mb-1">Fleet Sync</h4>
                 <p className="text-[#adaaaa] text-xs">Proprietary vehicle-to-vehicle communication network.</p>
               </div>
-              <span className="text-[#c180ff] text-5xl opacity-50 group-hover:opacity-100 transition-opacity">📶</span>
+              <span className="text-[var(--color-secondary)] text-5xl opacity-50 group-hover:opacity-100 transition-opacity">📶</span>
             </div>
             <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/15 flex flex-col items-center text-center justify-center space-y-3 group">
-              <div className="h-12 w-12 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] group-hover:scale-110 transition-transform text-xl">🔒</div>
+              <div className="h-12 w-12 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform text-xl">🔒</div>
               <h4 className="font-bold text-sm">Quantum Sec</h4>
               <p className="text-[10px] text-[#adaaaa]">Military-grade encryption for all manifests.</p>
             </div>
             <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/15 flex flex-col items-center text-center justify-center space-y-3 group">
-              <div className="h-12 w-12 rounded-full bg-[#c180ff]/10 flex items-center justify-center text-[#c180ff] group-hover:scale-110 transition-transform text-xl">🔄</div>
+              <div className="h-12 w-12 rounded-full bg-[var(--color-secondary)]/10 flex items-center justify-center text-[var(--color-secondary)] group-hover:scale-110 transition-transform text-xl">🔄</div>
               <h4 className="font-bold text-sm">Auto-Scale</h4>
               <p className="text-[10px] text-[#adaaaa]">Instant bandwidth expansion during peak traffic.</p>
             </div>
@@ -202,13 +202,14 @@ export default function HowItWorksPage() {
       {/* Final CTA */}
       <section className="py-20 sm:py-32 px-4 sm:px-6 text-center">
         <h2 className="font-headline text-3xl sm:text-4xl md:text-6xl font-black mb-6 sm:mb-8 tracking-tighter text-balance">
-          READY TO <span className="text-[#a3a6ff]">ENTER THE VOID?</span>
+          READY TO <span className="text-[var(--color-primary)]">ENTER THE VOID?</span>
         </h2>
         <p className="text-[#adaaaa] text-lg max-w-xl mx-auto mb-12">Join the global leaders who trust Go Drop for their most critical logistics missions.</p>
-        <Link href="/signup" className="inline-block bg-[#a3a6ff] text-[#0f00a4] font-bold px-10 py-5 rounded-lg kinetic-glow uppercase tracking-widest text-sm transition-all hover:brightness-110 active:scale-95">
+        <Link href="/signup" className="inline-block bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold px-10 py-5 rounded-lg kinetic-glow uppercase tracking-widest text-sm transition-all hover:brightness-110 active:scale-95">
           Request Onboarding
         </Link>
       </section>
     </div>
   )
 }
+

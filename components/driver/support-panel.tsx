@@ -6,8 +6,8 @@ import type { SupportTicket } from "@/app/actions/driver"
 
 function TicketStatusBadge({ status }: { status: "open" | "closed" }) {
   return status === "open" ? (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-[#a3a6ff]/10 text-[#a3a6ff] border border-[#a3a6ff]/20">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#a3a6ff]" />Open
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+      <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />Open
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-green-500/10 text-green-400 border border-green-500/20">
@@ -55,7 +55,7 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
               name="subject"
               required
               placeholder="Brief description of your issue"
-              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all"
+              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
             />
           </div>
           <div className="space-y-1.5">
@@ -65,7 +65,7 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
               required
               rows={5}
               placeholder="Describe your issue in detail..."
-              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all resize-none"
+              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all resize-none"
             />
           </div>
           {error && (
@@ -78,7 +78,7 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
             <button
               type="submit"
               disabled={isPending}
-              className="flex-1 py-3 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] disabled:opacity-60 flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {isPending ? (
                 <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Submitting...</>
@@ -118,7 +118,7 @@ export function SupportPanel({
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="self-start sm:self-auto flex items-center gap-2 px-5 py-2.5 bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm rounded-xl shadow-[0_0_15px_rgba(163,166,255,0.2)] active:scale-95 transition-all"
+          className="self-start sm:self-auto flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm rounded-xl shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] active:scale-95 transition-all"
         >
           <span className="material-symbols-outlined text-sm">add</span>
           New Ticket
@@ -127,13 +127,13 @@ export function SupportPanel({
 
       {/* Live chat hint */}
       {showChatHint && (
-      <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20">
-        <div className="w-9 h-9 rounded-xl bg-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-          <span className="material-symbols-outlined text-[#a3a6ff] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
+      <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
+        <div className="w-9 h-9 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+          <span className="material-symbols-outlined text-[var(--color-primary)] text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-white">Need instant help?</p>
-          <p className="text-xs text-[#adaaaa] mt-0.5">Use the <span className="text-[#a3a6ff] font-semibold">chat bubble</span> in the bottom-right corner to talk directly with our support team.</p>
+          <p className="text-xs text-[#adaaaa] mt-0.5">Use the <span className="text-[var(--color-primary)] font-semibold">chat bubble</span> in the bottom-right corner to talk directly with our support team.</p>
         </div>
       </div>
       )}
@@ -183,3 +183,4 @@ export function SupportPanel({
     </div>
   )
 }
+

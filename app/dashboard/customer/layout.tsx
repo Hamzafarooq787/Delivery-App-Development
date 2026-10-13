@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Sidebar from '@/components/customer/Sidebar'
 import BottomNav from '@/components/customer/BottomNav'
@@ -17,12 +17,18 @@ export default function CustomerDashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const isHome = usePathname() === '/dashboard/customer'
+  const [focusAddress, setFocusAddress] = useState<'pickup' | 'delivery' | undefined>()
   const [showModal, setShowModal] = useState(false)
   const [resumeDraft, setResumeDraft] = useState<DeliveryDraft | null>(null)
 
   // The BottomNav FAB dispatches this event; individual pages can too.
   useEffect(() => {
-    const open = () => setShowModal(true)
+    const open = (event: Event) => {
+      const focus = (event as CustomEvent<{ focus?: string }>).detail?.focus
+      setFocusAddress(focus === 'pickup' || focus === 'delivery' ? focus : undefined)
+      setShowModal(true)
+    }
     document.addEventListener('open-new-delivery', open)
     return () => document.removeEventListener('open-new-delivery', open)
   }, [])
@@ -55,15 +61,16 @@ export default function CustomerDashboardLayout({
     <div className="min-h-screen bg-surface-container-low">
       {/* Top bar chrome comes from each page's own <Header /> — mounting
           CustomerTopBar here as well rendered two top bars at once. */}
-      <Sidebar />
-      <BottomNav />
+      {!isHome && <><Sidebar /><BottomNav /></>}
       {children}
       {showModal && (
         <NewDeliveryModal
           initialDraft={resumeDraft}
+          focusAddress={focusAddress}
           onClose={() => { setShowModal(false); setResumeDraft(null) }}
         />
       )}
     </div>
   )
 }
+

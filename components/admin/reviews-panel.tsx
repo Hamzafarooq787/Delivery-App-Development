@@ -93,9 +93,9 @@ export function ReviewsPanel({ initialRatings }: { initialRatings: PendingRating
           <p className="text-[#adaaaa] mt-1">Approve or reject ratings before they're published to the other party.</p>
         </div>
         {ratings.length > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-[#a3a6ff] animate-pulse" />
-            <span className="text-xs font-bold text-[#a3a6ff]">{ratings.length} pending</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
+            <span className="text-xs font-bold text-[var(--color-primary)]">{ratings.length} pending</span>
           </div>
         )}
       </div>
@@ -116,3 +116,4 @@ export function ReviewsPanel({ initialRatings }: { initialRatings: PendingRating
     </div>
   )
 }
+

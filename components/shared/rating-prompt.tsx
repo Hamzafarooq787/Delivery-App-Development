@@ -43,7 +43,7 @@ export function RatingPrompt({ deliveryId, ratedLabel, onSubmitted }: Props) {
   const displayScore = hoverScore || score
 
   return (
-    <div className="rounded-2xl border border-[#a3a6ff]/20 bg-[#a3a6ff]/5 px-4 py-4 space-y-3">
+    <div className="rounded-2xl border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5 px-4 py-4 space-y-3">
       <p className="text-sm font-bold text-white">Rate {ratedLabel}</p>
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((n) => (
@@ -73,16 +73,17 @@ export function RatingPrompt({ deliveryId, ratedLabel, onSubmitted }: Props) {
         onChange={(e) => setComment(e.target.value.slice(0, 300))}
         placeholder="Leave a comment (optional)"
         rows={2}
-        className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3 py-2 text-sm text-white placeholder-[#494847] outline-none focus:border-[#a3a6ff]/50 transition-colors resize-none"
+        className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3 py-2 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors resize-none"
       />
       {error && <p className="text-xs text-[#ff6e84]">{error}</p>}
       <button
         onClick={handleSubmit}
         disabled={score === 0 || isPending}
-        className="w-full py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-40"
+        className="w-full py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-40"
       >
         {isPending ? "Submitting…" : "Submit Rating"}
       </button>
     </div>
   )
 }
+

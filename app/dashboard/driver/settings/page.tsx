@@ -58,8 +58,8 @@ export default async function DriverSettingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 md:mb-10">
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-            <span className="text-base font-bold text-[#a3a6ff]">{initials}</span>
+          <div className="h-14 w-14 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+            <span className="text-base font-bold text-[var(--color-primary)]">{initials}</span>
           </div>
           <div>
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tighter font-headline text-white">
@@ -77,3 +77,4 @@ export default async function DriverSettingsPage() {
     </div>
   )
 }
+

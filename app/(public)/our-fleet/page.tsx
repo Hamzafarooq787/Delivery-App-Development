@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 const vehicles = [
   {
     tier: "Hyper-Local",
-    tierColor: "text-[#a3a6ff]",
+    tierColor: "text-[var(--color-primary)]",
     name: "Courier Cycle",
     img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDeg-F43PjW60L8IMldj52Wi76YyxZKTe3yHdebyqvz4PElXb2TnH5f9jLblKI-d7sUonSUx25qQmLA0z6dsnSl7Jpabio-0gKaAK_FkJWZqripWpNyo6mm9bWreNIKB0loHkmnxIbylceWFFtpph6ST8ZkegnVlw_X9GnOGfmXB0XsWhk0k8jUOLM585QP2kUnsbwmrcNZ_qqZ-9od1O5j16twEcBwvnMb9vSjdKf9vvIOEJaV2ed-zV-4zELIN3sfpG0uIMKK8Q",
     imgAlt: "Electric courier bike",
@@ -21,7 +21,7 @@ const vehicles = [
   },
   {
     tier: "Urban Freight",
-    tierColor: "text-[#c180ff]",
+    tierColor: "text-[var(--color-secondary)]",
     name: "Kinetic Van",
     img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDSpObFjpAY23sTHr6ITCd2ELb8VqIPbiZJ9y0GoOVBVy7zpt7rVIRHx972TEutEc5PB2fAIIfSSHaePBbvK15o6hxKXyni2N9JjoysFzckrwG0oqAc8S2cb5mX8j-xQJmafzXGxe3dwDdLTTmotdKTJaXHE9zRWXFJrSMiQ2xKecpaSKEYJpp6loXP-YJq8oGi45RUAjGlWNW_RQQB4pB83FQf5wks0IhNnurbLRYgm-JzTKVIfk22JSxaoivxaNZOxrmCeNtVNw",
     imgAlt: "Electric delivery van",
@@ -33,7 +33,7 @@ const vehicles = [
   },
   {
     tier: "Continental",
-    tierColor: "text-[#ffa5d9]",
+    tierColor: "text-[var(--color-tertiary)]",
     name: "Heavy Freight",
     img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCUFQVarfp3p7hwKnJUSOWbNWIFaSeFHnA_naX1lVQBnS5mLeL7JdBiUGbuoJ4OrZM70JwDNPVFUo72dTFVKoN6tKPdRdvmOiSdjzWrKTJcqa_n8Fy97GpguqUwyD3r4ihdoT5UP-RMztDaE72bSbo-6fKnKj8An6NOoA-RVOdXLSCfuIF-irWxJeDHcnPzbeQk6dhTjIowbHln25lMypzQ0OVOGZncC9PrydxMqQBXHU_SurVCCboAWS4-AaYZKBSRFY6y5NsTUg",
     imgAlt: "Electric semi truck",
@@ -45,7 +45,7 @@ const vehicles = [
   },
   {
     tier: "Aerial",
-    tierColor: "text-[#a3a6ff]",
+    tierColor: "text-[var(--color-primary)]",
     name: "Aero-Drone",
     img: "https://lh3.googleusercontent.com/aida-public/AB6AXuC1DyTGKq8KNxcpF-w8R9hpUsK2zmAX-zBzjDBcmaeb4sNC5d8n3bQwfAYo6GGlRMwZ6wbzMEolxA5bvoWozDKRgrbqmUqzl_8GHufaZG5WGL9DFCGmCBWBZJ9fFMafLid5k-_K6DaGP2aG2yllEfKg4Zcm4rX0XKZ627O93q9YqOPZvY706hC53k89O_nGzGc8xigcr4s2DCz5pw51ImYiMxLahKXVtW7EdmaM9TZTEjqTckAt9jaxolIB8WUNuIT87chJbs-WA",
     imgAlt: "Logistics drone",
@@ -59,19 +59,19 @@ const vehicles = [
 
 const ecosystemFeatures = [
   {
-    iconColor: "text-[#a3a6ff] bg-[#1a1919]",
+    iconColor: "text-[var(--color-primary)] bg-[#1a1919]",
     icon: "⚡",
     title: "Universal Charging",
     desc: "Proprietary wireless kinetic charging pads integrated at every hub for 100% uptime.",
   },
   {
-    iconColor: "text-[#c180ff] bg-[#1a1919]",
+    iconColor: "text-[var(--color-secondary)] bg-[#1a1919]",
     icon: "⚙️",
     title: "Modular Cargo Hubs",
     desc: "Quick-swap container systems allow for vehicle transitions in under 120 seconds.",
   },
   {
-    iconColor: "text-[#ffa5d9] bg-[#1a1919]",
+    iconColor: "text-[var(--color-tertiary)] bg-[#1a1919]",
     icon: "🎯",
     title: "L5 Autonomy",
     desc: "Every vehicle equipped with multi-spectrum LiDAR and real-time neural navigation.",
@@ -94,7 +94,7 @@ export default function OurFleetPage() {
         </div>
         <div className="relative z-10 max-w-3xl pt-20">
           <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter mb-4 sm:mb-6 leading-tight text-balance">
-            THE FUTURE OF <span className="text-[#a3a6ff]">KINETIC</span> MOTION
+            THE FUTURE OF <span className="text-[var(--color-primary)]">KINETIC</span> MOTION
           </h1>
           <p className="text-[#adaaaa] text-base sm:text-xl max-w-xl font-light leading-relaxed mb-6 sm:mb-8">
             Precision-engineered autonomous fleet designed for zero-latency logistics. From hyper-local delivery to heavy continental freight.
@@ -102,7 +102,7 @@ export default function OurFleetPage() {
           <div className="flex gap-4">
             <Link
               href="/contact"
-              className="bg-[#a3a6ff] text-[#0f00a4] font-bold px-8 py-4 rounded-lg shadow-[0_0_15px_rgba(163,166,255,0.2)] active:scale-95 transition-all flex items-center gap-2"
+              className="bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold px-8 py-4 rounded-lg shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] active:scale-95 transition-all flex items-center gap-2"
             >
               Book Fleet &rarr;
             </Link>
@@ -144,7 +144,7 @@ export default function OurFleetPage() {
                   ))}
                 </div>
               </div>
-              <button className="mt-8 w-full py-3 rounded-lg border border-[#a3a6ff]/30 text-[#a3a6ff] font-bold hover:bg-[#a3a6ff] hover:text-[#0f00a4] transition-all">
+              <button className="mt-8 w-full py-3 rounded-lg border border-[var(--color-primary)]/30 text-[var(--color-primary)] font-bold hover:bg-[var(--color-primary)] hover:text-[var(--color-on-primary)] transition-all">
                 Select Tier
               </button>
             </div>
@@ -180,8 +180,8 @@ export default function OurFleetPage() {
                 className="w-full h-full object-cover rounded-xl opacity-60"
               />
             </div>
-            <div className="absolute -bottom-10 -left-10 bg-[#262626]/60 backdrop-blur-xl border border-[#a3a6ff]/20 p-8 rounded-2xl">
-              <div className="text-5xl font-black text-[#a3a6ff] mb-1">99.9%</div>
+            <div className="absolute -bottom-10 -left-10 bg-[#262626]/60 backdrop-blur-xl border border-[var(--color-primary)]/20 p-8 rounded-2xl">
+              <div className="text-5xl font-black text-[var(--color-primary)] mb-1">99.9%</div>
               <div className="text-xs uppercase tracking-widest text-[#adaaaa]">Autonomous Uptime</div>
             </div>
           </div>
@@ -190,12 +190,12 @@ export default function OurFleetPage() {
 
       {/* CTA */}
       <section className="py-20 sm:py-32 px-4 sm:px-8 md:px-12 text-center bg-[#131313] overflow-hidden relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#a3a6ff]/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[var(--color-primary)]/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="relative z-10 max-w-2xl mx-auto">
           <h2 className="font-headline text-3xl sm:text-5xl font-extrabold mb-4 sm:mb-6 tracking-tighter text-balance">Ready to optimize your velocity?</h2>
           <p className="text-[#adaaaa] text-base sm:text-lg mb-8 sm:mb-10">Join the network of thousands of businesses scaling their logistics through the Go Drop ecosystem.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/contact" className="bg-[#a3a6ff] text-[#0f00a4] font-bold px-10 py-4 rounded-lg active:scale-95 transition-all text-lg">
+            <Link href="/contact" className="bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold px-10 py-4 rounded-lg active:scale-95 transition-all text-lg">
               Book Now
             </Link>
             <Link href="/contact" className="bg-[#262626] border border-[#494847]/30 text-white font-bold px-10 py-4 rounded-lg active:scale-95 transition-all text-lg">
@@ -207,3 +207,4 @@ export default function OurFleetPage() {
     </div>
   )
 }
+

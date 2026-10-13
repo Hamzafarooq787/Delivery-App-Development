@@ -86,8 +86,8 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
 
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-[#494847]/15 shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-[#a3a6ff]/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[#a3a6ff]">verified_user</span>
+          <div className="w-9 h-9 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-[var(--color-primary)]">verified_user</span>
           </div>
           <div>
             <p className="text-sm font-bold text-white">Parcel Authentication</p>
@@ -150,8 +150,8 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
           {step === "camera" && (
             <div className="space-y-4">
               <div className="rounded-xl border border-[#494847]/20 bg-[#262626] p-8 flex flex-col items-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-4xl">photo_camera</span>
+                <div className="w-20 h-20 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-4xl">photo_camera</span>
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-bold text-white">Take a Photo of the Parcel</p>
@@ -167,7 +167,7 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:brightness-110 transition-all active:scale-95"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:brightness-110 transition-all active:scale-95"
                 >
                   <span className="material-symbols-outlined text-base">camera_alt</span>
                   Open Camera
@@ -207,7 +207,7 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
               <button
                 disabled={!agreed}
                 onClick={() => setStep("camera")}
-                className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">arrow_forward</span>
                 I Understand — Continue
@@ -239,3 +239,4 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
     </div>
   )
 }
+

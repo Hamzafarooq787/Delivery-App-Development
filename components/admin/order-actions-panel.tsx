@@ -86,7 +86,7 @@ export function OrderActionsPanel({
       {/* Assign Driver */}
       <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[#201f1f] rounded-lg border border-[#494847]/10">
         <div className="flex items-center gap-2 text-sm text-white">
-          <span className="material-symbols-outlined text-sm text-[#a3a6ff]">person_add</span>
+          <span className="material-symbols-outlined text-sm text-[var(--color-primary)]">person_add</span>
           Assign Driver
         </div>
         <AssignDriverDropdown
@@ -183,3 +183,4 @@ export function OrderActionsPanel({
     </div>
   )
 }
+

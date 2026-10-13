@@ -1,7 +1,7 @@
 export default function BottomNav() {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 h-16 rounded-t-2xl bg-[#0e0e0e]/95 backdrop-blur-md border-t border-[#494847]/20 flex justify-around items-center shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-      <div className="flex flex-col items-center text-[#a3a6ff] drop-shadow-[0_0_8px_rgba(163,166,255,0.4)]">
+      <div className="flex flex-col items-center text-[var(--color-primary)] drop-shadow-[0_0_8px_rgba(var(--brand-rgb),0.4)]">
         <span className="material-symbols-outlined">grid_view</span>
         <span className="font-inter text-[10px] uppercase tracking-widest font-bold mt-1">Home</span>
       </div>
@@ -20,3 +20,4 @@ export default function BottomNav() {
     </nav>
   )
 }
+

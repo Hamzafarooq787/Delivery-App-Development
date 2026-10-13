@@ -42,8 +42,8 @@ export function AddDriverModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#494847]/15">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#a3a6ff]/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-base">person_add</span>
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-base">person_add</span>
             </div>
             <h2 className="text-base font-bold text-white">Add Driver Manually</h2>
           </div>
@@ -76,7 +76,7 @@ export function AddDriverModal({ onClose }: { onClose: () => void }) {
                   type="text"
                   required
                   placeholder="e.g. John Smith"
-                  className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
+                  className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-1 focus:ring-[var(--color-primary)]/30 transition-all"
                 />
               </div>
 
@@ -89,7 +89,7 @@ export function AddDriverModal({ onClose }: { onClose: () => void }) {
                   type="email"
                   required
                   placeholder="driver@example.com"
-                  className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
+                  className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-1 focus:ring-[var(--color-primary)]/30 transition-all"
                 />
               </div>
 
@@ -101,7 +101,7 @@ export function AddDriverModal({ onClose }: { onClose: () => void }) {
                   name="phone"
                   type="tel"
                   placeholder="+1 555 000 0000"
-                  className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
+                  className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-1 focus:ring-[var(--color-primary)]/30 transition-all"
                 />
               </div>
 
@@ -128,7 +128,7 @@ export function AddDriverModal({ onClose }: { onClose: () => void }) {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="flex-1 py-3 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isPending ? (
                     <>
@@ -150,3 +150,4 @@ export function AddDriverModal({ onClose }: { onClose: () => void }) {
     </div>
   )
 }
+

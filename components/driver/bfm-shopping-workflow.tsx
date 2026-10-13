@@ -184,15 +184,15 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
   const isDelivered = currentStage === "delivered" || job.status === "delivered"
   const isShopping = currentStage === "shopping"
 
-  const inputCls = "w-full bg-[#1a1919] border border-[#494847]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[#a3a6ff]/40 transition-all"
+  const inputCls = "w-full bg-[#1a1919] border border-[#494847]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/40 transition-all"
 
   return (
     <div className="space-y-4">
       {/* BFM Badge */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-[#c180ff]/10 border border-[#c180ff]/20 rounded-xl">
+      <div className="flex items-center gap-2 px-4 py-3 bg-[var(--color-secondary)]/10 border border-[var(--color-secondary)]/20 rounded-xl">
         <span className="text-xl">🛍️</span>
         <div>
-          <p className="text-sm font-bold text-[#c180ff]">Buy for Me Order</p>
+          <p className="text-sm font-bold text-[var(--color-secondary)]">Buy for Me Order</p>
           <p className="text-xs text-[#adaaaa]">
             Max spend: {fmt(job.max_spend_approved ?? 50)}
             {job.actual_items_total != null && ` · Spent: ${fmt(job.actual_items_total)}`}
@@ -209,22 +209,22 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
             return (
               <div key={stage} className="flex flex-col items-center gap-1.5 relative w-[72px]">
                 {i < BFM_STAGES.length - 1 && (
-                  <div className={`absolute top-4 left-1/2 w-full h-px z-0 ${done ? "bg-[#a3a6ff]" : "bg-[#494847]/30"}`} />
+                  <div className={`absolute top-4 left-1/2 w-full h-px z-0 ${done ? "bg-[var(--color-primary)]" : "bg-[#494847]/30"}`} />
                 )}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-all ${
-                  done ? "bg-[#a3a6ff] border-[#a3a6ff]" :
-                  active ? "bg-[#1a1919] border-[#c180ff] shadow-[0_0_12px_rgba(193,128,255,0.4)]" :
+                  done ? "bg-[var(--color-primary)] border-[var(--color-primary)]" :
+                  active ? "bg-[#1a1919] border-[var(--color-secondary)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.4)]" :
                   "bg-[#1a1919] border-[#494847]/30"
                 }`}>
                   {done ? (
                     <span className="material-symbols-outlined text-white text-sm">check</span>
                   ) : (
-                    <span className={`material-symbols-outlined text-sm ${active ? "text-[#c180ff]" : "text-[#494847]"}`}>
+                    <span className={`material-symbols-outlined text-sm ${active ? "text-[var(--color-secondary)]" : "text-[#494847]"}`}>
                       {icon}
                     </span>
                   )}
                 </div>
-                <p className={`text-[8px] font-bold text-center leading-tight ${active ? "text-[#c180ff]" : done ? "text-[#adaaaa]" : "text-[#494847]"}`}>
+                <p className={`text-[8px] font-bold text-center leading-tight ${active ? "text-[var(--color-secondary)]" : done ? "text-[#adaaaa]" : "text-[#494847]"}`}>
                   {label}
                 </p>
               </div>
@@ -236,7 +236,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
       {/* Shop & Delivery Info */}
       <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4 space-y-3">
         <div className="flex gap-3 items-start">
-          <span className="material-symbols-outlined text-[#c180ff] text-base mt-0.5">storefront</span>
+          <span className="material-symbols-outlined text-[var(--color-secondary)] text-base mt-0.5">storefront</span>
           <div>
             <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest">Shop</p>
             <p className="text-sm font-semibold text-white">{job.shop_name ?? "—"}</p>
@@ -244,7 +244,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
           </div>
         </div>
         <div className="flex gap-3 items-start">
-          <span className="material-symbols-outlined text-[#a3a6ff] text-base mt-0.5">location_on</span>
+          <span className="material-symbols-outlined text-[var(--color-primary)] text-base mt-0.5">location_on</span>
           <div>
             <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest">Deliver to</p>
             <p className="text-xs text-[#adaaaa]">{job.delivery_address ?? "—"}</p>
@@ -269,7 +269,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
             {items.map((item) => {
               const statusColor =
                 item.status === "purchased" ? "text-emerald-400" :
-                item.status === "substituted" ? "text-[#c180ff]" :
+                item.status === "substituted" ? "text-[var(--color-secondary)]" :
                 item.status === "unavailable" ? "text-red-400" :
                 item.status === "skipped" ? "text-[#494847]" :
                 "text-amber-400"
@@ -323,7 +323,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                           type="button"
                           disabled={isPending}
                           onClick={() => setShowSubForm(item.id)}
-                          className="flex-1 py-2 bg-[#c180ff]/10 text-[#c180ff] border border-[#c180ff]/20 rounded-lg text-xs font-bold hover:bg-[#c180ff]/20 transition-all disabled:opacity-50"
+                          className="flex-1 py-2 bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border border-[var(--color-secondary)]/20 rounded-lg text-xs font-bold hover:bg-[var(--color-secondary)]/20 transition-all disabled:opacity-50"
                         >
                           Replace
                         </button>
@@ -333,8 +333,8 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
                   {/* Substitution form */}
                   {showSubForm === item.id && (
-                    <div className="bg-[#0e0e0e] rounded-xl p-3 space-y-2 border border-[#c180ff]/20">
-                      <p className="text-[10px] font-bold text-[#c180ff] uppercase tracking-widest">Suggest replacement</p>
+                    <div className="bg-[#0e0e0e] rounded-xl p-3 space-y-2 border border-[var(--color-secondary)]/20">
+                      <p className="text-[10px] font-bold text-[var(--color-secondary)] uppercase tracking-widest">Suggest replacement</p>
                       <input
                         type="text"
                         placeholder="Replacement item name"
@@ -370,7 +370,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                           type="button"
                           disabled={isPending}
                           onClick={() => handleSubstitution(item.id)}
-                          className="flex-1 py-2 text-xs font-bold text-[#c180ff] bg-[#c180ff]/10 rounded-lg border border-[#c180ff]/20 disabled:opacity-50"
+                          className="flex-1 py-2 text-xs font-bold text-[var(--color-secondary)] bg-[var(--color-secondary)]/10 rounded-lg border border-[var(--color-secondary)]/20 disabled:opacity-50"
                         >
                           Send Request
                         </button>
@@ -445,7 +445,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
               type="button"
               disabled={isPending || uploadingReceipt || !receiptUrl || !actualTotal}
               onClick={handleReceiptSubmit}
-              className="flex-1 py-3 text-sm font-bold text-[#c180ff] bg-[#c180ff]/10 rounded-xl border border-[#c180ff]/20 disabled:opacity-50"
+              className="flex-1 py-3 text-sm font-bold text-[var(--color-secondary)] bg-[var(--color-secondary)]/10 rounded-xl border border-[var(--color-secondary)]/20 disabled:opacity-50"
             >
               {isPending ? "Submitting…" : "Submit Receipt"}
             </button>
@@ -459,7 +459,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
           type="button"
           disabled={isPending || !canAdvance}
           onClick={handleStageAdvance}
-          className="w-full py-4 bg-[#c180ff] text-[#33005b] font-black rounded-xl text-sm hover:brightness-110 transition-all disabled:opacity-50 active:scale-[0.98]"
+          className="w-full py-4 bg-[var(--color-secondary)] text-[var(--color-on-secondary)] font-black rounded-xl text-sm hover:brightness-110 transition-all disabled:opacity-50 active:scale-[0.98]"
         >
           {isPending ? "Updating…" : nextStageLabel ?? "Next Step"}
         </button>
@@ -480,3 +480,4 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
     </div>
   )
 }
+

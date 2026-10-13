@@ -21,7 +21,7 @@ import {
   type SurgeSettings, type BusyPeriodRuleRow, type BusyPeriodRuleInput,
 } from "@/app/actions/pricing"
 
-const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all"
+const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
 const LABEL = "text-xs font-semibold text-[#adaaaa] uppercase tracking-wider"
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -49,7 +49,7 @@ function SaveButton({ isPending, label = "Save Changes" }: { isPending: boolean;
     <button
       type="submit"
       disabled={isPending}
-      className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
+      className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
     >
       {isPending ? "Saving…" : label}
     </button>
@@ -129,7 +129,7 @@ function PromoCodeModal({ initial, editingId, onClose, onSaved }: {
               <div className="flex rounded-xl bg-[#262626] border border-[#494847]/20 p-1">
                 {(["percentage", "fixed"] as const).map((t) => (
                   <button key={t} type="button" onClick={() => set("discount_type", t)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.discount_type === t ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa]"}`}>
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.discount_type === t ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
                     {t === "percentage" ? "% Off" : "£ Off"}
                   </button>
                 ))}
@@ -186,7 +186,7 @@ function PromoCodeModal({ initial, editingId, onClose, onSaved }: {
 
         <div className="px-5 py-4 border-t border-[#494847]/15 flex items-center justify-end gap-3 shrink-0">
           <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] transition-all disabled:opacity-60">
+          <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] transition-all disabled:opacity-60">
             {isPending ? "Saving…" : "Save Code"}
           </button>
         </div>
@@ -235,7 +235,7 @@ function PromoCodesSection({ initial }: { initial: PromoCode[] }) {
 
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-[#adaaaa]">{codes.length} promo code{codes.length !== 1 ? "s" : ""}</p>
-        <button onClick={() => setModalState({ input: EMPTY_PROMO })} className="flex items-center gap-1.5 px-4 py-2 bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs rounded-xl hover:bg-[#8387ff] transition-all">
+        <button onClick={() => setModalState({ input: EMPTY_PROMO })} className="flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs rounded-xl hover:bg-[var(--color-primary-fixed-dim)] transition-all">
           <span className="material-symbols-outlined text-sm">add</span>New Code
         </button>
       </div>
@@ -328,7 +328,7 @@ function AutomaticDiscountCard({ discount, title, description, icon }: {
   return (
     <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] shrink-0">
           <span className="material-symbols-outlined">{icon}</span>
         </div>
         <div>
@@ -345,7 +345,7 @@ function AutomaticDiscountCard({ discount, title, description, icon }: {
           <div className="flex rounded-xl bg-[#262626] border border-[#494847]/20 p-1">
             {(["percentage", "fixed"] as const).map((t) => (
               <button key={t} type="button" onClick={() => set("discount_type", t)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.discount_type === t ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa]"}`}>
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.discount_type === t ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
                 {t === "percentage" ? "% Off" : "£ Off"}
               </button>
             ))}
@@ -440,7 +440,7 @@ function SurgePricingSection({ initial }: { initial: SurgeSettings | null }) {
       </div>
 
       <div className={`bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4 transition-opacity ${!form.master_enabled ? "opacity-50" : ""}`}>
-        <p className="text-sm font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[#a3a6ff] text-base">groups</span>High Demand</p>
+        <p className="text-sm font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[var(--color-primary)] text-base">groups</span>High Demand</p>
         <Toggle checked={form.demand_enabled} onChange={(v) => set("demand_enabled", v)} label="Enabled" description="Triggers when pending orders significantly outnumber online drivers" />
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -455,7 +455,7 @@ function SurgePricingSection({ initial }: { initial: SurgeSettings | null }) {
       </div>
 
       <div className={`bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4 transition-opacity ${!form.master_enabled ? "opacity-50" : ""}`}>
-        <p className="text-sm font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[#a3a6ff] text-base">traffic</span>Heavy Traffic</p>
+        <p className="text-sm font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[var(--color-primary)] text-base">traffic</span>Heavy Traffic</p>
         <Toggle checked={form.traffic_enabled} onChange={(v) => set("traffic_enabled", v)} label="Enabled" description="Triggers when live traffic significantly slows the route, via Google Maps" />
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -552,7 +552,7 @@ function BusyPeriodRuleModal({ initial, editingId, onClose, onSaved }: {
         </div>
         <div className="px-5 py-4 border-t border-[#494847]/15 flex items-center justify-end gap-3">
           <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626]">Cancel</button>
-          <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm hover:bg-[#8387ff] disabled:opacity-60">
+          <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] disabled:opacity-60">
             {isPending ? "Saving…" : "Save Rule"}
           </button>
         </div>
@@ -592,7 +592,7 @@ function BusyPeriodsSection({ initial }: { initial: BusyPeriodRuleRow[] }) {
 
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-[#adaaaa]">{rules.length} rule{rules.length !== 1 ? "s" : ""}</p>
-        <button onClick={() => setModalState({ input: EMPTY_RULE })} className="flex items-center gap-1.5 px-4 py-2 bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs rounded-xl hover:bg-[#8387ff] transition-all">
+        <button onClick={() => setModalState({ input: EMPTY_RULE })} className="flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs rounded-xl hover:bg-[var(--color-primary-fixed-dim)] transition-all">
           <span className="material-symbols-outlined text-sm">add</span>New Rule
         </button>
       </div>
@@ -668,7 +668,7 @@ export function PromotionsPanel({
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-              tab === t.key ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa] hover:text-white"
+              tab === t.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa] hover:text-white"
             }`}
           >
             <span className="material-symbols-outlined text-sm">{t.icon}</span>
@@ -684,3 +684,4 @@ export function PromotionsPanel({
     </div>
   )
 }
+

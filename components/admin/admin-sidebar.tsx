@@ -1,5 +1,6 @@
 "use client"
 
+import { BrandLogo } from '@/components/shared/brand-logo'
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -20,6 +21,7 @@ const navItems = [
   { label: "Disputes", href: "/dashboard/admin/disputes", icon: "gavel" },
   { label: "Support Tickets", href: "/dashboard/admin/support", icon: "support_agent" },
   { label: "Reports", href: "/dashboard/admin/reports", icon: "analytics" },
+  { label: "Theme", href: "/dashboard/admin/theme", icon: "palette" },
   { label: "Settings", href: "/dashboard/admin/settings", icon: "settings" },
 ]
 
@@ -42,7 +44,7 @@ export function AdminSidebar({ onClose, user, pendingVerifications = 0, pendingR
     <aside className="flex h-full w-64 flex-col bg-[#0e0e0e] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
       <div className="px-6 py-6 mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-widest uppercase font-headline">Go Drop</h1>
+          <BrandLogo />
           <p className="text-[10px] text-[#adaaaa] tracking-[0.2em] uppercase mt-1 font-headline">Command Center</p>
         </div>
         {onClose && (
@@ -67,14 +69,14 @@ export function AdminSidebar({ onClose, user, pendingVerifications = 0, pendingR
               className={cn(
                 "flex items-center gap-3 px-6 py-3 text-sm font-headline tracking-tight transition-all duration-200",
                 isActive
-                  ? "text-[#a3a6ff] bg-[#131313] border-l-4 border-[#a3a6ff]"
+                  ? "text-[var(--color-primary)] bg-[#131313] border-l-4 border-[var(--color-primary)]"
                   : "text-[#adaaaa] hover:text-white hover:bg-[#201f1f] border-l-4 border-transparent"
               )}
             >
               <span className="material-symbols-outlined text-lg">{item.icon}</span>
               <span className="flex-1">{item.label}</span>
               {badgeCount > 0 && (
-                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#a3a6ff] text-[#0f00a4] text-[10px] font-black">
+                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[10px] font-black">
                   {badgeCount > 99 ? "99+" : badgeCount}
                 </span>
               )}
@@ -84,7 +86,7 @@ export function AdminSidebar({ onClose, user, pendingVerifications = 0, pendingR
       </nav>
 
       <div className="px-6 pt-6 pb-6 mt-auto">
-        <button className="w-full bg-[#a3a6ff] hover:bg-[#8387ff] text-[#0f00a4] font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-[0px_0px_15px_rgba(163,166,255,0.2)]">
+        <button className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-fixed-dim)] text-[var(--color-on-primary)] font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-[0px_0px_15px_rgba(var(--brand-rgb),0.2)]">
           <span className="material-symbols-outlined text-base">add_circle</span>
           <span className="text-xs uppercase tracking-widest">New Shipment</span>
         </button>
@@ -96,3 +98,4 @@ export function AdminSidebar({ onClose, user, pendingVerifications = 0, pendingR
     </aside>
   )
 }
+

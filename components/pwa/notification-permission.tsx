@@ -152,7 +152,7 @@ export function NotificationPermission({
           : isIOSSafari
             ? "border border-[#f5a623]/40"
             : "border border-[rgba(73,72,71,0.25)]",
-        "shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(163,166,255,0.06)]",
+        "shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(var(--brand-rgb),0.06)]",
         "w-[min(22rem,calc(100vw-2rem))]",
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
         className
@@ -167,13 +167,13 @@ export function NotificationPermission({
             ? "bg-[#ff6e84]/10"
             : isIOSSafari
               ? "bg-[#f5a623]/10"
-              : "bg-[#a3a6ff]/10"
+              : "bg-[var(--color-primary)]/10"
         )}
       >
         <Bell
           className={cn(
             "w-4 h-4",
-            isBlocked ? "text-[#ff6e84]" : isIOSSafari ? "text-[#f5a623]" : "text-[#a3a6ff]"
+            isBlocked ? "text-[#ff6e84]" : isIOSSafari ? "text-[#f5a623]" : "text-[var(--color-primary)]"
           )}
         />
       </div>
@@ -219,7 +219,7 @@ export function NotificationPermission({
             aria-label="Allow push notifications"
             className={cn(
               "px-3 py-1.5 rounded-lg text-[12px] font-bold",
-              "bg-[#a3a6ff] text-[#0f00a4]",
+              "bg-[var(--color-primary)] text-[var(--color-on-primary)]",
               "hover:brightness-110 active:scale-95 transition-all",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
@@ -239,3 +239,4 @@ export function NotificationPermission({
     </div>
   )
 }
+

@@ -20,7 +20,7 @@ import {
 } from "@/app/actions/marketing"
 import type { PromoCode } from "@/app/actions/promotions"
 
-const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all"
+const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
 const LABEL = "text-xs font-semibold text-[#adaaaa] uppercase tracking-wider"
 
 function Toggle({ checked, onChange, label, description }: { checked: boolean; onChange: (v: boolean) => void; label: string; description?: string }) {
@@ -59,7 +59,7 @@ function SegmentPicker({
           { key: "inactive" as const, label: "Inactive Customers" },
         ]).map((s) => (
           <button key={s.key} type="button" onClick={() => setSegment(s.key)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${segment === s.key ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa]"}`}>
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${segment === s.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
             {s.label}
           </button>
         ))}
@@ -168,7 +168,7 @@ function ComposeSection({ promoCodes, onSent }: { promoCodes: PromoCode[]; onSen
               { key: "both" as const, label: "Push + Email" },
             ]).map((c) => (
               <button key={c.key} type="button" onClick={() => set("channel", c.key)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.channel === c.key ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa]"}`}>
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.channel === c.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
                 {c.label}
               </button>
             ))}
@@ -192,7 +192,7 @@ function ComposeSection({ promoCodes, onSent }: { promoCodes: PromoCode[]; onSen
       <button
         onClick={handleSend}
         disabled={isPending || !form.title.trim() || !form.subject.trim() || !form.message.trim()}
-        className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
+        className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
       >
         {isPending ? "Sending…" : "Send Campaign"}
       </button>
@@ -319,7 +319,7 @@ function ReengagementSection({ initial, promoCodes }: { initial: ReengagementSet
                 { key: "both" as const, label: "Both" },
               ]).map((c) => (
                 <button key={c.key} type="button" onClick={() => set("channel", c.key)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.channel === c.key ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa]"}`}>
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.channel === c.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
                   {c.label}
                 </button>
               ))}
@@ -346,7 +346,7 @@ function ReengagementSection({ initial, promoCodes }: { initial: ReengagementSet
       {error && <p className="text-xs text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 rounded-xl px-4 py-3">{error}</p>}
 
       <div className="flex items-center gap-3">
-        <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] disabled:opacity-60">
+        <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60">
           {isPending ? "Saving…" : "Save Settings"}
         </button>
         {saved && <span className="text-xs text-green-400 font-semibold flex items-center gap-1"><span className="material-symbols-outlined text-sm">check_circle</span>Saved</span>}
@@ -390,7 +390,7 @@ export function MarketingPanel({
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-              tab === t.key ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa] hover:text-white"
+              tab === t.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa] hover:text-white"
             }`}
           >
             <span className="material-symbols-outlined text-sm">{t.icon}</span>
@@ -405,3 +405,4 @@ export function MarketingPanel({
     </div>
   )
 }
+

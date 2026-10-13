@@ -101,7 +101,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by address or item..."
-            className="w-full bg-[#1a1919] border border-[#494847]/20 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all"
+            className="w-full bg-[#1a1919] border border-[#494847]/20 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#adaaaa] hover:text-white">
@@ -112,7 +112,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
-          className="bg-[#1a1919] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#a3a6ff]/40 transition-all"
+          className="bg-[#1a1919] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--color-primary)]/40 transition-all"
         >
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
@@ -131,7 +131,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
             {search ? "Try a different keyword or clear the search." : "Check back shortly — new requests will appear here."}
           </p>
           {search && (
-            <button onClick={() => setSearch("")} className="mt-4 text-sm text-[#a3a6ff] hover:underline">
+            <button onClick={() => setSearch("")} className="mt-4 text-sm text-[var(--color-primary)] hover:underline">
               Clear search
             </button>
           )}
@@ -153,7 +153,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[#a3a6ff]">
+                        <span className="material-symbols-outlined text-[var(--color-primary)]">
                           {job.service_type === "buy_for_me" ? "shopping_bag" : "inventory_2"}
                         </span>
                       </div>
@@ -165,11 +165,11 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                               : (job.item_description || "Delivery request")}
                           </h3>
                           {job.service_type === "buy_for_me" ? (
-                            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#c180ff]/10 text-[#c180ff] border border-[#c180ff]/20">
+                            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border border-[var(--color-secondary)]/20">
                               BUY FOR ME
                             </span>
                           ) : job.package_size && isPackageSize(job.package_size) ? (
-                            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#a3a6ff]/10 text-[#a3a6ff] border border-[#a3a6ff]/20">
+                            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
                               {PACKAGE_SIZE_INFO[job.package_size].label}
                             </span>
                           ) : null}
@@ -182,7 +182,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                     </div>
                     {price && (
                       <div className="text-right shrink-0">
-                        <span className="text-2xl font-black text-[#a3a6ff] font-headline tracking-tighter">{price}</span>
+                        <span className="text-2xl font-black text-[var(--color-primary)] font-headline tracking-tighter">{price}</span>
                         <p className="text-[10px] text-[#adaaaa] uppercase font-bold">Payout</p>
                       </div>
                     )}
@@ -190,9 +190,9 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
 
                   <div className="flex items-start gap-3">
                     <div className="flex flex-col items-center pt-1 shrink-0">
-                      <div className="w-2.5 h-2.5 rounded-full border-2 border-[#a3a6ff] bg-[#0e0e0e]" />
+                      <div className="w-2.5 h-2.5 rounded-full border-2 border-[var(--color-primary)] bg-[#0e0e0e]" />
                       <div className="w-px h-8 border-l border-dashed border-[#494847] my-1" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-[#c180ff]" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-secondary)]" />
                     </div>
                     <div className="flex-1 space-y-3 min-w-0">
                       <div>
@@ -231,7 +231,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                     )}
                     <div className="flex justify-between">
                       <span className="text-[#adaaaa]">Status</span>
-                      <span className="text-[#a3a6ff] font-bold uppercase">{job.status}</span>
+                      <span className="text-[var(--color-primary)] font-bold uppercase">{job.status}</span>
                     </div>
                   </div>
                   <AcceptJobButton deliveryId={job.id} />
@@ -244,3 +244,4 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
     </div>
   )
 }
+

@@ -19,7 +19,7 @@ type TxRow = {
 // wallet — there is no "pending" or "awaiting payment" state to show or act
 // on here anymore. These labels remain only to display any historical rows.
 const STATUS_STYLE: Record<string, { label: string; color: string; dot: string; bg: string }> = {
-  pending:   { label: 'Pending',  color: 'text-[#c180ff]', dot: 'bg-[#c180ff]', bg: 'bg-[#c180ff]/10' },
+  pending:   { label: 'Pending',  color: 'text-[var(--color-secondary)]', dot: 'bg-[var(--color-secondary)]', bg: 'bg-[var(--color-secondary)]/10' },
   paid:      { label: 'Paid',     color: 'text-[#6ee7b7]', dot: 'bg-[#6ee7b7]', bg: 'bg-[#6ee7b7]/10' },
   released:  { label: 'Released', color: 'text-[#6ee7b7]', dot: 'bg-[#6ee7b7]', bg: 'bg-[#6ee7b7]/10' },
   failed:    { label: 'Failed',   color: 'text-[#ff6e84]', dot: 'bg-[#ff6e84]', bg: 'bg-[#ff6e84]/10' },
@@ -140,8 +140,8 @@ export default function PaymentsPage() {
           <div className="md:hidden flex gap-3 overflow-x-auto no-scrollbar pb-4 mb-4">
             {[
               { label: 'Total Paid', value: fmt(summary.totalPaid), color: 'text-[#6ee7b7]' },
-              { label: 'This Month', value: fmt(summary.monthSpend), color: 'text-[#a3a6ff]' },
-              { label: 'Pending', value: fmt(summary.totalPending), color: 'text-[#c180ff]' },
+              { label: 'This Month', value: fmt(summary.monthSpend), color: 'text-[var(--color-primary)]' },
+              { label: 'Pending', value: fmt(summary.totalPending), color: 'text-[var(--color-secondary)]' },
             ].map(chip => (
               <div key={chip.label} className="bg-[#1a1919] rounded-2xl px-4 py-3 flex-shrink-0 border border-[#494847]/10">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#adaaaa]">{chip.label}</p>
@@ -154,11 +154,11 @@ export default function PaymentsPage() {
           <div className="md:hidden">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#a3a6ff] text-base">receipt_long</span>
+                <span className="material-symbols-outlined text-[var(--color-primary)] text-base">receipt_long</span>
                 Transactions
               </h3>
               {transactions.length > 0 && (
-                <span className="text-xs font-bold text-[#a3a6ff]">{transactions.length} total</span>
+                <span className="text-xs font-bold text-[var(--color-primary)]">{transactions.length} total</span>
               )}
             </div>
             <div className="bg-[#1a1919] rounded-2xl overflow-hidden border border-[#494847]/10">
@@ -170,7 +170,7 @@ export default function PaymentsPage() {
               ) : transactions.length === 0 ? (
                 <div className="py-16 text-center px-8">
                   <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#262626] flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">receipt_long</span>
+                    <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl">receipt_long</span>
                   </div>
                   <p className="text-sm font-bold text-white mb-1">No transactions yet</p>
                   <p className="text-xs text-[#adaaaa]">Charges appear here after requesting a delivery.</p>
@@ -184,7 +184,7 @@ export default function PaymentsPage() {
                     return (
                       <div key={tx.id} className="flex items-center gap-3 px-4 py-4">
                         <div className="w-10 h-10 rounded-xl bg-[#262626] flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[#a3a6ff] text-base">local_shipping</span>
+                          <span className="material-symbols-outlined text-[var(--color-primary)] text-base">local_shipping</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-white truncate">{label}</p>
@@ -217,11 +217,11 @@ export default function PaymentsPage() {
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#a3a6ff]">receipt_long</span>
+                  <span className="material-symbols-outlined text-[var(--color-primary)]">receipt_long</span>
                   Transaction History
                 </h3>
                 {transactions.length > 0 && (
-                  <span className="text-xs font-bold text-[#a3a6ff]">{transactions.length} total</span>
+                  <span className="text-xs font-bold text-[var(--color-primary)]">{transactions.length} total</span>
                 )}
               </div>
 
@@ -234,7 +234,7 @@ export default function PaymentsPage() {
                 ) : transactions.length === 0 ? (
                   <div className="py-16 text-center px-8">
                     <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#262626] flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">receipt_long</span>
+                      <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl">receipt_long</span>
                     </div>
                     <p className="text-sm font-bold text-white mb-1">No payment transactions yet</p>
                     <p className="text-xs text-[#adaaaa]">Once you request a delivery, charges will appear here.</p>
@@ -248,8 +248,8 @@ export default function PaymentsPage() {
                       return (
                         <div key={tx.id} className="flex items-center justify-between px-5 py-4 hover:bg-[#201f1f] transition-colors group">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-[#262626] group-hover:bg-[#a3a6ff]/10 flex items-center justify-center transition-colors shrink-0">
-                              <span className="material-symbols-outlined text-[#a3a6ff]">local_shipping</span>
+                            <div className="w-10 h-10 rounded-xl bg-[#262626] group-hover:bg-[var(--color-primary)]/10 flex items-center justify-center transition-colors shrink-0">
+                              <span className="material-symbols-outlined text-[var(--color-primary)]">local_shipping</span>
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-white truncate">{label}</p>
@@ -284,9 +284,9 @@ export default function PaymentsPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl border border-[#a3a6ff]/20 relative overflow-hidden">
-                <div className="absolute -top-4 -right-4 w-20 h-20 bg-[#a3a6ff]/10 rounded-full blur-2xl" />
-                <p className="text-[10px] font-bold text-[#a3a6ff] uppercase tracking-[0.2em] mb-2">Total Paid</p>
+              <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl border border-[var(--color-primary)]/20 relative overflow-hidden">
+                <div className="absolute -top-4 -right-4 w-20 h-20 bg-[var(--color-primary)]/10 rounded-full blur-2xl" />
+                <p className="text-[10px] font-bold text-[var(--color-primary)] uppercase tracking-[0.2em] mb-2">Total Paid</p>
                 <h4 className="text-4xl font-headline font-black text-white mb-6">{fmt(summary.totalPaid)}</h4>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-sm">
@@ -295,7 +295,7 @@ export default function PaymentsPage() {
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-[#adaaaa]">Pending</span>
-                    <span className="text-[#c180ff] font-bold">{fmt(summary.totalPending)}</span>
+                    <span className="text-[var(--color-secondary)] font-bold">{fmt(summary.totalPending)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm border-t border-[#494847]/20 pt-3">
                     <span className="text-[#adaaaa]">Total transactions</span>
@@ -337,3 +337,4 @@ export default function PaymentsPage() {
     </>
   )
 }
+

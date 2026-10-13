@@ -22,9 +22,9 @@ export type DriverRow = {
 type Doc = { document_type: string; file_url: string }
 
 const DOC_CONFIGS = [
-  { type: "identity",             label: "Identity",     icon: "badge",   color: "text-[#a3a6ff]", bg: "bg-[#a3a6ff]/10" },
-  { type: "insurance",            label: "Insurance",    icon: "shield",  color: "text-[#c180ff]", bg: "bg-[#c180ff]/10" },
-  { type: "vehicle_registration", label: "Vehicle Reg.", icon: "commute", color: "text-[#a3a6ff]", bg: "bg-[#a3a6ff]/10" },
+  { type: "identity",             label: "Identity",     icon: "badge",   color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10" },
+  { type: "insurance",            label: "Insurance",    icon: "shield",  color: "text-[var(--color-secondary)]", bg: "bg-[var(--color-secondary)]/10" },
+  { type: "vehicle_registration", label: "Vehicle Reg.", icon: "commute", color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10" },
 ]
 
 function isImage(url: string) {
@@ -41,7 +41,7 @@ function StatusPill({ status }: { status: "pending" | "approved" | "rejected" })
     return <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 uppercase tracking-wider"><span className="w-1.5 h-1.5 rounded-full bg-green-400" />Approved</span>
   if (status === "rejected")
     return <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full bg-[#ff6e84]/10 text-[#ff6e84] border border-[#ff6e84]/20 uppercase tracking-wider"><span className="w-1.5 h-1.5 rounded-full bg-[#ff6e84]" />Rejected</span>
-  return <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full bg-[#a3a6ff]/10 text-[#a3a6ff] border border-[#a3a6ff]/20 uppercase tracking-wider"><span className="w-1.5 h-1.5 rounded-full bg-[#a3a6ff] animate-pulse" />Pending</span>
+  return <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20 uppercase tracking-wider"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />Pending</span>
 }
 
 function DocPreviewCard({ doc, onOpen }: { doc: DriverDocument; onOpen: (d: Doc) => void }) {
@@ -51,7 +51,7 @@ function DocPreviewCard({ doc, onOpen }: { doc: DriverDocument; onOpen: (d: Doc)
   return (
     <div
       onClick={() => onOpen({ document_type: doc.document_type, file_url: doc.file_url })}
-      className="rounded-xl border border-[#494847]/15 bg-[#0e0e0e] overflow-hidden cursor-pointer hover:border-[#a3a6ff]/30 transition-all group"
+      className="rounded-xl border border-[#494847]/15 bg-[#0e0e0e] overflow-hidden cursor-pointer hover:border-[var(--color-primary)]/30 transition-all group"
     >
       {/* Thumbnail */}
       <div className="h-[90px] relative flex items-center justify-center overflow-hidden">
@@ -140,7 +140,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="self-start sm:self-auto bg-[#a3a6ff] text-[#0f00a4] px-5 py-2.5 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] active:scale-95 transition-all flex items-center gap-2"
+          className="self-start sm:self-auto bg-[var(--color-primary)] text-[var(--color-on-primary)] px-5 py-2.5 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] active:scale-95 transition-all flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-sm">person_add</span>
           Manual Entry
@@ -154,12 +154,12 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
             key={tab}
             onClick={() => { setActiveTab(tab); setSelectedId(null) }}
             className={`pb-4 text-sm font-semibold transition-all capitalize flex items-center gap-2 ${
-              activeTab === tab ? "border-b-2 border-[#a3a6ff] text-white" : "text-[#adaaaa] hover:text-white"
+              activeTab === tab ? "border-b-2 border-[var(--color-primary)] text-white" : "text-[#adaaaa] hover:text-white"
             }`}
           >
             {tab === "pending" ? "Pending Approval" : tab.charAt(0).toUpperCase() + tab.slice(1)}
             {tab === "pending" && pendingCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px] font-black">{pendingCount}</span>
+              <span className="px-1.5 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-black">{pendingCount}</span>
             )}
             <span className="text-[10px] text-[#494847]">({drivers.filter((d) => d.status === tab).length})</span>
           </button>
@@ -181,11 +181,11 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                     onClick={() => setSelectedId(driver.id)}
                     className={`group flex items-center p-4 rounded-xl transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-[#201f1f] border border-[#a3a6ff]/20 ring-1 ring-[#a3a6ff]/10"
+                        ? "bg-[#201f1f] border border-[var(--color-primary)]/20 ring-1 ring-[var(--color-primary)]/10"
                         : "bg-[#1a1919] hover:bg-[#201f1f] border border-transparent hover:border-[#494847]/10"
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#6f00be]/20 flex items-center justify-center text-[#c180ff] font-bold text-sm shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-[var(--color-secondary-container)]/20 flex items-center justify-center text-[var(--color-secondary)] font-bold text-sm shrink-0">
                       {getInitials(driver.full_name)}
                     </div>
                     <div className="ml-3 flex-1 min-w-0">
@@ -198,7 +198,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                         {new Date(driver.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </p>
                     </div>
-                    <span className={`material-symbols-outlined text-lg transition-colors shrink-0 ${isSelected ? "text-[#a3a6ff]" : "text-[#494847] group-hover:text-[#a3a6ff]"}`}>
+                    <span className={`material-symbols-outlined text-lg transition-colors shrink-0 ${isSelected ? "text-[var(--color-primary)]" : "text-[#494847] group-hover:text-[var(--color-primary)]"}`}>
                       chevron_right
                     </span>
                   </div>
@@ -217,8 +217,8 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
             >
               {/* Cover + avatar */}
               <div className="relative h-28 bg-gradient-to-br from-[#262626] to-[#0e0e0e] overflow-hidden">
-                <div className="absolute inset-0 opacity-20" style={{ background: "radial-gradient(circle at 60% 50%, #a3a6ff 0%, transparent 70%)" }} />
-                <div className="absolute -bottom-8 left-5 w-16 h-16 rounded-2xl bg-[#6f00be]/20 border-4 border-[#1a1919] flex items-center justify-center text-[#c180ff] font-black text-xl shadow-xl">
+                <div className="absolute inset-0 opacity-20" style={{ background: "radial-gradient(circle at 60% 50%, var(--color-primary) 0%, transparent 70%)" }} />
+                <div className="absolute -bottom-8 left-5 w-16 h-16 rounded-2xl bg-[var(--color-secondary-container)]/20 border-4 border-[#1a1919] flex items-center justify-center text-[var(--color-secondary)] font-black text-xl shadow-xl">
                   {getInitials(selected.full_name)}
                 </div>
               </div>
@@ -233,7 +233,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                   <div className="flex gap-2 shrink-0">
                     <a
                       href={`mailto:${selected.email}`}
-                      className="p-2 rounded-lg bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-[#a3a6ff] hover:border-[#a3a6ff]/30 transition-all"
+                      className="p-2 rounded-lg bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 transition-all"
                       title={`Email ${selected.full_name}`}
                     >
                       <span className="material-symbols-outlined text-lg">mail</span>
@@ -241,7 +241,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                     {selected.phone && (
                       <a
                         href={`tel:${selected.phone}`}
-                        className="p-2 rounded-lg bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-[#a3a6ff] hover:border-[#a3a6ff]/30 transition-all"
+                        className="p-2 rounded-lg bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 transition-all"
                         title={`Call ${selected.full_name}`}
                       >
                         <span className="material-symbols-outlined text-lg">phone</span>
@@ -266,11 +266,11 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                 <div className="mb-5">
                   <p className="text-[9px] uppercase tracking-widest text-[#adaaaa] font-bold mb-3">
                     Verified Documents
-                    {documents.length > 0 && <span className="ml-1.5 text-[#a3a6ff]">({documents.length})</span>}
+                    {documents.length > 0 && <span className="ml-1.5 text-[var(--color-primary)]">({documents.length})</span>}
                   </p>
                   {loadingDocs ? (
                     <div className="flex items-center justify-center py-6">
-                      <svg className="animate-spin w-5 h-5 text-[#a3a6ff]" viewBox="0 0 24 24" fill="none">
+                      <svg className="animate-spin w-5 h-5 text-[var(--color-primary)]" viewBox="0 0 24 24" fill="none">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                       </svg>
@@ -311,7 +311,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                   <button
                     onClick={handleApprove}
                     disabled={isPending || selected.status === "approved"}
-                    className="flex-1 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs hover:bg-[#8387ff] shadow-[0_0_12px_rgba(163,166,255,0.2)] transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs hover:bg-[var(--color-primary-fixed-dim)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.2)] transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
                   >
                     <span className="material-symbols-outlined text-sm">check_circle</span>
                     Approve
@@ -333,3 +333,4 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
     </div>
   )
 }
+

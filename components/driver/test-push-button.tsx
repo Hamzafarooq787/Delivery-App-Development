@@ -47,10 +47,11 @@ export function TestPushButton() {
       onClick={handleClick}
       disabled={loading}
       title="Send a test push notification to yourself"
-      className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#a3a6ff] border border-[#a3a6ff]/30 hover:bg-[#a3a6ff]/10 active:scale-95 transition-all disabled:opacity-50"
+      className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[var(--color-primary)] border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/10 active:scale-95 transition-all disabled:opacity-50"
     >
       <span className="material-symbols-outlined text-sm">notifications_active</span>
       {loading ? "Sending…" : "Test Push"}
     </button>
   )
 }
+

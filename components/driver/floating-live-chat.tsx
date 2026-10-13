@@ -109,7 +109,7 @@ export function FloatingLiveChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Live chat"
-        className="fixed bottom-24 lg:bottom-8 right-4 lg:right-6 z-50 w-14 h-14 rounded-full bg-[#a3a6ff] text-[#0f00a4] shadow-[0_0_24px_rgba(163,166,255,0.45)] flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
+        className="fixed bottom-24 lg:bottom-8 right-4 lg:right-6 z-50 w-14 h-14 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-[0_0_24px_rgba(var(--brand-rgb),0.45)] flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
       >
         <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
           {open ? "close" : "chat_bubble"}
@@ -129,7 +129,7 @@ export function FloatingLiveChat() {
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#494847]/20 shrink-0 bg-[#1a1919]">
-            <div className="w-9 h-9 rounded-full bg-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff] font-bold text-xs shrink-0">AD</div>
+            <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] font-bold text-xs shrink-0">AD</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white leading-none">Support Team</p>
               <p className="text-[10px] text-[#6ee7b7] mt-0.5 flex items-center gap-1">
@@ -146,12 +146,12 @@ export function FloatingLiveChat() {
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
             {loading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="w-6 h-6 border-2 border-[#a3a6ff] border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-3">
                 <div className="w-14 h-14 rounded-2xl bg-[#1a1919] border border-[#494847]/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>support_agent</span>
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>support_agent</span>
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">Hi there! 👋</p>
@@ -162,17 +162,17 @@ export function FloatingLiveChat() {
               messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender_role === "driver" ? "justify-end" : "justify-start"}`}>
                   {msg.sender_role === "admin" && (
-                    <div className="w-6 h-6 rounded-full bg-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff] text-[9px] font-bold shrink-0 mr-2 mt-auto mb-0.5">AD</div>
+                    <div className="w-6 h-6 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] text-[9px] font-bold shrink-0 mr-2 mt-auto mb-0.5">AD</div>
                   )}
                   <div
                     className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                       msg.sender_role === "driver"
-                        ? "bg-[#a3a6ff] text-[#0f00a4] rounded-br-sm font-medium"
+                        ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-br-sm font-medium"
                         : "bg-[#262626] text-white rounded-bl-sm"
                     }`}
                   >
                     {msg.content}
-                    <p className={`text-[9px] mt-1 ${msg.sender_role === "driver" ? "text-[#0f00a4]/60 text-right" : "text-[#adaaaa]"}`}>
+                    <p className={`text-[9px] mt-1 ${msg.sender_role === "driver" ? "text-[var(--color-on-primary)]/60 text-right" : "text-[#adaaaa]"}`}>
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
@@ -193,16 +193,16 @@ export function FloatingLiveChat() {
                 placeholder="Type a message…"
                 rows={1}
                 disabled={sending || !sessionId}
-                className="flex-1 resize-none bg-[#262626] border border-[#494847]/20 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 transition-all min-h-[38px] max-h-[100px]"
+                className="flex-1 resize-none bg-[#262626] border border-[#494847]/20 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 transition-all min-h-[38px] max-h-[100px]"
                 style={{ fieldSizing: "content" } as React.CSSProperties}
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || sending || !sessionId}
-                className="w-9 h-9 rounded-xl bg-[#a3a6ff] text-[#0f00a4] flex items-center justify-center disabled:opacity-40 hover:brightness-110 active:scale-95 transition-all shrink-0"
+                className="w-9 h-9 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] flex items-center justify-center disabled:opacity-40 hover:brightness-110 active:scale-95 transition-all shrink-0"
               >
                 {sending ? (
-                  <div className="w-4 h-4 border-2 border-[#0f00a4] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-[var(--color-on-primary)] border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>
                 )}
@@ -215,3 +215,4 @@ export function FloatingLiveChat() {
     </>
   )
 }
+

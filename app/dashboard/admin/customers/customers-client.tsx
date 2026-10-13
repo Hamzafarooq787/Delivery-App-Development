@@ -4,10 +4,10 @@ import { useState } from "react"
 import Link from "next/link"
 
 const ACCENT_COLORS = [
-  { bg: "bg-[#a3a6ff]/10", text: "text-[#a3a6ff]" },
-  { bg: "bg-[#c180ff]/10", text: "text-[#c180ff]" },
+  { bg: "bg-[var(--color-primary)]/10", text: "text-[var(--color-primary)]" },
+  { bg: "bg-[var(--color-secondary)]/10", text: "text-[var(--color-secondary)]" },
   { bg: "bg-[#ff6e84]/10", text: "text-[#ff6e84]" },
-  { bg: "bg-[#ffa5d9]/10", text: "text-[#ffa5d9]" },
+  { bg: "bg-[var(--color-tertiary)]/10", text: "text-[var(--color-tertiary)]" },
 ]
 
 type CustomerRow = {
@@ -41,7 +41,7 @@ export function CustomersClient({ rows }: { rows: CustomerRow[] }) {
             type="button"
             onClick={() => setTab("active")}
             className={`px-5 sm:px-6 py-1.5 rounded-full text-xs font-bold transition-all ${
-              tab === "active" ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa] hover:text-white"
+              tab === "active" ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa] hover:text-white"
             }`}
           >
             Active
@@ -50,7 +50,7 @@ export function CustomersClient({ rows }: { rows: CustomerRow[] }) {
             type="button"
             onClick={() => setTab("inactive")}
             className={`px-5 sm:px-6 py-1.5 rounded-full text-xs font-bold transition-all ${
-              tab === "inactive" ? "bg-[#a3a6ff] text-[#0f00a4]" : "text-[#adaaaa] hover:text-white"
+              tab === "inactive" ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa] hover:text-white"
             }`}
           >
             Inactive
@@ -122,7 +122,7 @@ export function CustomersClient({ rows }: { rows: CustomerRow[] }) {
                       </td>
                       <td className="px-6 lg:px-8 py-5">
                         <div className="flex justify-center">
-                          <div className={`w-2 h-2 rounded-full ${customer.delivery_count > 0 ? "bg-[#a3a6ff] shadow-[0px_0px_8px_rgba(163,166,255,0.6)]" : "bg-[#494847]"}`} />
+                          <div className={`w-2 h-2 rounded-full ${customer.delivery_count > 0 ? "bg-[var(--color-primary)] shadow-[0px_0px_8px_rgba(var(--brand-rgb),0.6)]" : "bg-[#494847]"}`} />
                         </div>
                       </td>
                     </tr>
@@ -171,3 +171,4 @@ export function CustomersClient({ rows }: { rows: CustomerRow[] }) {
     </div>
   )
 }
+

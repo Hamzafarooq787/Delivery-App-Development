@@ -20,7 +20,7 @@ function NavItem({ href, icon, label, active }: { href: string; icon: string; la
       {active && (
         <span
           className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-full bg-primary"
-          style={{ boxShadow: '0 0 8px rgba(163,166,255,0.7)' }}
+          style={{ boxShadow: '0 0 8px rgba(var(--brand-rgb),0.7)' }}
         />
       )}
       {/* Icon pill */}
@@ -77,7 +77,7 @@ export default function BottomNav() {
               onClick={handleNewDelivery}
               aria-label="New Delivery"
               className="w-14 h-14 rounded-full bg-primary flex items-center justify-center active:scale-90 transition-transform duration-150"
-              style={{ boxShadow: '0 0 24px rgba(163,166,255,0.5), 0 4px 16px rgba(0,0,0,0.4)' }}
+              style={{ boxShadow: '0 0 24px rgba(var(--brand-rgb),0.5), 0 4px 16px rgba(0,0,0,0.4)' }}
             >
               <span className="material-symbols-outlined text-on-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>
                 add
@@ -101,3 +101,4 @@ export default function BottomNav() {
     </nav>
   )
 }
+

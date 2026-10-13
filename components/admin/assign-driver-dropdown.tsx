@@ -52,7 +52,7 @@ export function AssignDriverDropdown({
         onClick={() => setOpen((v) => !v)}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all whitespace-nowrap ${
           localDriverId
-            ? "bg-[#a3a6ff]/10 border-[#a3a6ff]/20 text-[#a3a6ff] hover:bg-[#a3a6ff]/20"
+            ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20"
             : "bg-[#262626] border-[#494847]/20 text-[#adaaaa] hover:text-white hover:bg-[#2c2c2c]"
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
@@ -105,18 +105,18 @@ export function AssignDriverDropdown({
                   onClick={() => handleSelect(driver.id)}
                   className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors hover:bg-[#262626] ${
                     driver.id === localDriverId
-                      ? "text-[#a3a6ff] font-bold"
+                      ? "text-[var(--color-primary)] font-bold"
                       : "text-white"
                   }`}
                 >
-                  <div className="w-5 h-5 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center shrink-0">
-                    <span className="text-[8px] font-bold text-[#a3a6ff]">
+                  <div className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
+                    <span className="text-[8px] font-bold text-[var(--color-primary)]">
                       {driver.full_name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <span className="truncate">{driver.full_name}</span>
                   {driver.id === localDriverId && (
-                    <span className="material-symbols-outlined text-xs ml-auto shrink-0 text-[#a3a6ff]">check</span>
+                    <span className="material-symbols-outlined text-xs ml-auto shrink-0 text-[var(--color-primary)]">check</span>
                   )}
                 </button>
               ))
@@ -127,3 +127,4 @@ export function AssignDriverDropdown({
     </div>
   )
 }
+

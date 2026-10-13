@@ -51,8 +51,8 @@ type StatusFilter    = (typeof STATUS_OPTIONS)[number]
 type DateFilter      = (typeof DATE_OPTIONS)[number]
 
 const STATUS_CFG = {
-  paid:    { label: "Paid",    dot: "bg-[#a3a6ff] shadow-[0_0_6px_rgba(163,166,255,0.6)]", bg: "bg-[#a3a6ff]/10", text: "text-[#a3a6ff]" },
-  pending: { label: "Pending", dot: "bg-[#c180ff] animate-pulse",                           bg: "bg-[#c180ff]/10", text: "text-[#c180ff]" },
+  paid:    { label: "Paid",    dot: "bg-[var(--color-primary)] shadow-[0_0_6px_rgba(var(--brand-rgb),0.6)]", bg: "bg-[var(--color-primary)]/10", text: "text-[var(--color-primary)]" },
+  pending: { label: "Pending", dot: "bg-[var(--color-secondary)] animate-pulse",                           bg: "bg-[var(--color-secondary)]/10", text: "text-[var(--color-secondary)]" },
   failed:  { label: "Failed",  dot: "bg-[#ff6e84]",                                         bg: "bg-[#ff6e84]/10", text: "text-[#ff6e84]" },
 } as const
 
@@ -193,7 +193,7 @@ export function PaymentsPanel({
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as StatusFilter)}
-              className="appearance-none bg-[#1a1919] px-3 py-2 pr-7 rounded-lg border border-[#494847]/20 text-sm text-white cursor-pointer focus:outline-none focus:border-[#a3a6ff]/40 transition-colors"
+              className="appearance-none bg-[#1a1919] px-3 py-2 pr-7 rounded-lg border border-[#494847]/20 text-sm text-white cursor-pointer focus:outline-none focus:border-[var(--color-primary)]/40 transition-colors"
             >
               {STATUS_OPTIONS.map(s => (
                 <option key={s} value={s} className="bg-[#1a1919]">
@@ -211,7 +211,7 @@ export function PaymentsPanel({
             <select
               value={dateFilter}
               onChange={e => setDateFilter(e.target.value as DateFilter)}
-              className="appearance-none bg-[#1a1919] px-3 py-2 pr-7 rounded-lg border border-[#494847]/20 text-sm text-white cursor-pointer focus:outline-none focus:border-[#a3a6ff]/40 transition-colors"
+              className="appearance-none bg-[#1a1919] px-3 py-2 pr-7 rounded-lg border border-[#494847]/20 text-sm text-white cursor-pointer focus:outline-none focus:border-[var(--color-primary)]/40 transition-colors"
             >
               {DATE_OPTIONS.map(d => (
                 <option key={d} value={d} className="bg-[#1a1919]">{d}</option>
@@ -226,7 +226,7 @@ export function PaymentsPanel({
             onClick={handleExportCSV}
             className="flex items-center gap-2 bg-[#262626] hover:bg-[#2c2c2c] px-4 py-2 rounded-lg transition-colors text-sm font-semibold text-white"
           >
-            <span className="material-symbols-outlined text-sm text-[#a3a6ff]">download</span>
+            <span className="material-symbols-outlined text-sm text-[var(--color-primary)]">download</span>
             Export CSV
           </button>
         </div>
@@ -239,7 +239,7 @@ export function PaymentsPanel({
         <div className="sm:col-span-2 lg:col-span-5 bg-[#1a1919] p-6 md:p-8 rounded-xl relative overflow-hidden flex flex-col justify-between min-h-[160px]">
           <div className="z-10">
             <p className="text-[#adaaaa] text-sm font-medium mb-1">Gross Revenue (All Time)</p>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-[#a3a6ff] font-headline tracking-tight">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-[var(--color-primary)] font-headline tracking-tight">
               {fmt(grossRevenue)}
             </h2>
           </div>
@@ -248,19 +248,19 @@ export function PaymentsPanel({
               {allTxs.length} total transaction{allTxs.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-[#a3a6ff]/10 to-transparent pointer-events-none" />
-          <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-[#a3a6ff]/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-[var(--color-primary)]/10 to-transparent pointer-events-none" />
+          <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-[var(--color-primary)]/5 rounded-full blur-3xl pointer-events-none" />
         </div>
 
         {/* Commission split */}
         <div className="col-span-1 lg:col-span-4 space-y-4">
-          <div className="bg-[#1a1919] px-6 py-5 rounded-xl flex items-center justify-between border-l-4 border-[#c180ff]">
+          <div className="bg-[#1a1919] px-6 py-5 rounded-xl flex items-center justify-between border-l-4 border-[var(--color-secondary)]">
             <div>
               <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-1">Platform Commission (25%)</p>
-              <h3 className="text-2xl font-bold text-[#c180ff] font-headline">{fmt(platformCommission)}</h3>
+              <h3 className="text-2xl font-bold text-[var(--color-secondary)] font-headline">{fmt(platformCommission)}</h3>
             </div>
-            <div className="w-10 h-10 rounded-full bg-[#c180ff]/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#c180ff]">account_balance</span>
+            <div className="w-10 h-10 rounded-full bg-[var(--color-secondary)]/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[var(--color-secondary)]">account_balance</span>
             </div>
           </div>
           <div className="bg-[#1a1919] px-6 py-5 rounded-xl flex items-center justify-between border-l-4 border-[#6ee7b7]">
@@ -306,7 +306,7 @@ export function PaymentsPanel({
             </span>
             <button
               onClick={() => { setStatusFilter("All"); setDateFilter("All Time") }}
-              className="text-xs text-[#a3a6ff] hover:underline"
+              className="text-xs text-[var(--color-primary)] hover:underline"
             >
               Clear filters
             </button>
@@ -377,7 +377,7 @@ function TxTableRow({ tx, onSelect }: { tx: TxRow; onSelect: () => void }) {
     <tr className="hover:bg-[#201f1f] transition-all group">
       <td className="px-5 md:px-8 py-4 md:py-5">
         <div>
-          <span className="font-mono text-xs text-[#a3a6ff]">{shortId}</span>
+          <span className="font-mono text-xs text-[var(--color-primary)]">{shortId}</span>
           <p className="text-[10px] text-[#adaaaa] mt-0.5 capitalize">
             {tx.type === "delivery" ? "delivery payment" : "driver payout"}
           </p>
@@ -385,7 +385,7 @@ function TxTableRow({ tx, onSelect }: { tx: TxRow; onSelect: () => void }) {
       </td>
       <td className="px-5 md:px-8 py-4 md:py-5">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-[#262626] flex items-center justify-center text-[#a3a6ff] font-bold text-xs shrink-0">
+          <div className="h-8 w-8 rounded-full bg-[#262626] flex items-center justify-center text-[var(--color-primary)] font-bold text-xs shrink-0">
             {monogram(tx.userName, tx.userEmail)}
           </div>
           <div className="min-w-0">
@@ -424,7 +424,7 @@ function TxTableRow({ tx, onSelect }: { tx: TxRow; onSelect: () => void }) {
               title="View delivery"
               className="w-7 h-7 rounded-lg bg-[#262626] hover:bg-[#2c2c2c] flex items-center justify-center transition-colors"
             >
-              <span className="material-symbols-outlined text-sm text-[#a3a6ff]">local_shipping</span>
+              <span className="material-symbols-outlined text-sm text-[var(--color-primary)]">local_shipping</span>
             </a>
           )}
         </div>
@@ -493,7 +493,7 @@ function TxDetailModal({ tx, onClose }: { tx: TxRow; onClose: () => void }) {
               </span>
               <a
                 href={`/dashboard/admin/orders?tracking=${tx.trackingNumber}`}
-                className="text-xs text-[#a3a6ff] hover:underline font-mono"
+                className="text-xs text-[var(--color-primary)] hover:underline font-mono"
               >
                 {tx.trackingNumber}
               </a>
@@ -507,7 +507,7 @@ function TxDetailModal({ tx, onClose }: { tx: TxRow; onClose: () => void }) {
           {tx.trackingNumber && (
             <a
               href={`/dashboard/admin/orders?tracking=${tx.trackingNumber}`}
-              className="flex-1 flex items-center justify-center gap-2 bg-[#a3a6ff]/10 hover:bg-[#a3a6ff]/20 text-[#a3a6ff] text-sm font-semibold py-2.5 rounded-xl transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-sm font-semibold py-2.5 rounded-xl transition-colors"
             >
               <span className="material-symbols-outlined text-sm">local_shipping</span>
               View Delivery
@@ -531,9 +531,10 @@ function DetailRow({ label, value, mono = false }: { label: string; value: strin
       <span className="text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold shrink-0 mr-4 pt-0.5">
         {label}
       </span>
-      <span className={`text-xs text-white text-right break-all ${mono ? "font-mono text-[#a3a6ff]" : "font-medium"}`}>
+      <span className={`text-xs text-white text-right break-all ${mono ? "font-mono text-[var(--color-primary)]" : "font-medium"}`}>
         {value}
       </span>
     </div>
   )
 }
+

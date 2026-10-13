@@ -77,10 +77,10 @@ export default async function AdminOrdersPage() {
             <div>
               <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Active Shipments</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl md:text-4xl font-extrabold font-headline text-[#a3a6ff]">
+                <span className="text-2xl md:text-4xl font-extrabold font-headline text-[var(--color-primary)]">
                   {activeCount.toLocaleString()}
                 </span>
-                <span className="text-[#c180ff] text-xs font-semibold">Live</span>
+                <span className="text-[var(--color-secondary)] text-xs font-semibold">Live</span>
               </div>
             </div>
             <div>
@@ -104,13 +104,13 @@ export default async function AdminOrdersPage() {
                 className="w-2 rounded-t-sm"
                 style={{
                   height: `${h}%`,
-                  backgroundColor: `rgba(163, 166, 255, ${0.2 + i * 0.16})`,
+                  backgroundColor: `rgba(var(--brand-rgb), ${0.2 + i * 0.16})`,
                 }}
               />
             ))}
           </div>
         </div>
-        <div className="col-span-1 lg:col-span-4 bg-[#a3a6ff] text-[#0f00a4] p-6 rounded-xl relative overflow-hidden group">
+        <div className="col-span-1 lg:col-span-4 bg-[var(--color-primary)] text-[var(--color-on-primary)] p-6 rounded-xl relative overflow-hidden group">
           <div className="relative z-10">
             <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-80">Premium Logistics</p>
             <h3 className="text-2xl font-bold font-headline leading-tight">
@@ -130,3 +130,4 @@ export default async function AdminOrdersPage() {
     </div>
   )
 }
+

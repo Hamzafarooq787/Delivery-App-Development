@@ -143,9 +143,9 @@ export default async function DriverDashboard() {
 
   const STATUS_ICON: Record<string, { icon: string; color: string }> = {
     delivered:  { icon: "check_circle",   color: "text-[#6ee7b7]" },
-    in_transit: { icon: "directions_car", color: "text-[#a3a6ff]" },
-    collected:  { icon: "inventory_2",    color: "text-[#a3a6ff]" },
-    accepted:   { icon: "local_shipping", color: "text-[#c180ff]" },
+    in_transit: { icon: "directions_car", color: "text-[var(--color-primary)]" },
+    collected:  { icon: "inventory_2",    color: "text-[var(--color-primary)]" },
+    accepted:   { icon: "local_shipping", color: "text-[var(--color-secondary)]" },
     requested:  { icon: "schedule",       color: "text-[#adaaaa]" },
     cancelled:  { icon: "cancel",         color: "text-[#ff6e84]" },
   }
@@ -169,11 +169,11 @@ export default async function DriverDashboard() {
         <div className="md:col-span-4 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-5 md:p-8 flex flex-col justify-between border border-[#494847]/15 hover:bg-[#201f1f] transition-all group">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#a3a6ff]">
+              <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">
                 Today's Earnings
               </span>
               <span
-                className="material-symbols-outlined text-[#a3a6ff]"
+                className="material-symbols-outlined text-[var(--color-primary)]"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
                 payments
@@ -183,11 +183,11 @@ export default async function DriverDashboard() {
               £{todayTotal.toFixed(2)}
             </h3>
             <p className="text-xs text-[#adaaaa]">
-              All time: <span className="text-[#a3a6ff] font-bold">£{totalEarnings.toFixed(2)}</span>
+              All time: <span className="text-[var(--color-primary)] font-bold">£{totalEarnings.toFixed(2)}</span>
               &nbsp;·&nbsp;your 75% share
             </p>
             {pendingPayoutAmount > 0 && (
-              <p className="text-xs text-[#c180ff] mt-1 font-bold">
+              <p className="text-xs text-[var(--color-secondary)] mt-1 font-bold">
                 £{pendingPayoutAmount.toFixed(2)} pending withdrawal
               </p>
             )}
@@ -202,10 +202,10 @@ export default async function DriverDashboard() {
             {bars.map((h, i) => (
               <div
                 key={i}
-                className={`flex-1 rounded-sm ${i === 6 ? "bg-[#a3a6ff]" : "bg-[#a3a6ff]/20"}`}
+                className={`flex-1 rounded-sm ${i === 6 ? "bg-[var(--color-primary)]" : "bg-[var(--color-primary)]/20"}`}
                 style={{
                   height: `${h}%`,
-                  boxShadow: i === 6 ? "0px 0px 10px rgba(163,166,255,0.4)" : undefined,
+                  boxShadow: i === 6 ? "0px 0px 10px rgba(var(--brand-rgb),0.4)" : undefined,
                 }}
               />
             ))}
@@ -216,8 +216,8 @@ export default async function DriverDashboard() {
         <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-1 gap-4 md:gap-6">
           <div className="flex-1 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-6 hover:bg-[#201f1f] transition-all border border-[#494847]/15">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-[#c180ff]/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[#c180ff] text-lg">local_shipping</span>
+              <div className="w-8 h-8 rounded-lg bg-[var(--color-secondary)]/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[var(--color-secondary)] text-lg">local_shipping</span>
               </div>
               <span className="text-xs font-bold text-[#adaaaa]">Completed Jobs</span>
             </div>
@@ -225,17 +225,17 @@ export default async function DriverDashboard() {
               {String(completedJobs.length).padStart(2, "0")}
             </div>
           </div>
-          <div className="flex-1 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-6 hover:bg-[#201f1f] transition-all border-l-4 border-[#c180ff]">
+          <div className="flex-1 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-6 hover:bg-[#201f1f] transition-all border-l-4 border-[var(--color-secondary)]">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-[#c180ff]/20 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[var(--color-secondary)]/20 flex items-center justify-center">
                 <span
-                  className="material-symbols-outlined text-[#c180ff] text-lg animate-pulse"
+                  className="material-symbols-outlined text-[var(--color-secondary)] text-lg animate-pulse"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
                   radar
                 </span>
               </div>
-              <span className="text-xs font-bold text-[#c180ff]">Active Jobs</span>
+              <span className="text-xs font-bold text-[var(--color-secondary)]">Active Jobs</span>
             </div>
             <div className="text-4xl font-black font-headline text-white">
               {String(activeJobs.length).padStart(2, "0")}
@@ -269,16 +269,16 @@ export default async function DriverDashboard() {
                   href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 bg-[#a3a6ff] text-[#0f00a4] px-4 py-2 rounded font-bold text-xs"
-                  style={{ boxShadow: "0px 0px 10px rgba(163,166,255,0.4)" }}
+                  className="shrink-0 bg-[var(--color-primary)] text-[var(--color-on-primary)] px-4 py-2 rounded font-bold text-xs"
+                  style={{ boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.4)" }}
                 >
                   Open Maps
                 </a>
               ) : (
                 <Link
                   href={`/dashboard/driver/jobs/${activeJob.id}`}
-                  className="shrink-0 bg-[#a3a6ff] text-[#0f00a4] px-4 py-2 rounded font-bold text-xs"
-                  style={{ boxShadow: "0px 0px 10px rgba(163,166,255,0.4)" }}
+                  className="shrink-0 bg-[var(--color-primary)] text-[var(--color-on-primary)] px-4 py-2 rounded font-bold text-xs"
+                  style={{ boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.4)" }}
                 >
                   View Job
                 </Link>
@@ -286,8 +286,8 @@ export default async function DriverDashboard() {
             ) : (
               <Link
                 href="/dashboard/driver/jobs/available"
-                className="shrink-0 bg-[#a3a6ff] text-[#0f00a4] px-4 py-2 rounded font-bold text-xs"
-                style={{ boxShadow: "0px 0px 10px rgba(163,166,255,0.4)" }}
+                className="shrink-0 bg-[var(--color-primary)] text-[var(--color-on-primary)] px-4 py-2 rounded font-bold text-xs"
+                style={{ boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.4)" }}
               >
                 Find Jobs
               </Link>
@@ -299,7 +299,7 @@ export default async function DriverDashboard() {
         <div className="lg:col-span-8 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-4 md:p-8 border border-[#494847]/15">
           <div className="flex items-center justify-between mb-4 md:mb-8">
             <h4 className="text-lg font-bold font-headline text-white">Recent Activity</h4>
-            <Link href="/dashboard/driver/jobs/completed" className="text-xs font-bold text-[#a3a6ff] hover:underline">
+            <Link href="/dashboard/driver/jobs/completed" className="text-xs font-bold text-[var(--color-primary)] hover:underline">
               View History
             </Link>
           </div>
@@ -313,7 +313,7 @@ export default async function DriverDashboard() {
                 </p>
                 <Link
                   href="/dashboard/driver/jobs/available"
-                  className="inline-block mt-4 px-4 py-2 rounded-lg bg-[#a3a6ff]/10 text-[#a3a6ff] text-xs font-bold hover:bg-[#a3a6ff]/20 transition-colors"
+                  className="inline-block mt-4 px-4 py-2 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-bold hover:bg-[var(--color-primary)]/20 transition-colors"
                 >
                   Browse Available Jobs
                 </Link>
@@ -363,10 +363,10 @@ export default async function DriverDashboard() {
         {/* ── Driver Performance Card ── */}
         <div className="lg:col-span-4 flex flex-col gap-4 md:gap-6">
           <div
-            className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-4 md:p-8 border-t-2 border-[#a3a6ff]"
-            style={{ background: "linear-gradient(to bottom right, rgba(163,166,255,0.1), transparent)" }}
+            className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-4 md:p-8 border-t-2 border-[var(--color-primary)]"
+            style={{ background: "linear-gradient(to bottom right, rgba(var(--brand-rgb),0.1), transparent)" }}
           >
-            <h4 className="text-xs font-bold text-[#a3a6ff] uppercase tracking-widest mb-6">
+            <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-widest mb-6">
               Driver Tier: {tier}
             </h4>
             <div className="flex items-end justify-between mb-2">
@@ -377,10 +377,10 @@ export default async function DriverDashboard() {
             </div>
             <div className="w-full bg-[#1a1919] h-2 rounded-full mb-8">
               <div
-                className="bg-[#a3a6ff] h-full rounded-full transition-all"
+                className="bg-[var(--color-primary)] h-full rounded-full transition-all"
                 style={{
                   width: completedJobs.length === 0 ? "0%" : `${reliability}%`,
-                  boxShadow: "0px 0px 10px rgba(163,166,255,0.4)",
+                  boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.4)",
                 }}
               />
             </div>
@@ -405,7 +405,7 @@ export default async function DriverDashboard() {
               className="object-cover"
               unoptimized
             />
-            <div className="absolute inset-0 bg-[#c180ff]/80 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-[var(--color-secondary)]/80 mix-blend-multiply" />
             <div className="relative z-10">
               <p className="text-xs font-black uppercase tracking-tighter text-white mb-1">
                 {tier === "Legend" ? "Top Driver" : "Keep Growing"}
@@ -418,7 +418,7 @@ export default async function DriverDashboard() {
               </h5>
               <Link
                 href="/dashboard/driver/jobs/available"
-                className="inline-block bg-white text-[#9c48ea] px-6 py-2 rounded-full font-bold text-xs transition-transform active:scale-95"
+                className="inline-block bg-white text-[var(--color-secondary-dim)] px-6 py-2 rounded-full font-bold text-xs transition-transform active:scale-95"
               >
                 {tier === "Legend" ? "Find More Jobs" : "Level Up"}
               </Link>
@@ -429,3 +429,4 @@ export default async function DriverDashboard() {
     </div>
   )
 }
+

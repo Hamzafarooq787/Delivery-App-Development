@@ -187,7 +187,7 @@ export function NewShoppingRequestModal({
   }, [])
 
   const inputCls =
-    "w-full bg-[#201f1f] border border-[#494847]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/10 transition-all"
+    "w-full bg-[#201f1f] border border-[#494847]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/10 transition-all"
 
   const labelCls = "block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1.5"
 
@@ -213,7 +213,7 @@ export function NewShoppingRequestModal({
           {([1, 2, 3, 4] as Step[]).map((s) => (
             <div
               key={s}
-              className={`h-1 rounded-full flex-1 transition-all ${s <= step ? "bg-[#a3a6ff]" : "bg-[#494847]/30"}`}
+              className={`h-1 rounded-full flex-1 transition-all ${s <= step ? "bg-[var(--color-primary)]" : "bg-[#494847]/30"}`}
             />
           ))}
         </div>
@@ -312,7 +312,7 @@ export function NewShoppingRequestModal({
               <button
                 type="button"
                 onClick={handleStep1Next}
-                className="w-full py-3.5 bg-[#a3a6ff] text-[#0f00a4] font-bold rounded-xl text-sm hover:brightness-110 transition-all"
+                className="w-full py-3.5 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold rounded-xl text-sm hover:brightness-110 transition-all"
               >
                 Next: Add Items
               </button>
@@ -426,7 +426,7 @@ export function NewShoppingRequestModal({
               <button
                 type="button"
                 onClick={addItem}
-                className="w-full py-3 bg-[#1a1919] border border-dashed border-[#494847]/30 rounded-xl text-sm text-[#adaaaa] hover:text-white hover:border-[#a3a6ff]/30 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#1a1919] border border-dashed border-[#494847]/30 rounded-xl text-sm text-[#adaaaa] hover:text-white hover:border-[var(--color-primary)]/30 transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">add</span>
                 Add Another Item
@@ -452,7 +452,7 @@ export function NewShoppingRequestModal({
                 <button
                   type="button"
                   onClick={handleStep2Next}
-                  className="py-3 bg-[#a3a6ff] text-[#0f00a4] font-bold rounded-xl text-sm hover:brightness-110 transition-all"
+                  className="py-3 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold rounded-xl text-sm hover:brightness-110 transition-all"
                 >
                   Review &amp; Pay
                 </button>
@@ -470,14 +470,14 @@ export function NewShoppingRequestModal({
 
               <div className="bg-[#1a1919] rounded-xl p-4 space-y-2 text-sm">
                 <div className="flex gap-3">
-                  <span className="material-symbols-outlined text-[#c180ff] text-base mt-0.5">storefront</span>
+                  <span className="material-symbols-outlined text-[var(--color-secondary)] text-base mt-0.5">storefront</span>
                   <div>
                     <p className="font-semibold text-white">{shopName}</p>
                     <p className="text-[#adaaaa] text-xs">{shopAddress?.address}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-base mt-0.5">location_on</span>
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-base mt-0.5">location_on</span>
                   <p className="text-[#adaaaa] text-xs">{deliveryAddress?.address}</p>
                 </div>
               </div>
@@ -519,7 +519,7 @@ export function NewShoppingRequestModal({
                   </div>
                   <div className="border-t border-[#494847]/20 pt-2 flex justify-between font-bold">
                     <span className="text-white">Total charged now</span>
-                    <span className="text-[#a3a6ff] text-base">{fmt(quote.totalCharge)}</span>
+                    <span className="text-[var(--color-primary)] text-base">{fmt(quote.totalCharge)}</span>
                   </div>
                   <p className="text-[10px] text-[#adaaaa] pt-1 leading-relaxed">
                     Shopping funds (up to {fmt(quote.maxSpendLimit)}) are held from your wallet. Any unspent amount is returned after purchase. The final shopping cost may differ from your estimates.
@@ -544,7 +544,7 @@ export function NewShoppingRequestModal({
                   type="button"
                   disabled={loadingQuote || submitting || !quote}
                   onClick={handleSubmit}
-                  className="py-3 bg-[#c180ff] text-[#33005b] font-bold rounded-xl text-sm hover:brightness-110 transition-all disabled:opacity-50"
+                  className="py-3 bg-[var(--color-secondary)] text-[var(--color-on-secondary)] font-bold rounded-xl text-sm hover:brightness-110 transition-all disabled:opacity-50"
                 >
                   {submitting ? "Booking…" : "Confirm & Pay"}
                 </button>
@@ -577,13 +577,13 @@ export function NewShoppingRequestModal({
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[#adaaaa]">Status</span>
-                  <span className="text-[#a3a6ff] font-bold uppercase">Requested</span>
+                  <span className="text-[var(--color-primary)] font-bold uppercase">Requested</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-3.5 bg-[#a3a6ff] text-[#0f00a4] font-bold rounded-xl text-sm hover:brightness-110 transition-all"
+                className="w-full py-3.5 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold rounded-xl text-sm hover:brightness-110 transition-all"
               >
                 Track My Order
               </button>
@@ -594,3 +594,4 @@ export function NewShoppingRequestModal({
     </div>
   )
 }
+

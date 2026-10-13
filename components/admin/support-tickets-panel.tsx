@@ -19,7 +19,7 @@ function RoleBadge({ role }: { role: string }) {
   const isDriver = role === "driver"
   return (
     <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-      isDriver ? "bg-[#c180ff]/10 text-[#c180ff]" : "bg-[#60a5fa]/10 text-[#60a5fa]"
+      isDriver ? "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]" : "bg-[#60a5fa]/10 text-[#60a5fa]"
     }`}>
       {role}
     </span>
@@ -61,7 +61,7 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
         {tickets.length === 0 ? (
           <div className="py-16 text-center px-8">
             <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#262626] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#a3a6ff]">support_agent</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)]">support_agent</span>
             </div>
             <p className="text-sm font-bold text-white mb-1">No support tickets</p>
             <p className="text-xs text-[#adaaaa]">Tickets submitted by customers and drivers appear here.</p>
@@ -77,7 +77,7 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
                     onClick={() => setExpandedId(expanded ? null : t.id)}
                     className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-[#201f1f]/40 transition-colors"
                   >
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${isOpen ? "bg-[#a3a6ff] animate-pulse" : "bg-[#6ee7b7]"}`} />
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${isOpen ? "bg-[var(--color-primary)] animate-pulse" : "bg-[#6ee7b7]"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white truncate">{t.subject}</p>
                       <p className="text-xs text-[#adaaaa] mt-0.5 flex items-center gap-2">
@@ -88,7 +88,7 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
                     </div>
                     <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
                       isOpen
-                        ? "bg-[#a3a6ff]/10 text-[#a3a6ff] border border-[#a3a6ff]/20"
+                        ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20"
                         : "bg-green-500/10 text-green-400 border border-green-500/20"
                     }`}>
                       {isOpen ? "Open" : "Resolved"}
@@ -125,3 +125,4 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
     </div>
   )
 }
+

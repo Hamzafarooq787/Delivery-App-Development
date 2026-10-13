@@ -79,10 +79,10 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
 
       {/* Commission split notice */}
       <div className="flex items-center gap-3 bg-[#1a1919] border border-[#494847]/20 rounded-xl px-5 py-4 mb-8">
-        <span className="material-symbols-outlined text-[#a3a6ff]">info</span>
+        <span className="material-symbols-outlined text-[var(--color-primary)]">info</span>
         <p className="text-sm text-[#adaaaa]">
           Your earnings are <span className="text-white font-bold">75%</span> of each delivery fare.
-          The remaining <span className="text-[#c180ff] font-bold">25%</span> is the platform commission.
+          The remaining <span className="text-[var(--color-secondary)] font-bold">25%</span> is the platform commission.
           Taxes will be introduced in a future update.
         </p>
       </div>
@@ -90,10 +90,10 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
         <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden group border border-[#494847]/10 shadow-lg">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#a3a6ff]/10 rounded-full blur-3xl group-hover:bg-[#a3a6ff]/20 transition-all" />
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-[var(--color-primary)]/10 rounded-full blur-3xl group-hover:bg-[var(--color-primary)]/20 transition-all" />
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#a3a6ff]">Today</span>
-            <span className="material-symbols-outlined text-[#a3a6ff]">today</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">Today</span>
+            <span className="material-symbols-outlined text-[var(--color-primary)]">today</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(todayTotal)}</span>
@@ -128,7 +128,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
             <h3 className="text-lg font-bold font-headline text-white">
               {activeTab === "Daily" ? "Today's" : activeTab === "Weekly" ? "This Week's" : "This Month's"} Transactions
             </h3>
-            <span className="text-[#a3a6ff] text-xs font-bold">{filtered.length} jobs</span>
+            <span className="text-[var(--color-primary)] text-xs font-bold">{filtered.length} jobs</span>
           </div>
           <div className="bg-[#1a1919] rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
@@ -151,7 +151,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                         <div key={e.id} className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-[#201f1f] transition-colors">
                           <div className="col-span-5 flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-[#262626] flex items-center justify-center shrink-0">
-                              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">local_shipping</span>
+                              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">local_shipping</span>
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-white truncate">
@@ -168,7 +168,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                           </div>
                           {/* Commission 25% */}
                           <div className="col-span-2 text-right">
-                            <p className="text-xs font-semibold text-[#c180ff]">-{fmt(commission)}</p>
+                            <p className="text-xs font-semibold text-[var(--color-secondary)]">-{fmt(commission)}</p>
                           </div>
                           {/* Driver cut 75% */}
                           <div className="col-span-2 text-right">
@@ -214,8 +214,8 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                 return (
                   <div
                     key={i}
-                    className={`w-full rounded-t ${i === 6 ? "bg-[#a3a6ff]" : "bg-[#a3a6ff]/20"}`}
-                    style={{ height: `${Math.max(pct, 4)}%`, boxShadow: i === 6 ? "0px 0px 10px rgba(163,166,255,0.4)" : undefined }}
+                    className={`w-full rounded-t ${i === 6 ? "bg-[var(--color-primary)]" : "bg-[var(--color-primary)]/20"}`}
+                    style={{ height: `${Math.max(pct, 4)}%`, boxShadow: i === 6 ? "0px 0px 10px rgba(var(--brand-rgb),0.4)" : undefined }}
                   />
                 )
               })}
@@ -224,10 +224,10 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
           </div>
 
           {/* All-time card */}
-          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl border border-[#a3a6ff]/20">
+          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl border border-[var(--color-primary)]/20">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-[#a3a6ff] flex items-center justify-center text-[#0f00a4]"
-                style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.3)" }}>
+              <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-[var(--color-on-primary)]"
+                style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.3)" }}>
                 <span className="material-symbols-outlined">account_balance_wallet</span>
               </div>
               <div>
@@ -251,8 +251,8 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#c180ff]">Platform commission (25%)</span>
-                  <span className="text-[#c180ff] font-bold">
+                  <span className="text-[var(--color-secondary)]">Platform commission (25%)</span>
+                  <span className="text-[var(--color-secondary)] font-bold">
                     -{fmt(earnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0))}
                   </span>
                 </div>
@@ -268,3 +268,4 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
     </div>
   )
 }
+

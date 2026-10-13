@@ -1,5 +1,6 @@
 "use client"
 
+import { BrandLogo } from '@/components/shared/brand-logo'
 import { useState, useTransition, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -57,15 +58,15 @@ export function DriverSidebar({ onClose, user, isOnline = false, isLocked = fals
   return (
     <aside className="flex h-full w-64 flex-col bg-[#0e0e0e] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
       <div className="px-6 py-6 mb-4">
-        <h1 className="text-xl font-bold text-white tracking-widest uppercase font-headline">Go Drop</h1>
+        <BrandLogo />
         <p className="text-[10px] text-[#adaaaa] tracking-[0.2em] uppercase mt-1 font-headline">Driver Portal</p>
       </div>
 
       {isLocked && (
-        <div className="mx-4 mb-3 px-3 py-2.5 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 rounded-xl">
+        <div className="mx-4 mb-3 px-3 py-2.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-xl">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm text-[#a3a6ff]">lock</span>
-            <p className="text-[10px] font-bold text-[#a3a6ff] uppercase tracking-wider">Account Pending</p>
+            <span className="material-symbols-outlined text-sm text-[var(--color-primary)]">lock</span>
+            <p className="text-[10px] font-bold text-[var(--color-primary)] uppercase tracking-wider">Account Pending</p>
           </div>
           <p className="text-[10px] text-[#adaaaa] mt-0.5 leading-relaxed">Complete verification to unlock all features</p>
         </div>
@@ -100,7 +101,7 @@ export function DriverSidebar({ onClose, user, isOnline = false, isLocked = fals
               className={cn(
                 "flex items-center gap-3 px-6 py-3 text-sm font-headline tracking-tight transition-all duration-200",
                 isActive
-                  ? "text-[#a3a6ff] bg-[#131313] border-l-4 border-[#a3a6ff]"
+                  ? "text-[var(--color-primary)] bg-[#131313] border-l-4 border-[var(--color-primary)]"
                   : "text-[#adaaaa] hover:text-white hover:bg-[#201f1f] border-l-4 border-transparent"
               )}
             >
@@ -136,3 +137,4 @@ export function DriverSidebar({ onClose, user, isOnline = false, isLocked = fals
     </aside>
   )
 }
+

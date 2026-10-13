@@ -3,8 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { notFound } from "next/navigation"
 
 const STATUS_COLORS: Record<string, string> = {
-  requested:  "bg-[#a3a6ff]/10 text-[#a3a6ff]",
-  accepted:   "bg-[#c180ff]/10 text-[#c180ff]",
+  requested:  "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+  accepted:   "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]",
   collected:  "bg-blue-500/10 text-blue-400",
   in_transit: "bg-amber-500/10 text-amber-400",
   delivered:  "bg-emerald-500/10 text-emerald-400",
@@ -74,7 +74,7 @@ export default async function AdminCustomerDetailPage({
           {/* Profile */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] text-lg font-bold shrink-0">
+              <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] text-lg font-bold shrink-0">
                 {initials}
               </div>
               <div>
@@ -113,7 +113,7 @@ export default async function AdminCustomerDetailPage({
           {/* Order History */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-5 md:px-6 py-4 border-b border-[#494847]/10">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">local_shipping</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">local_shipping</span>
               <h3 className="text-base font-bold text-white font-headline">Order History</h3>
               <span className="ml-auto text-xs text-[#adaaaa] bg-[#494847]/20 px-2 py-0.5 rounded-full">
                 {orders.length} orders
@@ -142,7 +142,7 @@ export default async function AdminCustomerDetailPage({
                         <td className="px-6 py-4 font-mono text-xs">
                           <Link
                             href={`/dashboard/admin/orders/${o.id}`}
-                            className="text-[#a3a6ff] hover:underline"
+                            className="text-[var(--color-primary)] hover:underline"
                           >
                             {o.tracking_number ?? o.id.slice(0, 8)}
                           </Link>
@@ -175,7 +175,7 @@ export default async function AdminCustomerDetailPage({
           {/* Stats */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">bar_chart</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">bar_chart</span>
               <h3 className="text-sm font-bold text-white font-headline">Stats</h3>
             </div>
             <div className="space-y-3">
@@ -196,12 +196,12 @@ export default async function AdminCustomerDetailPage({
           {/* Account Actions */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">manage_accounts</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">manage_accounts</span>
               <h3 className="text-sm font-bold text-white font-headline">Account Actions</h3>
             </div>
             <div className="space-y-2">
               <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
-                <span className="material-symbols-outlined text-sm text-[#a3a6ff]">mail</span>
+                <span className="material-symbols-outlined text-sm text-[var(--color-primary)]">mail</span>
                 Send Message
               </button>
               <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
@@ -219,3 +219,4 @@ export default async function AdminCustomerDetailPage({
     </div>
   )
 }
+

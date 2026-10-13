@@ -123,8 +123,8 @@ export function ProfileDropdown({
         aria-expanded={open}
         className={`h-8 w-8 rounded-full flex items-center justify-center border text-xs font-bold font-headline transition-all select-none ${
           open
-            ? "bg-[#a3a6ff]/20 border-[#a3a6ff]/60 text-[#a3a6ff]"
-            : "bg-[#262626] border-[#494847]/30 text-white hover:border-[#a3a6ff]/40 hover:bg-[#a3a6ff]/10 hover:text-[#a3a6ff]"
+            ? "bg-[var(--color-primary)]/20 border-[var(--color-primary)]/60 text-[var(--color-primary)]"
+            : "bg-[#262626] border-[#494847]/30 text-white hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"
         }`}
       >
         {abbr}
@@ -135,14 +135,14 @@ export function ProfileDropdown({
         <div className="absolute right-0 top-full mt-2 w-64 rounded-xl bg-[#1a1919] border border-[#494847]/20 shadow-[0_8px_40px_rgba(0,0,0,0.6)] z-50 overflow-hidden">
           {/* User info */}
           <div className="px-4 py-4 border-b border-[#494847]/15 flex items-center gap-3">
-            <div className="h-11 w-11 rounded-full bg-[#a3a6ff]/15 flex items-center justify-center text-[#a3a6ff] font-bold font-headline text-sm shrink-0 border border-[#a3a6ff]/20">
+            <div className="h-11 w-11 rounded-full bg-[var(--color-primary)]/15 flex items-center justify-center text-[var(--color-primary)] font-bold font-headline text-sm shrink-0 border border-[var(--color-primary)]/20">
               {abbr}
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{displayName}</p>
               <p className="text-[11px] text-[#adaaaa] truncate">{email}</p>
               {role && (
-                <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded-full bg-[#a3a6ff]/10 text-[#a3a6ff]">
+                <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                   {role}
                 </span>
               )}
@@ -156,17 +156,20 @@ export function ProfileDropdown({
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors group"
             >
-              <span className="material-symbols-outlined text-[18px] text-[#a3a6ff] group-hover:text-[#a3a6ff]">manage_accounts</span>
+              <span className="material-symbols-outlined text-[18px] text-[var(--color-primary)] group-hover:text-[var(--color-primary)]">manage_accounts</span>
               <span className="font-medium">Profile &amp; Settings</span>
             </Link>
 
+            {activeRole === 'customer' && <Link href="/dashboard/customer/addresses" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-on-surface-variant hover:text-on-surface">
+              <span className="material-symbols-outlined text-lg">location_on</span>Saved addresses
+            </Link>}
             {supportHref && (
               <Link
                 href={supportHref}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors group"
               >
-                <span className="material-symbols-outlined text-[18px] text-[#a3a6ff]">help_outline</span>
+                <span className="material-symbols-outlined text-[18px] text-[var(--color-primary)]">help_outline</span>
                 <span className="font-medium">Help &amp; Support</span>
               </Link>
             )}
@@ -199,7 +202,7 @@ export function ProfileDropdown({
                 <button
                   onClick={() => handleSwitch(otherRole as "customer" | "driver")}
                   disabled={isPending}
-                  className="w-full flex items-center gap-2.5 bg-[#a3a6ff]/10 hover:bg-[#a3a6ff]/20 border border-[#a3a6ff]/20 rounded-xl px-3 py-2.5 text-sm text-[#a3a6ff] font-semibold transition-all disabled:opacity-50"
+                  className="w-full flex items-center gap-2.5 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/20 rounded-xl px-3 py-2.5 text-sm text-[var(--color-primary)] font-semibold transition-all disabled:opacity-50"
                 >
                   {isPending ? (
                     <svg className="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
@@ -251,7 +254,7 @@ export function ProfileDropdown({
                   onClick={() => setTheme(t.value)}
                   className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${
                     theme === t.value
-                      ? "bg-[#a3a6ff]/15 text-[#a3a6ff] border border-[#a3a6ff]/30"
+                      ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)] border border-[var(--color-primary)]/30"
                       : "bg-[#262626]/60 text-[#adaaaa] border border-transparent hover:text-white hover:bg-[#262626]"
                   }`}
                 >
@@ -278,3 +281,4 @@ export function ProfileDropdown({
     </div>
   )
 }
+

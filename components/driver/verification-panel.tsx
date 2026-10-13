@@ -23,8 +23,8 @@ const DOC_CONFIGS: {
     label: "Identity Verification",
     description: "Passport or Commercial Driver's License — all four corners visible, text legible.",
     icon: "badge",
-    iconColor: "text-[#a3a6ff]",
-    iconBg: "bg-[#a3a6ff]/20",
+    iconColor: "text-[var(--color-primary)]",
+    iconBg: "bg-[var(--color-primary)]/20",
   },
   {
     type: "selfie",
@@ -39,16 +39,16 @@ const DOC_CONFIGS: {
     label: "Insurance Policy",
     description: "Current active commercial insurance certificate.",
     icon: "shield",
-    iconColor: "text-[#c180ff]",
-    iconBg: "bg-[#6f00be]/20",
+    iconColor: "text-[var(--color-secondary)]",
+    iconBg: "bg-[var(--color-secondary-container)]/20",
   },
   {
     type: "vehicle_registration",
     label: "Vehicle Registration",
     description: "Official registration documents for your primary logistics vehicle.",
     icon: "commute",
-    iconColor: "text-[#a3a6ff]",
-    iconBg: "bg-[#a3a6ff]/20",
+    iconColor: "text-[var(--color-primary)]",
+    iconBg: "bg-[var(--color-primary)]/20",
   },
 ]
 
@@ -195,7 +195,7 @@ export function VerificationPanel({
         {/* Status Overview */}
         <div className="md:col-span-4 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-xl flex flex-col justify-between border border-[#494847]/15">
           <div>
-            <p className="text-xs font-semibold tracking-widest text-[#a3a6ff] uppercase mb-4">Overall Status</p>
+            <p className="text-xs font-semibold tracking-widest text-[var(--color-primary)] uppercase mb-4">Overall Status</p>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl md:text-5xl font-black font-headline text-white">
                 {driverStatus === "approved" ? 100 : pct}%
@@ -208,8 +208,8 @@ export function VerificationPanel({
           <div className="mt-8 space-y-4">
             <div className="w-full h-1.5 bg-[#1a1919] rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${driverStatus === "approved" ? "bg-green-400" : "bg-[#a3a6ff]"}`}
-                style={{ width: `${driverStatus === "approved" ? 100 : pct}%`, boxShadow: "0px 0px 15px rgba(163,166,255,0.2)" }}
+                className={`h-full rounded-full transition-all duration-500 ${driverStatus === "approved" ? "bg-green-400" : "bg-[var(--color-primary)]"}`}
+                style={{ width: `${driverStatus === "approved" ? 100 : pct}%`, boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
               />
             </div>
             <p className="text-xs text-[#adaaaa] italic">
@@ -247,8 +247,8 @@ export function VerificationPanel({
               <button
                 onClick={handleSubmit}
                 disabled={submitPending}
-                className="w-full mt-2 py-3 bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.2)" }}
+                className="w-full mt-2 py-3 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
               >
                 {submitPending ? (
                   <>
@@ -273,7 +273,7 @@ export function VerificationPanel({
         <div className="md:col-span-8 space-y-4">
           <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-5 md:p-6 rounded-xl border border-[#494847]/15">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff] shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] shrink-0">
                 <span className="material-symbols-outlined">directions_car</span>
               </div>
               <div>
@@ -341,8 +341,8 @@ export function VerificationPanel({
                     <button
                       onClick={() => fileInputRefs.current[config.type]?.click()}
                       disabled={isUploading || driverStatus === "approved"}
-                      className="px-4 py-2 bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs rounded-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                      style={{ boxShadow: "0px 0px 10px rgba(163,166,255,0.15)" }}
+                      className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs rounded-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      style={{ boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.15)" }}
                     >
                       {isUploading ? (
                         <>
@@ -377,11 +377,11 @@ export function VerificationPanel({
         {/* Support Banner */}
         <div className="md:col-span-12 mt-4">
           <div className="relative overflow-hidden rounded-2xl bg-[#1a1919] border border-[#494847]/10 p-1">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#a3a6ff]/10 blur-[80px] -mr-32 -mt-32 rounded-full pointer-events-none" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-primary)]/10 blur-[80px] -mr-32 -mt-32 rounded-full pointer-events-none" />
             <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between p-5 md:p-8 gap-5 md:gap-6">
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 rounded-full bg-[#201f1f] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-3xl">support_agent</span>
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-3xl">support_agent</span>
                 </div>
                 <div>
                   <h4 className="text-lg font-bold text-white">Having trouble with verification?</h4>
@@ -403,3 +403,4 @@ export function VerificationPanel({
     </div>
   )
 }
+

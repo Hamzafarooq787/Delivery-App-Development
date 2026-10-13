@@ -11,8 +11,8 @@ const LIVE_TRACKING_STATUSES = ["accepted", "collected", "in_transit", "picked_u
 const STATUS_ORDER = ["requested", "accepted", "collected", "in_transit", "delivered"]
 
 const STATUS_COLORS: Record<string, string> = {
-  requested:  "bg-[#a3a6ff]/10 text-[#a3a6ff]",
-  accepted:   "bg-[#c180ff]/10 text-[#c180ff]",
+  requested:  "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+  accepted:   "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]",
   collected:  "bg-blue-500/10 text-blue-400",
   in_transit: "bg-amber-500/10 text-amber-400",
   delivered:  "bg-emerald-500/10 text-emerald-400",
@@ -96,7 +96,7 @@ export default async function AdminOrderDetailPage({
           {/* Package Details */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">inventory_2</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">inventory_2</span>
               <h3 className="text-base font-bold text-white font-headline">Package Details</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
@@ -185,11 +185,11 @@ export default async function AdminOrderDetailPage({
 
           {/* Buy for Me Details */}
           {order.service_type === "buy_for_me" && (
-            <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#c180ff]/15 rounded-xl p-5 md:p-6">
+            <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[var(--color-secondary)]/15 rounded-xl p-5 md:p-6">
               <div className="flex items-center gap-2 mb-5">
-                <span className="material-symbols-outlined text-[#c180ff] text-lg">shopping_bag</span>
+                <span className="material-symbols-outlined text-[var(--color-secondary)] text-lg">shopping_bag</span>
                 <h3 className="text-base font-bold text-white font-headline">Buy for Me Details</h3>
-                <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#c180ff]/10 text-[#c180ff] border border-[#c180ff]/20">
+                <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border border-[var(--color-secondary)]/20">
                   BUY FOR ME
                 </span>
               </div>
@@ -234,7 +234,7 @@ export default async function AdminOrderDetailPage({
                   <div className="sm:col-span-2">
                     <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Purchase Receipt</p>
                     <a href={order.receipt_url} target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#c180ff] hover:underline">
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-secondary)] hover:underline">
                       <span className="material-symbols-outlined text-sm">receipt_long</span>
                       View Receipt
                     </a>
@@ -247,7 +247,7 @@ export default async function AdminOrderDetailPage({
           {/* Route */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">route</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">route</span>
               <h3 className="text-base font-bold text-white font-headline">Route</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -261,8 +261,8 @@ export default async function AdminOrderDetailPage({
                 </div>
               </div>
               <div className="flex gap-3">
-                <div className="mt-0.5 w-7 h-7 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-sm">location_on</span>
+                <div className="mt-0.5 w-7 h-7 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-sm">location_on</span>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Dropoff</p>
@@ -276,7 +276,7 @@ export default async function AdminOrderDetailPage({
           {(order.driver_id || (order.pickup_lat != null && order.delivery_lat != null)) && (
             <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl overflow-hidden">
               <div className="flex items-center gap-2 p-5 md:p-6 pb-4">
-                <span className="material-symbols-outlined text-[#a3a6ff] text-lg">location_on</span>
+                <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">location_on</span>
                 <h3 className="text-base font-bold text-white font-headline">Live Tracking</h3>
               </div>
               <LiveTrackingPanel
@@ -305,7 +305,7 @@ export default async function AdminOrderDetailPage({
           {/* Order Timeline */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">timeline</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">timeline</span>
               <h3 className="text-base font-bold text-white font-headline">Order Timeline</h3>
             </div>
             <div className="relative pl-6">
@@ -317,14 +317,14 @@ export default async function AdminOrderDetailPage({
                 return (
                   <div key={s} className="relative mb-6 last:mb-0">
                     {idx < STATUS_ORDER.length - 1 && (
-                      <div className={`absolute left-[-17px] top-6 w-0.5 h-full ${isDone ? "bg-[#a3a6ff]/40" : "bg-[#494847]/20"}`} />
+                      <div className={`absolute left-[-17px] top-6 w-0.5 h-full ${isDone ? "bg-[var(--color-primary)]/40" : "bg-[#494847]/20"}`} />
                     )}
                     <div className={`absolute left-[-22px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center
-                      ${isDone    ? "border-[#a3a6ff] bg-[#a3a6ff]" :
-                        isActive  ? "border-[#a3a6ff] bg-[#131313]" :
+                      ${isDone    ? "border-[var(--color-primary)] bg-[var(--color-primary)]" :
+                        isActive  ? "border-[var(--color-primary)] bg-[#131313]" :
                                     "border-[#494847]/30 bg-[#131313]"}`}>
                       {isDone && <span className="material-symbols-outlined text-white" style={{ fontSize: 9 }}>check</span>}
-                      {isActive && <div className="w-2 h-2 rounded-full bg-[#a3a6ff]" />}
+                      {isActive && <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />}
                     </div>
                     <div>
                       <p className={`text-sm font-semibold capitalize ${isUpcoming ? "text-[#494847]" : "text-white"}`}>
@@ -352,7 +352,7 @@ export default async function AdminOrderDetailPage({
           {/* Customer */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">person</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">person</span>
               <h3 className="text-sm font-bold text-white font-headline">Customer</h3>
             </div>
             {customer ? (
@@ -362,7 +362,7 @@ export default async function AdminOrderDetailPage({
                 {customer.phone && <p className="text-[#adaaaa] text-xs">{customer.phone}</p>}
                 <Link
                   href={`/dashboard/admin/customers/${order.customer_id}`}
-                  className="inline-flex items-center gap-1 text-xs text-[#a3a6ff] hover:underline mt-2"
+                  className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] hover:underline mt-2"
                 >
                   View profile
                   <span className="material-symbols-outlined text-[10px]">arrow_forward</span>
@@ -376,7 +376,7 @@ export default async function AdminOrderDetailPage({
           {/* Assigned Driver */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">directions_car</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">directions_car</span>
               <h3 className="text-sm font-bold text-white font-headline">Assigned Driver</h3>
             </div>
             {driver ? (
@@ -385,7 +385,7 @@ export default async function AdminOrderDetailPage({
                 <p className="text-[#adaaaa] text-xs">{driver.email}</p>
                 <Link
                   href={`/dashboard/admin/drivers/${order.driver_id}`}
-                  className="inline-flex items-center gap-1 text-xs text-[#a3a6ff] hover:underline mt-2"
+                  className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] hover:underline mt-2"
                 >
                   View driver
                   <span className="material-symbols-outlined text-[10px]">arrow_forward</span>
@@ -400,7 +400,7 @@ export default async function AdminOrderDetailPage({
           {(customerRating || driverRating) && (
             <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-[#a3a6ff] text-lg">star</span>
+                <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">star</span>
                 <h3 className="text-sm font-bold text-white font-headline">Ratings</h3>
               </div>
               <div className="space-y-4">
@@ -443,7 +443,7 @@ export default async function AdminOrderDetailPage({
           {/* Admin Actions */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-lg">admin_panel_settings</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">admin_panel_settings</span>
               <h3 className="text-sm font-bold text-white font-headline">Admin Actions</h3>
             </div>
             <OrderActionsPanel
@@ -463,3 +463,4 @@ export default async function AdminOrderDetailPage({
     </div>
   )
 }
+

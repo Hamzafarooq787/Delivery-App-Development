@@ -29,8 +29,8 @@ function StatusPill({ status }: { status: string }) {
       </span>
     )
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#a3a6ff]/10 text-[#a3a6ff] border border-[#a3a6ff]/20">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#a3a6ff] animate-pulse" />Pending Review
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+      <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />Pending Review
     </span>
   )
 }
@@ -88,8 +88,8 @@ export default async function AdminDriverDetailPage({
           {/* Profile card */}
           <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-                <span className="text-lg font-bold text-[#a3a6ff]">{initials}</span>
+              <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+                <span className="text-lg font-bold text-[var(--color-primary)]">{initials}</span>
               </div>
               <div className="min-w-0">
                 <p className="text-base font-bold text-white">{driver.full_name}</p>
@@ -117,7 +117,7 @@ export default async function AdminDriverDetailPage({
           {/* Vehicles card */}
           <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="material-symbols-outlined text-[#a3a6ff]">directions_car</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)]">directions_car</span>
               <p className="text-sm font-bold text-white">Vehicles</p>
               <span className="ml-auto text-xs text-[#adaaaa]">{vehicles.length} registered</span>
             </div>
@@ -146,7 +146,7 @@ export default async function AdminDriverDetailPage({
           {/* Documents card */}
           <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="material-symbols-outlined text-[#a3a6ff]">folder_open</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)]">folder_open</span>
               <p className="text-sm font-bold text-white">Submitted Documents</p>
               <span className="ml-auto text-xs text-[#adaaaa]">{documents.length} file{documents.length !== 1 ? "s" : ""}</span>
             </div>
@@ -195,7 +195,7 @@ export default async function AdminDriverDetailPage({
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-[#adaaaa]">Total Earned</span>
-                <span className="text-sm font-bold text-[#a3a6ff]">{fmt(driver.totalEarned)}</span>
+                <span className="text-sm font-bold text-[var(--color-primary)]">{fmt(driver.totalEarned)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-[#adaaaa]">Jobs Completed</span>
@@ -229,3 +229,4 @@ export default async function AdminDriverDetailPage({
     </div>
   )
 }
+

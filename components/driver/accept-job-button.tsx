@@ -27,8 +27,8 @@ export function AcceptJobButton({ deliveryId }: { deliveryId: string }) {
       type="button"
       onClick={handleAccept}
       disabled={isPending}
-      className="w-full py-2.5 bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm rounded-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.2)" }}
+      className="w-full py-2.5 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm rounded-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
     >
       <span className="material-symbols-outlined text-base">
         {isPending ? "hourglass_empty" : "check_circle"}
@@ -37,3 +37,4 @@ export function AcceptJobButton({ deliveryId }: { deliveryId: string }) {
     </button>
   )
 }
+

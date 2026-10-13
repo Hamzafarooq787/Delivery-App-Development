@@ -260,7 +260,7 @@ export default function SettingsPage() {
                     <button
                       type="submit"
                       disabled={saving || !userId}
-                      className="px-8 py-2 bg-primary text-on-primary hover:brightness-110 transition-colors rounded-lg text-sm font-extrabold shadow-[0_0_15px_rgba(163,166,255,0.2)] disabled:opacity-60"
+                      className="px-8 py-2 bg-primary text-on-primary hover:brightness-110 transition-colors rounded-lg text-sm font-extrabold shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60"
                     >
                       {saving ? 'Saving...' : 'Update Profile'}
                     </button>
@@ -486,3 +486,4 @@ export default function SettingsPage() {
     </>
   )
 }
+

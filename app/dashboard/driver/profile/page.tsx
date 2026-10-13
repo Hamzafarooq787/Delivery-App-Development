@@ -36,8 +36,8 @@ export default async function DriverProfilePage() {
         {/* Personal info card */}
         <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
           <div className="flex items-center gap-4 mb-6">
-            <div className="h-16 w-16 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-              <span className="text-lg font-bold text-[#a3a6ff]">{initials}</span>
+            <div className="h-16 w-16 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+              <span className="text-lg font-bold text-[var(--color-primary)]">{initials}</span>
             </div>
             <div className="min-w-0">
               <p className="text-base font-bold text-white truncate">{profile.full_name || "Driver"}</p>
@@ -51,10 +51,10 @@ export default async function DriverProfilePage() {
         {/* Vehicle management moved to Settings — supports multiple vehicles */}
         <Link
           href="/dashboard/driver/settings"
-          className="flex items-center gap-4 bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6 hover:border-[#a3a6ff]/30 transition-colors"
+          className="flex items-center gap-4 bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6 hover:border-[var(--color-primary)]/30 transition-colors"
         >
-          <div className="w-10 h-10 rounded-lg bg-[#a3a6ff]/10 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[#a3a6ff]">directions_car</span>
+          <div className="w-10 h-10 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[var(--color-primary)]">directions_car</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white">Manage Vehicles</p>
@@ -66,3 +66,4 @@ export default async function DriverProfilePage() {
     </div>
   )
 }
+

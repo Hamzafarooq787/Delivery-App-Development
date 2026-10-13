@@ -44,7 +44,7 @@ export function DriverSettingsForm({ fullName, phone, email }: Props) {
           <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">Full Name</label>
           <input
             name="full_name"
-            className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[#a3a6ff]/30 focus:border-[#a3a6ff] transition-all outline-none"
+            className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all outline-none"
             type="text"
             defaultValue={fullName}
           />
@@ -53,7 +53,7 @@ export function DriverSettingsForm({ fullName, phone, email }: Props) {
           <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">Phone Number</label>
           <input
             name="phone"
-            className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[#a3a6ff]/30 focus:border-[#a3a6ff] transition-all outline-none"
+            className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all outline-none"
             type="tel"
             defaultValue={phone}
           />
@@ -69,7 +69,7 @@ export function DriverSettingsForm({ fullName, phone, email }: Props) {
         </div>
         <div className="space-y-2">
           <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">Home Base</label>
-          <select className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[#a3a6ff]/30 focus:border-[#a3a6ff] transition-all appearance-none outline-none">
+          <select className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all appearance-none outline-none">
             <option>San Francisco - Sector 7</option>
             <option>Oakland - Hub East</option>
             <option>San Jose - South Zone</option>
@@ -96,11 +96,12 @@ export function DriverSettingsActions({ saving, onDiscard }: { saving?: boolean;
       <button
         type="submit"
         form="driver-settings-form"
-        className="px-4 md:px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[#a3a6ff] text-[#0f00a4] transition-all"
-        style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.2)" }}
+        className="px-4 md:px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[var(--color-primary)] text-[var(--color-on-primary)] transition-all"
+        style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
       >
         Save Profile
       </button>
     </div>
   )
 }
+

@@ -13,11 +13,11 @@ const ROLE_ICONS: Record<string, string> = {
   driver:   "local_shipping",
 }
 const ROLE_COLORS: Record<string, string> = {
-  customer: "text-[#a3a6ff]",
+  customer: "text-[var(--color-primary)]",
   driver:   "text-[#6ee7b7]",
 }
 const ROLE_BG: Record<string, string> = {
-  customer: "bg-[#a3a6ff]/10 border-[#a3a6ff]/20",
+  customer: "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20",
   driver:   "bg-[#6ee7b7]/10 border-[#6ee7b7]/20",
 }
 
@@ -35,7 +35,7 @@ function AccountLinkedContent() {
     <main className="min-h-screen bg-[#0e0e0e] flex items-center justify-center px-4">
       {/* Background glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#a3a6ff]/5 blur-[120px]" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[var(--color-primary)]/5 blur-[120px]" />
         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-[#6ee7b7]/5 blur-[100px]" />
       </div>
 
@@ -43,8 +43,8 @@ function AccountLinkedContent() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <Link href="/" className="flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">bolt</span>
+            <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl">bolt</span>
             </div>
             <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">GO DROP</h1>
           </Link>
@@ -86,12 +86,12 @@ function AccountLinkedContent() {
           </div>
 
           {/* Info note */}
-          <div className="flex items-start gap-2.5 bg-[#a3a6ff]/8 border border-[#a3a6ff]/15 rounded-xl px-4 py-3 mb-6">
-            <span className="material-symbols-outlined text-[#a3a6ff] text-base shrink-0 mt-0.5">info</span>
+          <div className="flex items-start gap-2.5 bg-[var(--color-primary)]/8 border border-[var(--color-primary)]/15 rounded-xl px-4 py-3 mb-6">
+            <span className="material-symbols-outlined text-[var(--color-primary)] text-base shrink-0 mt-0.5">info</span>
             <p className="text-xs text-[#adaaaa] leading-relaxed">
               You can switch between <span className="text-white font-medium">{existingLabel}</span> and{" "}
               <span className="text-white font-medium">{addedLabel}</span> at any time from the{" "}
-              <span className="text-[#a3a6ff] font-medium">profile menu</span> in the top-right corner. Your data for each role is kept separate and safe.
+              <span className="text-[var(--color-primary)] font-medium">profile menu</span> in the top-right corner. Your data for each role is kept separate and safe.
             </p>
           </div>
 
@@ -133,3 +133,4 @@ export default function AccountLinkedPage() {
     </Suspense>
   )
 }
+

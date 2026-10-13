@@ -1,7 +1,7 @@
 const fleetItems = [
   {
     label: 'Ground Unit',
-    labelColor: 'text-[#a3a6ff]',
+    labelColor: 'text-[var(--color-primary)]',
     title: 'Stealth Runner',
     subtitle: 'Agile city-navigation',
     offset: false,
@@ -11,7 +11,7 @@ const fleetItems = [
   },
   {
     label: 'Heavy Transit',
-    labelColor: 'text-[#c180ff]',
+    labelColor: 'text-[var(--color-secondary)]',
     title: 'Titan Carrier',
     subtitle: 'Bulk industrial logistics',
     offset: true,
@@ -21,7 +21,7 @@ const fleetItems = [
   },
   {
     label: 'Airborne',
-    labelColor: 'text-[#a3a6ff]',
+    labelColor: 'text-[var(--color-primary)]',
     title: 'Aero-Drone V2',
     subtitle: 'Instant short-range drop',
     offset: false,
@@ -31,7 +31,7 @@ const fleetItems = [
   },
   {
     label: 'Hyper-Local',
-    labelColor: 'text-[#c180ff]',
+    labelColor: 'text-[var(--color-secondary)]',
     title: 'Velocity Bike',
     subtitle: 'Zero-emission precision',
     offset: true,
@@ -80,3 +80,4 @@ export default function FleetSection() {
     </section>
   )
 }
+

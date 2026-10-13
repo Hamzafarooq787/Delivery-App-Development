@@ -8,12 +8,12 @@ interface StatusEntry {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#c180ff",
-  assigned: "#a3a6ff",
-  in_transit: "#ffa5d9",
-  delivered: "#a3a6ff",
+  pending: "var(--color-secondary)",
+  assigned: "var(--color-primary)",
+  in_transit: "var(--color-tertiary)",
+  delivered: "var(--color-primary)",
   cancelled: "#ff6e84",
-  completed: "#a3a6ff",
+  completed: "var(--color-primary)",
 }
 
 function CustomTooltip({ active, payload }: any) {
@@ -76,3 +76,4 @@ export function OrderStatusChart({ data }: { data: StatusEntry[] }) {
     </div>
   )
 }
+

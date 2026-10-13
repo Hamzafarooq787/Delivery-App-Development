@@ -29,7 +29,7 @@ export function SubTabs({ tabs, className = "" }: { tabs: SubTab[]; className?: 
             href={tab.href}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               active
-                ? "bg-[#a3a6ff] text-[#0f00a4]"
+                ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                 : "text-[#adaaaa] hover:text-white"
             }`}
           >
@@ -45,3 +45,4 @@ export function SubTabs({ tabs, className = "" }: { tabs: SubTab[]; className?: 
     </div>
   )
 }
+

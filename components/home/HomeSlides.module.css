@@ -1,9 +1,9 @@
-.home{--purple:#7957ff;--lavender:#a99aff;background:#101112;color:#fff;height:100svh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;font-family:var(--font-inter),Arial,sans-serif;touch-action:pan-y pinch-zoom;isolation:isolate}
+.home{--purple:var(--brand-strong);--lavender:var(--brand-soft);background:var(--brand-bg);color:#fff;height:100svh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;font-family:var(--font-inter),Arial,sans-serif;touch-action:pan-y pinch-zoom;isolation:isolate}
 .home button,.home a{-webkit-tap-highlight-color:transparent}
 .home button{cursor:pointer;font:inherit}
 .home a{text-decoration:none}
 .home :focus-visible{outline:2px solid var(--lavender);outline-offset:5px}
-.header{height:76px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;gap:24px;border-bottom:1px solid #ffffff09;z-index:3;background:#101112}
+.header{height:76px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;gap:24px;border-bottom:1px solid #ffffff09;z-index:3;background:var(--brand-bg)}
 .logo{display:flex;align-items:center;gap:9px;font-size:25px!important;font-weight:800;background:none;border:0;color:white;letter-spacing:-1px}
 .logo svg{width:32px;height:32px;color:var(--lavender)}
 .desktopNav{display:flex;gap:25px;align-items:center}
@@ -11,12 +11,12 @@
 .desktopNav button[aria-current],.desktopNav button:hover,.desktopNav a:hover{color:var(--lavender)}
 .actions{display:flex;align-items:center;gap:24px;font-size:13px}
 .primary,.outline,.pills button{display:inline-flex;justify-content:center;align-items:center;gap:10px;min-height:46px;padding:12px 23px;border-radius:12px;font-size:14px;font-weight:600;line-height:1.3;transition:background .2s,transform .2s}
-.primary{background:var(--purple);color:white;border:1px solid transparent}
-.primary:hover{background:#6946e9}
+.primary{background:var(--purple);color:var(--brand-ink);border:1px solid transparent}
+.primary:hover{background:var(--brand-strong-hover)}
 .outline,.pills button{border:1px solid #ffffff30;background:#ffffff05;color:white}
 .outline:hover,.pills button:hover{background:#ffffff0c}
 .menuButton{display:none;background:none;border:0;color:white;min-width:44px;min-height:44px}
-.mobileMenu{position:absolute;z-index:5;inset:64px 0 auto;background:#18181b;display:flex;flex-direction:column;padding:20px;box-shadow:0 20px 50px #0008;max-height:calc(100dvh - 64px);overflow:auto}
+.mobileMenu{position:absolute;z-index:5;inset:64px 0 auto;background:var(--brand-panel);display:flex;flex-direction:column;padding:20px;box-shadow:0 20px 50px #0008;max-height:calc(100dvh - 64px);overflow:auto}
 .mobileMenu button,.mobileMenu a{background:none;border:0;border-bottom:1px solid #ffffff12;padding:13px;text-align:left;color:white}
 .viewport{flex:1;min-height:0;overflow:hidden}
 .track{height:100%;display:flex;transition:transform .55s cubic-bezier(.22,.8,.22,1);will-change:transform}
@@ -71,7 +71,7 @@
 .helpPanels .card{padding:24px;gap:11px}
 .helpPanels .cardIcon{height:32px;width:32px}
 .legal{display:flex;flex-wrap:wrap;gap:17px;font-size:11px;color:#bcbac4;padding:0 3px}
-.controls{flex-shrink:0;min-height:80px;display:flex;justify-content:center;align-items:center;gap:27px;padding:10px 5vw max(10px,env(safe-area-inset-bottom));background:#101112;border-top:1px solid #ffffff09;z-index:2}
+.controls{flex-shrink:0;min-height:80px;display:flex;justify-content:center;align-items:center;gap:27px;padding:10px 5vw max(10px,env(safe-area-inset-bottom));background:var(--brand-bg);border-top:1px solid #ffffff09;z-index:2}
 .controls>button{display:grid;place-items:center;width:44px;height:44px;border:1px solid #ffffff55;border-radius:50%;background:transparent;color:white;flex-shrink:0}
 .controls>button:hover:enabled{background:#ffffff10}
 .controls>button:disabled{opacity:.25;cursor:default}

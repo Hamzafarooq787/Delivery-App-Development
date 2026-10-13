@@ -24,7 +24,7 @@ import { LogoutButton }              from "@/components/auth/logout-button"
 
 // ─────────── Shared primitives ─────────────────────────────────────────────
 
-const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all"
+const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
 const LABEL = "text-xs font-semibold text-[#adaaaa] uppercase tracking-wider"
 
 function Feedback({ saved, error }: { saved: boolean; error: string | null }) {
@@ -55,7 +55,7 @@ function SaveBtn({
     <button
       type="submit"
       disabled={isPending}
-      className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
+      className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
     >
       {isPending ? (
         <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -103,8 +103,8 @@ function ProfileSection({
   return (
     <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-10 h-10 bg-[#a3a6ff]/10 rounded-lg flex items-center justify-center">
-          <span className="material-symbols-outlined text-[#a3a6ff]">person</span>
+        <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[var(--color-primary)]">person</span>
         </div>
         <h3 className="text-lg font-bold font-headline text-white">Profile Information</h3>
       </div>
@@ -147,8 +147,8 @@ function VehicleSection({ vehicles }: { vehicles: DriverVehicle[] }) {
   return (
     <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-10 h-10 bg-[#c180ff]/10 rounded-lg flex items-center justify-center">
-          <span className="material-symbols-outlined text-[#c180ff]">directions_car</span>
+        <div className="w-10 h-10 bg-[var(--color-secondary)]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[var(--color-secondary)]">directions_car</span>
         </div>
         <div>
           <h3 className="text-lg font-bold font-headline text-white">My Vehicles</h3>
@@ -190,7 +190,7 @@ function Toggle({
         id={id}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-          checked ? "bg-[#a3a6ff]" : "bg-[#494847]"
+          checked ? "bg-[var(--color-primary)]" : "bg-[#494847]"
         }`}
       >
         <span
@@ -326,8 +326,8 @@ function SoundSettingsSection() {
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-7">
-        <div className="w-10 h-10 bg-[#c180ff]/10 rounded-lg flex items-center justify-center">
-          <span className="material-symbols-outlined text-[#c180ff]" style={{ fontVariationSettings: "'FILL' 1" }}>
+        <div className="w-10 h-10 bg-[var(--color-secondary)]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[var(--color-secondary)]" style={{ fontVariationSettings: "'FILL' 1" }}>
             volume_up
           </span>
         </div>
@@ -406,8 +406,8 @@ function SoundSettingsSection() {
 
           {/* iOS note */}
           {notifPerm === "unsupported" && (
-            <div className="mt-3 flex items-start gap-2 bg-[#a3a6ff]/8 border border-[#a3a6ff]/15 rounded-lg px-3 py-2.5">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-[14px] shrink-0 mt-0.5">info</span>
+            <div className="mt-3 flex items-start gap-2 bg-[var(--color-primary)]/8 border border-[var(--color-primary)]/15 rounded-lg px-3 py-2.5">
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-[14px] shrink-0 mt-0.5">info</span>
               <p className="text-[11px] text-[#adaaaa] leading-relaxed">
                 On <span className="text-white font-semibold">iOS</span>, add this app to your Home Screen (Share → Add to Home Screen) to enable push notifications with system sounds.
               </p>
@@ -427,7 +427,7 @@ function SoundSettingsSection() {
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2.5">
             <label className={LABEL}>Volume</label>
-            <span className="text-xs font-bold text-[#a3a6ff] tabular-nums">{volume}%</span>
+            <span className="text-xs font-bold text-[var(--color-primary)] tabular-nums">{volume}%</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_mute</span>
@@ -440,8 +440,8 @@ function SoundSettingsSection() {
               onChange={(e) => setVolume(Number(e.target.value))}
               className="flex-1 h-2 rounded-full cursor-pointer appearance-none"
               style={{
-                background: `linear-gradient(to right, #a3a6ff ${volume}%, #2a2a2a ${volume}%)`,
-                accentColor: "#a3a6ff",
+                background: `linear-gradient(to right, var(--color-primary) ${volume}%, #2a2a2a ${volume}%)`,
+                accentColor: "var(--color-primary)",
               }}
             />
             <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_up</span>
@@ -468,18 +468,18 @@ function SoundSettingsSection() {
                 className={`
                   relative flex items-center gap-3 p-4 rounded-xl border text-left transition-all
                   ${isSelected
-                    ? "bg-[#a3a6ff]/10 border-[#a3a6ff]/50 shadow-[0_0_12px_rgba(163,166,255,0.12)]"
+                    ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/50 shadow-[0_0_12px_rgba(var(--brand-rgb),0.12)]"
                     : "bg-[#262626] border-[#494847]/20 hover:border-[#494847]/50 hover:bg-[#2a2a2a]"
                   }
                 `}
               >
                 {/* Icon */}
                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                  isSelected ? "bg-[#a3a6ff]/20" : "bg-[#1a1919]"
+                  isSelected ? "bg-[var(--color-primary)]/20" : "bg-[#1a1919]"
                 }`}>
                   <span
                     className={`material-symbols-outlined text-[18px] transition-colors ${
-                      isSelected ? "text-[#a3a6ff]" : "text-[#adaaaa]"
+                      isSelected ? "text-[var(--color-primary)]" : "text-[#adaaaa]"
                     }`}
                     style={{ fontVariationSettings: "'FILL' 1" }}
                   >
@@ -489,7 +489,7 @@ function SoundSettingsSection() {
 
                 {/* Label + description */}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-bold transition-colors ${isSelected ? "text-[#a3a6ff]" : "text-white"}`}>
+                  <p className={`text-sm font-bold transition-colors ${isSelected ? "text-[var(--color-primary)]" : "text-white"}`}>
                     {opt.label}
                   </p>
                   <p className="text-[11px] text-[#adaaaa] mt-0.5 leading-relaxed">{opt.description}</p>
@@ -503,13 +503,13 @@ function SoundSettingsSection() {
                   className={`
                     w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all
                     ${isPreviewing
-                      ? "bg-[#a3a6ff] scale-110"
-                      : "bg-[#1a1919] hover:bg-[#a3a6ff]/20 hover:scale-105"
+                      ? "bg-[var(--color-primary)] scale-110"
+                      : "bg-[#1a1919] hover:bg-[var(--color-primary)]/20 hover:scale-105"
                     }
                   `}
                 >
                   <span
-                    className={`material-symbols-outlined text-[15px] ${isPreviewing ? "text-[#0f00a4]" : "text-[#adaaaa]"}`}
+                    className={`material-symbols-outlined text-[15px] ${isPreviewing ? "text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}
                     style={{ fontVariationSettings: isPreviewing ? "'FILL' 1" : "'FILL' 0" }}
                   >
                     {isPreviewing ? "graphic_eq" : "play_arrow"}
@@ -518,8 +518,8 @@ function SoundSettingsSection() {
 
                 {/* Selected tick */}
                 {isSelected && (
-                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#a3a6ff] flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[#0f00a4]" style={{ fontSize: 11 }}>check</span>
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[var(--color-on-primary)]" style={{ fontSize: 11 }}>check</span>
                   </span>
                 )}
               </button>
@@ -532,7 +532,7 @@ function SoundSettingsSection() {
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2.5 rounded-xl bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm shadow-[0_0_15px_rgba(163,166,255,0.2)] flex items-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(163,166,255,0.35)]"
+            className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] flex items-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(var(--brand-rgb),0.35)]"
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
             Save Sound Settings
@@ -702,8 +702,8 @@ function AvailabilityCard({ isOnline: initial }: { isOnline: boolean }) {
 function SafetyCard() {
   const links = [
     { icon: "cancel",          label: "Cancel Active Job",  color: "text-[#ff6e84]", hover: "hover:bg-[#ff6e84]/10", href: "/dashboard/driver/active-jobs" },
-    { icon: "report",          label: "Report Incident",    color: "text-[#c180ff]", hover: "hover:bg-[#c180ff]/10", href: "/dashboard/driver/support" },
-    { icon: "contact_support", label: "Live Dispatch Chat", color: "text-[#a3a6ff]", hover: "hover:bg-[#a3a6ff]/10", href: "/dashboard/driver/support" },
+    { icon: "report",          label: "Report Incident",    color: "text-[var(--color-secondary)]", hover: "hover:bg-[var(--color-secondary)]/10", href: "/dashboard/driver/support" },
+    { icon: "contact_support", label: "Live Dispatch Chat", color: "text-[var(--color-primary)]", hover: "hover:bg-[var(--color-primary)]/10", href: "/dashboard/driver/support" },
   ]
   return (
     <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
@@ -731,11 +731,11 @@ function SafetyCard() {
 
 function AccountCard({ email, role }: { email: string; role: string }) {
   return (
-    <div className="rounded-xl border border-[#a3a6ff]/10 p-5" style={{ background: "linear-gradient(to bottom right, rgba(163,166,255,0.08), transparent)" }}>
-      <p className="text-[10px] font-bold text-[#a3a6ff] tracking-widest uppercase mb-3">Account</p>
+    <div className="rounded-xl border border-[var(--color-primary)]/10 p-5" style={{ background: "linear-gradient(to bottom right, rgba(var(--brand-rgb),0.08), transparent)" }}>
+      <p className="text-[10px] font-bold text-[var(--color-primary)] tracking-widest uppercase mb-3">Account</p>
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center">
-          <span className="material-symbols-outlined text-[#a3a6ff] text-lg">account_circle</span>
+        <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
+          <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">account_circle</span>
         </div>
         <div className="min-w-0">
           <p className="text-xs text-white font-semibold truncate">{email || "—"}</p>
@@ -793,3 +793,4 @@ export function DriverSettingsPanel({
     </div>
   )
 }
+

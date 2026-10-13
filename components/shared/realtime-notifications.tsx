@@ -41,13 +41,13 @@ type NotifStyle = {
 
 function notifStyle(title: string): NotifStyle {
   if (title.includes("New Driver Message") || title.includes("Support Reply") || title.includes("Chat"))
-    return { icon: "chat_bubble",    iconColor: "text-[#c180ff]",  iconBg: "bg-[#c180ff]/10",  accent: "border-[#c180ff]",  pill: "bg-[#c180ff]/15 text-[#c180ff]" }
+    return { icon: "chat_bubble",    iconColor: "text-[var(--color-secondary)]",  iconBg: "bg-[var(--color-secondary)]/10",  accent: "border-[var(--color-secondary)]",  pill: "bg-[var(--color-secondary)]/15 text-[var(--color-secondary)]" }
   if (title.includes("Delivered"))
     return { icon: "check_circle",   iconColor: "text-emerald-400", iconBg: "bg-emerald-400/10", accent: "border-emerald-500", pill: "bg-emerald-500/15 text-emerald-400" }
   if (title.includes("New Job") || title.includes("Available"))
-    return { icon: "local_shipping", iconColor: "text-[#a3a6ff]",  iconBg: "bg-[#a3a6ff]/10",  accent: "border-[#a3a6ff]",  pill: "bg-[#a3a6ff]/15 text-[#a3a6ff]" }
+    return { icon: "local_shipping", iconColor: "text-[var(--color-primary)]",  iconBg: "bg-[var(--color-primary)]/10",  accent: "border-[var(--color-primary)]",  pill: "bg-[var(--color-primary)]/15 text-[var(--color-primary)]" }
   if (title.includes("New Shipment") || title.includes("Request"))
-    return { icon: "inventory_2",    iconColor: "text-[#c180ff]",  iconBg: "bg-[#c180ff]/10",  accent: "border-[#c180ff]",  pill: "bg-[#c180ff]/15 text-[#c180ff]" }
+    return { icon: "inventory_2",    iconColor: "text-[var(--color-secondary)]",  iconBg: "bg-[var(--color-secondary)]/10",  accent: "border-[var(--color-secondary)]",  pill: "bg-[var(--color-secondary)]/15 text-[var(--color-secondary)]" }
   if (title.includes("Way") || title.includes("Transit"))
     return { icon: "directions_car", iconColor: "text-amber-400",  iconBg: "bg-amber-400/10",  accent: "border-amber-400",  pill: "bg-amber-400/15 text-amber-400" }
   if (title.includes("Pick") || title.includes("Collect"))
@@ -236,15 +236,15 @@ export function RealtimeNotifications({ role, userId }: Props) {
                       if (role === "admin") window.dispatchEvent(new CustomEvent("open-admin-chat"))
                       else if (role === "driver") window.dispatchEvent(new CustomEvent("open-driver-chat"))
                     }}
-                    className="w-full flex items-center gap-3 bg-[#1a1919] border border-[#c180ff]/30 rounded-2xl px-4 py-3.5 shadow-2xl shadow-black/50 text-left group hover:border-[#c180ff]/60 transition-all"
+                    className="w-full flex items-center gap-3 bg-[#1a1919] border border-[var(--color-secondary)]/30 rounded-2xl px-4 py-3.5 shadow-2xl shadow-black/50 text-left group hover:border-[var(--color-secondary)]/60 transition-all"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-[#c180ff]/15 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-[#c180ff] text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
+                    <div className="w-10 h-10 rounded-xl bg-[var(--color-secondary)]/15 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[var(--color-secondary)] text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white leading-snug">{n.title}</p>
                       <p className="text-xs text-[#adaaaa] truncate mt-0.5">{n.body}</p>
-                      <p className="text-[11px] text-[#c180ff] font-semibold mt-1">Tap to open chat →</p>
+                      <p className="text-[11px] text-[var(--color-secondary)] font-semibold mt-1">Tap to open chat →</p>
                     </div>
                     <div
                       role="button"
@@ -312,7 +312,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
         onClick={handleOpen}
         aria-label="Notifications"
         className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${
-          open ? "bg-[#a3a6ff]/15 text-[#a3a6ff]" : "text-[#adaaaa] hover:text-[#a3a6ff] hover:bg-[#a3a6ff]/10"
+          open ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)]" : "text-[#adaaaa] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
         }`}
       >
         <span
@@ -322,7 +322,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
           notifications
         </span>
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#a3a6ff] text-[#0f00a4] text-[9px] font-black flex items-center justify-center leading-none shadow-lg shadow-[#a3a6ff]/40 animate-bounce">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[9px] font-black flex items-center justify-center leading-none shadow-lg shadow-[var(--color-primary)]/40 animate-bounce">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -350,7 +350,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
             md:right-0 md:top-11 md:w-[380px] md:max-h-[520px]
             md:rounded-2xl md:rounded-t-2xl
           `}
-          style={{ boxShadow: "0 -4px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(163,166,255,0.08)" }}
+          style={{ boxShadow: "0 -4px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(var(--brand-rgb),0.08)" }}
         >
           {/* Mobile drag handle */}
           <div className="md:hidden flex justify-center pt-3 pb-1 shrink-0">
@@ -360,8 +360,8 @@ export function RealtimeNotifications({ role, userId }: Props) {
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/20 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#a3a6ff]/15 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[#a3a6ff] text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)]/15 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[var(--color-primary)] text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                   notifications
                 </span>
               </div>
@@ -376,7 +376,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
               {unread > 0 && (
                 <button
                   onClick={markAllRead}
-                  className="text-[11px] font-semibold text-[#a3a6ff] hover:text-white px-3 py-1.5 rounded-lg hover:bg-[#a3a6ff]/10 transition-all"
+                  className="text-[11px] font-semibold text-[var(--color-primary)] hover:text-white px-3 py-1.5 rounded-lg hover:bg-[var(--color-primary)]/10 transition-all"
                 >
                   Mark all read
                 </button>
@@ -484,7 +484,7 @@ export function RealtimeNotifications({ role, userId }: Props) {
                 {notifs.length} notification{notifs.length !== 1 ? "s" : ""}
                 {unread > 0 ? ` · ${unread} unread` : " · all read"}
               </p>
-              <div className={`text-[10px] font-bold px-2 py-1 rounded-full ${unread > 0 ? "bg-[#a3a6ff]/15 text-[#a3a6ff]" : "bg-[#262626] text-[#494847]"}`}>
+              <div className={`text-[10px] font-bold px-2 py-1 rounded-full ${unread > 0 ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)]" : "bg-[#262626] text-[#494847]"}`}>
                 {unread > 0 ? `${unread} NEW` : "CAUGHT UP"}
               </div>
             </div>
@@ -497,3 +497,4 @@ export function RealtimeNotifications({ role, userId }: Props) {
     </div>
   )
 }
+

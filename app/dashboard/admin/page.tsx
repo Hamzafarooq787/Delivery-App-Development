@@ -155,8 +155,8 @@ export default async function AdminDashboardPage() {
       delta: "All completed fares",
       deltaUp: true,
       icon: "payments",
-      iconColor: "text-[#a3a6ff]",
-      iconBg: "bg-[#a3a6ff]/10",
+      iconColor: "text-[var(--color-primary)]",
+      iconBg: "bg-[var(--color-primary)]/10",
     },
     {
       label: "Platform Commission",
@@ -164,8 +164,8 @@ export default async function AdminDashboardPage() {
       delta: "25% of all fares",
       deltaUp: true,
       icon: "account_balance",
-      iconColor: "text-[#c180ff]",
-      iconBg: "bg-[#c180ff]/10",
+      iconColor: "text-[var(--color-secondary)]",
+      iconBg: "bg-[var(--color-secondary)]/10",
     },
     {
       label: "Driver Payouts",
@@ -215,10 +215,10 @@ export default async function AdminDashboardPage() {
   // ── Activity Feed ─────────────────────────────────────────────────────────
 
   const STATUS_CFG: Record<string, { mkTitle: (tn: string) => string; mkBody: (tn: string) => string; dot: string; dotBg: string; pulse: boolean }> = {
-    requested:  { mkTitle: () => "New delivery requested",    mkBody: tn => `Order ${tn} added to queue`,              dot: "bg-[#c180ff]", dotBg: "bg-[#c180ff]/20", pulse: true  },
-    accepted:   { mkTitle: () => "Driver accepted job",       mkBody: tn => `Order ${tn} — heading to pickup`,         dot: "bg-[#a3a6ff]", dotBg: "bg-[#a3a6ff]/20", pulse: false },
-    collected:  { mkTitle: () => "Parcel collected",          mkBody: tn => `Order ${tn} — parcel authenticated`,      dot: "bg-[#a3a6ff]", dotBg: "bg-[#a3a6ff]/20", pulse: false },
-    in_transit: { mkTitle: () => "En route to delivery",      mkBody: tn => `Order ${tn} is in transit`,               dot: "bg-[#a3a6ff]", dotBg: "bg-[#a3a6ff]/20", pulse: true  },
+    requested:  { mkTitle: () => "New delivery requested",    mkBody: tn => `Order ${tn} added to queue`,              dot: "bg-[var(--color-secondary)]", dotBg: "bg-[var(--color-secondary)]/20", pulse: true  },
+    accepted:   { mkTitle: () => "Driver accepted job",       mkBody: tn => `Order ${tn} — heading to pickup`,         dot: "bg-[var(--color-primary)]", dotBg: "bg-[var(--color-primary)]/20", pulse: false },
+    collected:  { mkTitle: () => "Parcel collected",          mkBody: tn => `Order ${tn} — parcel authenticated`,      dot: "bg-[var(--color-primary)]", dotBg: "bg-[var(--color-primary)]/20", pulse: false },
+    in_transit: { mkTitle: () => "En route to delivery",      mkBody: tn => `Order ${tn} is in transit`,               dot: "bg-[var(--color-primary)]", dotBg: "bg-[var(--color-primary)]/20", pulse: true  },
     delivered:  { mkTitle: () => "Delivery completed ✓",      mkBody: tn => `Order ${tn} successfully delivered`,      dot: "bg-[#6ee7b7]", dotBg: "bg-[#6ee7b7]/20", pulse: false },
     cancelled:  { mkTitle: () => "Delivery cancelled",        mkBody: tn => `Order ${tn} was cancelled`,               dot: "bg-[#ff6e84]", dotBg: "bg-[#ff6e84]/20", pulse: false },
   }
@@ -266,8 +266,8 @@ export default async function AdminDashboardPage() {
       body:    `${name} — ${fmt(p.amount ?? 0)}`,
       time:    relTime(p.created_at),
       rawTime: p.created_at,
-      dot:     paid ? "bg-[#6ee7b7]" : "bg-[#c180ff]",
-      dotBg:   paid ? "bg-[#6ee7b7]/20" : "bg-[#c180ff]/20",
+      dot:     paid ? "bg-[#6ee7b7]" : "bg-[var(--color-secondary)]",
+      dotBg:   paid ? "bg-[#6ee7b7]/20" : "bg-[var(--color-secondary)]/20",
       pulse:   !paid,
     })
   }
@@ -295,9 +295,9 @@ export default async function AdminDashboardPage() {
   const approvalRate   = totalDriverN > 0 ? Math.round((approvedN / totalDriverN) * 100) : 0
 
   const fleetBars = [
-    { label: "Delivery Completion", pct: completionRate, color: "bg-[#a3a6ff]",  subtext: `${deliveredN} delivered` },
-    { label: "Jobs Currently Active", pct: activeJobRate,  color: "bg-[#c180ff]", subtext: `${activeN} in progress` },
-    { label: "Driver Approval Rate",  pct: approvalRate,   color: "bg-[#ffa5d9]", subtext: `${approvedN} approved` },
+    { label: "Delivery Completion", pct: completionRate, color: "bg-[var(--color-primary)]",  subtext: `${deliveredN} delivered` },
+    { label: "Jobs Currently Active", pct: activeJobRate,  color: "bg-[var(--color-secondary)]", subtext: `${activeN} in progress` },
+    { label: "Driver Approval Rate",  pct: approvalRate,   color: "bg-[var(--color-tertiary)]", subtext: `${approvedN} approved` },
   ]
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -308,7 +308,7 @@ export default async function AdminDashboardPage() {
       {/* Page Header */}
       <div className="mb-6 md:mb-8">
         <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-          Overview <span className="text-[#a3a6ff]">&amp;</span> Analytics
+          Overview <span className="text-[var(--color-primary)]">&amp;</span> Analytics
         </h2>
         <p className="text-[#adaaaa] mt-2 text-sm">Real-time throughput and platform performance metrics.</p>
       </div>
@@ -323,8 +323,8 @@ export default async function AdminDashboardPage() {
             <div className="flex justify-between items-start relative z-10">
               <div>
                 <p className="text-[#adaaaa] text-xs font-bold uppercase tracking-widest mb-1">{stat.label}</p>
-                <h3 className="font-headline text-2xl md:text-4xl font-bold text-[#a3a6ff]">{stat.value}</h3>
-                <p className={`text-xs mt-2 flex items-center font-bold ${stat.deltaUp ? "text-[#c180ff]" : "text-[#ff6e84]"}`}>
+                <h3 className="font-headline text-2xl md:text-4xl font-bold text-[var(--color-primary)]">{stat.value}</h3>
+                <p className={`text-xs mt-2 flex items-center font-bold ${stat.deltaUp ? "text-[var(--color-secondary)]" : "text-[#ff6e84]"}`}>
                   <span className="material-symbols-outlined text-sm mr-1">
                     {stat.deltaUp ? "trending_up" : "trending_down"}
                   </span>
@@ -337,7 +337,7 @@ export default async function AdminDashboardPage() {
             </div>
             <div className="absolute bottom-0 left-0 w-full h-16 opacity-20 pointer-events-none">
               <svg className="w-full h-full" viewBox="0 0 400 60" preserveAspectRatio="none">
-                <path d="M0 50 Q 50 10, 100 35 T 200 20 T 300 40 T 400 15 V 60 H 0 Z" fill="#a3a6ff" fillOpacity="0.4" />
+                <path d="M0 50 Q 50 10, 100 35 T 200 20 T 300 40 T 400 15 V 60 H 0 Z" fill="var(--color-primary)" fillOpacity="0.4" />
               </svg>
             </div>
           </div>
@@ -372,12 +372,12 @@ export default async function AdminDashboardPage() {
                   key={i}
                   className={`w-full rounded-t-lg relative group transition-all hover:brightness-125 ${
                     bar.isToday
-                      ? "bg-[#c180ff]/40 shadow-[0px_0px_15px_rgba(163,166,255,0.2)]"
-                      : "bg-[#a3a6ff]/20"
+                      ? "bg-[var(--color-secondary)]/40 shadow-[0px_0px_15px_rgba(var(--brand-rgb),0.2)]"
+                      : "bg-[var(--color-primary)]/20"
                   }`}
                   style={{ height: `${bar.heightPct}%` }}
                 >
-                  <div className={`absolute inset-x-0 bottom-0 h-full bg-gradient-to-t ${bar.isToday ? "from-[#c180ff]/60" : "from-[#a3a6ff]/40"} to-transparent`} />
+                  <div className={`absolute inset-x-0 bottom-0 h-full bg-gradient-to-t ${bar.isToday ? "from-[var(--color-secondary)]/60" : "from-[var(--color-primary)]/40"} to-transparent`} />
                   {/* Tooltip on hover */}
                   <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[#262626]/95 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-white whitespace-nowrap pointer-events-none z-10">
                     {bar.revenue > 0 ? fmt(bar.revenue) : "No data"}
@@ -387,7 +387,7 @@ export default async function AdminDashboardPage() {
             </div>
             <div className="mt-4 flex justify-between text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest px-1">
               {chartBars.map((bar, i) => (
-                <span key={i} className={bar.isToday ? "text-[#c180ff]" : ""}>{bar.label}</span>
+                <span key={i} className={bar.isToday ? "text-[var(--color-secondary)]" : ""}>{bar.label}</span>
               ))}
             </div>
           </div>
@@ -396,7 +396,7 @@ export default async function AdminDashboardPage() {
           <div className="bg-[#1a1919] rounded-xl overflow-hidden">
             <div className="p-6 flex justify-between items-center">
               <h4 className="font-headline text-lg font-bold text-white">Pending Driver Approvals</h4>
-              <a href="/dashboard/admin/drivers" className="text-[#a3a6ff] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
+              <a href="/dashboard/admin/drivers" className="text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
                 View All
               </a>
             </div>
@@ -425,8 +425,8 @@ export default async function AdminDashboardPage() {
                         </p>
                         <p className="text-xs text-[#494847]">{new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#c180ff]/10 text-[#c180ff]">Pending</span>
-                      <span className="material-symbols-outlined text-[#a3a6ff] text-lg shrink-0">chevron_right</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]">Pending</span>
+                      <span className="material-symbols-outlined text-[var(--color-primary)] text-lg shrink-0">chevron_right</span>
                     </a>
                   )
                 })
@@ -473,7 +473,7 @@ export default async function AdminDashboardPage() {
                             {vehicles.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {vehicles.map((v, i) => (
-                                  <span key={i} className="px-2 py-0.5 rounded bg-[#a3a6ff]/10 text-[#a3a6ff] text-[10px] font-bold uppercase">
+                                  <span key={i} className="px-2 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-bold uppercase">
                                     {isVehicleType(v.vehicle_type) ? VEHICLE_INFO[v.vehicle_type].label : v.vehicle_type}
                                   </span>
                                 ))}
@@ -484,15 +484,15 @@ export default async function AdminDashboardPage() {
                             {new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
                           </td>
                           <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#c180ff]/10 text-[#c180ff] uppercase">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#c180ff] animate-pulse" />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] uppercase">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-secondary)] animate-pulse" />
                               Pending
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <a
                               href={`/dashboard/admin/drivers/${driver.id}`}
-                              className="p-2 text-[#a3a6ff] hover:bg-[#a3a6ff]/10 rounded-lg transition-colors inline-flex"
+                              className="p-2 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-lg transition-colors inline-flex"
                               title="Review driver"
                             >
                               <span className="material-symbols-outlined text-lg">arrow_forward</span>
@@ -511,7 +511,7 @@ export default async function AdminDashboardPage() {
           <div className="bg-[#1a1919] rounded-xl overflow-hidden">
             <div className="p-6 flex justify-between items-center">
               <h4 className="font-headline text-lg font-bold text-white">Recent Orders</h4>
-              <a href="/dashboard/admin/orders" className="text-[#a3a6ff] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
+              <a href="/dashboard/admin/orders" className="text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
                 View All
               </a>
             </div>
@@ -526,7 +526,7 @@ export default async function AdminDashboardPage() {
                   return (
                     <div key={order.id} className="px-4 py-4 space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-mono text-[#a3a6ff] truncate">{order.tracking_number ?? "—"}</p>
+                        <p className="text-sm font-mono text-[var(--color-primary)] truncate">{order.tracking_number ?? "—"}</p>
                         <StatusPill status={order.status} />
                       </div>
                       <div className="flex items-center justify-between gap-2">
@@ -583,7 +583,7 @@ export default async function AdminDashboardPage() {
                       const delivery = order.delivery_address ?? "—"
                       return (
                         <tr key={order.id} className="hover:bg-[#201f1f] transition-colors">
-                          <td className="px-5 py-4 font-mono text-sm text-[#a3a6ff] whitespace-nowrap">{order.tracking_number ?? "—"}</td>
+                          <td className="px-5 py-4 font-mono text-sm text-[var(--color-primary)] whitespace-nowrap">{order.tracking_number ?? "—"}</td>
                           <td className="px-5 py-4 text-sm text-white font-medium whitespace-nowrap">{customerName}</td>
                           <td className="px-5 py-4 text-sm text-[#adaaaa] max-w-[120px]">
                             <span className="truncate block" title={order.item_description ?? ""}>{order.item_description ?? <span className="text-[#494847]">—</span>}</span>
@@ -594,7 +594,7 @@ export default async function AdminDashboardPage() {
                                 <span className="text-[#6ee7b7] font-bold text-[10px]">FROM </span>{pickup}
                               </p>
                               <p className="text-xs text-[#adaaaa] truncate" title={delivery}>
-                                <span className="text-[#a3a6ff] font-bold text-[10px]">TO </span>{delivery}
+                                <span className="text-[var(--color-primary)] font-bold text-[10px]">TO </span>{delivery}
                               </p>
                             </div>
                           </td>
@@ -643,7 +643,7 @@ export default async function AdminDashboardPage() {
                     )}
                     <div className={`w-6 h-6 rounded-full ${item.dotBg} flex items-center justify-center relative z-10 shrink-0 mt-0.5`}>
                       {item.dot ? (
-                        <div className={`w-2 h-2 ${item.dot} rounded-full ${item.pulse ? "animate-pulse shadow-[0_0_8px_rgba(163,166,255,0.8)]" : ""}`} />
+                        <div className={`w-2 h-2 ${item.dot} rounded-full ${item.pulse ? "animate-pulse shadow-[0_0_8px_rgba(var(--brand-rgb),0.8)]" : ""}`} />
                       ) : (
                         <span className="material-symbols-outlined text-[14px] text-[#adaaaa]">{item.icon}</span>
                       )}
@@ -689,9 +689,9 @@ function StatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
     delivered:  { label: "Delivered",  className: "bg-[#6ee7b7]/10 text-[#6ee7b7]"  },
     requested:  { label: "Requested",  className: "bg-[#adaaaa]/10 text-[#adaaaa]"  },
-    accepted:   { label: "Accepted",   className: "bg-[#c180ff]/10 text-[#c180ff]"  },
-    collected:  { label: "Collected",  className: "bg-[#a3a6ff]/10 text-[#a3a6ff]"  },
-    in_transit: { label: "In Transit", className: "bg-[#a3a6ff]/10 text-[#a3a6ff]"  },
+    accepted:   { label: "Accepted",   className: "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]"  },
+    collected:  { label: "Collected",  className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"  },
+    in_transit: { label: "In Transit", className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"  },
     cancelled:  { label: "Cancelled",  className: "bg-[#ff6e84]/10 text-[#ff6e84]"  },
   }
   const cfg = map[status] ?? { label: status, className: "bg-[#262626] text-[#adaaaa]" }
@@ -701,3 +701,4 @@ function StatusPill({ status }: { status: string }) {
     </span>
   )
 }
+

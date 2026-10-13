@@ -43,7 +43,7 @@ export function GeneralSettingsForm({ fullName, email, phone }: Props) {
               placeholder={placeholder}
               defaultValue={defaultValue ?? ""}
               readOnly={readOnly}
-              className="w-full bg-[#201f1f] border border-[#494847]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[#a3a6ff]/40 transition-colors read-only:opacity-60 read-only:cursor-not-allowed"
+              className="w-full bg-[#201f1f] border border-[#494847]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/40 transition-colors read-only:opacity-60 read-only:cursor-not-allowed"
             />
           </div>
         ))}
@@ -53,7 +53,7 @@ export function GeneralSettingsForm({ fullName, email, phone }: Props) {
         <button
           type="submit"
           disabled={saving}
-          className="bg-[#a3a6ff] text-[#0f00a4] font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-[#b5b8ff] transition-colors disabled:opacity-60"
+          className="bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-[var(--brand-soft)] transition-colors disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save General"}
         </button>
@@ -61,3 +61,4 @@ export function GeneralSettingsForm({ fullName, email, phone }: Props) {
     </form>
   )
 }
+

@@ -27,19 +27,19 @@ const DRIVER_ICON = L.divIcon({
     ">
       <div style="
         position: absolute; inset: 0;
-        background: rgba(163,166,255,0.25);
+        background: rgba(var(--brand-rgb),0.25);
         border-radius: 9999px;
         animation: kv-pulse 2s ease-out infinite;
       "></div>
       <div style="
         position: absolute; top: 7px; left: 7px;
         width: 24px; height: 24px;
-        background: #a3a6ff;
+        background: var(--color-primary);
         border: 3px solid #0e0e0e;
         border-radius: 9999px;
-        box-shadow: 0 0 12px rgba(163,166,255,0.6);
+        box-shadow: 0 0 12px rgba(var(--brand-rgb),0.6);
         display: flex; align-items: center; justify-content: center;
-        color: #0f00a4; font-size: 12px;
+        color: var(--color-on-primary); font-size: 12px;
       ">
         <span class="material-symbols-outlined" style="font-size:14px;font-weight:700">local_shipping</span>
       </div>
@@ -57,8 +57,8 @@ const PIN_PICKUP = L.divIcon({
   className: "kv-pin",
   html: `<div style="
     width:18px;height:18px;border-radius:9999px;
-    background:#c180ff;border:3px solid #0e0e0e;
-    box-shadow:0 0 8px rgba(193,128,255,0.6);
+    background:var(--color-secondary);border:3px solid #0e0e0e;
+    box-shadow:0 0 8px rgba(var(--brand-rgb),0.6);
     transform:translate(-9px,-9px);
   "></div>`,
 })
@@ -147,7 +147,7 @@ export function LiveTrackingMap({
               ...(driver ? [[driver.lat, driver.lng] as [number, number]] : []),
               [destination.lat, destination.lng],
             ]}
-            pathOptions={{ color: "#a3a6ff", weight: 3, dashArray: "6 8", opacity: 0.7 }}
+            pathOptions={{ color: "var(--color-primary)", weight: 3, dashArray: "6 8", opacity: 0.7 }}
           />
         )}
 
@@ -173,3 +173,4 @@ export function LiveTrackingMap({
     </div>
   )
 }
+

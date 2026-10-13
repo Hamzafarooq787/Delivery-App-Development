@@ -24,8 +24,8 @@ function statusLabel(status: string) {
 }
 
 function statusColor(status: string) {
-  if (status === "accepted") return "text-[#a3a6ff]"
-  if (status === "collected") return "text-[#c180ff]"
+  if (status === "accepted") return "text-[var(--color-primary)]"
+  if (status === "collected") return "text-[var(--color-secondary)]"
   if (status === "in_transit") return "text-[#6ee7b7]"
   return "text-[#adaaaa]"
 }
@@ -65,8 +65,8 @@ export default async function ActiveJobsPage() {
           </p>
           <Link
             href="/dashboard/driver/jobs/available"
-            className="mt-6 inline-block bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs px-6 py-2.5 rounded-lg"
-            style={{ boxShadow: "0px 0px 15px rgba(163,166,255,0.2)" }}
+            className="mt-6 inline-block bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs px-6 py-2.5 rounded-lg"
+            style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
           >
             Browse Available Jobs
           </Link>
@@ -82,7 +82,7 @@ export default async function ActiveJobsPage() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[#a3a6ff]">
+                      <span className="material-symbols-outlined text-[var(--color-primary)]">
                         local_shipping
                       </span>
                     </div>
@@ -103,9 +103,9 @@ export default async function ActiveJobsPage() {
 
                 <div className="flex items-start gap-4">
                   <div className="flex flex-col items-center pt-1">
-                    <div className="w-3 h-3 rounded-full border-2 border-[#a3a6ff] bg-[#0e0e0e]" />
+                    <div className="w-3 h-3 rounded-full border-2 border-[var(--color-primary)] bg-[#0e0e0e]" />
                     <div className="w-px h-10 border-l border-dashed border-[#494847] my-1" />
-                    <div className="w-3 h-3 rounded-full bg-[#c180ff]" />
+                    <div className="w-3 h-3 rounded-full bg-[var(--color-secondary)]" />
                   </div>
                   <div className="flex-1 space-y-4 min-w-0">
                     <div>
@@ -141,7 +141,7 @@ export default async function ActiveJobsPage() {
                   {job.price != null && (
                     <div className="flex justify-between text-xs">
                       <span className="text-[#adaaaa]">Payout</span>
-                      <span className="text-[#a3a6ff] font-bold">
+                      <span className="text-[var(--color-primary)] font-bold">
                         {new Intl.NumberFormat(undefined, {
                           style: "currency",
                           currency: "USD",
@@ -164,3 +164,4 @@ export default async function ActiveJobsPage() {
     </div>
   )
 }
+

@@ -75,7 +75,7 @@ export function DriverDocumentsPanel({ documents }: { documents: DriverDocument[
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setPreviewDoc({ document_type: doc.document_type, file_url: doc.file_url })}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-white hover:border-[#a3a6ff]/30 rounded-lg text-xs font-semibold transition-all"
+                      className="flex items-center gap-1 px-3 py-1.5 bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-white hover:border-[var(--color-primary)]/30 rounded-lg text-xs font-semibold transition-all"
                     >
                       <span className="material-symbols-outlined text-sm">visibility</span>
                       Preview
@@ -98,7 +98,7 @@ export function DriverDocumentsPanel({ documents }: { documents: DriverDocument[
                           window.open(doc.file_url, "_blank")
                         }
                       }}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] hover:bg-[#a3a6ff]/20 rounded-lg text-xs font-semibold transition-all"
+                      className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 rounded-lg text-xs font-semibold transition-all"
                     >
                       <span className="material-symbols-outlined text-sm">download</span>
                       Download
@@ -113,3 +113,4 @@ export function DriverDocumentsPanel({ documents }: { documents: DriverDocument[
     </>
   )
 }
+

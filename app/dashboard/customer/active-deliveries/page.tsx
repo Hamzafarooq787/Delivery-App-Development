@@ -178,7 +178,7 @@ export default function ActiveDeliveriesPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="bg-surface-container rounded-xl px-3 py-2 flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_#a3a6ff]" />
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--color-primary)]" />
               <span className="text-xs font-bold text-on-surface uppercase tracking-widest">
                 {deliveries.length} live
               </span>
@@ -342,7 +342,7 @@ export default function ActiveDeliveriesPage() {
                           <button
                             type="button"
                             onClick={() => router.push(`/dashboard/customer/tracking?id=${shipment.id}`)}
-                            className="bg-primary text-on-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(163,166,255,0.2)]"
+                            className="bg-primary text-on-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)]"
                           >
                             Track
                           </button>
@@ -361,3 +361,4 @@ export default function ActiveDeliveriesPage() {
     </>
   )
 }
+

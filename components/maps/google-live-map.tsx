@@ -71,11 +71,11 @@ function initials(name: string) {
 function PickupPin() {
   return (
     <div style={{ transform: "translate(-50%, -100%)" }} className="flex flex-col items-center">
-      <div className="w-8 h-8 rounded-full bg-[#a3a6ff] border-2 border-white flex items-center justify-center shadow-lg" style={{ boxShadow: "0 0 12px rgba(163,166,255,0.6)" }}>
+      <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] border-2 border-white flex items-center justify-center shadow-lg" style={{ boxShadow: "0 0 12px rgba(var(--brand-rgb),0.6)" }}>
         <span className="material-symbols-outlined text-white text-sm">radio_button_checked</span>
       </div>
-      <div className="w-0.5 h-2.5 bg-[#a3a6ff]" />
-      <div className="w-1.5 h-1.5 rounded-full bg-[#a3a6ff]" />
+      <div className="w-0.5 h-2.5 bg-[var(--color-primary)]" />
+      <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]" />
     </div>
   )
 }
@@ -83,11 +83,11 @@ function PickupPin() {
 function DestinationPin() {
   return (
     <div style={{ transform: "translate(-50%, -100%)" }} className="flex flex-col items-center">
-      <div className="w-8 h-8 rounded-full bg-[#c180ff] border-2 border-white flex items-center justify-center shadow-lg" style={{ boxShadow: "0 0 12px rgba(193,128,255,0.6)" }}>
+      <div className="w-8 h-8 rounded-full bg-[var(--color-secondary)] border-2 border-white flex items-center justify-center shadow-lg" style={{ boxShadow: "0 0 12px rgba(var(--brand-rgb),0.6)" }}>
         <span className="material-symbols-outlined text-white text-sm">location_on</span>
       </div>
-      <div className="w-0.5 h-2.5 bg-[#c180ff]" />
-      <div className="w-1.5 h-1.5 rounded-full bg-[#c180ff]" />
+      <div className="w-0.5 h-2.5 bg-[var(--color-secondary)]" />
+      <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-secondary)]" />
     </div>
   )
 }
@@ -111,9 +111,9 @@ function DriverPin({ driver }: { driver: Driver }) {
       {accepted && <div className="absolute inset-0 rounded-full bg-green-400/30 animate-ping" style={{ transform: "scale(2)" }} />}
       <div
         className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-xs font-black z-10 relative ${
-          accepted ? "bg-green-500 border-green-300 text-white" : "bg-[#a3a6ff] border-white text-[#0f00a4]"
+          accepted ? "bg-green-500 border-green-300 text-white" : "bg-[var(--color-primary)] border-white text-[var(--color-on-primary)]"
         }`}
-        style={{ boxShadow: accepted ? "0 0 14px rgba(34,197,94,0.5)" : "0 0 14px rgba(163,166,255,0.4)" }}
+        style={{ boxShadow: accepted ? "0 0 14px rgba(34,197,94,0.5)" : "0 0 14px rgba(var(--brand-rgb),0.4)" }}
       >
         {initials(driver.label)}
       </div>
@@ -229,7 +229,7 @@ export function GoogleLiveMap({
         {routeCoords && routeCoords.length > 1 && (
           <Polyline
             path={routeCoords}
-            options={{ strokeColor: "#a3a6ff", strokeWeight: 4, strokeOpacity: 0.85 }}
+            options={{ strokeColor: "var(--color-primary)", strokeWeight: 4, strokeOpacity: 0.85 }}
           />
         )}
 
@@ -237,11 +237,11 @@ export function GoogleLiveMap({
           <Polyline
             path={routeCoords2}
             options={{
-              strokeColor: "#c180ff",
+              strokeColor: "var(--color-secondary)",
               strokeWeight: 0,
               strokeOpacity: 0,
               icons: [{
-                icon: { path: "M 0,-1 0,1", strokeColor: "#c180ff", strokeWeight: 3, strokeOpacity: 0.75, scale: 3 },
+                icon: { path: "M 0,-1 0,1", strokeColor: "var(--color-secondary)", strokeWeight: 3, strokeOpacity: 0.75, scale: 3 },
                 offset: "0",
                 repeat: "16px",
               }],
@@ -276,3 +276,4 @@ export function GoogleLiveMap({
     </div>
   )
 }
+

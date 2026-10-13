@@ -202,7 +202,7 @@ function PayoutDetailModal({
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-[#494847]/10">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] font-bold text-base shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] font-bold text-base shrink-0">
               {initials(payout.driver.full_name)}
             </div>
             <div>
@@ -231,7 +231,7 @@ function PayoutDetailModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#262626] rounded-xl p-3">
               <p className="text-[#adaaaa] text-[10px] uppercase tracking-wider font-bold mb-1">Payout ID</p>
-              <p className="text-[#a3a6ff] font-mono text-xs">#{payout.id.slice(0, 8).toUpperCase()}</p>
+              <p className="text-[var(--color-primary)] font-mono text-xs">#{payout.id.slice(0, 8).toUpperCase()}</p>
             </div>
             <div className="bg-[#262626] rounded-xl p-3">
               <p className="text-[#adaaaa] text-[10px] uppercase tracking-wider font-bold mb-1">Requested</p>
@@ -243,7 +243,7 @@ function PayoutDetailModal({
             </div>
             <div className="bg-[#262626] rounded-xl p-3">
               <p className="text-[#adaaaa] text-[10px] uppercase tracking-wider font-bold mb-1">Pending Balance</p>
-              <p className={`text-xs font-bold ${payout.driverStats.pendingEarnings > 0 ? "text-[#c180ff]" : "text-[#adaaaa]"}`}>
+              <p className={`text-xs font-bold ${payout.driverStats.pendingEarnings > 0 ? "text-[var(--color-secondary)]" : "text-[#adaaaa]"}`}>
                 {fmt(payout.driverStats.pendingEarnings)}
               </p>
             </div>
@@ -274,7 +274,7 @@ function PayoutDetailModal({
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                     e.status === "paid"
                       ? "bg-[#6ee7b7]/10 text-[#6ee7b7]"
-                      : "bg-[#c180ff]/10 text-[#c180ff]"
+                      : "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]"
                   }`}>
                     {e.status}
                   </span>
@@ -296,7 +296,7 @@ function PayoutDetailModal({
               {(details?.deliveries ?? []).map(d => (
                 <div key={d.id} className="bg-[#262626] rounded-lg px-3 py-2.5">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-[#a3a6ff] font-mono text-[10px]">
+                    <p className="text-[var(--color-primary)] font-mono text-[10px]">
                       {d.tracking_number ?? `#${d.id.slice(0, 8).toUpperCase()}`}
                     </p>
                     <p className="text-white text-xs font-bold">{fmt(d.price ?? 0)}</p>
@@ -390,7 +390,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
           label="Drivers Awaiting"
           value={String(stats.driversAwaiting)}
           sub="with open requests"
-          accent="border-[#c180ff]"
+          accent="border-[var(--color-secondary)]"
         />
         <KPICard
           label="Total Paid Out"
@@ -402,7 +402,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
           label="Platform Commission"
           value={fmt(stats.platformCommission)}
           sub="25% of all fares"
-          accent="border-[#a3a6ff]"
+          accent="border-[var(--color-primary)]"
         />
       </div>
 
@@ -414,7 +414,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
               <h3 className="font-headline text-base font-bold text-white">Unclaimed Driver Balances</h3>
               <p className="text-xs text-[#adaaaa] mt-0.5">Earnings available but not yet requested</p>
             </div>
-            <span className="text-xs font-bold text-[#c180ff] bg-[#c180ff]/10 px-3 py-1 rounded-full">
+            <span className="text-xs font-bold text-[var(--color-secondary)] bg-[var(--color-secondary)]/10 px-3 py-1 rounded-full">
               {pendingDrivers.length} drivers
             </span>
           </div>
@@ -434,7 +434,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
                   <tr key={d.driverId} className="hover:bg-[#201f1f] transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] text-xs font-bold shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] text-xs font-bold shrink-0">
                           {initials(d.full_name || d.email)}
                         </div>
                         <div>
@@ -445,7 +445,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
                     </td>
                     <td className="px-6 py-4 text-right text-sm text-[#adaaaa]">{fmt(d.total)}</td>
                     <td className="px-6 py-4 text-right">
-                      <span className="text-sm font-black text-[#c180ff]">{fmt(d.pending)}</span>
+                      <span className="text-sm font-black text-[var(--color-secondary)]">{fmt(d.pending)}</span>
                     </td>
                     <td className="px-6 py-4 text-right text-sm text-[#adaaaa]">{d.jobs}</td>
                     <td className="px-6 py-4 text-right">
@@ -474,7 +474,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
           <select
             value={dateFilter}
             onChange={e => setDateFilter(e.target.value as DateFilter)}
-            className="bg-[#262626] border border-[#494847]/20 text-[#adaaaa] text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#a3a6ff]/40 cursor-pointer"
+            className="bg-[#262626] border border-[#494847]/20 text-[#adaaaa] text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[var(--color-primary)]/40 cursor-pointer"
           >
             {DATE_FILTERS.map(d => (
               <option key={d} value={d}>{d}</option>
@@ -489,7 +489,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
                 onClick={() => setStatusFilter(f)}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
                   statusFilter === f
-                    ? "bg-[#a3a6ff] text-[#0f00a4]"
+                    ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                     : "text-[#adaaaa] hover:text-white"
                 }`}
               >
@@ -526,12 +526,12 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
                     className="hover:bg-[#201f1f] transition-colors cursor-pointer group"
                     onClick={() => setSelected(p)}
                   >
-                    <td className="px-6 py-4 font-mono text-xs text-[#a3a6ff]">
+                    <td className="px-6 py-4 font-mono text-xs text-[var(--color-primary)]">
                       #{p.id.slice(0, 8).toUpperCase()}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] text-[10px] font-bold shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] text-[10px] font-bold shrink-0">
                           {initials(p.driver.full_name)}
                         </div>
                         <div>
@@ -572,7 +572,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] text-xs font-bold shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] text-xs font-bold shrink-0">
                       {initials(p.driver.full_name)}
                     </div>
                     <div>
@@ -605,10 +605,10 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
             {filtered.length} of {payouts.length} requests
           </p>
           <div className="flex gap-2">
-            <button className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[#a3a6ff] transition-colors">
+            <button className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[var(--color-primary)] transition-colors">
               <span className="material-symbols-outlined text-sm">chevron_left</span>
             </button>
-            <button className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[#a3a6ff] transition-colors">
+            <button className="p-1.5 rounded-lg bg-[#262626] text-white hover:text-[var(--color-primary)] transition-colors">
               <span className="material-symbols-outlined text-sm">chevron_right</span>
             </button>
           </div>
@@ -625,3 +625,4 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
     </div>
   )
 }
+

@@ -81,12 +81,12 @@ export function AdminLiveTrackingBoard({ deliveries }: { deliveries: TrackedDeli
             <div
               key={d.id}
               className={`p-4 cursor-pointer transition-colors ${
-                focused?.id === d.id ? "bg-[#a3a6ff]/10" : "hover:bg-[#201f1f]"
+                focused?.id === d.id ? "bg-[var(--color-primary)]/10" : "hover:bg-[#201f1f]"
               }`}
               onClick={() => setFocusedId(d.id)}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-xs text-[#a3a6ff]">
+                <span className="font-mono text-xs text-[var(--color-primary)]">
                   {d.tracking_number ?? `KV-${d.id.slice(0, 8).toUpperCase()}`}
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#adaaaa]">
@@ -101,7 +101,7 @@ export function AdminLiveTrackingBoard({ deliveries }: { deliveries: TrackedDeli
               <Link
                 href={`/dashboard/admin/orders/${d.id}`}
                 onClick={(e) => e.stopPropagation()}
-                className="inline-block mt-2 text-xs font-bold text-[#a3a6ff] hover:underline"
+                className="inline-block mt-2 text-xs font-bold text-[var(--color-primary)] hover:underline"
               >
                 Order details →
               </Link>
@@ -112,3 +112,4 @@ export function AdminLiveTrackingBoard({ deliveries }: { deliveries: TrackedDeli
     </div>
   )
 }
+

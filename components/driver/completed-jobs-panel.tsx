@@ -73,7 +73,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by tracking # or address..."
-            className="w-full bg-[#1a1919] border border-[#494847]/20 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/40 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-all"
+            className="w-full bg-[#1a1919] border border-[#494847]/20 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#adaaaa] hover:text-white">
@@ -90,7 +90,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
               onClick={() => setPeriod(val)}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
                 period === val
-                  ? "bg-[#a3a6ff] text-[#0f00a4]"
+                  ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                   : "text-[#adaaaa] hover:text-white"
               }`}
             >
@@ -110,7 +110,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
         <div className="rounded-xl border border-dashed border-[#494847]/30 bg-[#1a1919] px-6 py-12 text-center">
           <p className="text-base font-semibold text-white">No results</p>
           <p className="mt-1 text-sm text-[#adaaaa]">Try a different search or time range.</p>
-          <button onClick={() => { setSearch(""); setPeriod("all") }} className="mt-3 text-sm text-[#a3a6ff] hover:underline">
+          <button onClick={() => { setSearch(""); setPeriod("all") }} className="mt-3 text-sm text-[var(--color-primary)] hover:underline">
             Clear filters
           </button>
         </div>
@@ -141,11 +141,11 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
                     <td className="px-5 py-3.5 text-sm text-[#adaaaa] max-w-[160px]">
                       <span className="block truncate" title={job.delivery_address ?? ""}>{job.delivery_address || "—"}</span>
                     </td>
-                    <td className="px-5 py-3.5 text-sm font-semibold text-[#a3a6ff]">{fmt(job.price != null ? job.price * 0.75 : null)}</td>
+                    <td className="px-5 py-3.5 text-sm font-semibold text-[var(--color-primary)]">{fmt(job.price != null ? job.price * 0.75 : null)}</td>
                     <td className="px-5 py-3.5">
                       <Link
                         href={`/dashboard/driver/jobs/${job.id}`}
-                        className="text-xs font-semibold text-[#adaaaa] hover:text-[#a3a6ff] transition-colors"
+                        className="text-xs font-semibold text-[#adaaaa] hover:text-[var(--color-primary)] transition-colors"
                       >
                         View →
                       </Link>
@@ -157,10 +157,11 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
           </div>
           <div className="px-5 py-3 bg-[#131313]/40 border-t border-[#494847]/10 flex justify-between items-center">
             <p className="text-xs text-[#adaaaa]">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</p>
-            <p className="text-xs font-semibold text-[#a3a6ff]">Total: {fmt(totalPayout)}</p>
+            <p className="text-xs font-semibold text-[var(--color-primary)]">Total: {fmt(totalPayout)}</p>
           </div>
         </div>
       )}
     </div>
   )
 }
+

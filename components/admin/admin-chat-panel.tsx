@@ -135,8 +135,8 @@ export function AdminChatPanel({ userId }: { userId: string }) {
         aria-label="Driver chats"
         className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${
           open
-            ? "bg-[#c180ff]/15 text-[#c180ff]"
-            : "text-[#adaaaa] hover:text-[#c180ff] hover:bg-[#c180ff]/10"
+            ? "bg-[var(--color-secondary)]/15 text-[var(--color-secondary)]"
+            : "text-[#adaaaa] hover:text-[var(--color-secondary)] hover:bg-[var(--color-secondary)]/10"
         }`}
       >
         <span
@@ -146,7 +146,7 @@ export function AdminChatPanel({ userId }: { userId: string }) {
           chat
         </span>
         {totalUnread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#c180ff] text-[#1a0030] text-[9px] font-black flex items-center justify-center leading-none shadow-lg shadow-[#c180ff]/40">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-secondary)] text-[#1a0030] text-[9px] font-black flex items-center justify-center leading-none shadow-lg shadow-[var(--color-secondary)]/40">
             {totalUnread > 99 ? "99+" : totalUnread}
           </span>
         )}
@@ -160,7 +160,7 @@ export function AdminChatPanel({ userId }: { userId: string }) {
             width: "clamp(320px, 90vw, 520px)",
             height: "480px",
             background: "#111111",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(193,128,255,0.08)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(var(--brand-rgb),0.08)",
           }}
         >
           {/* ── Sessions sidebar ── */}
@@ -185,18 +185,18 @@ export function AdminChatPanel({ userId }: { userId: string }) {
                       key={sess.id}
                       onClick={() => selectSession(sess)}
                       className={`w-full text-left px-3 py-2.5 border-b border-[#494847]/10 transition-colors ${
-                        selectedId === sess.id ? "bg-[#c180ff]/10" : "hover:bg-[#1a1919]"
+                        selectedId === sess.id ? "bg-[var(--color-secondary)]/10" : "hover:bg-[#1a1919]"
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="w-6 h-6 rounded-full bg-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff] text-[8px] font-bold shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] text-[8px] font-bold shrink-0">
                           {initials}
                         </div>
                         <p className="text-xs font-semibold text-white truncate flex-1">
                           {sess.driver_name ?? "Driver"}
                         </p>
                         {sess.admin_unread > 0 && (
-                          <span className="min-w-[16px] h-4 px-0.5 rounded-full bg-[#c180ff] text-[#1a0030] text-[8px] font-black flex items-center justify-center shrink-0">
+                          <span className="min-w-[16px] h-4 px-0.5 rounded-full bg-[var(--color-secondary)] text-[#1a0030] text-[8px] font-black flex items-center justify-center shrink-0">
                             {sess.admin_unread}
                           </span>
                         )}
@@ -225,7 +225,7 @@ export function AdminChatPanel({ userId }: { userId: string }) {
               <>
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-[#494847]/20 shrink-0 flex items-center gap-3 bg-[#1a1919]">
-                  <div className="w-8 h-8 rounded-full bg-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff] text-xs font-bold shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] text-xs font-bold shrink-0">
                     {(selectedSession.driver_name ?? "D").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
                   <div>
@@ -238,7 +238,7 @@ export function AdminChatPanel({ userId }: { userId: string }) {
                 <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
                   {loadingMsgs ? (
                     <div className="flex items-center justify-center h-full">
-                      <div className="w-5 h-5 border-2 border-[#c180ff] border-t-transparent rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-[var(--color-secondary)] border-t-transparent rounded-full animate-spin" />
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
@@ -250,12 +250,12 @@ export function AdminChatPanel({ userId }: { userId: string }) {
                         <div
                           className={`max-w-[78%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
                             msg.sender_role === "admin"
-                              ? "bg-[#a3a6ff] text-[#0f00a4] rounded-br-sm font-medium"
+                              ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-br-sm font-medium"
                               : "bg-[#262626] text-white rounded-bl-sm"
                           }`}
                         >
                           {msg.content}
-                          <p className={`text-[9px] mt-1 ${msg.sender_role === "admin" ? "text-[#0f00a4]/60 text-right" : "text-[#adaaaa]"}`}>
+                          <p className={`text-[9px] mt-1 ${msg.sender_role === "admin" ? "text-[var(--color-on-primary)]/60 text-right" : "text-[#adaaaa]"}`}>
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </p>
                         </div>
@@ -276,13 +276,13 @@ export function AdminChatPanel({ userId }: { userId: string }) {
                       placeholder="Reply to driver…"
                       rows={1}
                       disabled={sending}
-                      className="flex-1 resize-none bg-[#262626] border border-[#494847]/20 rounded-xl px-3 py-2 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#c180ff]/40 transition-all min-h-[36px] max-h-[80px]"
+                      className="flex-1 resize-none bg-[#262626] border border-[#494847]/20 rounded-xl px-3 py-2 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-secondary)]/40 transition-all min-h-[36px] max-h-[80px]"
                       style={{ fieldSizing: "content" } as React.CSSProperties}
                     />
                     <button
                       onClick={handleSend}
                       disabled={!input.trim() || sending}
-                      className="w-8 h-8 rounded-xl bg-[#c180ff] text-[#1a0030] flex items-center justify-center disabled:opacity-40 hover:brightness-110 active:scale-95 transition-all shrink-0"
+                      className="w-8 h-8 rounded-xl bg-[var(--color-secondary)] text-[#1a0030] flex items-center justify-center disabled:opacity-40 hover:brightness-110 active:scale-95 transition-all shrink-0"
                     >
                       {sending ? (
                         <div className="w-3.5 h-3.5 border-2 border-[#1a0030] border-t-transparent rounded-full animate-spin" />
@@ -301,3 +301,4 @@ export function AdminChatPanel({ userId }: { userId: string }) {
     </div>
   )
 }
+

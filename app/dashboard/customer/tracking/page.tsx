@@ -32,8 +32,8 @@ function driverInitials(d: Driver) {
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   requested:  { bg: 'bg-[#adaaaa]/10', text: 'text-[#adaaaa]',  dot: 'bg-[#adaaaa]'  },
-  accepted:   { bg: 'bg-[#a3a6ff]/10', text: 'text-[#a3a6ff]',  dot: 'bg-[#a3a6ff]'  },
-  collected:  { bg: 'bg-[#c180ff]/10', text: 'text-[#c180ff]',  dot: 'bg-[#c180ff]'  },
+  accepted:   { bg: 'bg-[var(--color-primary)]/10', text: 'text-[var(--color-primary)]',  dot: 'bg-[var(--color-primary)]'  },
+  collected:  { bg: 'bg-[var(--color-secondary)]/10', text: 'text-[var(--color-secondary)]',  dot: 'bg-[var(--color-secondary)]'  },
   in_transit: { bg: 'bg-[#6ee7b7]/10', text: 'text-[#6ee7b7]',  dot: 'bg-[#6ee7b7]'  },
   delivered:  { bg: 'bg-[#6ee7b7]/10', text: 'text-[#6ee7b7]',  dot: 'bg-[#6ee7b7]'  },
   cancelled:  { bg: 'bg-[#ff6e84]/10', text: 'text-[#ff6e84]',  dot: 'bg-[#ff6e84]'  },
@@ -218,7 +218,7 @@ function TrackingPageInner() {
           {/* ── Header: tracking number + status ── */}
           <div className="px-5 pt-3 pb-4 border-b border-[#494847]/20 shrink-0">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a6ff]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-primary)]">
                 {isDelivered ? 'Delivery Record' : 'Live Tracking'}
               </p>
               {shipment && (
@@ -236,7 +236,7 @@ function TrackingPageInner() {
             {shipment && (
               <p className="text-xs text-[#adaaaa] mt-1 leading-relaxed">
                 <span className="font-medium text-white/70">{shipment.pickup_address}</span>
-                <span className="mx-1.5 text-[#a3a6ff]">→</span>
+                <span className="mx-1.5 text-[var(--color-primary)]">→</span>
                 <span className="font-medium text-white/70">{shipment.delivery_address}</span>
               </p>
             )}
@@ -295,13 +295,13 @@ function TrackingPageInner() {
 
           {/* ── Delivery code ── */}
           {otp && shipment && OTP_VISIBLE_STATUSES.includes(shipment.status) && (
-            <div className="mx-4 mt-3 rounded-2xl border border-[#a3a6ff]/25 bg-[#a3a6ff]/5 px-4 py-4 shrink-0">
+            <div className="mx-4 mt-3 rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 px-4 py-4 shrink-0">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#a3a6ff] mb-1.5">Delivery Code</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-primary)] mb-1.5">Delivery Code</p>
                   <p className="text-3xl font-black font-mono tracking-[0.3em] text-white">{otp}</p>
                 </div>
-                <span className="material-symbols-outlined text-[#a3a6ff] text-2xl shrink-0">lock</span>
+                <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl shrink-0">lock</span>
               </div>
               <p className="text-[11px] text-[#adaaaa] mt-2.5 leading-relaxed">
                 Share this code with your driver only when they arrive with your package — they'll need it to confirm delivery.
@@ -321,8 +321,8 @@ function TrackingPageInner() {
                   {shipment?.status === 'in_transit' ? 'Driver en route' : 'Awaiting dispatch'}
                 </p>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[#a3a6ff] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
+              <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
               </div>
             </div>
           )}
@@ -331,8 +331,8 @@ function TrackingPageInner() {
           {(shipment?.item_description || (shipment?.item_photo_urls && shipment.item_photo_urls.length > 0)) && (
             <div className="mx-4 my-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0 bg-[#1a1919]">
               <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#494847]/15">
-                <span className="material-symbols-outlined text-[#a3a6ff] text-base">inventory_2</span>
-                <p className="text-[11px] font-bold text-[#a3a6ff] uppercase tracking-wider">Item Details</p>
+                <span className="material-symbols-outlined text-[var(--color-primary)] text-base">inventory_2</span>
+                <p className="text-[11px] font-bold text-[var(--color-primary)] uppercase tracking-wider">Item Details</p>
               </div>
               <div className="px-3 py-3 space-y-2.5">
                 {shipment?.item_description && (
@@ -396,7 +396,7 @@ function TrackingPageInner() {
                     step.done && !step.active
                       ? 'bg-[#6ee7b7] border-[#6ee7b7]'
                       : step.active
-                      ? 'bg-[#a3a6ff] border-[#a3a6ff] shadow-[0_0_12px_rgba(163,166,255,0.45)]'
+                      ? 'bg-[var(--color-primary)] border-[var(--color-primary)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.45)]'
                       : 'bg-transparent border-[#494847]/30'
                   }`}>
                     {step.done && !step.active && (
@@ -408,7 +408,7 @@ function TrackingPageInner() {
                   </div>
                   <div className="pb-6 min-w-0">
                     <p className={`text-sm font-bold leading-tight ${
-                      step.done && !step.active ? 'text-[#6ee7b7]' : step.active ? 'text-[#a3a6ff]' : 'text-[#494847]'
+                      step.done && !step.active ? 'text-[#6ee7b7]' : step.active ? 'text-[var(--color-primary)]' : 'text-[#494847]'
                     }`}>
                       {step.label}
                     </p>
@@ -424,7 +424,7 @@ function TrackingPageInner() {
           {/* ── Driver Card ── */}
           <div className="border-t border-[#494847]/20 px-5 py-4 md:shrink-0 bg-[#0e0e0e]">
             <div className="flex items-center gap-3.5 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center text-[#a3a6ff] font-bold font-headline text-base shrink-0">
+              <div className="w-12 h-12 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] font-bold font-headline text-base shrink-0">
                 {driverInitials(driver)}
               </div>
               <div className="min-w-0 flex-1">
@@ -446,7 +446,7 @@ function TrackingPageInner() {
                   <span className="material-symbols-outlined text-base text-[#adaaaa]">mail</span>
                   Message
                 </button>
-                <button className="bg-[#a3a6ff] hover:brightness-110 text-[#0f00a4] text-sm font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#a3a6ff]/20">
+                <button className="bg-[var(--color-primary)] hover:brightness-110 text-[var(--color-on-primary)] text-sm font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-[var(--color-primary)]/20">
                   <span className="material-symbols-outlined text-base">call</span>
                   Call
                 </button>
@@ -541,3 +541,4 @@ export default function LiveTrackingPage() {
     </Suspense>
   )
 }
+

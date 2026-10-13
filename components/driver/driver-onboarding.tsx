@@ -1,5 +1,6 @@
 "use client"
 
+import { BrandLogo } from '@/components/shared/brand-logo'
 import Link from "next/link"
 import { LogoutButton } from "@/components/auth/logout-button"
 
@@ -33,17 +34,17 @@ function StepIndicator({ current }: { current: Step }) {
             <div className="flex flex-col items-center gap-2">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${
                 done   ? "bg-green-500 shadow-[0_0_15px_rgba(74,222,128,0.4)]" :
-                active ? "bg-[#a3a6ff] shadow-[0_0_20px_rgba(163,166,255,0.5)] animate-pulse" :
+                active ? "bg-[var(--color-primary)] shadow-[0_0_20px_rgba(var(--brand-rgb),0.5)] animate-pulse" :
                          "bg-[#262626] border border-[#494847]/30"
               }`}>
                 {done ? (
                   <span className="material-symbols-outlined text-white text-lg">check</span>
                 ) : (
-                  <span className={`material-symbols-outlined text-lg ${active ? "text-[#0f00a4]" : "text-[#494847]"}`}>{step.icon}</span>
+                  <span className={`material-symbols-outlined text-lg ${active ? "text-[var(--color-on-primary)]" : "text-[#494847]"}`}>{step.icon}</span>
                 )}
               </div>
               <p className={`text-[10px] font-bold uppercase tracking-wider whitespace-nowrap hidden sm:block ${
-                done ? "text-green-400" : active ? "text-[#a3a6ff]" : "text-[#494847]"
+                done ? "text-green-400" : active ? "text-[var(--color-primary)]" : "text-[#494847]"
               }`}>{step.label}</p>
             </div>
             {i < STEPS.length - 1 && (
@@ -74,23 +75,23 @@ export function DriverOnboarding({
     <div className="min-h-screen bg-[#0e0e0e] flex flex-col">
       {/* Background glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full bg-[#a3a6ff]/4 blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-[#c180ff]/4 blur-[100px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full bg-[var(--color-primary)]/4 blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-[var(--color-secondary)]/4 blur-[100px]" />
       </div>
 
       {/* Top bar */}
       <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-[#1a1919]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[#a3a6ff] text-base">bolt</span>
+          <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
+            <span className="material-symbols-outlined text-[var(--color-primary)] text-base">bolt</span>
           </div>
-          <span className="font-headline text-sm font-extrabold text-white tracking-widest uppercase">Go Drop</span>
-          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 rounded-full text-[9px] font-bold text-[#a3a6ff] uppercase tracking-wider">Driver Portal</span>
+          <BrandLogo />
+          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-full text-[9px] font-bold text-[var(--color-primary)] uppercase tracking-wider">Driver Portal</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center">
-              <span className="text-[10px] font-bold text-[#a3a6ff]">{initials}</span>
+            <div className="w-7 h-7 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
+              <span className="text-[10px] font-bold text-[var(--color-primary)]">{initials}</span>
             </div>
             <span className="hidden sm:block text-sm text-[#adaaaa]">{user.full_name || user.email}</span>
           </div>
@@ -135,14 +136,14 @@ export function DriverOnboarding({
                     { icon: "crop",         text: "Do not crop or obscure any part of the document" },
                   ].map(({ icon, text }) => (
                     <div key={text} className="flex items-start gap-3">
-                      <span className="material-symbols-outlined text-[#a3a6ff] text-sm mt-0.5 shrink-0">{icon}</span>
+                      <span className="material-symbols-outlined text-[var(--color-primary)] text-sm mt-0.5 shrink-0">{icon}</span>
                       <p className="text-xs text-[#adaaaa]">{text}</p>
                     </div>
                   ))}
                 </div>
                 <Link
                   href="/dashboard/driver/verification"
-                  className="mt-2 w-full flex items-center justify-center gap-2 py-3.5 bg-[#a3a6ff] text-[#0f00a4] font-black text-sm rounded-xl hover:bg-[#8387ff] shadow-[0_0_20px_rgba(163,166,255,0.25)] transition-all active:scale-[0.98]"
+                  className="mt-2 w-full flex items-center justify-center gap-2 py-3.5 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-black text-sm rounded-xl hover:bg-[var(--color-primary-fixed-dim)] shadow-[0_0_20px_rgba(var(--brand-rgb),0.25)] transition-all active:scale-[0.98]"
                 >
                   <span className="material-symbols-outlined text-base">upload_file</span>
                   Re-upload Documents
@@ -155,8 +156,8 @@ export function DriverOnboarding({
           {driverStatus !== "rejected" && currentStep === "documents" && (
             <div className="bg-[#1a1919] rounded-2xl border border-[#494847]/15 overflow-hidden">
               <div className="px-8 py-6 border-b border-[#494847]/10 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">upload_file</span>
+                <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl">upload_file</span>
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-white">Upload Your Documents</h2>
@@ -175,7 +176,7 @@ export function DriverOnboarding({
                       { icon: "commute", label: "Vehicle Registration",desc: "Current vehicle registration document" },
                     ].map(({ icon, label, desc }) => (
                       <div key={label} className="bg-[#131313] border border-[#494847]/15 rounded-xl p-4 flex flex-col gap-2">
-                        <span className="material-symbols-outlined text-[#a3a6ff] text-xl">{icon}</span>
+                        <span className="material-symbols-outlined text-[var(--color-primary)] text-xl">{icon}</span>
                         <p className="text-xs font-bold text-white">{label}</p>
                         <p className="text-[10px] text-[#adaaaa] leading-relaxed">{desc}</p>
                       </div>
@@ -194,8 +195,8 @@ export function DriverOnboarding({
                       { n: "4", text: "Once approved, full access to all driver features is unlocked" },
                     ].map(({ n, text }) => (
                       <div key={n} className="flex items-start gap-3">
-                        <div className="w-5 h-5 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="text-[9px] font-black text-[#a3a6ff]">{n}</span>
+                        <div className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-[9px] font-black text-[var(--color-primary)]">{n}</span>
                         </div>
                         <p className="text-xs text-[#adaaaa]">{text}</p>
                       </div>
@@ -205,7 +206,7 @@ export function DriverOnboarding({
 
                 <Link
                   href="/dashboard/driver/verification"
-                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#a3a6ff] text-[#0f00a4] font-black text-sm rounded-xl hover:bg-[#8387ff] shadow-[0_0_20px_rgba(163,166,255,0.25)] transition-all active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-black text-sm rounded-xl hover:bg-[var(--color-primary-fixed-dim)] shadow-[0_0_20px_rgba(var(--brand-rgb),0.25)] transition-all active:scale-[0.98]"
                 >
                   <span className="material-symbols-outlined text-base">upload_file</span>
                   Upload My Documents
@@ -216,11 +217,11 @@ export function DriverOnboarding({
 
           {/* ── UNDER REVIEW ──────────────────────────────────────── */}
           {currentStep === "review" && driverStatus !== "rejected" && (
-            <div className="bg-[#1a1919] rounded-2xl border border-[#a3a6ff]/15 overflow-hidden">
-              <div className="px-8 py-6 border-b border-[#a3a6ff]/10">
+            <div className="bg-[#1a1919] rounded-2xl border border-[var(--color-primary)]/15 overflow-hidden">
+              <div className="px-8 py-6 border-b border-[var(--color-primary)]/10">
                 <div className="flex items-center gap-4 mb-1">
-                  <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0 animate-pulse">
-                    <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">manage_search</span>
+                  <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0 animate-pulse">
+                    <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl">manage_search</span>
                   </div>
                   <div>
                     <h2 className="text-lg font-black text-white">Application Under Review</h2>
@@ -237,12 +238,12 @@ export function DriverOnboarding({
                     <div className="absolute left-2.5 top-2 bottom-2 w-px bg-[#494847]/30" />
                     {[
                       { icon: "check_circle", color: "text-green-400", bg: "bg-green-500", label: "Documents Submitted", desc: "All required documents received.", done: true },
-                      { icon: "manage_search", color: "text-[#a3a6ff]", bg: "bg-[#a3a6ff]", label: "Identity Verification", desc: "Verifying your identity and licence.", done: false, active: true },
+                      { icon: "manage_search", color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]", label: "Identity Verification", desc: "Verifying your identity and licence.", done: false, active: true },
                       { icon: "schedule", color: "text-[#494847]", bg: "bg-[#494847]", label: "Background Check", desc: "Standard compliance check.", done: false },
                       { icon: "schedule", color: "text-[#494847]", bg: "bg-[#494847]", label: "Final Approval", desc: "Account activated for deliveries.", done: false },
                     ].map(({ icon, color, bg, label, desc, done, active }) => (
                       <div key={label} className="flex items-start gap-4">
-                        <div className={`absolute left-0 w-5 h-5 rounded-full ${bg} flex items-center justify-center ${active ? "shadow-[0_0_10px_rgba(163,166,255,0.5)]" : ""}`}
+                        <div className={`absolute left-0 w-5 h-5 rounded-full ${bg} flex items-center justify-center ${active ? "shadow-[0_0_10px_rgba(var(--brand-rgb),0.5)]" : ""}`}
                           style={{ marginTop: "2px" }}>
                           <span className="material-symbols-outlined text-white text-xs">{icon}</span>
                         </div>
@@ -250,8 +251,8 @@ export function DriverOnboarding({
                           <p className={`text-sm font-bold ${done || active ? "text-white" : "text-[#494847]"}`}>{label}</p>
                           <p className={`text-xs mt-0.5 ${done || active ? "text-[#adaaaa]" : "text-[#494847]"}`}>{desc}</p>
                           {active && (
-                            <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-black text-[#a3a6ff] bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#a3a6ff] animate-pulse" />In Progress
+                            <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-black text-[var(--color-primary)] bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />In Progress
                             </span>
                           )}
                         </div>
@@ -262,7 +263,7 @@ export function DriverOnboarding({
 
                 {/* Estimated time */}
                 <div className="bg-[#131313] border border-[#494847]/10 rounded-xl px-5 py-4 flex items-center gap-4">
-                  <span className="material-symbols-outlined text-[#a3a6ff] text-2xl shrink-0">schedule</span>
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl shrink-0">schedule</span>
                   <div>
                     <p className="text-sm font-bold text-white">Estimated Review Time</p>
                     <p className="text-xs text-[#adaaaa] mt-0.5">Typically <span className="text-white font-semibold">24–48 hours</span>. You will receive an email notification once your application is reviewed.</p>
@@ -295,3 +296,4 @@ export function DriverOnboarding({
     </div>
   )
 }
+

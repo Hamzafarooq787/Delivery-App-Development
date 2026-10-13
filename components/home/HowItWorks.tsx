@@ -38,18 +38,18 @@ export default function HowItWorks() {
               key={step.title}
               className={`bg-[#1a1919] p-7 sm:p-10 rounded-[2rem] border border-[#494847]/5 transition-all group ${
                 step.color === 'primary'
-                  ? 'hover:border-[#a3a6ff]/20'
-                  : 'hover:border-[#c180ff]/20'
+                  ? 'hover:border-[var(--color-primary)]/20'
+                  : 'hover:border-[var(--color-secondary)]/20'
               }`}
             >
               <div
                 className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform ${
-                  step.color === 'primary' ? 'bg-[#a3a6ff]/10' : 'bg-[#c180ff]/10'
+                  step.color === 'primary' ? 'bg-[var(--color-primary)]/10' : 'bg-[var(--color-secondary)]/10'
                 }`}
               >
                 <span
                   className={`material-symbols-outlined text-3xl ${
-                    step.color === 'primary' ? 'text-[#a3a6ff]' : 'text-[#c180ff]'
+                    step.color === 'primary' ? 'text-[var(--color-primary)]' : 'text-[var(--color-secondary)]'
                   }`}
                 >
                   {step.icon}
@@ -64,3 +64,4 @@ export default function HowItWorks() {
     </section>
   )
 }
+

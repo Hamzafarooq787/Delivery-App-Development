@@ -25,10 +25,10 @@ function CustomTooltip({ active, payload, label }: any) {
   return (
     <div className="bg-[#201f1f] border border-[#494847]/20 rounded-xl px-4 py-3 shadow-2xl">
       <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold mb-2">{label}</p>
-      <p className="text-[#a3a6ff] font-bold text-sm">
+      <p className="text-[var(--color-primary)] font-bold text-sm">
         ${(payload[0]?.value ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
-      <p className="text-[#c180ff] text-xs">{payload[1]?.value ?? 0} orders</p>
+      <p className="text-[var(--color-secondary)] text-xs">{payload[1]?.value ?? 0} orders</p>
     </div>
   )
 }
@@ -39,12 +39,12 @@ export function RevenueChart({ data }: RevenueChartProps) {
       <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#a3a6ff" stopOpacity={0.25} />
-            <stop offset="95%" stopColor="#a3a6ff" stopOpacity={0} />
+            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="ordGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#c180ff" stopOpacity={0.2} />
-            <stop offset="95%" stopColor="#c180ff" stopOpacity={0} />
+            <stop offset="5%" stopColor="var(--color-secondary)" stopOpacity={0.2} />
+            <stop offset="95%" stopColor="var(--color-secondary)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#494847" strokeOpacity={0.15} vertical={false} />
@@ -65,22 +65,23 @@ export function RevenueChart({ data }: RevenueChartProps) {
         <Area
           type="monotone"
           dataKey="revenue"
-          stroke="#a3a6ff"
+          stroke="var(--color-primary)"
           strokeWidth={2}
           fill="url(#revGrad)"
           dot={false}
-          activeDot={{ r: 4, fill: "#a3a6ff", strokeWidth: 0 }}
+          activeDot={{ r: 4, fill: "var(--color-primary)", strokeWidth: 0 }}
         />
         <Area
           type="monotone"
           dataKey="orders"
-          stroke="#c180ff"
+          stroke="var(--color-secondary)"
           strokeWidth={2}
           fill="url(#ordGrad)"
           dot={false}
-          activeDot={{ r: 4, fill: "#c180ff", strokeWidth: 0 }}
+          activeDot={{ r: 4, fill: "var(--color-secondary)", strokeWidth: 0 }}
         />
       </AreaChart>
     </ResponsiveContainer>
   )
 }
+

@@ -100,8 +100,8 @@ export function DeliveriesLedger({
                 className={`px-3 py-1.5 text-[11px] font-bold uppercase transition-colors ${
                   serviceFilter === f
                     ? f === "buy_for_me"
-                      ? "bg-[#c180ff] text-[#0e0e0e]"
-                      : "bg-[#a3a6ff] text-[#0f00a4]"
+                      ? "bg-[var(--color-secondary)] text-[#0e0e0e]"
+                      : "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                     : "bg-[#1a1919] text-[#adaaaa] hover:text-white"
                 }`}
               >
@@ -145,7 +145,7 @@ export function DeliveriesLedger({
             ) : (
               filtered.map((delivery) => (
                 <tr key={delivery.id} className="hover:bg-[#201f1f]/40 transition-colors group">
-                  <td className="px-5 py-4 font-mono text-xs text-[#a3a6ff] whitespace-nowrap">
+                  <td className="px-5 py-4 font-mono text-xs text-[var(--color-primary)] whitespace-nowrap">
                     <Link href={`/dashboard/admin/orders/${delivery.id}`} className="hover:underline">
                       {delivery.tracking_number ?? `KV-${delivery.id.slice(0, 8).toUpperCase()}`}
                     </Link>
@@ -163,7 +163,7 @@ export function DeliveriesLedger({
                   <td className="px-5 py-4 text-sm text-[#adaaaa] max-w-[160px]">
                     {delivery.service_type === "buy_for_me" ? (
                       <div className="flex flex-col gap-0.5">
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[#c180ff]/10 text-[#c180ff] border border-[#c180ff]/20 w-fit">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border border-[var(--color-secondary)]/20 w-fit">
                           BFM
                         </span>
                         <span className="block truncate text-white" title={delivery.shop_name ?? ""}>
@@ -198,7 +198,7 @@ export function DeliveriesLedger({
                   <td className="px-5 py-4 text-right whitespace-nowrap">
                     <Link
                       href={`/dashboard/admin/orders/${delivery.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[#a3a6ff] hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[var(--color-primary)] hover:underline"
                     >
                       <span className="material-symbols-outlined text-base">
                         {FINAL_STATUSES.has(delivery.status) ? "visibility" : "my_location"}
@@ -218,7 +218,7 @@ export function DeliveriesLedger({
           <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">
             Prev
           </button>
-          <button className="px-3 py-1 text-xs bg-[#a3a6ff] text-[#0f00a4] rounded font-bold">1</button>
+          <button className="px-3 py-1 text-xs bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded font-bold">1</button>
           <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">
             Next
           </button>
@@ -230,11 +230,11 @@ export function DeliveriesLedger({
 
 function DeliveryStatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
-    requested: { label: "Requested", className: "bg-[#c180ff]/10 text-[#c180ff] border-[#c180ff]/20" },
-    accepted: { label: "Accepted", className: "bg-[#a3a6ff]/10 text-[#a3a6ff] border-[#a3a6ff]/20" },
-    collected: { label: "Collected", className: "bg-[#a3a6ff]/10 text-[#a3a6ff] border-[#a3a6ff]/20" },
-    in_transit: { label: "In Transit", className: "bg-[#a3a6ff]/10 text-[#a3a6ff] border-[#a3a6ff]/20" },
-    delivered: { label: "Delivered", className: "bg-[#ffa5d9]/10 text-[#ffa5d9] border-[#ffa5d9]/20" },
+    requested: { label: "Requested", className: "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border-[var(--color-secondary)]/20" },
+    accepted: { label: "Accepted", className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20" },
+    collected: { label: "Collected", className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20" },
+    in_transit: { label: "In Transit", className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20" },
+    delivered: { label: "Delivered", className: "bg-[var(--color-tertiary)]/10 text-[var(--color-tertiary)] border-[var(--color-tertiary)]/20" },
     cancelled: { label: "Cancelled", className: "bg-[#ff6e84]/10 text-[#ff6e84] border-[#ff6e84]/20" },
   }
   const config = map[status] ?? {
@@ -247,3 +247,4 @@ function DeliveryStatusPill({ status }: { status: string }) {
     </span>
   )
 }
+

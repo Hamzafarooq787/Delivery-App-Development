@@ -65,7 +65,7 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
               <div className="relative w-full max-w-md hidden sm:block">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-sm">search</span>
                 <input
-                  className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[#a3a6ff]/30 text-white placeholder-[#adaaaa] outline-none"
+                  className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[var(--color-primary)]/30 text-white placeholder-[#adaaaa] outline-none"
                   placeholder="Search jobs, earnings, or IDs..."
                   type="text"
                 />
@@ -76,12 +76,12 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
             <TestPushButton />
             <InstallButton />
             {!isLocked && (
-              <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
+              <button className="sm:hidden text-[#adaaaa] hover:text-[var(--color-primary)] transition-colors" aria-label="Search">
                 <span className="material-symbols-outlined">search</span>
               </button>
             )}
             {userId && isApproved && <RealtimeNotifications role="driver" userId={userId} />}
-            <button className="hidden md:block text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Help">
+            <button className="hidden md:block text-[#adaaaa] hover:text-[var(--color-primary)] transition-colors" aria-label="Help">
               <span className="material-symbols-outlined">help_outline</span>
             </button>
             <ProfileDropdown
@@ -109,3 +109,4 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
     </div>
   )
 }
+

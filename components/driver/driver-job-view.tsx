@@ -151,8 +151,8 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
         </div>
         <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
           job.status === "delivered" ? "bg-[#6ee7b7]/10 text-[#6ee7b7] border-[#6ee7b7]/20" :
-          job.status === "in_transit" ? "bg-[#a3a6ff]/10 text-[#a3a6ff] border-[#a3a6ff]/20" :
-          job.status === "collected" ? "bg-[#c180ff]/10 text-[#c180ff] border-[#c180ff]/20" :
+          job.status === "in_transit" ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20" :
+          job.status === "collected" ? "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border-[var(--color-secondary)]/20" :
           "bg-amber-400/10 text-amber-400 border-amber-400/20"
         }`}>
           {STATUS_LABELS[job.status] ?? job.status}
@@ -170,22 +170,22 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               return (
                 <div key={s} className="flex-1 flex flex-col items-center gap-1.5 relative">
                   {i < STATUS_STEPS.length - 1 && (
-                    <div className={`absolute top-4 left-1/2 w-full h-px ${done ? "bg-[#a3a6ff]" : "bg-[#494847]/30"}`} />
+                    <div className={`absolute top-4 left-1/2 w-full h-px ${done ? "bg-[var(--color-primary)]" : "bg-[#494847]/30"}`} />
                   )}
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-all ${
-                    done ? "bg-[#a3a6ff] border-[#a3a6ff]" :
-                    active ? "bg-[#1a1919] border-[#a3a6ff] shadow-[0_0_12px_rgba(163,166,255,0.4)]" :
+                    done ? "bg-[var(--color-primary)] border-[var(--color-primary)]" :
+                    active ? "bg-[#1a1919] border-[var(--color-primary)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.4)]" :
                     "bg-[#1a1919] border-[#494847]/30"
                   }`}>
                     {done ? (
                       <span className="material-symbols-outlined text-white text-sm">check</span>
                     ) : (
-                      <span className={`material-symbols-outlined text-sm ${active ? "text-[#a3a6ff]" : "text-[#494847]"}`}>
+                      <span className={`material-symbols-outlined text-sm ${active ? "text-[var(--color-primary)]" : "text-[#494847]"}`}>
                         {STATUS_ICONS[s]}
                       </span>
                     )}
                   </div>
-                  <p className={`text-[9px] font-bold uppercase tracking-wider text-center ${active ? "text-[#a3a6ff]" : done ? "text-[#adaaaa]" : "text-[#494847]"}`}>
+                  <p className={`text-[9px] font-bold uppercase tracking-wider text-center ${active ? "text-[var(--color-primary)]" : done ? "text-[#adaaaa]" : "text-[#494847]"}`}>
                     {STATUS_LABELS[s]}
                   </p>
                 </div>
@@ -223,9 +223,9 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
           <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Delivery Route</p>
           <div className="flex gap-3">
             <div className="flex flex-col items-center pt-1 shrink-0">
-              <div className="w-3 h-3 rounded-full border-2 border-[#a3a6ff] bg-[#0e0e0e]" />
+              <div className="w-3 h-3 rounded-full border-2 border-[var(--color-primary)] bg-[#0e0e0e]" />
               <div className="w-px flex-1 min-h-[32px] border-l border-dashed border-[#494847] my-1" />
-              <div className="w-3 h-3 rounded-full bg-[#c180ff]" />
+              <div className="w-3 h-3 rounded-full bg-[var(--color-secondary)]" />
             </div>
             <div className="flex-1 space-y-4 min-w-0">
               <div>
@@ -236,7 +236,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
                     href={`https://www.google.com/maps/dir/?api=1&destination=${pickup.lat},${pickup.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#a3a6ff] hover:underline"
+                    className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[var(--color-primary)] hover:underline"
                   >
                     <span className="material-symbols-outlined text-sm">navigation</span>
                     Navigate
@@ -251,7 +251,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
                     href={`https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[#c180ff] hover:underline"
+                    className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-[var(--color-secondary)] hover:underline"
                   >
                     <span className="material-symbols-outlined text-sm">navigation</span>
                     Navigate
@@ -317,8 +317,8 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
         <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
           <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Customer</p>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-[#a3a6ff]">{customerInitials()}</span>
+            <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+              <span className="text-sm font-bold text-[var(--color-primary)]">{customerInitials()}</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate">{customer?.full_name || "Customer"}</p>
@@ -327,7 +327,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
             {customer?.phone && (
               <a
                 href={`tel:${customer.phone}`}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-xs font-bold hover:bg-[#a3a6ff]/20 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold hover:bg-[var(--color-primary)]/20 transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">call</span>
                 Call
@@ -347,16 +347,16 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
             {timelineSteps.map((step, i) => (
               <div key={i} className={`relative flex items-start gap-4 ${step.status === "upcoming" ? "opacity-35" : ""}`}>
                 <div className={`z-10 w-6 h-6 rounded-full flex items-center justify-center border-2 shrink-0 ${
-                  step.status === "completed" ? "bg-[#a3a6ff] border-[#a3a6ff]" :
-                  step.status === "active" ? "bg-[#1a1919] border-[#a3a6ff] shadow-[0_0_10px_rgba(163,166,255,0.5)]" :
+                  step.status === "completed" ? "bg-[var(--color-primary)] border-[var(--color-primary)]" :
+                  step.status === "active" ? "bg-[#1a1919] border-[var(--color-primary)] shadow-[0_0_10px_rgba(var(--brand-rgb),0.5)]" :
                   "bg-[#1a1919] border-[#494847]/40"
                 }`}>
                   {step.status === "completed" && <span className="material-symbols-outlined text-white text-[12px]">check</span>}
-                  {step.status === "active" && <div className="w-2 h-2 rounded-full bg-[#a3a6ff]" />}
+                  {step.status === "active" && <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />}
                 </div>
                 <div className="flex-1 min-w-0 pb-1">
                   <div className="flex items-center justify-between">
-                    <p className={`text-sm font-bold ${step.status === "active" ? "text-[#a3a6ff]" : "text-white"}`}>{step.label}</p>
+                    <p className={`text-sm font-bold ${step.status === "active" ? "text-[var(--color-primary)]" : "text-white"}`}>{step.label}</p>
                     {step.time && <p className="text-[10px] text-[#494847]">{step.time}</p>}
                   </div>
                 </div>
@@ -379,8 +379,8 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
             {job.status === "accepted" && (
               <button
                 onClick={() => setShowParcelAuth(true)}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#a3a6ff] text-[#0f00a4] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98]"
-                style={{ boxShadow: "0 0 20px rgba(163,166,255,0.25)" }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98]"
+                style={{ boxShadow: "0 0 20px rgba(var(--brand-rgb),0.25)" }}
               >
                 <span className="material-symbols-outlined text-base">verified_user</span>
                 Authenticate Parcel
@@ -390,8 +390,8 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               <button
                 onClick={() => advanceStatus("in_transit")}
                 disabled={isPending}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#c180ff] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
-                style={{ boxShadow: "0 0 20px rgba(193,128,255,0.25)" }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[var(--color-secondary)] text-[#0e0e0e] font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ boxShadow: "0 0 20px rgba(var(--brand-rgb),0.25)" }}
               >
                 <span className="material-symbols-outlined text-base">directions_car</span>
                 {isPending ? "Updating…" : "Start Delivery"}
@@ -428,3 +428,4 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
     </div>
   )
 }
+

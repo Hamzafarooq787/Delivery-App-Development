@@ -23,17 +23,17 @@ export default function AboutPage() {
         </div>
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-28 sm:py-36">
           <div className="w-full max-w-4xl">
-            <span className="text-[#a3a6ff] font-headline font-bold tracking-widest text-xs uppercase mb-4 block">Our Mission</span>
+            <span className="text-[var(--color-primary)] font-headline font-bold tracking-widest text-xs uppercase mb-4 block">Our Mission</span>
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black font-headline text-white leading-tight tracking-tighter mb-6 sm:mb-8 text-balance break-words">
               Filling the{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#a3a6ff] to-[#c180ff]">Void</span>{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)]">Void</span>{" "}
               of Global Inefficiency.
             </h1>
             <p className="text-[#adaaaa] text-base sm:text-lg md:text-xl max-w-2xl font-light leading-relaxed">
               Go Drop was born from a singular obsession: that movement should be invisible. We are re-engineering the world&apos;s logistical backbone through autonomous coordination and hyper-predictive analytics.
             </p>
             <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
-              <Link href="/how-it-works" className="w-full sm:w-auto text-center bg-[#a3a6ff] text-[#0f00a4] font-headline font-bold px-10 py-5 rounded-xl shadow-[0_0_20px_rgba(163,166,255,0.3)] hover:scale-105 transition-transform">
+              <Link href="/how-it-works" className="w-full sm:w-auto text-center bg-[var(--color-primary)] text-[var(--color-on-primary)] font-headline font-bold px-10 py-5 rounded-xl shadow-[0_0_20px_rgba(var(--brand-rgb),0.3)] hover:scale-105 transition-transform">
                 Explore Our Tech
               </Link>
               <Link href="/contact" className="w-full sm:w-auto text-center bg-[#262626]/40 backdrop-blur-md border border-[#494847]/30 text-white px-10 py-5 rounded-xl hover:bg-[#262626] transition-colors">
@@ -56,14 +56,14 @@ export default function AboutPage() {
                 We don&apos;t just track shipments; we anticipate them. Our proprietary Kinetic Engine simulates millions of route variables in milliseconds, ensuring the void between point A and B is crossed with absolute precision.
               </p>
             </div>
-            <div className="mt-12 flex items-center gap-2 text-[#a3a6ff] font-bold cursor-pointer hover:gap-4 transition-all">
+            <div className="mt-12 flex items-center gap-2 text-[var(--color-primary)] font-bold cursor-pointer hover:gap-4 transition-all">
               View Technical Specs →
             </div>
           </div>
 
           {/* Small Callout */}
-          <div className="md:col-span-4 bg-gradient-to-br from-[#6f00be]/20 to-[#1a1919] rounded-3xl p-10 border border-[#c180ff]/10 flex flex-col items-center text-center justify-center">
-            <div className="w-16 h-16 bg-[#c180ff]/10 rounded-2xl flex items-center justify-center mb-6 text-3xl">🕸️</div>
+          <div className="md:col-span-4 bg-gradient-to-br from-[var(--color-secondary-container)]/20 to-[#1a1919] rounded-3xl p-10 border border-[var(--color-secondary)]/10 flex flex-col items-center text-center justify-center">
+            <div className="w-16 h-16 bg-[var(--color-secondary)]/10 rounded-2xl flex items-center justify-center mb-6 text-3xl">🕸️</div>
             <h3 className="text-xl font-headline font-bold text-white mb-2">Neural Network</h3>
             <p className="text-[#adaaaa] text-sm">A global mesh of smart nodes reacting in real-time to global events.</p>
           </div>
@@ -75,7 +75,7 @@ export default function AboutPage() {
             { icon: "🔒", title: "Absolute Security", desc: "Blockchain-verified chain of custody for high-stakes cargo." },
           ].map((item) => (
             <div key={item.title} className="md:col-span-4 bg-[#1a1919] rounded-3xl p-8 border border-[#494847]/5">
-              <span className="text-[#a3a6ff] text-2xl mb-4 block">{item.icon}</span>
+              <span className="text-[var(--color-primary)] text-2xl mb-4 block">{item.icon}</span>
               <h4 className="font-bold text-lg mb-2">{item.title}</h4>
               <p className="text-[#adaaaa] text-sm">{item.desc}</p>
             </div>
@@ -88,7 +88,7 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 md:px-16 py-16 sm:py-32 flex flex-col lg:flex-row gap-12 lg:gap-16 items-center">
           <div className="lg:w-1/2 w-full">
             <h2 className="text-4xl sm:text-5xl font-headline font-black mb-8 sm:mb-12 tracking-tighter text-balance">
-              The Global <span className="text-[#a3a6ff]">Pulse</span>
+              The Global <span className="text-[var(--color-primary)]">Pulse</span>
             </h2>
             <div className="space-y-12">
               {[
@@ -97,7 +97,7 @@ export default function AboutPage() {
                 { num: "03", stat: "99.9% Uptime", sub: "The Go Drop never sleeps, ensuring global trade remains uninterrupted." },
               ].map((item) => (
                 <div key={item.num} className="flex items-start gap-4 sm:gap-6 group">
-                  <div className="text-4xl sm:text-5xl font-black font-headline text-[#a3a6ff]/40 group-hover:text-[#a3a6ff] transition-colors">{item.num}</div>
+                  <div className="text-4xl sm:text-5xl font-black font-headline text-[var(--color-primary)]/40 group-hover:text-[var(--color-primary)] transition-colors">{item.num}</div>
                   <div>
                     <h4 className="text-3xl sm:text-4xl font-black text-white">{item.stat}</h4>
                     <p className="text-[#adaaaa] mt-2 max-w-sm">{item.sub}</p>
@@ -116,10 +116,10 @@ export default function AboutPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#1a1919] via-transparent to-transparent" />
             <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
               <div className="glass-card px-6 py-4 rounded-2xl border border-[#494847]/20">
-                <p className="text-[10px] text-[#a3a6ff] font-bold uppercase tracking-widest mb-1">Live Feed</p>
+                <p className="text-[10px] text-[var(--color-primary)] font-bold uppercase tracking-widest mb-1">Live Feed</p>
                 <p className="text-sm font-medium">Oceanic Corridor: Normal</p>
               </div>
-              <div className="w-10 h-10 rounded-full border-2 border-[#0e0e0e] bg-[#a3a6ff]/20 flex items-center justify-center text-[10px] font-bold">+12</div>
+              <div className="w-10 h-10 rounded-full border-2 border-[#0e0e0e] bg-[var(--color-primary)]/20 flex items-center justify-center text-[10px] font-bold">+12</div>
             </div>
           </div>
         </div>
@@ -133,10 +133,10 @@ export default function AboutPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {[
-            { name: "Marcus Chen", role: "Systemic Architect", badge: "Founder / CEO", badgeColor: "[#a3a6ff]", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDIfAzYvu9Uyrtj8JtXcycgN8OR4SXBuQ_em6xcmjpOP-TPCTsCvGuOHQWsziPlnku9maoty_803tH20-XLoS8T99u8Us_vuZ8SSqnVLPma5InG0Fo1DTDoXO5YgEGbleH_HM9PveWaQ699UJHetZx6FAo_Dac37ue2fV0dLuLGjtslfOKjpdxCCIuBHi06_aTUh_nR7BhtL1cmWBd2QiM2uO12S_0fJYTAExR9S753fH5w3HvO3s1Mq7Rp3qOcBTc3Jm7gnZRp8w" },
-            { name: "Elena Rodriguez", role: "Neural Specialist", badge: "Head of AI", badgeColor: "[#c180ff]", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuATyUTb-_ECzj49mPJAlE_TkKse2p1IPrnofe3ETp1pUY_S0oIhDy8PQkXkHB-SnOKzU_J0PeKtPO5IctinFV0paLVwfyM7GBcXphBbJmyFq975L2iFK8vIRc6tUcu_R2BVmgFBDFxdzVfWDTg7GonI-n8F4Meq_auZyLHGaffXsENbIJHnAhtoMv1mafOBr52nLi8vyOSnRfWsEKow6txDTKOKp1pP8Cl7_HSajoMyETE9BAy1mECJ_k1jZKRdYO3bbYFV2bIs7w" },
-            { name: "David Park", role: "Global Strategist", badge: "Operations", badgeColor: "[#a3a6ff]", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBkLdjwjRs6l9seAbKZBCszxcM3lzAJr036Ewys95jksH8mFc7IlvlyV9cySmpci1Uem87jHgPdqpXO_Dfb8O2vKkZwhFBeIKzTIL_AlSM0MpB9Rxwxw8CZCVxOTgqqEkezcB6ZV_vAoPWPrBaFF1YKy0agPdLZz13KxhhFAo3usDMhwIyQS37BUIWTV7mVq3jTOzFrkD1nHmKaGw_dEvtroPnADy_57njxQpHwPHO6ajCjlS65MCQ0dI79gcFoW8nHfpuWHnLT6A" },
-            { name: "Sarah Jenkins", role: "Interface Pioneer", badge: "Product Design", badgeColor: "[#ffa5d9]", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDQYh-2ccFRglo3CMG2zTok8QbHNmORmZg70O0tMRO_HFdKRgR0sOBduKcBVZ3C3jh2i5ahik7taggxrodIoMjYJ40fSZDpkbxV9i4ZGb0xt2iCqd7N_JMzZpJ3iCGtARY77-ANQFb6Ou8aWW9BXjkaXRH3WVFTSZz3NTrn-ZFRjbPYo-uBU6_hi4GX7JtmSw44goX-8tGjX0XCTrzObxsDC-_pAGAQeoJbALmaWUf3iRzUYvfQC8ClwDzBt791SQs--TfT6jHaPA" },
+            { name: "Marcus Chen", role: "Systemic Architect", badge: "Founder / CEO", badgeColor: "[var(--color-primary)]", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDIfAzYvu9Uyrtj8JtXcycgN8OR4SXBuQ_em6xcmjpOP-TPCTsCvGuOHQWsziPlnku9maoty_803tH20-XLoS8T99u8Us_vuZ8SSqnVLPma5InG0Fo1DTDoXO5YgEGbleH_HM9PveWaQ699UJHetZx6FAo_Dac37ue2fV0dLuLGjtslfOKjpdxCCIuBHi06_aTUh_nR7BhtL1cmWBd2QiM2uO12S_0fJYTAExR9S753fH5w3HvO3s1Mq7Rp3qOcBTc3Jm7gnZRp8w" },
+            { name: "Elena Rodriguez", role: "Neural Specialist", badge: "Head of AI", badgeColor: "[var(--color-secondary)]", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuATyUTb-_ECzj49mPJAlE_TkKse2p1IPrnofe3ETp1pUY_S0oIhDy8PQkXkHB-SnOKzU_J0PeKtPO5IctinFV0paLVwfyM7GBcXphBbJmyFq975L2iFK8vIRc6tUcu_R2BVmgFBDFxdzVfWDTg7GonI-n8F4Meq_auZyLHGaffXsENbIJHnAhtoMv1mafOBr52nLi8vyOSnRfWsEKow6txDTKOKp1pP8Cl7_HSajoMyETE9BAy1mECJ_k1jZKRdYO3bbYFV2bIs7w" },
+            { name: "David Park", role: "Global Strategist", badge: "Operations", badgeColor: "[var(--color-primary)]", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBkLdjwjRs6l9seAbKZBCszxcM3lzAJr036Ewys95jksH8mFc7IlvlyV9cySmpci1Uem87jHgPdqpXO_Dfb8O2vKkZwhFBeIKzTIL_AlSM0MpB9Rxwxw8CZCVxOTgqqEkezcB6ZV_vAoPWPrBaFF1YKy0agPdLZz13KxhhFAo3usDMhwIyQS37BUIWTV7mVq3jTOzFrkD1nHmKaGw_dEvtroPnADy_57njxQpHwPHO6ajCjlS65MCQ0dI79gcFoW8nHfpuWHnLT6A" },
+            { name: "Sarah Jenkins", role: "Interface Pioneer", badge: "Product Design", badgeColor: "[var(--color-tertiary)]", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDQYh-2ccFRglo3CMG2zTok8QbHNmORmZg70O0tMRO_HFdKRgR0sOBduKcBVZ3C3jh2i5ahik7taggxrodIoMjYJ40fSZDpkbxV9i4ZGb0xt2iCqd7N_JMzZpJ3iCGtARY77-ANQFb6Ou8aWW9BXjkaXRH3WVFTSZz3NTrn-ZFRjbPYo-uBU6_hi4GX7JtmSw44goX-8tGjX0XCTrzObxsDC-_pAGAQeoJbALmaWUf3iRzUYvfQC8ClwDzBt791SQs--TfT6jHaPA" },
           ].map((member) => (
             <div key={member.name} className="group">
               <div className="relative aspect-[3/4] rounded-3xl overflow-hidden mb-6 border border-[#494847]/10">
@@ -162,15 +162,15 @@ export default function AboutPage() {
 
       {/* CTA */}
       <section className="px-4 sm:px-8 md:px-16 py-20 sm:py-32 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#a3a6ff]/5 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-primary)]/5 to-transparent pointer-events-none" />
         <div className="relative z-10 max-w-2xl mx-auto">
           <h2 className="text-3xl sm:text-4xl md:text-6xl font-headline font-black mb-6 sm:mb-8 tracking-tighter text-balance">
-            Ready to Enter the <span className="text-[#a3a6ff]">Void?</span>
+            Ready to Enter the <span className="text-[var(--color-primary)]">Void?</span>
           </h2>
           <p className="text-[#adaaaa] text-lg mb-10 leading-relaxed">
             Join the global leaders who trust Go Drop for their most critical logistics missions.
           </p>
-          <Link href="/signup" className="inline-block bg-[#a3a6ff] text-[#0f00a4] font-bold px-10 py-5 rounded-xl shadow-[0_10px_30px_rgba(163,166,255,0.2)] hover:shadow-[0_15px_40px_rgba(163,166,255,0.3)] hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-[0.1em]">
+          <Link href="/signup" className="inline-block bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold px-10 py-5 rounded-xl shadow-[0_10px_30px_rgba(var(--brand-rgb),0.2)] hover:shadow-[0_15px_40px_rgba(var(--brand-rgb),0.3)] hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-[0.1em]">
             Get Started Today
           </Link>
         </div>
@@ -178,3 +178,4 @@ export default function AboutPage() {
     </div>
   )
 }
+

@@ -96,8 +96,8 @@ export default async function AdminReportsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-[#1a1919] border border-[#494847]/20 px-4 py-2.5 rounded-xl hover:border-[#a3a6ff]/40 transition-colors">
-            <span className="material-symbols-outlined text-sm text-[#a3a6ff]">download</span>
+          <button className="flex items-center gap-2 bg-[#1a1919] border border-[#494847]/20 px-4 py-2.5 rounded-xl hover:border-[var(--color-primary)]/40 transition-colors">
+            <span className="material-symbols-outlined text-sm text-[var(--color-primary)]">download</span>
             <span className="text-white text-sm font-semibold">Export</span>
           </button>
         </div>
@@ -109,16 +109,16 @@ export default async function AdminReportsPage() {
           <div key={stat.label} className="bg-[#1a1919] p-6 rounded-xl">
             <div className="flex items-start justify-between mb-4">
               <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">{stat.label}</p>
-              <span className="material-symbols-outlined text-[#a3a6ff] text-xl">{stat.icon}</span>
+              <span className="material-symbols-outlined text-[var(--color-primary)] text-xl">{stat.icon}</span>
             </div>
             <p className="text-3xl font-extrabold font-headline text-white">{stat.value}</p>
             <div className="flex items-center gap-1 mt-2">
               <span
-                className={`material-symbols-outlined text-[10px] ${stat.up ? "text-[#a3a6ff]" : "text-[#ff6e84]"}`}
+                className={`material-symbols-outlined text-[10px] ${stat.up ? "text-[var(--color-primary)]" : "text-[#ff6e84]"}`}
               >
                 {stat.up ? "arrow_upward" : "arrow_downward"}
               </span>
-              <span className={`text-xs font-bold ${stat.up ? "text-[#a3a6ff]" : "text-[#ff6e84]"}`}>
+              <span className={`text-xs font-bold ${stat.up ? "text-[var(--color-primary)]" : "text-[#ff6e84]"}`}>
                 {stat.delta}
               </span>
               <span className="text-[10px] text-[#adaaaa]">vs. last period</span>
@@ -136,7 +136,7 @@ export default async function AdminReportsPage() {
               <h3 className="text-lg font-bold text-white font-headline">Revenue Momentum</h3>
               <p className="text-[#adaaaa] text-xs">Weekly earnings in GBP (£)</p>
             </div>
-            <span className="text-[10px] text-[#a3a6ff] bg-[#a3a6ff]/10 px-3 py-1 rounded-full font-bold">
+            <span className="text-[10px] text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 rounded-full font-bold">
               7-Day Window
             </span>
           </div>
@@ -157,7 +157,7 @@ export default async function AdminReportsPage() {
       <div className="bg-[#1a1919] rounded-xl overflow-hidden">
         <div className="px-6 md:px-8 py-5 border-b border-[#494847]/10 flex items-center justify-between">
           <h3 className="text-base font-bold text-white font-headline">Top Field Agents</h3>
-          <a href="/dashboard/admin/drivers" className="text-xs text-[#a3a6ff] hover:underline">
+          <a href="/dashboard/admin/drivers" className="text-xs text-[var(--color-primary)] hover:underline">
             View All
           </a>
         </div>
@@ -184,7 +184,7 @@ export default async function AdminReportsPage() {
                   <td className="px-8 py-5">
                     <span
                       className={`text-xs font-extrabold font-headline ${
-                        i === 0 ? "text-[#a3a6ff]" : i === 1 ? "text-[#c180ff]" : "text-[#adaaaa]"
+                        i === 0 ? "text-[var(--color-primary)]" : i === 1 ? "text-[var(--color-secondary)]" : "text-[#adaaaa]"
                       }`}
                     >
                       #{i + 1}
@@ -192,7 +192,7 @@ export default async function AdminReportsPage() {
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-[#a3a6ff]/10 flex items-center justify-center text-[#a3a6ff] text-xs font-bold">
+                      <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] text-xs font-bold">
                         {(driver.full_name ?? driver.email ?? "?").slice(0, 2).toUpperCase()}
                       </div>
                       <div>
@@ -204,7 +204,7 @@ export default async function AdminReportsPage() {
                   <td className="px-8 py-5 text-right text-white font-bold text-sm">—</td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span className="material-symbols-outlined text-xs text-[#a3a6ff]">star</span>
+                      <span className="material-symbols-outlined text-xs text-[var(--color-primary)]">star</span>
                       <span className="text-white font-bold text-sm">—</span>
                     </div>
                   </td>
@@ -218,3 +218,4 @@ export default async function AdminReportsPage() {
     </div>
   )
 }
+

@@ -6,7 +6,9 @@ import { ThemeProvider } from '@/components/shared/theme-provider'
 import { SWRegister } from '@/components/pwa/sw-register'
 import { IconGuard } from '@/components/pwa/icon-guard'
 import { MATERIAL_ICON_NAMES } from '@/lib/material-icon-names'
+import { BrandProvider } from '@/components/shared/brand-provider'
 import './globals.css'
+import './brand.css'
 
 // Subset of Material Symbols: only the icons the app uses (see lib/material-icon-names.ts),
 // ~70 KB instead of the ~4 MB full font. Icon names MUST be alphabetical.
@@ -62,7 +64,7 @@ export default function RootLayout({
         {/* Anti-flash: apply saved theme before first paint */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('kv-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('kv-theme')||'dark';document.documentElement.setAttribute('data-theme',t);var b=localStorage.getItem('godrop-brand');document.documentElement.setAttribute('data-brand',b==='purple'?'purple':'orange');}catch(e){}`,
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -86,7 +88,7 @@ export default function RootLayout({
       </head>
       <body className="bg-[#0e0e0e] font-inter text-white overflow-x-hidden antialiased">
         <ThemeProvider>
-          {children}
+          <BrandProvider>{children}</BrandProvider>
         </ThemeProvider>
         <Toaster
           position="top-right"
@@ -105,7 +107,7 @@ export default function RootLayout({
               fontSize: '13px',
               fontFamily: 'Inter, sans-serif',
               fontWeight: '500',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(163,166,255,0.06)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(var(--brand-rgb),0.06)',
               minWidth: '300px',
               maxWidth: '380px',
             },
@@ -113,7 +115,7 @@ export default function RootLayout({
               title: 'font-bold text-white text-sm',
               description: 'text-[#adaaaa] text-xs mt-0.5 leading-relaxed',
               icon: 'text-base',
-              actionButton: 'bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs rounded-lg px-3 py-1.5 hover:brightness-110',
+              actionButton: 'bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs rounded-lg px-3 py-1.5 hover:brightness-110',
               cancelButton: 'bg-[#262626] text-[#adaaaa] font-bold text-xs rounded-lg px-3 py-1.5',
               closeButton: 'text-[#adaaaa] hover:text-white hover:bg-[#262626] rounded-lg',
               success: 'border-l-2 border-l-emerald-500',
@@ -130,3 +132,4 @@ export default function RootLayout({
     </html>
   )
 }
+

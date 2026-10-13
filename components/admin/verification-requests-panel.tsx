@@ -7,10 +7,10 @@ import { DocumentPreviewModal } from "@/components/admin/document-preview-modal"
 import { VEHICLE_INFO } from "@/lib/vehicles"
 
 const DOC_TYPES = [
-  { type: "identity",            label: "Identity",       icon: "badge",   color: "text-[#a3a6ff]", bg: "bg-[#a3a6ff]/10", border: "border-[#a3a6ff]/20" },
+  { type: "identity",            label: "Identity",       icon: "badge",   color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10", border: "border-[var(--color-primary)]/20" },
   { type: "selfie",              label: "Selfie",         icon: "face",    color: "text-[#6ee7b7]", bg: "bg-[#6ee7b7]/10", border: "border-[#6ee7b7]/20" },
-  { type: "insurance",           label: "Insurance",      icon: "shield",  color: "text-[#c180ff]", bg: "bg-[#c180ff]/10", border: "border-[#c180ff]/20" },
-  { type: "vehicle_registration",label: "Vehicle Reg.",   icon: "commute", color: "text-[#a3a6ff]", bg: "bg-[#a3a6ff]/10", border: "border-[#a3a6ff]/20" },
+  { type: "insurance",           label: "Insurance",      icon: "shield",  color: "text-[var(--color-secondary)]", bg: "bg-[var(--color-secondary)]/10", border: "border-[var(--color-secondary)]/20" },
+  { type: "vehicle_registration",label: "Vehicle Reg.",   icon: "commute", color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10", border: "border-[var(--color-primary)]/20" },
 ]
 
 function fmtDate(v: string) {
@@ -120,7 +120,7 @@ function DocumentCard({
                   URL.revokeObjectURL(url)
                 } catch { window.open(doc!.file_url, "_blank") }
               }}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] hover:bg-[#a3a6ff]/20 rounded-lg text-[10px] font-semibold transition-all"
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 rounded-lg text-[10px] font-semibold transition-all"
             >
               <span className="material-symbols-outlined text-xs">download</span>Download
             </a>
@@ -197,8 +197,8 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
       <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#494847]/10">
-          <div className="w-9 h-9 rounded-full bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-[#a3a6ff]">{initials}</span>
+          <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+            <span className="text-xs font-bold text-[var(--color-primary)]">{initials}</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white truncate">{driver.full_name}</p>
@@ -340,9 +340,9 @@ export function VerificationRequestsPanel({ initialDrivers }: { initialDrivers: 
           <p className="text-[#adaaaa] mt-1">Review and approve driver verification submissions.</p>
         </div>
         {drivers.length > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-[#a3a6ff] animate-pulse" />
-            <span className="text-xs font-bold text-[#a3a6ff]">{drivers.length} pending</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
+            <span className="text-xs font-bold text-[var(--color-primary)]">{drivers.length} pending</span>
           </div>
         )}
       </div>
@@ -363,3 +363,4 @@ export function VerificationRequestsPanel({ initialDrivers }: { initialDrivers: 
     </div>
   )
 }
+

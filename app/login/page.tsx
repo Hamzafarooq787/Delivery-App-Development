@@ -1,5 +1,6 @@
 "use client"
 
+import { BrandLogo } from '@/components/shared/brand-logo'
 import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -47,20 +48,15 @@ function LoginPageContent() {
     <main className="min-h-screen bg-[#0e0e0e] flex items-center justify-center px-4">
       {/* Background glow blobs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#a3a6ff]/5 blur-[120px]" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[#c180ff]/5 blur-[100px]" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[var(--color-primary)]/5 blur-[120px]" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[var(--color-secondary)]/5 blur-[100px]" />
       </div>
 
       <div className="relative w-full max-w-[400px]">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
           <Link href="/" className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#a3a6ff] text-2xl">bolt</span>
-            </div>
-            <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">
-              GO DROP
-            </h1>
+            <BrandLogo />
           </Link>
           <p className="text-[#adaaaa] text-sm mt-1">Premium Logistics Platform</p>
         </div>
@@ -71,7 +67,7 @@ function LoginPageContent() {
           <p className="text-[#adaaaa] text-sm mb-8">Sign in to your account to continue</p>
 
           {resetSuccess && !error && (
-            <div className="mb-6 flex items-center gap-2 bg-[#a3a6ff]/10 border border-[#a3a6ff]/20 text-[#a3a6ff] text-sm rounded-xl px-4 py-3">
+            <div className="mb-6 flex items-center gap-2 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-sm rounded-xl px-4 py-3">
               <span className="material-symbols-outlined text-[18px]">check_circle</span>
               Password reset successfully. Please sign in with your new password.
             </div>
@@ -100,7 +96,7 @@ function LoginPageContent() {
                   type="email"
                   required
                   placeholder="you@example.com"
-                  className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
+                  className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-1 focus:ring-[var(--color-primary)]/30 transition-all"
                 />
               </div>
             </div>
@@ -111,7 +107,7 @@ function LoginPageContent() {
                 <label htmlFor="password" className="text-xs font-semibold text-[#adaaaa] uppercase tracking-widest">
                   Password
                 </label>
-                <button type="button" className="text-xs text-[#a3a6ff] hover:text-[#c180ff] transition-colors">
+                <button type="button" className="text-xs text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
                   Forgot password?
                 </button>
               </div>
@@ -125,7 +121,7 @@ function LoginPageContent() {
                   type="password"
                   required
                   placeholder="••••••••"
-                  className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[#a3a6ff]/60 focus:ring-1 focus:ring-[#a3a6ff]/30 transition-all"
+                  className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-1 focus:ring-[var(--color-primary)]/30 transition-all"
                 />
               </div>
             </div>
@@ -166,7 +162,7 @@ function LoginPageContent() {
           {/* Sign up link */}
           <p className="text-center text-sm text-[#adaaaa] mt-6">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-[#a3a6ff] hover:text-[#c180ff] font-semibold transition-colors">
+            <Link href="/signup" className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] font-semibold transition-colors">
               Create account
             </Link>
           </p>
@@ -180,3 +176,4 @@ function LoginPageContent() {
     </main>
   )
 }
+

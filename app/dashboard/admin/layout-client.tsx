@@ -42,17 +42,17 @@ export function AdminLayoutClient({ children, user, pendingVerifications, pendin
             </button>
             <div className="relative w-full max-w-md hidden sm:block">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-sm">search</span>
-              <input className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[#a3a6ff]/30 text-white placeholder-[#adaaaa] outline-none" placeholder="Search transactions, users, or IDs..." type="text" />
+              <input className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[var(--color-primary)]/30 text-white placeholder-[#adaaaa] outline-none" placeholder="Search transactions, users, or IDs..." type="text" />
             </div>
           </div>
           <div className="flex items-center gap-3 md:gap-5 shrink-0">
             <InstallButton />
-            <button className="sm:hidden text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Search">
+            <button className="sm:hidden text-[#adaaaa] hover:text-[var(--color-primary)] transition-colors" aria-label="Search">
               <span className="material-symbols-outlined">search</span>
             </button>
             {userId && <AdminChatPanel userId={userId} />}
             {userId && <RealtimeNotifications role="admin" userId={userId} />}
-            <button className="hidden md:block text-[#adaaaa] hover:text-[#a3a6ff] transition-colors" aria-label="Help">
+            <button className="hidden md:block text-[#adaaaa] hover:text-[var(--color-primary)] transition-colors" aria-label="Help">
               <span className="material-symbols-outlined">help_outline</span>
             </button>
             <ProfileDropdown
@@ -74,3 +74,4 @@ export function AdminLayoutClient({ children, user, pendingVerifications, pendin
     </div>
   )
 }
+

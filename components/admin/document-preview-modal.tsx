@@ -54,7 +54,7 @@ export function DocumentPreviewModal({ doc, onClose }: { doc: Doc; onClose: () =
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#a3a6ff]">description</span>
+            <span className="material-symbols-outlined text-[var(--color-primary)]">description</span>
             <div>
               <p className="text-sm font-bold text-white">{label}</p>
               <p className="text-[10px] text-[#adaaaa] uppercase font-bold tracking-wider">Document Preview</p>
@@ -92,7 +92,7 @@ export function DocumentPreviewModal({ doc, onClose }: { doc: Doc; onClose: () =
             )}
             <button
               onClick={() => triggerDownload(doc.file_url, filename)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-[#a3a6ff] text-[#0f00a4] font-bold text-xs rounded-lg hover:bg-[#8387ff] transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs rounded-lg hover:bg-[var(--color-primary-fixed-dim)] transition-all"
             >
               <span className="material-symbols-outlined text-sm">download</span>
               Download
@@ -139,3 +139,4 @@ export function DocumentPreviewModal({ doc, onClose }: { doc: Doc; onClose: () =
     </div>
   )
 }
+
