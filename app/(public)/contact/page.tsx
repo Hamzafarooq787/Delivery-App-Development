@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { ContactForm } from "./contact-form"
 
 export const metadata: Metadata = {
   title: "Contact | Go Drop",
@@ -28,63 +29,7 @@ export default function ContactPage() {
 
       {/* Main Content */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-20 sm:pb-32 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form */}
-        <div className="lg:col-span-2 bg-[#1a1919] rounded-3xl p-6 sm:p-8 md:p-12 border border-[#494847]/15">
-          <h2 className="text-2xl font-bold font-headline mb-8">Transmit a Message</h2>
-          <form className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-2">First Name</label>
-                <input
-                  type="text"
-                  placeholder="Marcus"
-                  className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-2">Last Name</label>
-                <input
-                  type="text"
-                  placeholder="Chen"
-                  className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-2">Email Address</label>
-              <input
-                type="email"
-                placeholder="ops@yourcompany.com"
-                className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-2">Subject</label>
-              <select className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors">
-                <option className="bg-[#1a1919]" value="">Select a topic...</option>
-                <option className="bg-[#1a1919]">Enterprise Partnership</option>
-                <option className="bg-[#1a1919]">Technical Support</option>
-                <option className="bg-[#1a1919]">Billing Inquiry</option>
-                <option className="bg-[#1a1919]">Damage Claim</option>
-                <option className="bg-[#1a1919]">Custom Fleet Request</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] text-[#adaaaa] uppercase tracking-widest font-bold mb-2">Message</label>
-              <textarea
-                rows={6}
-                placeholder="Describe your logistical requirements in detail. The more data you provide, the faster we can mobilize a response."
-                className="w-full bg-black/40 border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[#a3a6ff]/50 focus:ring-1 focus:ring-[#a3a6ff]/20 transition-colors resize-none"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-[#a3a6ff] text-[#0f00a4] font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(163,166,255,0.2)] hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest text-sm"
-            >
-              Transmit Signal
-            </button>
-          </form>
-        </div>
+        <ContactForm />
 
         {/* Info Panel */}
         <div className="flex flex-col gap-4">
@@ -93,21 +38,21 @@ export default function ContactPage() {
               icon: "📡",
               colorClass: "bg-[#a3a6ff]/10 text-[#a3a6ff]",
               title: "Operations Email",
-              value: "ops@kineticvoid.io",
+              value: "ops@godrop.io",
               sub: "Response within 2 hours",
             },
             {
               icon: "📞",
               colorClass: "bg-[#c180ff]/10 text-[#c180ff]",
               title: "Priority Hotline",
-              value: "+1 (800) KV-FLEET",
-              sub: "24/7 for Quantum tier clients",
+              value: "+44 800 GO DROP",
+              sub: "24/7 for premium clients",
             },
             {
               icon: "📍",
               colorClass: "bg-[#a3a6ff]/10 text-[#a3a6ff]",
-              title: "Global Nexus HQ",
-              value: "1 Void Plaza, San Francisco",
+              title: "HQ",
+              value: "United Kingdom",
               sub: "By appointment only",
             },
             {
@@ -115,7 +60,7 @@ export default function ContactPage() {
               colorClass: "bg-[#c180ff]/10 text-[#c180ff]",
               title: "Operational Hours",
               value: "00:00 – 23:59 UTC",
-              sub: "The void never sleeps",
+              sub: "Always on, always moving",
             },
           ].map((item) => (
             <div key={item.title} className="bg-[#1a1919] rounded-2xl p-6 border border-[#494847]/10 flex gap-5 items-start hover:border-[#494847]/25 transition-colors">
@@ -133,10 +78,10 @@ export default function ContactPage() {
           {/* SLA Note */}
           <div className="bg-[#a3a6ff]/5 border border-[#a3a6ff]/15 rounded-2xl p-6">
             <h4 className="font-bold text-[#a3a6ff] mb-2 flex items-center gap-2 text-sm">
-              ⚡ Enterprise SLA
+              ⚡ Priority Support
             </h4>
             <p className="text-xs text-[#adaaaa] leading-relaxed">
-              Quantum tier clients receive a dedicated escalation path with guaranteed response windows and a named account engineer.
+              Premium clients receive a dedicated escalation path with guaranteed response windows and a named account manager.
             </p>
           </div>
         </div>

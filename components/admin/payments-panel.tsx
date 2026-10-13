@@ -418,9 +418,9 @@ function TxTableRow({ tx, onSelect }: { tx: TxRow; onSelect: () => void }) {
           >
             <span className="material-symbols-outlined text-sm text-[#adaaaa]">open_in_new</span>
           </button>
-          {tx.trackingNumber && (
+          {tx.type === "delivery" && (
             <a
-              href={`/dashboard/admin/deliveries?tracking=${tx.trackingNumber}`}
+              href={`/dashboard/admin/orders/${tx.id}`}
               title="View delivery"
               className="w-7 h-7 rounded-lg bg-[#262626] hover:bg-[#2c2c2c] flex items-center justify-center transition-colors"
             >
@@ -492,7 +492,7 @@ function TxDetailModal({ tx, onClose }: { tx: TxRow; onClose: () => void }) {
                 Delivery
               </span>
               <a
-                href={`/dashboard/admin/deliveries?tracking=${tx.trackingNumber}`}
+                href={`/dashboard/admin/orders?tracking=${tx.trackingNumber}`}
                 className="text-xs text-[#a3a6ff] hover:underline font-mono"
               >
                 {tx.trackingNumber}
@@ -506,7 +506,7 @@ function TxDetailModal({ tx, onClose }: { tx: TxRow; onClose: () => void }) {
         <div className="mt-6 flex gap-3">
           {tx.trackingNumber && (
             <a
-              href={`/dashboard/admin/deliveries?tracking=${tx.trackingNumber}`}
+              href={`/dashboard/admin/orders?tracking=${tx.trackingNumber}`}
               className="flex-1 flex items-center justify-center gap-2 bg-[#a3a6ff]/10 hover:bg-[#a3a6ff]/20 text-[#a3a6ff] text-sm font-semibold py-2.5 rounded-xl transition-colors"
             >
               <span className="material-symbols-outlined text-sm">local_shipping</span>

@@ -20,6 +20,7 @@ import {
   requestNotificationPermission,
   type SoundType,
 }                                     from "@/lib/notification-sound"
+import { LogoutButton }              from "@/components/auth/logout-button"
 
 // ─────────── Shared primitives ─────────────────────────────────────────────
 
@@ -612,8 +613,7 @@ function SecuritySection() {
 
       {/* Session info */}
       <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Session</p>
-      <a
-        href="/auth/logout"
+      <LogoutButton
         className="flex items-center gap-3 w-full p-4 bg-[#262626] hover:bg-[#ff6e84]/10 border border-[#494847]/10 hover:border-[#ff6e84]/20 rounded-xl transition-all group"
       >
         <span className="material-symbols-outlined text-[#ff6e84] group-hover:scale-110 transition-transform">logout</span>
@@ -622,7 +622,7 @@ function SecuritySection() {
           <p className="text-xs text-[#adaaaa]">Sign out of this device</p>
         </div>
         <span className="material-symbols-outlined text-[#adaaaa] text-sm ml-auto">chevron_right</span>
-      </a>
+      </LogoutButton>
     </div>
   )
 }
