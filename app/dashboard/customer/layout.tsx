@@ -58,7 +58,7 @@ export default function CustomerDashboardLayout({
   }, [router])
 
   return (
-    <div className="min-h-screen bg-surface-container-low">
+    <div className={isHome ? "bg-surface-container-low" : "min-h-screen bg-surface-container-low"}>
       {/* Top bar chrome comes from each page's own <Header /> — mounting
           CustomerTopBar here as well rendered two top bars at once. */}
       {!isHome && <><Sidebar /><BottomNav /></>}
