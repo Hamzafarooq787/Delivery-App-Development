@@ -30,8 +30,8 @@ export async function submitContactForm(data: {
   })
 
   if (error) {
-    // If the table doesn't exist yet, still show success to the user
     console.error("contact_requests insert error:", error.message)
+    return { error: "Failed to send your message. Please try again later." }
   }
 
   return {}

@@ -418,9 +418,9 @@ function TxTableRow({ tx, onSelect }: { tx: TxRow; onSelect: () => void }) {
           >
             <span className="material-symbols-outlined text-sm text-[#adaaaa]">open_in_new</span>
           </button>
-          {tx.trackingNumber && (
+          {tx.type === "delivery" && (
             <a
-              href={`/dashboard/admin/orders?tracking=${tx.trackingNumber}`}
+              href={`/dashboard/admin/orders/${tx.id}`}
               title="View delivery"
               className="w-7 h-7 rounded-lg bg-[#262626] hover:bg-[#2c2c2c] flex items-center justify-center transition-colors"
             >
