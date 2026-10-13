@@ -25,18 +25,18 @@ export default function Footer() {
           <h6 className="font-bold mb-6">Network</h6>
           <ul className="space-y-4 text-sm text-[#adaaaa]">
             <li>
-              <a className="hover:text-[#a3a6ff]" href="#">
-                Global Reach
+              <a className="hover:text-[#a3a6ff]" href="/our-fleet">
+                Our Fleet
               </a>
             </li>
             <li>
-              <a className="hover:text-[#a3a6ff]" href="#">
-                Fleet Tiers
+              <a className="hover:text-[#a3a6ff]" href="/pricing">
+                Pricing
               </a>
             </li>
             <li>
-              <a className="hover:text-[#a3a6ff]" href="#">
-                Corporate Accounts
+              <a className="hover:text-[#a3a6ff]" href="/how-it-works">
+                How It Works
               </a>
             </li>
           </ul>
@@ -46,18 +46,18 @@ export default function Footer() {
           <h6 className="font-bold mb-6">Support</h6>
           <ul className="space-y-4 text-sm text-[#adaaaa]">
             <li>
-              <a className="hover:text-[#a3a6ff]" href="#">
-                Help Center
+              <a className="hover:text-[#a3a6ff]" href="/contact">
+                Contact Us
               </a>
             </li>
             <li>
-              <a className="hover:text-[#a3a6ff]" href="#">
-                API Docs
+              <a className="hover:text-[#a3a6ff]" href="/safety">
+                Safety
               </a>
             </li>
             <li>
-              <a className="hover:text-[#a3a6ff]" href="#">
-                System Status
+              <a className="hover:text-[#a3a6ff]" href="/prohibited-items">
+                Prohibited Items
               </a>
             </li>
           </ul>
@@ -69,8 +69,8 @@ export default function Footer() {
           © 2024 Go Drop Logistics. All rights reserved.
         </p>
         <div className="flex gap-8 text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
+          <a href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a>
+          <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
         </div>
       </div>
     </footer>
