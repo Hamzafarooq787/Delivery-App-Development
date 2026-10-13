@@ -9,18 +9,20 @@ const module = { exports: {} }
 new Function('exports', 'module', code)(module.exports, module)
 const { clampSlide, isDoubleTap, swipeDirection, wheelDirection } = module.exports
 
-test('scroll up advances, scroll down goes back, horizontal scroll follows its direction', () => {
-  assert.equal(wheelDirection(0, -120), 1)
-  assert.equal(wheelDirection(0, 120), -1)
+test('scroll down advances, scroll up goes back, horizontal scroll follows its direction', () => {
+  assert.equal(wheelDirection(0, -120), -1)
+  assert.equal(wheelDirection(0, 120), 1)
   assert.equal(wheelDirection(120, 0), 1)
   assert.equal(wheelDirection(-120, 0), -1)
   assert.equal(wheelDirection(0, 0), 0)
 })
 
-test('left and right swipes navigate; small movements and vertical scrolling do not', () => {
+test('horizontal and vertical swipes navigate; small and diagonal movements do not', () => {
   assert.equal(swipeDirection(-100, 10), 1)
   assert.equal(swipeDirection(100, -10), -1)
-  assert.equal(swipeDirection(20, 150), 0)
+  assert.equal(swipeDirection(20, 150), -1)
+  assert.equal(swipeDirection(10, -150), 1)
+  assert.equal(swipeDirection(100, 100), 0)
   assert.equal(swipeDirection(25, 0), 0)
 })
 

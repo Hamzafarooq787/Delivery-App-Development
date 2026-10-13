@@ -79,8 +79,61 @@ export default function HomeSlides() {
     return () => { element.removeEventListener("wheel", wheel); clearTimeout(timer) }
   }, [menuOpen, move])
 
+  useEffect(() => {
+    const element = root.current
+    if (!element) return
+    let start: { x: number; y: number; time: number; scrollable: HTMLElement | null } | null = null
+    let nativeScroll = false
+    function touchStart(event: TouchEvent) {
+      start = null
+      nativeScroll = false
+      if (menuOpen || event.touches.length !== 1 || (event.target instanceof Element && event.target.closest(INTERACTIVE_SELECTOR))) return
+      const touch = event.touches[0]
+      start = { x: touch.clientX, y: touch.clientY, time: Date.now(), scrollable: event.target instanceof Element ? event.target.closest<HTMLElement>("[data-slide-content]") : null }
+    }
+    function touchMove(event: TouchEvent) {
+      if (!start || event.touches.length !== 1) { start = null; previousTap.current = null; return }
+      const touch = event.touches[0]
+      const dx = touch.clientX - start.x
+      const dy = touch.clientY - start.y
+      const content = start.scrollable
+      if (Math.abs(dy) > Math.abs(dx) && content && content.scrollHeight > content.clientHeight + 1) {
+        const canScroll = dy < 0 ? content.scrollTop + content.clientHeight < content.scrollHeight - 1 : content.scrollTop > 1
+        if (canScroll || nativeScroll) { nativeScroll = true; previousTap.current = null; return }
+      }
+      // A non-passive listener keeps vertical gestures available to the slider
+      // instead of the browser canceling Pointer Events during a touch pan.
+      if (Math.max(Math.abs(dx), Math.abs(dy)) > 8 && event.cancelable) event.preventDefault()
+    }
+    function touchEnd(event: TouchEvent) {
+      const initial = start
+      start = null
+      if (!initial || nativeScroll || event.changedTouches.length !== 1 || event.touches.length) { previousTap.current = null; return }
+      const touch = event.changedTouches[0]
+      const dx = touch.clientX - initial.x
+      const dy = touch.clientY - initial.y
+      const direction = swipeDirection(dx, dy)
+      if (direction) { previousTap.current = null; move(direction); return }
+      if (Math.hypot(dx, dy) > 12 || Date.now() - initial.time > 500) { previousTap.current = null; return }
+      const tap = { time: Date.now(), x: touch.clientX, y: touch.clientY }
+      if (isDoubleTap(previousTap.current, tap)) { move(1); previousTap.current = null }
+      else previousTap.current = tap
+    }
+    function touchCancel() { start = null; nativeScroll = false; previousTap.current = null }
+    element.addEventListener("touchstart", touchStart, { passive: true })
+    element.addEventListener("touchmove", touchMove, { passive: false })
+    element.addEventListener("touchend", touchEnd, { passive: true })
+    element.addEventListener("touchcancel", touchCancel, { passive: true })
+    return () => {
+      element.removeEventListener("touchstart", touchStart)
+      element.removeEventListener("touchmove", touchMove)
+      element.removeEventListener("touchend", touchEnd)
+      element.removeEventListener("touchcancel", touchCancel)
+    }
+  }, [menuOpen, move])
+
   function startPointer(event: PointerEvent<HTMLDivElement>) {
-    if (!event.isPrimary || event.button !== 0 || menuOpen || (event.target instanceof Element && event.target.closest(INTERACTIVE_SELECTOR))) return
+    if (event.pointerType === "touch" || !event.isPrimary || event.button !== 0 || menuOpen || (event.target instanceof Element && event.target.closest(INTERACTIVE_SELECTOR))) return
     pointer.current = { id: event.pointerId, x: event.clientX, y: event.clientY, time: Date.now() }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
@@ -154,7 +207,7 @@ export default function HomeSlides() {
       </div>
       <footer className={styles.controls}>
         <button aria-label="Previous slide" disabled={active === 0} onClick={() => go(active - 1, true)}><ArrowLeft aria-hidden /></button>
-        <div><p className={styles.gestureHint}>Double tap for next · Scroll up for next · Swipe left / right</p><span aria-live="polite" aria-atomic="true">{names[active]} <b>{String(active + 1).padStart(2, "0")} / {String(SLIDE_COUNT).padStart(2, "0")}</b></span></div>
+        <div><p className={styles.gestureHint}>Scroll down: next · Scroll up: back · Swipe left / right · Double tap: next</p><span aria-live="polite" aria-atomic="true">{names[active]} <b>{String(active + 1).padStart(2, "0")} / {String(SLIDE_COUNT).padStart(2, "0")}</b></span></div>
         <button aria-label="Next slide" disabled={active === SLIDE_COUNT - 1} onClick={() => go(active + 1, true)}><ArrowRight aria-hidden /></button>
         <Link className={`${styles.primary} ${styles.mobileBooking}`} href="/signup">Book a Delivery <ArrowRight size={18} aria-hidden /></Link>
       </footer>
