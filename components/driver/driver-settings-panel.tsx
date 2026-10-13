@@ -622,7 +622,7 @@ function SecuritySection() {
           <p className="text-xs text-[#adaaaa]">Sign out of this device</p>
         </div>
         <span className="material-symbols-outlined text-[#adaaaa] text-sm ml-auto">chevron_right</span>
-      </a>
+      </LogoutButton>
     </div>
   )
 }
