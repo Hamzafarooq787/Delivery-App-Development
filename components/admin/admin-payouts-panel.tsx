@@ -301,7 +301,7 @@ function PayoutDetailModal({
                     </p>
                     <p className="text-white text-xs font-bold">{fmt(d.price ?? 0)}</p>
                   </div>
-                  <p className="text-[#adaaaa] text-[10px] truncate">{d.pickup_address ?? "—"} → {d.dropoff_address ?? "—"}</p>
+                  <p className="text-[#adaaaa] text-[10px] truncate">{d.pickup_address ?? "—"} → {d.delivery_address ?? "—"}</p>
                   <p className="text-[#adaaaa] text-[10px] mt-0.5">{fmtDate(d.created_at)}</p>
                 </div>
               ))}
