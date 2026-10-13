@@ -10,6 +10,7 @@ import { ParcelAuthModal } from "./parcel-auth-modal"
 import { SafetyCancelButton } from "./safety-cancel-button"
 import { DeliveryOtpModal } from "./delivery-otp-modal"
 import { RateCustomerCard } from "./rate-customer-card"
+import { BfmShoppingWorkflow } from "./bfm-shopping-workflow"
 
 const LiveTrackingPanel = dynamic(
   () => import("@/components/tracking/live-tracking-panel").then((m) => m.LiveTrackingPanel),
@@ -50,6 +51,14 @@ type Job = {
   parcel_image_url: string | null
   delivered_image_url: string | null
   customer_id: string | null
+  service_type?: string | null
+  bfm_stage?: string | null
+  shop_name?: string | null
+  shop_address?: string | null
+  max_spend_approved?: number | null
+  actual_items_total?: number | null
+  estimated_items_total?: number | null
+  receipt_url?: string | null
 }
 
 type Customer = { full_name: string | null; phone: string | null; email: string | null } | null
@@ -103,6 +112,29 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
     const parts = n.split(/\s+/).filter(Boolean)
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
     return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+
+  if (job.service_type === "buy_for_me") {
+    return (
+      <BfmShoppingWorkflow
+        job={{
+          id: job.id,
+          status: job.status,
+          tracking_number: job.tracking_number,
+          delivery_address: job.delivery_address,
+          price: job.price,
+          customer_id: job.customer_id,
+          bfm_stage: job.bfm_stage ?? null,
+          shop_name: job.shop_name ?? null,
+          shop_address: job.shop_address ?? null,
+          max_spend_approved: job.max_spend_approved ?? null,
+          actual_items_total: job.actual_items_total ?? null,
+          estimated_items_total: job.estimated_items_total ?? null,
+          receipt_url: job.receipt_url ?? null,
+        }}
+        userId={userId}
+      />
+    )
   }
 
   return (

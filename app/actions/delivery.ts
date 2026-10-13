@@ -212,7 +212,7 @@ export async function getAvailableDeliveries() {
 
   let query = admin
     .from("delivery_requests")
-    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size")
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total")
     .eq("status", "requested")
     .is("driver_id", null)
     .order("created_at", { ascending: false })

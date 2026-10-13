@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react"
 import { GeneralSettingsForm } from "@/components/admin/general-settings-form"
+import { getBfmSettings, updateBfmSettings } from "@/app/actions/shopping"
 
 const TABS = [
   { label: "General",       icon: "tune" },
   { label: "Pricing & Fees", icon: "payments" },
   { label: "Notifications", icon: "notifications" },
+  { label: "Buy for Me",    icon: "shopping_bag" },
 ]
 
 const NOTIFICATION_TEMPLATES = [
@@ -26,13 +28,38 @@ const PRICING_FIELDS = [
 
 export function SettingsTabsClient({
   adminProfile,
+  initialBfmSettings,
 }: {
   adminProfile: { full_name: string; email: string; phone: string }
+  initialBfmSettings?: { service_enabled?: boolean; max_purchase_amount: number }
 }) {
   const [activeTab, setActiveTab] = useState("General")
   const [pricing, setPricing] = useState<Record<string, string>>({})
   const [pricingMsg, setPricingMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const [bfmEnabled, setBfmEnabled] = useState(initialBfmSettings?.service_enabled !== false)
+  const [bfmMaxSpend, setBfmMaxSpend] = useState(String(initialBfmSettings?.max_purchase_amount ?? 50))
+  const [bfmMsg, setBfmMsg] = useState<{ text: string; ok: boolean } | null>(null)
+  const [isBfmPending, startBfmTransition] = useTransition()
+
+  function handleSaveBfm() {
+    startBfmTransition(async () => {
+      const v = parseFloat(bfmMaxSpend)
+      if (isNaN(v) || v <= 0) {
+        setBfmMsg({ text: "Max purchase amount must be a positive number.", ok: false })
+        setTimeout(() => setBfmMsg(null), 3000)
+        return
+      }
+      const result = await updateBfmSettings({ enabled: bfmEnabled, max_purchase_amount: v })
+      if (result.error) {
+        setBfmMsg({ text: result.error, ok: false })
+      } else {
+        setBfmMsg({ text: "Buy for Me settings saved.", ok: true })
+      }
+      setTimeout(() => setBfmMsg(null), 3000)
+    })
+  }
 
   function handleSavePricing() {
     startTransition(async () => {
@@ -131,6 +158,69 @@ export function SettingsTabsClient({
                 className="bg-[#c180ff]/15 text-[#c180ff] border border-[#c180ff]/20 font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-[#c180ff]/25 transition-colors disabled:opacity-50"
               >
                 {isPending ? "Saving…" : "Save Pricing"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Buy for Me */}
+        {activeTab === "Buy for Me" && (
+          <div className="bg-[#1a1919] rounded-xl p-6 space-y-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-[#c180ff]">shopping_bag</span>
+              <h3 className="text-base font-bold text-white font-headline">Buy for Me Settings</h3>
+            </div>
+            <p className="text-sm text-[#adaaaa]">
+              Configure the personal shopping service. Drivers purchase items on behalf of customers.
+            </p>
+
+            {/* Enable toggle */}
+            <div className="flex items-center justify-between py-4 border-t border-[#494847]/15">
+              <div>
+                <p className="text-sm font-semibold text-white">Service Enabled</p>
+                <p className="text-xs text-[#adaaaa] mt-0.5">Allow customers to create Buy for Me requests</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBfmEnabled((v) => !v)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${bfmEnabled ? "bg-[#c180ff]" : "bg-[#494847]/40"}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${bfmEnabled ? "right-1" : "left-1"}`} />
+              </button>
+            </div>
+
+            {/* Max purchase amount */}
+            <div className="pt-2">
+              <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">
+                Max Purchase Amount (£)
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                placeholder="50.00"
+                value={bfmMaxSpend}
+                onChange={(e) => setBfmMaxSpend(e.target.value)}
+                className="w-full sm:w-64 bg-[#201f1f] border border-[#494847]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[#c180ff]/40 transition-colors"
+              />
+              <p className="mt-1.5 text-[11px] text-[#adaaaa]">
+                The maximum amount a driver can spend on a single shopping trip. Customers approve this limit at booking.
+              </p>
+            </div>
+
+            {bfmMsg && (
+              <p className={`text-xs font-medium ${bfmMsg.ok ? "text-emerald-400" : "text-red-400"}`}>
+                {bfmMsg.text}
+              </p>
+            )}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                disabled={isBfmPending}
+                onClick={handleSaveBfm}
+                className="bg-[#c180ff]/15 text-[#c180ff] border border-[#c180ff]/20 font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-[#c180ff]/25 transition-colors disabled:opacity-50"
+              >
+                {isBfmPending ? "Saving…" : "Save Settings"}
               </button>
             </div>
           </div>
