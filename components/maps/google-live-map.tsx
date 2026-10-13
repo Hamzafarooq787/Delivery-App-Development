@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
+import { useBrand } from '@/components/shared/brand-provider'
 import { GoogleMap, useJsApiLoader, Polyline, OverlayView } from "@react-google-maps/api"
 
 const GOOGLE_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY!
@@ -135,6 +136,10 @@ export function GoogleLiveMap({
   customerLocation,
   showUserLocation = true,
 }: Props) {
+  const { brand } = useBrand()
+  // Google Maps expects resolved colour strings, rather than CSS variables.
+  const routePrimary = brand === 'orange' ? '#ff7900' : '#a3a6ff'
+  const routeSecondary = brand === 'orange' ? '#ffb168' : '#c180ff'
   const { isLoaded } = useJsApiLoader({ id: "google-map-script", googleMapsApiKey: GOOGLE_KEY })
   const mapRef = useRef<google.maps.Map | null>(null)
   const [userLocation, setUserLocation] = useState<LngLat | null>(null)
@@ -229,7 +234,7 @@ export function GoogleLiveMap({
         {routeCoords && routeCoords.length > 1 && (
           <Polyline
             path={routeCoords}
-            options={{ strokeColor: "var(--color-primary)", strokeWeight: 4, strokeOpacity: 0.85 }}
+            options={{ strokeColor: routePrimary, strokeWeight: 4, strokeOpacity: 0.85 }}
           />
         )}
 
@@ -237,11 +242,11 @@ export function GoogleLiveMap({
           <Polyline
             path={routeCoords2}
             options={{
-              strokeColor: "var(--color-secondary)",
+              strokeColor: routeSecondary,
               strokeWeight: 0,
               strokeOpacity: 0,
               icons: [{
-                icon: { path: "M 0,-1 0,1", strokeColor: "var(--color-secondary)", strokeWeight: 3, strokeOpacity: 0.75, scale: 3 },
+                icon: { path: "M 0,-1 0,1", strokeColor: routeSecondary, strokeWeight: 3, strokeOpacity: 0.75, scale: 3 },
                 offset: "0",
                 repeat: "16px",
               }],
