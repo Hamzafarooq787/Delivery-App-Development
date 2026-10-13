@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { signUp } from "@/app/actions/auth"
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons"
@@ -9,10 +10,15 @@ import { googleReverseGeocode } from "@/lib/google"
 type Role = "customer" | "driver"
 
 export default function SignupPage() {
+  return <Suspense fallback={<main className="min-h-screen bg-[#0e0e0e] text-white grid place-items-center">Loading signup…</main>}><SignupForm /></Suspense>
+}
+
+function SignupForm() {
+  const searchParams = useSearchParams()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<Role>("customer")
+  const [role, setRole] = useState<Role>(() => searchParams.get("role") === "driver" ? "driver" : "customer")
   const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
   const [detectingAddress, setDetectingAddress] = useState(false)
@@ -321,3 +327,4 @@ export default function SignupPage() {
     </main>
   )
 }
+
