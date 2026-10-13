@@ -209,7 +209,7 @@ export async function getDriverPayoutDetails(driverId: string) {
       .limit(15),
     admin
       .from("delivery_requests")
-      .select("id, tracking_number, price, status, created_at, pickup_address, dropoff_address")
+      .select("id, tracking_number, price, status, created_at, pickup_address, delivery_address")
       .eq("driver_id", driverId)
       .eq("status", "delivered")
       .order("created_at", { ascending: false })
