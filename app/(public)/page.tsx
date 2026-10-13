@@ -87,8 +87,13 @@ export default function HomePage() {
 
             {/* Buy for Me */}
             <div className="bg-[#1a1919] p-8 sm:p-10 rounded-[2rem] border border-[#494847]/5 hover:border-[#c180ff]/20 transition-all group flex flex-col">
-              <div className="w-14 h-14 bg-[#c180ff]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform text-2xl shrink-0">
-                🛍️
+              <div className="flex items-start justify-between mb-6">
+                <div className="w-14 h-14 bg-[#c180ff]/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform text-2xl shrink-0">
+                  🛍️
+                </div>
+                <span className="inline-block px-3 py-1 rounded-full bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-xs font-bold tracking-wider uppercase">
+                  Coming Soon
+                </span>
               </div>
               <h3 className="text-xl font-bold mb-3">Buy for Me</h3>
               <p className="text-[#adaaaa] text-sm leading-relaxed flex-1 mb-8">
@@ -97,9 +102,9 @@ export default function HomePage() {
               </p>
               <Link
                 href="/signup"
-                className="inline-block text-center w-full px-6 py-3 bg-[#c180ff] text-[#33005b] font-bold rounded-xl hover:brightness-110 transition-all"
+                className="inline-block text-center w-full px-6 py-3 bg-[#c180ff]/30 text-[#c180ff] font-bold rounded-xl hover:bg-[#c180ff]/40 transition-all"
               >
-                Shop with GoDrop
+                Register Interest
               </Link>
             </div>
           </div>
@@ -155,7 +160,7 @@ export default function HomePage() {
                 step: "01",
                 icon: "👆",
                 title: "Choose Your Service",
-                desc: "Select Collect & Deliver or Buy for Me.",
+                desc: "Select the Collect & Deliver service and tell us what you need moved.",
               },
               {
                 step: "02",
@@ -225,16 +230,21 @@ export default function HomePage() {
             </div>
           </div>
           <div className="order-1 lg:order-2">
-            <span className="inline-block px-4 py-1 rounded-full bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-xs font-bold tracking-widest uppercase mb-6">
-              Personal Shopping
-            </span>
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <span className="inline-block px-4 py-1 rounded-full bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-xs font-bold tracking-widest uppercase">
+                Personal Shopping
+              </span>
+              <span className="inline-block px-4 py-1 rounded-full bg-[#c180ff]/10 border border-[#c180ff]/20 text-[#c180ff] text-xs font-bold tracking-widest uppercase">
+                Coming Soon
+              </span>
+            </div>
             <h2 className="text-3xl sm:text-4xl font-black font-headline tracking-tight mb-6 text-balance">
               Need Something from a Shop?
             </h2>
             <p className="text-[#adaaaa] mb-6 leading-relaxed">
-              No time to visit the shop? GoDrop can help. Tell us what you need, where to buy it and
-              where to deliver it. Add item details and instructions so your driver knows exactly what
-              to collect.
+              No time to visit the shop? We&apos;re working on a Buy for Me service so a GoDrop driver
+              can collect your items and deliver them straight to your door. Register your interest
+              and we&apos;ll let you know when it launches.
             </p>
             <ul className="space-y-4 mb-8">
               {[
@@ -250,9 +260,9 @@ export default function HomePage() {
             </ul>
             <Link
               href="/signup"
-              className="inline-block px-8 py-4 bg-[#c180ff] text-[#33005b] font-bold rounded-full hover:brightness-110 transition-all"
+              className="inline-block px-8 py-4 bg-[#c180ff]/30 border border-[#c180ff]/30 text-[#c180ff] font-bold rounded-full hover:bg-[#c180ff]/40 transition-all"
             >
-              Try Buy for Me
+              Register Interest
             </Link>
           </div>
         </div>
