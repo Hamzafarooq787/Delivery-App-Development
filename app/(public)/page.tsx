@@ -97,14 +97,13 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold mb-3">Buy for Me</h3>
               <p className="text-[#adaaaa] text-sm leading-relaxed flex-1 mb-8">
-                Need something from a shop but can&apos;t get there yourself? Tell us what you need,
-                and a GoDrop driver can buy it and deliver it to your address.
+                Need something from a shop? Tell us what you need, and a GoDrop driver can buy it and bring it to you.
               </p>
               <Link
-                href="/signup"
-                className="inline-block text-center w-full px-6 py-3 bg-[#c180ff]/30 text-[#c180ff] font-bold rounded-xl hover:bg-[#c180ff]/40 transition-all"
+                href="/signup?service=buy_for_me"
+                className="inline-block text-center w-full px-6 py-3 bg-[#c180ff] text-[#33005b] font-bold rounded-xl hover:brightness-110 transition-all"
               >
-                Register Interest
+                Start Shopping Request
               </Link>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Header from '@/components/customer/Header'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { NewShoppingRequestModal } from '@/components/customer/NewShoppingRequestModal'
 import dynamic from 'next/dynamic'
 const GoogleMultiDriver = dynamic(
   () => import('@/components/maps/google-multi-driver').then((m) => m.GoogleMultiDriver),
@@ -80,6 +81,7 @@ function getGreeting() {
 
 export default function CustomerDashboardPage() {
   const [showModal, setShowModal]   = useState(false)
+  const [showBfmModal, setShowBfmModal] = useState(false)
   const supabase = useMemo(() => createClient(), [])
 
   const [userId,             setUserId]             = useState('')
@@ -194,14 +196,23 @@ export default function CustomerDashboardPage() {
                 Real-time logistics overview and orchestration.
               </p>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-primary text-on-primary px-5 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 hover:brightness-110 transition-all active:scale-95"
-              style={{ boxShadow: '0 0 15px rgba(163,166,255,0.15)' }}
-            >
-              <span className="material-symbols-outlined text-[18px]">add_circle</span>
-              NEW SHIPMENT
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowBfmModal(true)}
+                className="bg-[#c180ff]/15 text-[#c180ff] border border-[#c180ff]/20 px-5 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-[#c180ff]/25 transition-all active:scale-95"
+              >
+                <span className="text-base">🛍️</span>
+                BUY FOR ME
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                className="bg-primary text-on-primary px-5 py-2.5 rounded-full font-bold text-sm flex items-center gap-2 hover:brightness-110 transition-all active:scale-95"
+                style={{ boxShadow: '0 0 15px rgba(163,166,255,0.15)' }}
+              >
+                <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                NEW SHIPMENT
+              </button>
+            </div>
           </div>
 
           {/* ══════════════════════════════════════════════════
@@ -458,7 +469,7 @@ export default function CustomerDashboardPage() {
               MOBILE: empty state — no active deliveries
           ══════════════════════════════════════════════════ */}
           {!hasActive && (
-            <div className="md:hidden mb-5">
+            <div className="md:hidden mb-5 flex flex-col gap-3">
               <button
                 onClick={() => setShowModal(true)}
                 className="w-full rounded-3xl border-2 border-dashed border-primary/25 bg-primary/5 flex items-center gap-4 px-5 py-5 active:scale-[0.98] transition-transform"
@@ -471,6 +482,21 @@ export default function CustomerDashboardPage() {
                 <div className="text-left">
                   <p className="text-sm font-black text-white font-headline">Book a delivery</p>
                   <p className="text-[11px] text-on-surface-variant mt-0.5">Tap to create your first shipment</p>
+                </div>
+                <span className="material-symbols-outlined text-on-surface-variant ml-auto">chevron_right</span>
+              </button>
+              <button
+                onClick={() => setShowBfmModal(true)}
+                className="w-full rounded-3xl border-2 border-dashed border-[#c180ff]/25 bg-[#c180ff]/5 flex items-center gap-4 px-5 py-5 active:scale-[0.98] transition-transform"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#c180ff]/10 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[#c180ff] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    shopping_bag
+                  </span>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-black text-white font-headline">Buy for Me</p>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5">Get a driver to shop for you</p>
                 </div>
                 <span className="material-symbols-outlined text-on-surface-variant ml-auto">chevron_right</span>
               </button>
@@ -585,6 +611,7 @@ export default function CustomerDashboardPage() {
       </main>
 
       {showModal && <NewDeliveryModal onClose={() => setShowModal(false)} />}
+      {showBfmModal && <NewShoppingRequestModal onClose={() => setShowBfmModal(false)} />}
     </>
   )
 }

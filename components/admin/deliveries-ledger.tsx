@@ -22,9 +22,13 @@ type DeliveryRequest = {
   status: string
   is_safe_confirmed: boolean | null
   created_at: string
+  service_type?: string | null
+  shop_name?: string | null
 }
 
 const FINAL_STATUSES = new Set(["delivered", "cancelled"])
+
+type ServiceFilter = "all" | "collect_and_deliver" | "buy_for_me"
 
 export function DeliveriesLedger({
   initialDeliveries,
@@ -34,6 +38,7 @@ export function DeliveriesLedger({
   drivers?: DriverOption[]
 }) {
   const [deliveries, setDeliveries] = useState<DeliveryRequest[]>(initialDeliveries)
+  const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("all")
 
   useEffect(() => {
     const supabase = createClient()
@@ -76,11 +81,34 @@ export function DeliveriesLedger({
     }
   }, [])
 
+  const filtered = deliveries.filter((d) => {
+    if (serviceFilter === "all") return true
+    if (serviceFilter === "buy_for_me") return d.service_type === "buy_for_me"
+    return d.service_type !== "buy_for_me"
+  })
+
   return (
     <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl overflow-hidden">
-      <div className="p-6 bg-[#1a1919]/50 flex justify-between items-center border-b border-[#494847]/10">
+      <div className="p-6 bg-[#1a1919]/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#494847]/10">
         <h3 className="font-headline font-bold text-lg text-white">Active Ledger</h3>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg overflow-hidden border border-[#494847]/20">
+            {(["all", "collect_and_deliver", "buy_for_me"] as ServiceFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setServiceFilter(f)}
+                className={`px-3 py-1.5 text-[11px] font-bold uppercase transition-colors ${
+                  serviceFilter === f
+                    ? f === "buy_for_me"
+                      ? "bg-[#c180ff] text-[#0e0e0e]"
+                      : "bg-[#a3a6ff] text-[#0f00a4]"
+                    : "bg-[#1a1919] text-[#adaaaa] hover:text-white"
+                }`}
+              >
+                {f === "all" ? "All" : f === "buy_for_me" ? "Buy for Me" : "C&D"}
+              </button>
+            ))}
+          </div>
           <button className="p-2 text-[#adaaaa] hover:text-white transition-colors">
             <span className="material-symbols-outlined">download</span>
           </button>
@@ -108,14 +136,14 @@ export function DeliveriesLedger({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#494847]/5">
-            {deliveries.length === 0 ? (
+            {filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-16 text-center text-[#adaaaa] text-sm">
                   No deliveries found
                 </td>
               </tr>
             ) : (
-              deliveries.map((delivery) => (
+              filtered.map((delivery) => (
                 <tr key={delivery.id} className="hover:bg-[#201f1f]/40 transition-colors group">
                   <td className="px-5 py-4 font-mono text-xs text-[#a3a6ff] whitespace-nowrap">
                     <Link href={`/dashboard/admin/orders/${delivery.id}`} className="hover:underline">
@@ -132,10 +160,21 @@ export function DeliveriesLedger({
                       {delivery.delivery_address ?? "—"}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-sm text-[#adaaaa] max-w-[120px]">
-                    <span className="block truncate" title={delivery.item_description ?? ""}>
-                      {delivery.item_description ?? "—"}
-                    </span>
+                  <td className="px-5 py-4 text-sm text-[#adaaaa] max-w-[160px]">
+                    {delivery.service_type === "buy_for_me" ? (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[#c180ff]/10 text-[#c180ff] border border-[#c180ff]/20 w-fit">
+                          BFM
+                        </span>
+                        <span className="block truncate text-white" title={delivery.shop_name ?? ""}>
+                          {delivery.shop_name ?? "Shopping"}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="block truncate" title={delivery.item_description ?? ""}>
+                        {delivery.item_description ?? "—"}
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <DeliveryStatusPill status={delivery.status} />
@@ -174,7 +213,7 @@ export function DeliveriesLedger({
         </table>
       </div>
       <div className="px-6 py-4 bg-[#1a1919]/30 flex justify-between items-center">
-        <span className="text-xs text-[#adaaaa]">Showing {deliveries.length} entries</span>
+        <span className="text-xs text-[#adaaaa]">Showing {filtered.length} of {deliveries.length} entries</span>
         <div className="flex gap-1">
           <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">
             Prev

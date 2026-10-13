@@ -183,6 +183,67 @@ export default async function AdminOrderDetailPage({
             </div>
           </div>
 
+          {/* Buy for Me Details */}
+          {order.service_type === "buy_for_me" && (
+            <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#c180ff]/15 rounded-xl p-5 md:p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <span className="material-symbols-outlined text-[#c180ff] text-lg">shopping_bag</span>
+                <h3 className="text-base font-bold text-white font-headline">Buy for Me Details</h3>
+                <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#c180ff]/10 text-[#c180ff] border border-[#c180ff]/20">
+                  BUY FOR ME
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                {order.shop_name && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Shop</p>
+                    <p className="text-white font-medium">{order.shop_name}</p>
+                  </div>
+                )}
+                {order.shop_address && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Shop Address</p>
+                    <p className="text-white font-medium">{order.shop_address}</p>
+                  </div>
+                )}
+                {order.bfm_stage && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Shopping Stage</p>
+                    <p className="text-white font-medium capitalize">{String(order.bfm_stage).replace(/_/g, " ")}</p>
+                  </div>
+                )}
+                {order.max_spend_approved != null && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Max Spend Approved</p>
+                    <p className="text-white font-medium">£{Number(order.max_spend_approved).toFixed(2)}</p>
+                  </div>
+                )}
+                {order.estimated_items_total != null && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Estimated Items Total</p>
+                    <p className="text-white font-medium">£{Number(order.estimated_items_total).toFixed(2)}</p>
+                  </div>
+                )}
+                {order.actual_items_total != null && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1">Actual Items Total</p>
+                    <p className="text-[#6ee7b7] font-bold">£{Number(order.actual_items_total).toFixed(2)}</p>
+                  </div>
+                )}
+                {order.receipt_url && (
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Purchase Receipt</p>
+                    <a href={order.receipt_url} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#c180ff] hover:underline">
+                      <span className="material-symbols-outlined text-sm">receipt_long</span>
+                      View Receipt
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Route */}
           <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-5">

@@ -1,0 +1,482 @@
+"use client"
+
+import { useState, useTransition, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { createClient } from "@/lib/supabase/client"
+import {
+  updateBfmStage,
+  markItemFound,
+  markItemUnavailable,
+  requestSubstitution,
+  submitPurchaseReceipt,
+  getShoppingItems,
+  type BfmStage,
+  type ShoppingItemRow,
+} from "@/app/actions/shopping"
+import { DeliveryOtpModal } from "./delivery-otp-modal"
+
+type BfmJob = {
+  id: string
+  status: string
+  bfm_stage: string | null
+  shop_name: string | null
+  shop_address: string | null
+  delivery_address: string | null
+  max_spend_approved: number | null
+  actual_items_total: number | null
+  estimated_items_total: number | null
+  receipt_url: string | null
+  customer_id: string | null
+  tracking_number: string | null
+  price: number | null
+}
+
+function fmt(v: number) {
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(v)
+}
+
+const BFM_STAGES: { stage: string; label: string; icon: string }[] = [
+  { stage: "accepted",           label: "Accepted",              icon: "check_circle" },
+  { stage: "heading_to_shop",    label: "Heading to Shop",       icon: "directions_car" },
+  { stage: "arrived_at_shop",    label: "Arrived at Shop",       icon: "storefront" },
+  { stage: "shopping",           label: "Shopping",              icon: "shopping_cart" },
+  { stage: "purchase_completed", label: "Purchase Completed",    icon: "receipt_long" },
+  { stage: "heading_to_customer",label: "Heading to Customer",   icon: "local_shipping" },
+  { stage: "delivered",          label: "Delivered",             icon: "verified" },
+]
+
+const NEXT_STAGE: Record<string, BfmStage | null> = {
+  accepted: "heading_to_shop",
+  heading_to_shop: "arrived_at_shop",
+  arrived_at_shop: "shopping",
+  shopping: "purchase_completed",
+  purchase_completed: "heading_to_customer",
+  heading_to_customer: null,
+}
+
+const NEXT_STAGE_LABEL: Record<string, string> = {
+  accepted: "Start Journey to Shop",
+  heading_to_shop: "Mark Arrived at Shop",
+  arrived_at_shop: "Start Shopping",
+  shopping: "Submit Receipt & Complete Purchase",
+  purchase_completed: "Start Delivery",
+  heading_to_customer: "Deliver to Customer",
+}
+
+export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: string }) {
+  const [items, setItems] = useState<ShoppingItemRow[]>([])
+  const [loadingItems, setLoadingItems] = useState(true)
+  const [isPending, startTransition] = useTransition()
+  const [showOtpModal, setShowOtpModal] = useState(false)
+  const [showReceiptForm, setShowReceiptForm] = useState(false)
+  const [showSubForm, setShowSubForm] = useState<string | null>(null) // item id
+  const [subSuggested, setSubSuggested] = useState("")
+  const [subPrice, setSubPrice] = useState("")
+  const [subNotes, setSubNotes] = useState("")
+  const [receiptUrl, setReceiptUrl] = useState("")
+  const [actualTotal, setActualTotal] = useState("")
+  const [uploadingReceipt, setUploadingReceipt] = useState(false)
+  const router = useRouter()
+
+  const currentStage = job.bfm_stage ?? job.status
+
+  useEffect(() => {
+    getShoppingItems(job.id).then(({ data }) => {
+      setItems(data)
+      setLoadingItems(false)
+    })
+  }, [job.id])
+
+  const stageIndex = BFM_STAGES.findIndex((s) => s.stage === currentStage)
+
+  function handleStageAdvance() {
+    const next = NEXT_STAGE[currentStage]
+    if (!next) return
+
+    if (next === "purchase_completed") {
+      // Need receipt first
+      setShowReceiptForm(true)
+      return
+    }
+    if (currentStage === "heading_to_customer") {
+      // Deliver via OTP
+      setShowOtpModal(true)
+      return
+    }
+
+    startTransition(async () => {
+      const result = await updateBfmStage(job.id, next)
+      if (result.error) { toast.error(result.error); return }
+      toast.success(`Status updated: ${NEXT_STAGE_LABEL[next] ?? next}`)
+      router.refresh()
+    })
+  }
+
+  async function handleReceiptSubmit() {
+    if (!receiptUrl) { toast.error("Please upload the receipt first."); return }
+    const actual = parseFloat(actualTotal)
+    if (isNaN(actual) || actual < 0) { toast.error("Enter a valid total amount."); return }
+
+    startTransition(async () => {
+      const result = await submitPurchaseReceipt({
+        deliveryId: job.id,
+        receipt_url: receiptUrl,
+        actual_items_total: actual,
+      })
+      if (result.error) { toast.error(result.error); return }
+      toast.success("Receipt submitted.")
+      setShowReceiptForm(false)
+      router.refresh()
+    })
+  }
+
+  async function handleReceiptUpload(file: File) {
+    setUploadingReceipt(true)
+    const supabase = createClient()
+    const path = `receipts/${job.id}/${Date.now()}-receipt.jpg`
+    const { error } = await supabase.storage.from("delivery-item-photos").upload(path, file, { upsert: true })
+    if (error) { toast.error("Upload failed. Try again."); setUploadingReceipt(false); return }
+    const { data: { publicUrl } } = supabase.storage.from("delivery-item-photos").getPublicUrl(path)
+    setReceiptUrl(publicUrl)
+    setUploadingReceipt(false)
+    toast.success("Receipt uploaded.")
+  }
+
+  function handleMarkFound(itemId: string) {
+    startTransition(async () => {
+      await markItemFound(itemId)
+      setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, status: "purchased" } : i))
+      toast.success("Item marked as found.")
+    })
+  }
+
+  function handleMarkUnavailable(itemId: string) {
+    startTransition(async () => {
+      await markItemUnavailable(itemId)
+      setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, status: "unavailable" } : i))
+      toast.success("Item marked unavailable.")
+    })
+  }
+
+  async function handleSubstitution(itemId: string) {
+    if (!subSuggested.trim()) { toast.error("Enter a suggested item name."); return }
+    startTransition(async () => {
+      const result = await requestSubstitution({
+        shopping_item_id: itemId,
+        delivery_id: job.id,
+        suggested_name: subSuggested.trim(),
+        suggested_price: parseFloat(subPrice) || undefined,
+        driver_notes: subNotes.trim() || undefined,
+      })
+      if (result.error) { toast.error(result.error); return }
+      toast.success("Substitution request sent to customer.")
+      setShowSubForm(null)
+      setSubSuggested("")
+      setSubPrice("")
+      setSubNotes("")
+      setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, status: "substituted" } : i))
+    })
+  }
+
+  const canAdvance = !isPending && currentStage !== "delivered" && currentStage !== "heading_to_customer" || currentStage === "heading_to_customer"
+  const nextStageLabel = NEXT_STAGE_LABEL[currentStage]
+  const isDelivered = currentStage === "delivered" || job.status === "delivered"
+  const isShopping = currentStage === "shopping"
+
+  const inputCls = "w-full bg-[#1a1919] border border-[#494847]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[#a3a6ff]/40 transition-all"
+
+  return (
+    <div className="space-y-4">
+      {/* BFM Badge */}
+      <div className="flex items-center gap-2 px-4 py-3 bg-[#c180ff]/10 border border-[#c180ff]/20 rounded-xl">
+        <span className="text-xl">🛍️</span>
+        <div>
+          <p className="text-sm font-bold text-[#c180ff]">Buy for Me Order</p>
+          <p className="text-xs text-[#adaaaa]">
+            Max spend: {fmt(job.max_spend_approved ?? 50)}
+            {job.actual_items_total != null && ` · Spent: ${fmt(job.actual_items_total)}`}
+          </p>
+        </div>
+      </div>
+
+      {/* Stage Progress */}
+      <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4 overflow-x-auto">
+        <div className="flex items-start gap-1 min-w-max">
+          {BFM_STAGES.map(({ stage, label, icon }, i) => {
+            const done = i < stageIndex
+            const active = i === stageIndex
+            return (
+              <div key={stage} className="flex flex-col items-center gap-1.5 relative w-[72px]">
+                {i < BFM_STAGES.length - 1 && (
+                  <div className={`absolute top-4 left-1/2 w-full h-px z-0 ${done ? "bg-[#a3a6ff]" : "bg-[#494847]/30"}`} />
+                )}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-all ${
+                  done ? "bg-[#a3a6ff] border-[#a3a6ff]" :
+                  active ? "bg-[#1a1919] border-[#c180ff] shadow-[0_0_12px_rgba(193,128,255,0.4)]" :
+                  "bg-[#1a1919] border-[#494847]/30"
+                }`}>
+                  {done ? (
+                    <span className="material-symbols-outlined text-white text-sm">check</span>
+                  ) : (
+                    <span className={`material-symbols-outlined text-sm ${active ? "text-[#c180ff]" : "text-[#494847]"}`}>
+                      {icon}
+                    </span>
+                  )}
+                </div>
+                <p className={`text-[8px] font-bold text-center leading-tight ${active ? "text-[#c180ff]" : done ? "text-[#adaaaa]" : "text-[#494847]"}`}>
+                  {label}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Shop & Delivery Info */}
+      <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4 space-y-3">
+        <div className="flex gap-3 items-start">
+          <span className="material-symbols-outlined text-[#c180ff] text-base mt-0.5">storefront</span>
+          <div>
+            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest">Shop</p>
+            <p className="text-sm font-semibold text-white">{job.shop_name ?? "—"}</p>
+            <p className="text-xs text-[#adaaaa]">{job.shop_address ?? "—"}</p>
+          </div>
+        </div>
+        <div className="flex gap-3 items-start">
+          <span className="material-symbols-outlined text-[#a3a6ff] text-base mt-0.5">location_on</span>
+          <div>
+            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest">Deliver to</p>
+            <p className="text-xs text-[#adaaaa]">{job.delivery_address ?? "—"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Shopping List */}
+      <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest">Shopping List</p>
+          <span className="text-[10px] font-bold text-[#adaaaa]">
+            {items.filter((i) => i.status === "purchased" || i.status === "substituted").length}/{items.length} found
+          </span>
+        </div>
+        {loadingItems ? (
+          <p className="text-xs text-[#adaaaa]">Loading items…</p>
+        ) : items.length === 0 ? (
+          <p className="text-xs text-[#adaaaa]">No items on this order.</p>
+        ) : (
+          <div className="space-y-3">
+            {items.map((item) => {
+              const statusColor =
+                item.status === "purchased" ? "text-emerald-400" :
+                item.status === "substituted" ? "text-[#c180ff]" :
+                item.status === "unavailable" ? "text-red-400" :
+                item.status === "skipped" ? "text-[#494847]" :
+                "text-amber-400"
+
+              return (
+                <div key={item.id} className="bg-[#1a1919] rounded-xl p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white">
+                        {item.quantity}× {item.name}
+                      </p>
+                      {item.brand_size_variant && (
+                        <p className="text-xs text-[#adaaaa]">{item.brand_size_variant}</p>
+                      )}
+                      {item.notes && (
+                        <p className="text-xs text-[#adaaaa] italic">"{item.notes}"</p>
+                      )}
+                      {item.estimated_price && (
+                        <p className="text-xs text-[#adaaaa]">Est. {fmt(item.estimated_price)}</p>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase ${statusColor}`}>
+                      {item.status}
+                    </span>
+                  </div>
+
+                  {item.photo_url && (
+                    <img src={item.photo_url} alt={item.name} className="w-full h-24 object-cover rounded-lg" />
+                  )}
+
+                  {isShopping && item.status === "pending" && (
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleMarkFound(item.id)}
+                        className="flex-1 py-2 bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 rounded-lg text-xs font-bold hover:bg-emerald-400/20 transition-all disabled:opacity-50"
+                      >
+                        Found ✓
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleMarkUnavailable(item.id)}
+                        className="flex-1 py-2 bg-red-400/10 text-red-400 border border-red-400/20 rounded-lg text-xs font-bold hover:bg-red-400/20 transition-all disabled:opacity-50"
+                      >
+                        Unavailable
+                      </button>
+                      {item.substitution_preference !== "skip_if_unavailable" && (
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => setShowSubForm(item.id)}
+                          className="flex-1 py-2 bg-[#c180ff]/10 text-[#c180ff] border border-[#c180ff]/20 rounded-lg text-xs font-bold hover:bg-[#c180ff]/20 transition-all disabled:opacity-50"
+                        >
+                          Replace
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Substitution form */}
+                  {showSubForm === item.id && (
+                    <div className="bg-[#0e0e0e] rounded-xl p-3 space-y-2 border border-[#c180ff]/20">
+                      <p className="text-[10px] font-bold text-[#c180ff] uppercase tracking-widest">Suggest replacement</p>
+                      <input
+                        type="text"
+                        placeholder="Replacement item name"
+                        value={subSuggested}
+                        onChange={(e) => setSubSuggested(e.target.value)}
+                        className={inputCls}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          placeholder="Price (£)"
+                          value={subPrice}
+                          onChange={(e) => setSubPrice(e.target.value)}
+                          className={inputCls}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Notes (optional)"
+                          value={subNotes}
+                          onChange={(e) => setSubNotes(e.target.value)}
+                          className={inputCls}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowSubForm(null)}
+                          className="flex-1 py-2 text-xs font-bold text-[#adaaaa] bg-[#1a1919] rounded-lg border border-[#494847]/20"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => handleSubstitution(item.id)}
+                          className="flex-1 py-2 text-xs font-bold text-[#c180ff] bg-[#c180ff]/10 rounded-lg border border-[#c180ff]/20 disabled:opacity-50"
+                        >
+                          Send Request
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Receipt section */}
+      {(job.receipt_url || currentStage === "purchase_completed" || currentStage === "heading_to_customer") && (
+        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
+          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Purchase Receipt</p>
+          {job.receipt_url ? (
+            <div className="space-y-2">
+              <img src={job.receipt_url} alt="Receipt" className="w-full rounded-xl object-cover max-h-48" />
+              {job.actual_items_total != null && (
+                <p className="text-sm text-white font-bold">Total spent: {fmt(job.actual_items_total)}</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-[#adaaaa]">No receipt uploaded yet.</p>
+          )}
+        </div>
+      )}
+
+      {/* Receipt upload form */}
+      {showReceiptForm && (
+        <div className="bg-[#1a1919] border border-[#494847]/20 rounded-xl p-4 space-y-4">
+          <p className="text-sm font-bold text-white">Submit Purchase Receipt</p>
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1.5">Actual Total Spent (£)</label>
+            <input
+              type="number"
+              step={0.01}
+              min={0}
+              max={job.max_spend_approved ?? 50}
+              value={actualTotal}
+              onChange={(e) => setActualTotal(e.target.value)}
+              placeholder="0.00"
+              className={inputCls}
+            />
+            {job.max_spend_approved && (
+              <p className="text-[10px] text-[#adaaaa] mt-1">Max approved: {fmt(job.max_spend_approved)}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1.5">Receipt Photo</label>
+            <label className={`${inputCls} flex items-center gap-2 cursor-pointer`}>
+              <span className="material-symbols-outlined text-[#adaaaa] text-base">add_photo_alternate</span>
+              <span className="text-[#adaaaa]">
+                {uploadingReceipt ? "Uploading…" : receiptUrl ? "Receipt uploaded ✓" : "Upload receipt photo"}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                disabled={uploadingReceipt}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReceiptUpload(f) }}
+              />
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setShowReceiptForm(false)} className="flex-1 py-3 text-sm font-bold text-[#adaaaa] bg-[#0e0e0e] rounded-xl border border-[#494847]/20">
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isPending || uploadingReceipt || !receiptUrl || !actualTotal}
+              onClick={handleReceiptSubmit}
+              className="flex-1 py-3 text-sm font-bold text-[#c180ff] bg-[#c180ff]/10 rounded-xl border border-[#c180ff]/20 disabled:opacity-50"
+            >
+              {isPending ? "Submitting…" : "Submit Receipt"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Action Button */}
+      {!isDelivered && !showReceiptForm && (
+        <button
+          type="button"
+          disabled={isPending || !canAdvance}
+          onClick={handleStageAdvance}
+          className="w-full py-4 bg-[#c180ff] text-[#33005b] font-black rounded-xl text-sm hover:brightness-110 transition-all disabled:opacity-50 active:scale-[0.98]"
+        >
+          {isPending ? "Updating…" : nextStageLabel ?? "Next Step"}
+        </button>
+      )}
+
+      {/* OTP Modal for final delivery */}
+      {showOtpModal && (
+        <DeliveryOtpModal
+          deliveryId={job.id}
+          onSuccess={() => {
+            setShowOtpModal(false)
+            toast.success("Delivery complete! Great work.")
+            router.push("/dashboard/driver/jobs/completed")
+          }}
+          onClose={() => setShowOtpModal(false)}
+        />
+      )}
+    </div>
+  )
+}

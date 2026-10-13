@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
-import { GeneralSettingsForm } from "@/components/admin/general-settings-form"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { SettingsTabsClient } from "./settings-tabs-client"
 
 export default async function AdminSettingsPage() {
   const supabase = await createClient()
+  const admin = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   let adminProfile = { full_name: "", email: "", phone: "" }
@@ -16,6 +17,16 @@ export default async function AdminSettingsPage() {
     if (data) adminProfile = { full_name: data.full_name ?? "", email: data.email ?? "", phone: data.phone ?? "" }
   }
 
+  const { data: bfmRow } = await admin
+    .from("bfm_settings")
+    .select("service_enabled, max_purchase_amount")
+    .eq("id", 1)
+    .single()
+
+  const initialBfmSettings = bfmRow
+    ? { service_enabled: bfmRow.service_enabled ?? true, max_purchase_amount: Number(bfmRow.max_purchase_amount ?? 50) }
+    : { service_enabled: true, max_purchase_amount: 50 }
+
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
       {/* Header */}
@@ -26,7 +37,7 @@ export default async function AdminSettingsPage() {
         </p>
       </div>
 
-      <SettingsTabsClient adminProfile={adminProfile} />
+      <SettingsTabsClient adminProfile={adminProfile} initialBfmSettings={initialBfmSettings} />
     </div>
   )
 }

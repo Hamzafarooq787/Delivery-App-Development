@@ -18,6 +18,9 @@ type Job = {
   pickup_lat?: number | null
   pickup_lng?: number | null
   package_size?: string | null
+  service_type?: string | null
+  shop_name?: string | null
+  estimated_items_total?: number | null
 }
 
 type SortKey = "newest" | "oldest" | "payout_high" | "payout_low"
@@ -150,16 +153,26 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[#a3a6ff]">inventory_2</span>
+                        <span className="material-symbols-outlined text-[#a3a6ff]">
+                          {job.service_type === "buy_for_me" ? "shopping_bag" : "inventory_2"}
+                        </span>
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-bold text-white truncate">{job.item_description || "Delivery request"}</h3>
-                          {job.package_size && isPackageSize(job.package_size) && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base font-bold text-white truncate">
+                            {job.service_type === "buy_for_me"
+                              ? (job.shop_name || "Shopping request")
+                              : (job.item_description || "Delivery request")}
+                          </h3>
+                          {job.service_type === "buy_for_me" ? (
+                            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#c180ff]/10 text-[#c180ff] border border-[#c180ff]/20">
+                              BUY FOR ME
+                            </span>
+                          ) : job.package_size && isPackageSize(job.package_size) ? (
                             <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#a3a6ff]/10 text-[#a3a6ff] border border-[#a3a6ff]/20">
                               {PACKAGE_SIZE_INFO[job.package_size].label}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <p className="text-xs text-[#adaaaa]">
                           Posted {fmtDate(job.created_at)}
@@ -204,7 +217,13 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                         <span className="text-green-400 font-black">{distanceMiles.toFixed(1)} mi</span>
                       </div>
                     )}
-                    {job.item_value != null && (
+                    {job.service_type === "buy_for_me" && job.estimated_items_total != null && (
+                      <div className="flex justify-between">
+                        <span className="text-[#adaaaa]">Est. Items</span>
+                        <span className="text-white font-bold">{fmt(job.estimated_items_total)}</span>
+                      </div>
+                    )}
+                    {job.service_type !== "buy_for_me" && job.item_value != null && (
                       <div className="flex justify-between">
                         <span className="text-[#adaaaa]">Item Value</span>
                         <span className="text-white font-bold">{fmt(job.item_value) ?? "—"}</span>
