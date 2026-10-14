@@ -37,4 +37,4 @@ html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#1a1a1a]"] {bac
 html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#2a2a2a]"],html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#262626]"] {background-color:#2a2d31!important}
 html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#0a0a0a]"] {background-color:#0d0f11!important}
 
-.brand-logo img {mix-blend-mode:screen}
+.brand-logo img {mix-blend-mode:normal}

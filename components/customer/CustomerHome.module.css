@@ -1,20 +1,188 @@
-.screen{height:100svh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--brand-bg);color:var(--color-on-surface);font-family:var(--font-inter),Arial,sans-serif}
-.screen h1,.screen h2,.screen p{margin:0}.screen a{text-decoration:none;color:inherit}.screen button{font:inherit;cursor:pointer}.screen button:disabled{cursor:default;opacity:.6}.screen :focus-visible{outline:2px solid var(--brand-soft);outline-offset:3px}
-.header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 5vw;border-bottom:1px solid #ffffff12;flex-shrink:0;min-height:72px;background:var(--brand-panel)}
-.profile{display:flex;align-items:center;gap:12px}.desktopNav{display:flex;gap:30px;font-size:14px}.desktopNav [aria-current]{color:var(--brand-soft)}
-.main{width:min(1080px,100%);margin:auto;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:24px 28px}
-.greeting p,.bookingHeading p{font-size:10px;letter-spacing:.15em;color:var(--color-on-surface-variant);font-weight:700}.greeting h1{font-size:36px;letter-spacing:-.04em;font-weight:800;margin:5px 0}.greeting span,.bookingHeading span{font-size:13px;color:var(--color-on-surface-variant)}
-.services{display:grid;grid-template-columns:1fr 1fr;gap:12px}.services button{display:flex;align-items:center;gap:14px;padding:15px;border-radius:16px;border:1px solid #ffffff18;background:var(--brand-panel);color:inherit;text-align:left;min-height:72px}.services .selectedService{background:linear-gradient(115deg,var(--brand-strong),color-mix(in srgb,var(--brand-strong) 35%,#15100c));color:#fff}.services svg{width:30px;height:30px;flex-shrink:0}.services span{display:flex;flex-direction:column;gap:4px}.services strong{font-size:15px}.services small{font-size:11px}
-.booking{border:1px solid var(--brand-strong);border-radius:18px;background:linear-gradient(135deg,rgba(var(--brand-rgb),.12),var(--brand-panel) 65%);padding:23px;display:flex;flex-direction:column;gap:16px}.bookingHeading{display:flex;justify-content:space-between;align-items:center;gap:10px}.bookingHeading h2{font-size:27px;font-weight:800;letter-spacing:-.04em;margin:5px 0}.parcel{width:62px;height:62px;color:var(--brand-strong);flex-shrink:0;filter:drop-shadow(0 0 15px rgba(var(--brand-rgb),.25))}
-.addresses{display:grid;grid-template-columns:1fr 1fr;gap:12px}.addresses button,.deliveries,.shortcuts a{display:flex;align-items:center;gap:14px;padding:15px;background:var(--brand-panel);border:1px solid #ffffff14;border-radius:14px;color:inherit;text-align:left;min-height:64px}.addresses svg:first-child,.deliveries>svg:first-child,.shortcuts svg:first-child{color:var(--brand-strong);width:28px;height:28px;flex-shrink:0}.addresses span,.deliveries span,.shortcuts span{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}.addresses strong,.deliveries strong,.shortcuts strong{font-size:15px;font-weight:700}.addresses small,.deliveries small,.shortcuts small{font-size:12px;color:var(--color-on-surface-variant)}.addresses svg:last-child,.deliveries svg:last-child,.shortcuts svg:last-child{width:18px;height:18px;flex-shrink:0}
-.continue{display:flex;align-items:center;justify-content:center;gap:16px;border:0;border-radius:12px;background:var(--brand-strong);color:var(--brand-ink);font-weight:800!important;min-height:48px;padding:10px}.shortcuts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.bottomNav{display:none}
-@media(max-width:767px){
-.header{min-height:64px;padding:8px 18px}.header :global(.brand-logo){width:130px;height:36px}.desktopNav{display:none}.profile{gap:8px}.main{padding:16px 18px 12px;gap:12px;justify-content:space-evenly}.greeting h1{font-size:30px}.greeting span{font-size:12px}.services{gap:9px}.services button{padding:11px;gap:9px;min-height:68px}.services svg{width:24px;height:24px}.services strong{font-size:12px}.services small{font-size:10px}.booking{padding:16px;gap:12px}.bookingHeading h2{font-size:22px;line-height:1.12}.bookingHeading span{font-size:11px}.parcel{width:40px;height:40px}.addresses{grid-template-columns:1fr;gap:9px}.addresses button{min-height:60px;padding:11px;gap:11px}.addresses strong,.deliveries strong,.shortcuts strong{font-size:13px}.addresses small,.deliveries small,.shortcuts small{font-size:11px}.deliveries{padding:12px;min-height:62px}.deliveries small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.shortcuts{grid-template-columns:1fr 1fr;gap:9px}.shortcuts a{padding:11px;gap:9px;min-height:60px}.shortcuts .saved{display:none}.shortcuts svg:first-child{width:24px}.bottomNav{display:flex;align-items:center;justify-content:space-around;flex-shrink:0;border-top:1px solid #ffffff16;min-height:62px;padding:5px 6px max(6px,env(safe-area-inset-bottom));background:var(--brand-panel)}.bottomNav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:65px;min-height:48px;font-size:10px}.bottomNav [aria-current]{color:var(--brand-strong)}
+.screen {
+  height: 100vh;
+  height: var(--customer-viewport-height, 100vh);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  container-name: customer-home;
+  container-type: size;
+  background: var(--brand-bg);
+  color: var(--color-on-surface);
+  font-family: var(--font-inter), Arial, sans-serif;
 }
-@media(max-height:730px) and (max-width:767px){.main{gap:8px;padding:10px 16px;justify-content:center}.greeting h1{font-size:25px;margin:3px 0}.greeting>span{display:none}.booking{padding:12px;gap:9px}.bookingHeading p{display:none}.bookingHeading h2{font-size:20px}.services button{min-height:55px;padding:9px}.services small{display:none}.addresses button{min-height:52px}.deliveries,.shortcuts a{min-height:53px;padding:9px}.header{min-height:58px}.bottomNav{min-height:56px}.parcel{width:32px;height:32px}}
-@media(max-height:600px){.greeting p,.bookingHeading span,.addresses small,.shortcuts small{display:none}.main{gap:6px;padding-top:6px;padding-bottom:6px}.booking{padding:10px;gap:6px}.greeting h1{font-size:22px}.services button{min-height:48px}.addresses button{min-height:48px}.bookingHeading h2{font-size:18px}.deliveries,.shortcuts a{min-height:48px}.header{min-height:52px}.header :global(.brand-logo){height:28px}.bottomNav{min-height:52px}}
-/* Short landscape view keeps every action visible in a compact two-column layout. */
-@media(max-height:520px) and (min-width:600px){.main{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 20px}.greeting{grid-column:1}.greeting h1{font-size:24px}.services{grid-column:2;grid-row:1}.booking{grid-column:1;grid-row:2/4;padding:12px;gap:8px}.bookingHeading h2{font-size:20px}.bookingHeading p,.bookingHeading span{display:none}.addresses{grid-template-columns:1fr}.addresses button{min-height:48px;padding:8px}.continue{min-height:44px}.deliveries{grid-column:2;grid-row:2}.shortcuts{grid-column:2;grid-row:3;grid-template-columns:1fr 1fr}.shortcuts .saved{display:none}.header{min-height:52px;padding:6px 20px}.header :global(.brand-logo){height:30px}.desktopNav{gap:15px;font-size:12px}}
-@media(max-height:680px) and (max-width:767px){.main{gap:7px;padding:8px 14px}.greeting p{display:none}.greeting h1{font-size:24px;margin:0}.bookingHeading p{display:none}.booking{padding:11px;gap:8px}.bookingHeading h2{font-size:20px}.bookingHeading span{font-size:10px}.addresses button{min-height:50px;padding:8px}.services button{min-height:50px}.deliveries,.shortcuts a{min-height:50px;padding:8px}.addresses small{font-size:10px}.shortcuts small{font-size:10px}.header{min-height:54px}.bottomNav{min-height:54px}}
-@media(max-height:600px) and (max-width:767px){.main{gap:6px;padding-top:6px;padding-bottom:6px}.booking{padding:10px;gap:6px}.header{min-height:52px}.bottomNav{min-height:52px}}
-@media(max-height:520px) and (min-width:600px){.main{grid-template-rows:52px 1fr 1fr;align-content:stretch;gap:6px}.greeting p,.greeting>span{display:none}.greeting h1{font-size:22px}.services button{min-height:48px;padding:8px}.services small{display:none}.booking{padding:10px;gap:6px;justify-content:center}.bookingHeading h2{font-size:18px;margin:0}.parcel{width:28px;height:28px}.addresses{gap:6px}.addresses small{display:none}.addresses button{min-height:48px;padding:8px}.continue{min-height:44px}.shortcuts a{padding:10px}.header{min-height:48px}}
+.screen h1,.screen h2,.screen h3,.screen p { margin: 0; }
+.screen a { color: inherit; text-decoration: none; }
+.screen button { font: inherit; cursor: pointer; }
+.screen button:disabled { cursor: default; opacity: .6; }
+.screen :focus-visible { outline: 2px solid var(--brand-soft); outline-offset: 3px; }
+.header { position: relative; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 0 0 76px; padding: 10px 4vw; border-bottom: 1px solid #ffffff12; background: var(--brand-panel); }
+.header :global(.brand-logo) { width: 165px; height: 46px; }
+/* Avoid blend/filter compositor layers on older Android graphics drivers. */
+.header :global(.brand-logo img) { mix-blend-mode: normal; filter: none; }
+.profile { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.profile :global(button[aria-label="Profile menu"]),.profile :global(button[aria-label="Notifications"]) { min-width: 44px; min-height: 44px; }
+.profile :global(button[aria-label="Profile menu"] + div) { max-height: calc(var(--customer-viewport-height,100svh) - 85px); overflow-y: auto; }
+.desktopNav { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.desktopNav a { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 10px 15px; border-radius: 12px; }
+.desktopNav [aria-current] { color: var(--brand-soft); background: rgba(var(--brand-rgb),.14); }
+.desktopNav a:hover { background: rgba(var(--brand-rgb),.08); }
+.desktopMain { display: grid; grid-template-rows: auto minmax(155px,1fr) auto auto; gap: 20px; flex: 1; min-height: 0; width: min(1300px,100%); margin: 0 auto; padding: 32px 36px 28px; }
+.desktopGreeting p { font-size: 10px; font-weight: 700; letter-spacing: .15em; color: var(--color-on-surface-variant); margin-bottom: 8px; }
+.desktopGreeting h1 { font-size: 36px; line-height: 1.1; font-weight: 800; letter-spacing: -.04em; }
+.desktopGreeting h2 { font-size: 32px; line-height: 1.1; font-weight: 800; letter-spacing: -.04em; color: var(--brand-strong); margin: 5px 0 9px; }
+.desktopGreeting>span { color: var(--color-on-surface-variant); font-size: 14px; }
+.desktopServices { display: grid; grid-template-columns: 1.12fr 1fr; gap: 20px; min-height: 0; }
+.serviceCard { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; padding: 24px; min-height: 0; border-radius: 20px; border: 1px solid #ffffff1c; background: var(--brand-panel); overflow: hidden; }
+.deliveryCard { background: linear-gradient(120deg,var(--brand-strong),#22110c 100%); border-color: var(--brand-strong); color: white; }
+.serviceIcon,.shortcutIcon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 52px; height: 52px; border-radius: 13px; background: rgba(var(--brand-rgb),.15); color: var(--brand-strong); }
+.deliveryCard .serviceIcon { background: #0003; color: white; }
+.serviceCopy { position: relative; z-index: 1; width: 62%; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.serviceCopy h3 { font-size: 26px; line-height: 1.15; font-weight: 800; letter-spacing: -.025em; }
+.serviceCopy p { font-size: 13px; line-height: 1.65; color: var(--color-on-surface-variant); }
+.deliveryCard .serviceCopy p { color: #fff; }
+.serviceCopy button { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; font-size: 13px; background: var(--brand-strong); color: var(--brand-ink); }
+.serviceCopy .shoppingButton { background: rgba(var(--brand-rgb),.14); border: 1px solid rgba(var(--brand-rgb),.35); color: var(--brand-soft); }
+.serviceArt { position: absolute; width: 47%; max-width: 270px; right: 4px; bottom: 14px; pointer-events: none; }
+.serviceArt svg { width: 100%; height: auto; display: block; }
+.bagArt { width: 40%; max-width: 225px; right: 12px; bottom: 12px; }
+.comingSoon { position: absolute; right: 22px; top: 20px; color: var(--brand-soft); background: rgba(var(--brand-rgb),.16); border-radius: 30px; padding: 7px 13px; font-size: 11px; font-weight: 700; }
+.desktopDeliveries,.desktopShortcuts a { display: flex; align-items: center; gap: 16px; padding: 16px 20px; min-height: 76px; border: 1px solid #ffffff14; border-radius: 16px; background: var(--brand-panel); }
+.desktopDeliveries>span:nth-child(2),.desktopShortcuts a>span:nth-child(2) { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.desktopDeliveries strong,.desktopShortcuts strong { font-size: 14px; font-weight: 750; }
+.desktopDeliveries small,.desktopShortcuts small { font-size: 12px; line-height: 1.55; color: var(--color-on-surface-variant); }
+.desktopDeliveries>svg,.desktopShortcuts a>svg { flex-shrink: 0; }
+.desktopShortcuts { display: grid; grid-template-columns: .95fr 1.15fr 1fr; gap: 16px; }
+.desktopShortcuts a { min-height: 80px; padding: 14px 18px; }
+.desktopShortcuts a:first-child strong { font-size: 22px; }
+.desktopShortcuts .shortcutIcon { width: 44px; height: 44px; }
+.main,.bottomNav { display: none; }
+@container customer-home (max-height: 760px) {
+  .desktopMain { padding: 22px 32px; gap: 16px; }
+  .desktopGreeting h1 { font-size: 30px; }
+  .desktopGreeting h2 { font-size: 28px; }
+  .serviceCard { padding: 20px; gap: 10px; }
+  .serviceIcon { width: 42px; height: 42px; }
+  .serviceCopy { gap: 9px; }
+  .serviceCopy h3 { font-size: 23px; }
+  .desktopDeliveries,.desktopShortcuts a { padding: 12px 16px; min-height: 66px; }
+  .desktopDeliveries .shortcutIcon { width: 42px; height: 42px; }
+}
+@container customer-home (max-height: 640px) {
+  .header { flex-basis: 62px; }
+  .desktopMain { padding: 16px 28px; gap: 12px; }
+  .desktopGreeting p { display: none; }
+  .desktopGreeting h1 { font-size: 27px; }
+  .desktopGreeting h2 { font-size: 24px; margin: 3px 0 6px; }
+  .desktopGreeting>span { font-size: 12px; }
+  .serviceIcon { display: none; }
+  .serviceCard { justify-content: center; padding: 18px; }
+  .serviceCopy h3 { font-size: 22px; }
+  .serviceCopy p { font-size: 12px; }
+  .serviceCopy button { padding: 10px 14px; }
+  .desktopDeliveries,.desktopShortcuts a { min-height: 60px; padding: 10px 14px; }
+  .desktopShortcuts small { font-size: 11px; }
+}
+@media (min-width: 900px) and (max-width: 1100px) {
+  .header { padding-inline: 24px; gap: 10px; }
+  .header :global(.brand-logo) { width: 138px; }
+  .desktopNav { gap: 2px; font-size: 12px; }
+  .desktopNav a { padding-inline: 10px; }
+  .desktopMain { padding-inline: 24px; }
+  .desktopShortcuts { gap: 10px; }
+  .desktopShortcuts a { gap: 10px; padding-inline: 12px; }
+  .serviceArt { width: 43%; }
+}
+@media (max-width: 899px) {
+  .header { flex-basis: 64px; padding: 8px max(16px,env(safe-area-inset-right)) 8px max(16px,env(safe-area-inset-left)); }
+  .header :global(.brand-logo) { width: 132px; height: 38px; }
+  .desktopNav,.desktopMain { display: none; }
+  .profile { gap: 10px; }
+  .main { display: flex; flex-direction: column; justify-content: space-between; flex: 1; min-height: 0; width: min(540px,100%); margin: 0 auto; padding: 14px 18px 12px; gap: 10px; }
+  .main>* { flex-shrink: 0; }
+  .greeting p { font-size: 10px; letter-spacing: .15em; color: var(--color-on-surface-variant); font-weight: 700; }
+  .greeting h1 { font-size: 30px; line-height: 1.12; font-weight: 800; letter-spacing: -.04em; margin: 6px 0; }
+  .greeting>span { font-size: 12px; color: var(--color-on-surface-variant); }
+  .services { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .services button { display: flex; align-items: center; gap: 9px; padding: 10px; min-height: 58px; border-radius: 14px; border: 1px solid #ffffff18; background: var(--brand-panel); color: inherit; text-align: left; }
+  .services .selectedService { background: linear-gradient(115deg,var(--brand-strong),#68330e); color: white; }
+  .services svg { width: 24px; height: 24px; flex-shrink: 0; }
+  .services span { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .services strong { font-size: 12px; }
+  .services small { font-size: 10px; }
+  .booking { border: 1px solid var(--brand-strong); border-radius: 18px; background: var(--brand-panel); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .bookingHeading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .bookingHeading p { font-size: 10px; letter-spacing: .13em; font-weight: 700; color: var(--color-on-surface-variant); margin-bottom: 5px; }
+  .bookingHeading h2 { font-size: 22px; line-height: 1.15; font-weight: 800; letter-spacing: -.04em; margin-bottom: 4px; }
+  .bookingHeading span { font-size: 11px; color: var(--color-on-surface-variant); }
+  .parcel { width: 36px; height: 36px; flex-shrink: 0; color: var(--brand-strong); }
+  .addresses { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .addresses button,.deliveries,.shortcuts a { display: flex; align-items: center; gap: 11px; padding: 10px 11px; background: var(--brand-panel); border: 1px solid #ffffff18; border-radius: 14px; color: inherit; text-align: left; min-height: 56px; }
+  .addresses svg:first-child,.deliveries>svg:first-child,.shortcuts svg:first-child { color: var(--brand-strong); width: 26px; height: 26px; flex-shrink: 0; }
+  .addresses span,.deliveries span,.shortcuts span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .addresses strong,.deliveries strong,.shortcuts strong { font-size: 13px; font-weight: 700; }
+  .addresses small,.deliveries small,.shortcuts small { font-size: 11px; color: var(--color-on-surface-variant); }
+  .addresses svg:last-child,.deliveries svg:last-child,.shortcuts svg:last-child { width: 18px; height: 18px; flex-shrink: 0; }
+  .continue { display: flex; align-items: center; justify-content: center; gap: 12px; border: 0; border-radius: 12px; background: var(--brand-strong); color: var(--brand-ink); font-weight: 800!important; min-height: 48px; padding: 10px; }
+  .deliveries small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .shortcuts .saved { display: none; }
+  .shortcuts a { min-height: 58px; gap: 8px; }
+  .shortcuts svg:first-child { width: 23px; }
+  .bottomNav { display: flex; align-items: center; justify-content: space-around; flex-shrink: 0; border-top: 1px solid #ffffff16; padding: 5px max(6px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left)); background: var(--brand-panel); }
+  .bottomNav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 64px; min-height: 48px; font-size: 10px; }
+  .bottomNav [aria-current] { color: var(--brand-strong); }
+  /* Queries use the measured screen height, not Safari's larger layout viewport. */
+  @container customer-home (max-height: 800px) {
+    .main { gap: 8px; padding: 10px 16px; }
+    .greeting h1 { font-size: 28px; margin: 4px 0 0; }
+    .greeting>span,.bookingHeading p,.bookingHeading span { display: none; }
+    .services button { min-height: 52px; }
+    .booking { padding: 12px; gap: 8px; }
+    .bookingHeading h2 { font-size: 21px; margin: 0; }
+    .addresses button { min-height: 52px; }
+    .deliveries,.shortcuts a { min-height: 52px; padding: 9px; }
+  }
+  @container customer-home (max-height: 660px) {
+    .header { flex-basis: 56px; }
+    .main { gap: 7px; padding: 8px 14px; }
+    .greeting p,.services small { display: none; }
+    .greeting h1 { font-size: 24px; margin: 0; }
+    .services button { min-height: 50px; padding: 8px; }
+    .booking { padding: 10px; gap: 6px; }
+    .bookingHeading h2 { font-size: 19px; }
+    .parcel { width: 28px; height: 28px; }
+    .addresses { gap: 6px; }
+    .addresses button { min-height: 50px; padding: 8px; }
+    .addresses small,.shortcuts small { font-size: 10px; }
+    .deliveries,.shortcuts a { min-height: 50px; padding: 8px; }
+  }
+  @container customer-home (max-height: 590px) {
+    .header { flex-basis: 52px; }
+    .main { padding-block: 4px; gap: 5px; }
+    .bookingHeading h2 { font-size: 18px; }
+    .addresses small { display: none; }
+    .addresses button { min-height: 48px; }
+    .greeting h1 { font-size: 22px; }
+  }
+}
+@media (min-width: 600px) and (max-width: 899px) {
+  @container customer-home (max-height: 520px) {
+    .header { flex-basis: 50px; }
+    .header :global(.brand-logo) { height: 30px; }
+    .main { width: 100%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 48px 1fr 1fr; align-content: stretch; gap: 6px; padding: 6px 16px; }
+    .greeting { grid-column: 1; grid-row: 1; align-self: center; }
+    .greeting p,.greeting>span,.services small,.bookingHeading p,.bookingHeading span,.addresses small { display: none; }
+    .services { grid-column: 2; grid-row: 1; }
+    .services button { min-height: 48px; padding: 6px; }
+    .booking { grid-column: 1; grid-row: 2/4; gap: 6px; padding: 8px; justify-content: center; }
+    .bookingHeading h2 { font-size: 17px; }
+    .addresses button { min-height: 48px; }
+    .continue { min-height: 44px; padding: 8px; }
+    .deliveries { grid-column: 2; grid-row: 2; align-self: stretch; }
+    .shortcuts { grid-column: 2; grid-row: 3; }
+    .shortcuts a { align-self: stretch; }
+  }
+}
+
+@supports (height:100svh) { .screen { height:var(--customer-viewport-height,100svh); } }
