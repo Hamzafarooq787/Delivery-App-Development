@@ -84,6 +84,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState<{ id: string; tracking_number: string } | null>(null)
   const savedItems = items.filter(i => savedIds.includes(i.id))
+  const listPageSize = editing ? 2 : 3
   const item = items[index]
   const total = items.reduce((sum, i) => sum + (i.estimated_price ?? 0) * i.quantity, 0)
   useEffect(() => {
@@ -148,12 +149,12 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (!Number.isInteger(item.quantity) || item.quantity < 1 || (item.estimated_price != null && (!Number.isFinite(item.estimated_price) || item.estimated_price < 0))) { setError('Check the quantity and estimated price.'); return }
     if (!savedIds.includes(item.id)) setSavedIds([...savedIds, item.id])
     setEditing(false); setDetails(false); setError('')
-    setListPage(Math.floor((savedIds.includes(item.id) ? savedIds.indexOf(item.id) : savedIds.length) / 2) * 2)
+    setListPage(Math.floor((savedIds.includes(item.id) ? savedIds.indexOf(item.id) : savedIds.length) / 3) * 3)
   }
   function addItem() {
     if (items.some(i => !savedIds.includes(i.id))) { setIndex(items.findIndex(i => !savedIds.includes(i.id))) }
     else { setItems([...items, freshItem()]); setIndex(items.length) }
-    setEditing(true); setDetails(false); setError(''); setQuote(null)
+    setEditing(true); setListPage(0); setDetails(false); setError(''); setQuote(null)
   }
   function cancelEditor() {
     if (!savedIds.includes(item.id)) {
@@ -180,12 +181,12 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
           {step === 1 && <div className={styles.itemsStep}>
             {savedItems.length > 0 && !details && <section className={styles.savedList} aria-label="Added shopping items">
               <div className={styles.listHeading}><strong>Added items ({savedItems.length})</strong><span>{money(savedItems.reduce((sum,i) => sum + (i.estimated_price ?? 0) * i.quantity,0))}</span></div>
-              {savedItems.slice(listPage,listPage + 2).map(i => <div className={styles.savedItem} key={i.id}>
+              {savedItems.slice(listPage,listPage + listPageSize).map(i => <div className={styles.savedItem} key={i.id}>
                 <div><strong>{i.name}</strong><small>Qty {i.quantity} · {i.estimated_price == null ? 'Price not entered' : money(i.estimated_price * i.quantity)}</small></div>
                 <button disabled={uploading} aria-label={`Edit ${i.name}`} onClick={() => { setIndex(items.findIndex(x => x.id === i.id)); setEditing(true); setDetails(false); setError('') }}>Edit</button>
                 <button disabled={uploading} aria-label={`Remove ${i.name}`} onClick={() => removeSaved(i.id)}>×</button>
               </div>)}
-              {savedItems.length > 2 && <div className={styles.itemNav}><button disabled={listPage === 0} onClick={() => setListPage(listPage - 2)}>Previous items</button><span>{listPage + 1}–{Math.min(listPage + 2,savedItems.length)}</span><button disabled={listPage + 2 >= savedItems.length} onClick={() => setListPage(listPage + 2)}>Next items</button></div>}
+              {savedItems.length > listPageSize && <div className={styles.itemNav}><button disabled={listPage === 0} onClick={() => setListPage(Math.max(0,listPage - listPageSize))}>Previous items</button><span>{listPage + 1}–{Math.min(listPage + listPageSize,savedItems.length)}</span><button disabled={listPage + listPageSize >= savedItems.length} onClick={() => setListPage(listPage + listPageSize)}>Next items</button></div>}
             </section>}
             {editing ? <section className={`${styles.stack} ${styles.itemEditor}`} aria-label="Item editor">
               <strong className={styles.editorTitle}>{savedIds.includes(item.id) ? 'Edit item' : 'Add an item'}</strong>
