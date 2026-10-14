@@ -8,7 +8,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
   const version = useRef(0)
   const apply = useCallback((next: BrandTheme) => {
     version.current++
-    document.documentElement.dataset.brand = next
+    if (document.documentElement.dataset.brand !== next) document.documentElement.dataset.brand = next
     setBrand(next)
     setLoaded(true)
     try { localStorage.setItem('godrop-brand', next) } catch {}

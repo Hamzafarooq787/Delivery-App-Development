@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
@@ -19,6 +19,7 @@ type Notif = {
 type Props = {
   role: NotifRole
   userId: string
+  icon?: ReactNode
 }
 
 // ── Relative timestamp ─────────────────────────────────────────────────────
@@ -153,7 +154,7 @@ function actionLabel(title: string, role: NotifRole): string | null {
 // Set to true to re-enable in-app realtime notifications and chat notification toasts.
 const REALTIME_NOTIFICATIONS_ENABLED = false
 
-export function RealtimeNotifications({ role, userId }: Props) {
+export function RealtimeNotifications({ role, userId, icon }: Props) {
   const router  = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [notifs, setNotifs]   = useState<Notif[]>([])
@@ -315,12 +316,14 @@ export function RealtimeNotifications({ role, userId }: Props) {
           open ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)]" : "text-[#adaaaa] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
         }`}
       >
+        {icon ?? (
         <span
           className="material-symbols-outlined text-[22px]"
           style={{ fontVariationSettings: unread > 0 ? "'FILL' 1" : "'FILL' 0" }}
         >
           notifications
         </span>
+        )}
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[9px] font-black flex items-center justify-center leading-none shadow-lg shadow-[var(--color-primary)]/40 animate-bounce">
             {unread > 99 ? "99+" : unread}

@@ -7,6 +7,7 @@ import { SWRegister } from '@/components/pwa/sw-register'
 import { IconGuard } from '@/components/pwa/icon-guard'
 import { MATERIAL_ICON_NAMES } from '@/lib/material-icon-names'
 import { BrandProvider } from '@/components/shared/brand-provider'
+import { CUSTOMER_VIEWPORT_BOOTSTRAP } from '@/lib/customer-viewport'
 import './globals.css'
 import './brand.css'
 
@@ -59,7 +60,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`dark ${manrope.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en" data-theme="dark" data-brand="orange" className={`dark ${manrope.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         {/* Anti-flash: apply saved theme before first paint */}
         <script
@@ -67,6 +68,7 @@ export default function RootLayout({
             __html: `try{var t=localStorage.getItem('kv-theme')||'dark';document.documentElement.setAttribute('data-theme',t);var b=localStorage.getItem('godrop-brand');document.documentElement.setAttribute('data-brand',b==='purple'?'purple':'orange');}catch(e){}`,
           }}
         />
+        <script dangerouslySetInnerHTML={{ __html: CUSTOMER_VIEWPORT_BOOTSTRAP }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* display=block: never render an icon's ligature name (e.g. "local_shipping") as text while the font loads */}

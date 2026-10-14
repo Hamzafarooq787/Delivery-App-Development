@@ -5,8 +5,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  container-name: customer-home;
-  container-type: size;
   background: var(--brand-bg);
   color: var(--color-on-surface);
   font-family: var(--font-inter), Arial, sans-serif;
@@ -57,32 +55,28 @@
 .desktopShortcuts a:first-child strong { font-size: 22px; }
 .desktopShortcuts .shortcutIcon { width: 44px; height: 44px; }
 .main,.bottomNav { display: none; }
-@container customer-home (max-height: 760px) {
-  .desktopMain { padding: 22px 32px; gap: 16px; }
-  .desktopGreeting h1 { font-size: 30px; }
-  .desktopGreeting h2 { font-size: 28px; }
-  .serviceCard { padding: 20px; gap: 10px; }
-  .serviceIcon { width: 42px; height: 42px; }
-  .serviceCopy { gap: 9px; }
-  .serviceCopy h3 { font-size: 23px; }
-  .desktopDeliveries,.desktopShortcuts a { padding: 12px 16px; min-height: 66px; }
-  .desktopDeliveries .shortcutIcon { width: 42px; height: 42px; }
-}
-@container customer-home (max-height: 640px) {
-  .header { flex-basis: 62px; }
-  .desktopMain { padding: 16px 28px; gap: 12px; }
-  .desktopGreeting p { display: none; }
-  .desktopGreeting h1 { font-size: 27px; }
-  .desktopGreeting h2 { font-size: 24px; margin: 3px 0 6px; }
-  .desktopGreeting>span { font-size: 12px; }
-  .serviceIcon { display: none; }
-  .serviceCard { justify-content: center; padding: 18px; }
-  .serviceCopy h3 { font-size: 22px; }
-  .serviceCopy p { font-size: 12px; }
-  .serviceCopy button { padding: 10px 14px; }
-  .desktopDeliveries,.desktopShortcuts a { min-height: 60px; padding: 10px 14px; }
-  .desktopShortcuts small { font-size: 11px; }
-}
+:global(html[data-customer-height~="h760"]) .desktopMain { padding: 22px 32px; gap: 16px; }
+:global(html[data-customer-height~="h760"]) .desktopGreeting h1 { font-size: 30px; }
+:global(html[data-customer-height~="h760"]) .desktopGreeting h2 { font-size: 28px; }
+:global(html[data-customer-height~="h760"]) .serviceCard { padding: 20px; gap: 10px; }
+:global(html[data-customer-height~="h760"]) .serviceIcon { width: 42px; height: 42px; }
+:global(html[data-customer-height~="h760"]) .serviceCopy { gap: 9px; }
+:global(html[data-customer-height~="h760"]) .serviceCopy h3 { font-size: 23px; }
+:global(html[data-customer-height~="h760"]) .desktopDeliveries,:global(html[data-customer-height~="h760"]) .desktopShortcuts a { padding: 12px 16px; min-height: 66px; }
+:global(html[data-customer-height~="h760"]) .desktopDeliveries .shortcutIcon { width: 42px; height: 42px; }
+:global(html[data-customer-height~="h640"]) .header { flex-basis: 62px; }
+:global(html[data-customer-height~="h640"]) .desktopMain { padding: 16px 28px; gap: 12px; }
+:global(html[data-customer-height~="h640"]) .desktopGreeting p { display: none; }
+:global(html[data-customer-height~="h640"]) .desktopGreeting h1 { font-size: 27px; }
+:global(html[data-customer-height~="h640"]) .desktopGreeting h2 { font-size: 24px; margin: 3px 0 6px; }
+:global(html[data-customer-height~="h640"]) .desktopGreeting>span { font-size: 12px; }
+:global(html[data-customer-height~="h640"]) .serviceIcon { display: none; }
+:global(html[data-customer-height~="h640"]) .serviceCard { justify-content: center; padding: 18px; }
+:global(html[data-customer-height~="h640"]) .serviceCopy h3 { font-size: 22px; }
+:global(html[data-customer-height~="h640"]) .serviceCopy p { font-size: 12px; }
+:global(html[data-customer-height~="h640"]) .serviceCopy button { padding: 10px 14px; }
+:global(html[data-customer-height~="h640"]) .desktopDeliveries,:global(html[data-customer-height~="h640"]) .desktopShortcuts a { min-height: 60px; padding: 10px 14px; }
+:global(html[data-customer-height~="h640"]) .desktopShortcuts small { font-size: 11px; }
 @media (min-width: 900px) and (max-width: 1100px) {
   .header { padding-inline: 24px; gap: 10px; }
   .header :global(.brand-logo) { width: 138px; }
@@ -93,7 +87,9 @@
   .desktopShortcuts a { gap: 10px; padding-inline: 12px; }
   .serviceArt { width: 43%; }
 }
-@media (max-width: 899px) {
+@media (max-width: 899px) {.screen { font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
+.screen :global(.font-headline) { font-family:inherit; }
+.notificationPlaceholder { display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;background:none;color:var(--color-on-surface-variant); }
   .header { flex-basis: 64px; padding: 8px max(16px,env(safe-area-inset-right)) 8px max(16px,env(safe-area-inset-left)); }
   .header :global(.brand-logo) { width: 132px; height: 38px; }
   .desktopNav,.desktopMain { display: none; }
@@ -132,57 +128,70 @@
   .bottomNav { display: flex; align-items: center; justify-content: space-around; flex-shrink: 0; border-top: 1px solid #ffffff16; padding: 5px max(6px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left)); background: var(--brand-panel); }
   .bottomNav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 64px; min-height: 48px; font-size: 10px; }
   .bottomNav [aria-current] { color: var(--brand-strong); }
-  /* Queries use the measured screen height, not Safari's larger layout viewport. */
-  @container customer-home (max-height: 800px) {
-    .main { gap: 8px; padding: 10px 16px; }
-    .greeting h1 { font-size: 28px; margin: 4px 0 0; }
-    .greeting>span,.bookingHeading p,.bookingHeading span { display: none; }
-    .services button { min-height: 52px; }
-    .booking { padding: 12px; gap: 8px; }
-    .bookingHeading h2 { font-size: 21px; margin: 0; }
-    .addresses button { min-height: 52px; }
-    .deliveries,.shortcuts a { min-height: 52px; padding: 9px; }
-  }
-  @container customer-home (max-height: 660px) {
-    .header { flex-basis: 56px; }
-    .main { gap: 7px; padding: 8px 14px; }
-    .greeting p,.services small { display: none; }
-    .greeting h1 { font-size: 24px; margin: 0; }
-    .services button { min-height: 50px; padding: 8px; }
-    .booking { padding: 10px; gap: 6px; }
-    .bookingHeading h2 { font-size: 19px; }
-    .parcel { width: 28px; height: 28px; }
-    .addresses { gap: 6px; }
-    .addresses button { min-height: 50px; padding: 8px; }
-    .addresses small,.shortcuts small { font-size: 10px; }
-    .deliveries,.shortcuts a { min-height: 50px; padding: 8px; }
-  }
-  @container customer-home (max-height: 590px) {
-    .header { flex-basis: 52px; }
-    .main { padding-block: 4px; gap: 5px; }
-    .bookingHeading h2 { font-size: 18px; }
-    .addresses small { display: none; }
-    .addresses button { min-height: 48px; }
-    .greeting h1 { font-size: 22px; }
-  }
+  /* Height flags work before hydration and in browsers without container queries. */
+    :global(html[data-customer-height~="h800"]) .main { gap: 8px; padding: 10px 16px; }
+    :global(html[data-customer-height~="h800"]) .greeting h1 { font-size: 28px; margin: 4px 0 0; }
+    :global(html[data-customer-height~="h800"]) .greeting>span,:global(html[data-customer-height~="h800"]) .bookingHeading p,:global(html[data-customer-height~="h800"]) .bookingHeading span { display: none; }
+    :global(html[data-customer-height~="h800"]) .services button { min-height: 52px; }
+    :global(html[data-customer-height~="h800"]) .booking { padding: 12px; gap: 8px; }
+    :global(html[data-customer-height~="h800"]) .bookingHeading h2 { font-size: 21px; margin: 0; }
+    :global(html[data-customer-height~="h800"]) .addresses button { min-height: 52px; }
+    :global(html[data-customer-height~="h800"]) .deliveries,:global(html[data-customer-height~="h800"]) .shortcuts a { min-height: 52px; padding: 9px; }
+    :global(html[data-customer-height~="h660"]) .header { flex-basis: 56px; }
+    :global(html[data-customer-height~="h660"]) .main { gap: 7px; padding: 8px 14px; }
+    :global(html[data-customer-height~="h660"]) .greeting p,:global(html[data-customer-height~="h660"]) .services small { display: none; }
+    :global(html[data-customer-height~="h660"]) .greeting h1 { font-size: 24px; margin: 0; }
+    :global(html[data-customer-height~="h660"]) .services button { min-height: 50px; padding: 8px; }
+    :global(html[data-customer-height~="h660"]) .booking { padding: 10px; gap: 6px; }
+    :global(html[data-customer-height~="h660"]) .bookingHeading h2 { font-size: 19px; }
+    :global(html[data-customer-height~="h660"]) .parcel { width: 28px; height: 28px; }
+    :global(html[data-customer-height~="h660"]) .addresses { gap: 6px; }
+    :global(html[data-customer-height~="h660"]) .addresses button { min-height: 50px; padding: 8px; }
+    :global(html[data-customer-height~="h660"]) .addresses small,:global(html[data-customer-height~="h660"]) .shortcuts small { font-size: 10px; }
+    :global(html[data-customer-height~="h660"]) .deliveries,:global(html[data-customer-height~="h660"]) .shortcuts a { min-height: 50px; padding: 8px; }
+    :global(html[data-customer-height~="h590"]) .header { flex-basis: 52px; }
+    :global(html[data-customer-height~="h590"]) .main { padding-block: 4px; gap: 5px; }
+    :global(html[data-customer-height~="h590"]) .bookingHeading h2 { font-size: 18px; }
+    :global(html[data-customer-height~="h590"]) .addresses small { display: none; }
+    :global(html[data-customer-height~="h590"]) .addresses button { min-height: 48px; }
+    :global(html[data-customer-height~="h590"]) .greeting h1 { font-size: 22px; }
 }
 @media (min-width: 600px) and (max-width: 899px) {
-  @container customer-home (max-height: 520px) {
-    .header { flex-basis: 50px; }
-    .header :global(.brand-logo) { height: 30px; }
-    .main { width: 100%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 48px 1fr 1fr; align-content: stretch; gap: 6px; padding: 6px 16px; }
-    .greeting { grid-column: 1; grid-row: 1; align-self: center; }
-    .greeting p,.greeting>span,.services small,.bookingHeading p,.bookingHeading span,.addresses small { display: none; }
-    .services { grid-column: 2; grid-row: 1; }
-    .services button { min-height: 48px; padding: 6px; }
-    .booking { grid-column: 1; grid-row: 2/4; gap: 6px; padding: 8px; justify-content: center; }
-    .bookingHeading h2 { font-size: 17px; }
-    .addresses button { min-height: 48px; }
-    .continue { min-height: 44px; padding: 8px; }
-    .deliveries { grid-column: 2; grid-row: 2; align-self: stretch; }
-    .shortcuts { grid-column: 2; grid-row: 3; }
-    .shortcuts a { align-self: stretch; }
-  }
+    :global(html[data-customer-height~="h520"]) .header { flex-basis: 50px; }
+    :global(html[data-customer-height~="h520"]) .header :global(.brand-logo) { height: 30px; }
+    :global(html[data-customer-height~="h520"]) .main { width: 100%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 48px 1fr 1fr; align-content: stretch; gap: 6px; padding: 6px 16px; }
+    :global(html[data-customer-height~="h520"]) .greeting { grid-column: 1; grid-row: 1; align-self: center; }
+    :global(html[data-customer-height~="h520"]) .greeting p,:global(html[data-customer-height~="h520"]) .greeting>span,:global(html[data-customer-height~="h520"]) .services small,:global(html[data-customer-height~="h520"]) .bookingHeading p,:global(html[data-customer-height~="h520"]) .bookingHeading span,:global(html[data-customer-height~="h520"]) .addresses small { display: none; }
+    :global(html[data-customer-height~="h520"]) .services { grid-column: 2; grid-row: 1; }
+    :global(html[data-customer-height~="h520"]) .services button { min-height: 48px; padding: 6px; }
+    :global(html[data-customer-height~="h520"]) .booking { grid-column: 1; grid-row: 2/4; gap: 6px; padding: 8px; justify-content: center; }
+    :global(html[data-customer-height~="h520"]) .bookingHeading h2 { font-size: 17px; }
+    :global(html[data-customer-height~="h520"]) .addresses button { min-height: 48px; }
+    :global(html[data-customer-height~="h520"]) .continue { min-height: 44px; padding: 8px; }
+    :global(html[data-customer-height~="h520"]) .deliveries { grid-column: 2; grid-row: 2; align-self: stretch; }
+    :global(html[data-customer-height~="h520"]) .shortcuts { grid-column: 2; grid-row: 3; }
+    :global(html[data-customer-height~="h520"]) .shortcuts a { align-self: stretch; }
 }
 
 @supports (height:100svh) { .screen { height:var(--customer-viewport-height,100svh); } }
+@media (max-width:350px) {
+  :global(html[data-customer-height~="h590"]) .parcel { display:none; }
+}
+/* Keep wide but short windows usable, without hiding delivery actions. */
+@media (min-width:900px) {
+  :global(html[data-customer-height~="h520"]) .header { flex-basis:56px;padding-block:6px; }
+  :global(html[data-customer-height~="h520"]) .header :global(.brand-logo) { height:34px; }
+  :global(html[data-customer-height~="h520"]) .desktopMain { grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;padding:10px 24px; }
+  :global(html[data-customer-height~="h520"]) .desktopGreeting { grid-column:1/-1;display:flex;align-items:center;gap:16px; }
+  :global(html[data-customer-height~="h520"]) .desktopGreeting h1 { font-size:22px; }
+  :global(html[data-customer-height~="h520"]) .desktopGreeting h2 { font-size:24px;margin:0; }
+  :global(html[data-customer-height~="h520"]) .desktopGreeting>span { display:none; }
+  :global(html[data-customer-height~="h520"]) .desktopServices { grid-column:1/-1;min-height:0; }
+  :global(html[data-customer-height~="h520"]) .serviceCard { padding:12px 18px; }
+  :global(html[data-customer-height~="h520"]) .serviceCopy p { display:none; }
+  :global(html[data-customer-height~="h520"]) .desktopShortcuts { gap:8px; }
+  :global(html[data-customer-height~="h520"]) .desktopShortcuts a { gap:8px;padding:8px;min-height:60px; }
+  :global(html[data-customer-height~="h520"]) .desktopShortcuts .shortcutIcon { width:28px;height:32px; }
+  :global(html[data-customer-height~="h520"]) .desktopShortcuts a:not(:first-child) small { display:none; }
+  :global(html[data-customer-height~="h520"]) .desktopShortcuts a>svg { display:none; }
+}

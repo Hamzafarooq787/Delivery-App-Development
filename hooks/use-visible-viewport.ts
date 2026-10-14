@@ -1,18 +1,22 @@
 "use client"
 import { useLayoutEffect, useRef } from 'react'
+import { customerHeightFlags } from '@/lib/customer-viewport'
 
-/** Safari's layout viewport can include the space behind browser toolbars.
- * Keep this screen sized to the visible area, also on resize/rotation. */
+/** The initial viewport is set in the head; resize only when height changes. */
 export function useVisibleViewport() {
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const viewport = window.visualViewport
+    const root = document.documentElement
     let frame = 0
+    let lastHeight = parseInt(root.style.getPropertyValue('--customer-viewport-height'), 10) || 0
     const measure = () => {
-      // Do not resize the layout while the user is pinch zooming.
       if (viewport && Math.abs(viewport.scale - 1) > 0.01) return
       const height = Math.floor(Math.min(window.innerHeight, viewport?.height ?? window.innerHeight))
-      ref.current?.style.setProperty('--customer-viewport-height', `${height}px`)
+      if (!ref.current || height < 1 || height === lastHeight) return
+      lastHeight = height
+      ref.current.style.setProperty('--customer-viewport-height', height + 'px')
+      root.setAttribute('data-customer-height', customerHeightFlags(height))
     }
     const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(measure) }
     measure()
@@ -24,6 +28,8 @@ export function useVisibleViewport() {
       window.removeEventListener('resize', schedule)
       viewport?.removeEventListener('resize', schedule)
       viewport?.removeEventListener('scroll', schedule)
+      root.removeAttribute('data-customer-height')
+      root.style.removeProperty('--customer-viewport-height')
     }
   }, [])
   return ref

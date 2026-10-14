@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { Box, ShoppingBag, MapPin, ArrowRight, ChevronRight, Truck, Wallet, CircleHelp, Home, UserRound } from 'lucide-react'
+import { Bell, Box, ShoppingBag, MapPin, ArrowRight, ChevronRight, Truck, Wallet, CircleHelp, Home, UserRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getWalletBalance } from '@/app/actions/wallet'
 import { getBfmSettings } from '@/app/actions/shopping'
@@ -68,7 +68,7 @@ export default function CustomerHome() {
         <Link href="/dashboard/customer/payments"><Wallet size={18} aria-hidden />Payments</Link>
         <Link href="/dashboard/customer/support"><CircleHelp size={18} aria-hidden />Help</Link>
       </nav>
-      <div className={styles.profile}>{profile.id && <RealtimeNotifications role="customer" userId={profile.id} />}<ProfileDropdown name={profile.name} email={profile.email} activeRole="customer" userId={profile.id} profileHref="/dashboard/customer/settings" supportHref="/dashboard/customer/support" /></div>
+      <div className={styles.profile}>{profile.id ? <RealtimeNotifications role="customer" userId={profile.id} icon={<Bell size={22} aria-hidden />} /> : <button className={styles.notificationPlaceholder} disabled aria-label="Notifications"><Bell size={22} aria-hidden /></button>}<ProfileDropdown name={profile.name} email={profile.email} activeRole="customer" userId={profile.id} profileHref="/dashboard/customer/settings" supportHref="/dashboard/customer/support" /></div>
     </header>
     <main className={styles.desktopMain} aria-label="Customer desktop home">
       <div className={styles.desktopGreeting}><p>GOOD TO SEE YOU</p><h1>{profile.name ? `Hi, ${profile.name.split(' ')[0]}.` : 'Welcome back.'}</h1><h2>What do you need today?</h2><span>Fast, reliable deliveries and shopping, all in one place.</span></div>
