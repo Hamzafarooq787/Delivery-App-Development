@@ -1,6 +1,6 @@
 'use client'
 
-import dynamic from 'next/dynamic'
+import styles from './DeliverySteps.module.css'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -13,7 +13,6 @@ import { createClient } from '@/lib/supabase/client'
 import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
 import { formatPrice } from '@/lib/pricing'
 import {
-  fetchRoute,
   googlePlacesAutocomplete,
   googlePlaceCoords,
   googleReverseGeocode,
@@ -21,11 +20,6 @@ import {
   type PlaceSuggestion,
 } from '@/lib/google'
 import { saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
-
-const GoogleLiveMap = dynamic(
-  () => import('@/components/maps/google-live-map').then((m) => m.GoogleLiveMap),
-  { ssr: false }
-)
 
 interface NewDeliveryModalProps {
   onClose: () => void
@@ -138,6 +132,7 @@ function AddressInput({
         <input
           ref={inputRef}
           data-delivery-address
+          aria-label={label + " address"}
           className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors"
           placeholder={placeholder}
           value={value}
@@ -151,7 +146,7 @@ function AddressInput({
       </div>
       {open && suggestions.length > 0 && dropdownRect && (
         <div
-          style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, zIndex: 99999 }}
+          style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, maxHeight: Math.max(60, (window.visualViewport?.height ?? window.innerHeight) - dropdownRect.top - 76), overflowY: 'auto', zIndex: 99999 }}
           className="bg-[#1a1919] border border-[#494847]/30 rounded-xl overflow-hidden shadow-2xl"
         >
           {suggestions.map((s, i) => (
@@ -176,21 +171,62 @@ function AddressInput({
 
 export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }: NewDeliveryModalProps) {
   const router = useRouter()
+  const [step, setStep] = useState(1)
   useEffect(() => {
-    if (!focusAddress) return
+    const previous = document.activeElement as HTMLElement | null
+    frameRef.current?.querySelector<HTMLElement>('[aria-label="Close booking"]')?.focus()
+    return () => previous?.focus()
+  }, [])
+  const [stepError, setStepError] = useState<string | null>(null)
+  const frameRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const viewport = window.visualViewport
+    const measure = () => {
+      if (viewport && viewport.scale !== 1) return
+      const height = Math.floor(Math.min(window.innerHeight, viewport?.height ?? window.innerHeight))
+      if (frameRef.current) {
+        frameRef.current.style.setProperty('--booking-height', `${height}px`)
+        frameRef.current.style.top = `${viewport?.offsetTop ?? 0}px`
+        frameRef.current.dataset.compact = String(height < 620)
+      }
+    }
+    measure()
+    viewport?.addEventListener('resize', measure)
+    viewport?.addEventListener('scroll', measure)
+    window.addEventListener('resize', measure)
+    const oldOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      viewport?.removeEventListener('resize', measure)
+      viewport?.removeEventListener('scroll', measure)
+      window.removeEventListener('resize', measure)
+      document.body.style.overflow = oldOverflow
+    }
+  }, [])
+  function goTo(next: number) {
+    setStepError(null)
+    setStep(next)
+  }
+  function continueStep() {
+    if (step === 1 && !packageSize) { setStepError('Choose a package size to continue.'); return }
+    if (step === 1 && uploadingPhotos) { setStepError('Please wait for your photos to finish uploading.'); return }
+    if (step === 2 && (!pickupValue || !pickupCoords)) { setStepError('Choose a pickup address from the suggestions.'); return }
+    if (step === 2 && (!deliveryValue || !deliveryCoords)) { setStepError('Choose a delivery address or use your live location.'); return }
+    goTo(step + 1)
+  }
+  useEffect(() => {
+    if (!focusAddress || step !== 2) return
     const timer = setTimeout(() => {
       const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('[data-delivery-address]'))
       inputs[focusAddress === 'delivery' ? 1 : 0]?.focus()
     }, 100)
     return () => clearTimeout(timer)
-  }, [focusAddress])
+  }, [focusAddress, step])
 
   const [pickupValue, setPickupValue] = useState(initialDraft?.pickupValue ?? '')
   const [deliveryValue, setDeliveryValue] = useState(initialDraft?.deliveryValue ?? '')
   const [pickupCoords, setPickupCoords] = useState<LatLng | null>(initialDraft?.pickupCoords ?? null)
   const [deliveryCoords, setDeliveryCoords] = useState<LatLng | null>(initialDraft?.deliveryCoords ?? null)
-  const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null)
-  const [routeInfo, setRouteInfo] = useState<{ miles: number; km: number; duration_min: number } | null>(null)
   const [itemDescription, setItemDescription] = useState<string>(initialDraft?.itemDescription ?? '')
   const [itemPhotos, setItemPhotos] = useState<string[]>(initialDraft?.itemPhotos ?? [])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
@@ -277,16 +313,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
       }
     }
   }, [])
-
-  // Calculate route when both coords set
-  useEffect(() => {
-    if (!pickupCoords || !deliveryCoords) { setRouteGeometry(null); setRouteInfo(null); return }
-    fetchRoute(pickupCoords, deliveryCoords).then((r) => {
-      if (!r) return
-      setRouteGeometry(r.geometry)
-      setRouteInfo({ miles: r.distance_miles, km: r.distance_km, duration_min: r.duration_min })
-    })
-  }, [pickupCoords, deliveryCoords])
 
   // Fill an address field from device GPS (reverse geocode to exact street address)
   async function fillFromGps(field: 'pickup' | 'destination') {
@@ -525,41 +551,126 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     }
   }
 
-  const showMap = !!(pickupCoords || deliveryCoords)
-
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-
-      <div className="relative z-10 w-full max-w-lg bg-[#1a1919] rounded-2xl border border-[#494847]/20 shadow-2xl flex flex-col" style={{ maxHeight: '92dvh' }}>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">local_shipping</span>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white">New Delivery</p>
-              <p className="text-[10px] text-[#adaaaa] uppercase tracking-wider">Request a courier</p>
+    <div ref={frameRef} className={styles.overlay} onKeyDown={(event) => {
+      if (event.key === 'Escape' && !submitting && !addingFunds) onClose()
+      if (event.key === 'Tab') {
+        const controls = Array.from(frameRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled)') ?? []).filter(el => el.getClientRects().length > 0)
+        const first = controls[0], last = controls[controls.length - 1]
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+      }
+    }}>
+      <div className={styles.backdrop} />
+      <section role="dialog" aria-modal="true" aria-labelledby="booking-title" className={styles.dialog}>
+        <header className={styles.header}>
+          <div><p>Collect &amp; Deliver</p><span>Step {step} of 3 · {['Package', 'Locations', 'Review & Pay'][step - 1]}</span></div>
+          <button aria-label="Close booking" disabled={submitting} onClick={onClose}>×</button>
+        </header>
+        <div className={styles.progress} aria-hidden="true"><div style={{width: `${step / 3 * 100}%`}} /></div>
+        <div className={styles.body}>
+          <h2 id="booking-title">{['What are we delivering?', 'Where should we deliver?', 'Review your delivery'][step - 1]}</h2>
+          {step === 1 && <div className={styles.packageStep}>
+            <div className={styles.sizes}>          {/* Package size — determines which drivers (by vehicle) get matched */}
+          <div>
+            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider mb-2">Package Size</p>
+            <div className="grid grid-cols-2 gap-2">
+              {PACKAGE_SIZES.map((size) => {
+                const active = packageSize === size
+                const info = PACKAGE_SIZE_INFO[size]
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => { setPackageSize(size); setStepError(null) }}
+                    className={`flex flex-col items-start gap-0.5 py-2.5 px-3 rounded-xl border text-left transition-all ${
+                      active
+                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/40'
+                        : 'bg-[#262626] border-[#494847]/20 hover:border-[#494847]/40'
+                    }`}
+                  >
+                    <span className={`text-xs font-bold ${active ? 'text-[var(--color-primary)]' : 'text-white'}`}>{info.label}</span>
+                    <span className="text-[10px] text-[#adaaaa] leading-snug">{info.description}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
-            <span className="material-symbols-outlined text-lg">close</span>
-          </button>
-        </div>
 
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4 overscroll-contain">
+</div>
+            <div className={styles.description}>          {/* Item description — optional */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Description <span className="text-[#494847] normal-case">(optional)</span></p>
+              <span className="text-[10px] text-[#494847]">{itemDescription.length}/300</span>
+            </div>
+            <textarea
+              value={itemDescription}
+              onChange={(e) => setItemDescription(e.target.value.slice(0, 300))}
+              placeholder="Describe what's being delivered — e.g. 3 boxes of clothing, a fragile glass vase, a birthday cake…"
+              rows={2}
+              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors resize-none"
+            />
+          </div>
 
-          {/* Pickup */}
+</div>
+            <div className={styles.photos}>          {/* Item photos — optional */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Photos <span className="text-[#494847] normal-case">(optional)</span></p>
+              <span className="text-[10px] text-[#494847]">{itemPhotos.length}/{MAX_ITEM_PHOTOS}</span>
+            </div>
+            <div className="flex gap-2">
+              {itemPhotos.map((url) => (
+                <div key={url} className="relative w-12 h-12 rounded-xl overflow-hidden border border-[#494847]/20 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="Item photo" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(url)}
+                    className="absolute inset-0 bg-black/60 opacity-100 flex items-center justify-center transition-opacity"
+                    aria-label="Remove photo"
+                  >
+                    <span className="material-symbols-outlined text-white text-lg">delete</span>
+                  </button>
+                </div>
+              ))}
+              {itemPhotos.length < MAX_ITEM_PHOTOS && (
+                <label className={`w-12 h-12 rounded-xl border border-dashed flex items-center justify-center cursor-pointer transition-all ${
+                  uploadingPhotos
+                    ? 'border-[#494847]/20 opacity-50 cursor-wait'
+                    : 'border-[#494847]/30 hover:border-[var(--color-primary)]/40 text-[#adaaaa] hover:text-[var(--color-primary)]'
+                }`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={uploadingPhotos}
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                  />
+                  <span className="material-symbols-outlined text-xl">
+                    {uploadingPhotos ? 'hourglass_empty' : 'add_a_photo'}
+                  </span>
+                </label>
+              )}
+            </div>
+            {photoError && (
+              <p className="text-[10px] text-red-400 mt-1.5">{photoError}</p>
+            )}
+          </div>
+
+</div>
+          </div>}
+          {step === 2 && <div className={styles.locationStep}>          {/* Pickup */}
           <AddressInput
             label="Pickup"
             icon="radio_button_checked"
             color="text-[var(--color-primary)]"
             placeholder="Search pickup address..."
             value={pickupValue}
-            onChange={(v) => { setPickupValue(v); if (!v) setPickupCoords(null) }}
+            onChange={(v) => { setPickupValue(v); setPickupCoords(null) }}
             onSelect={(place, coords) => { setPickupValue(place); setPickupCoords(coords ?? null) }}
             onGpsClick={() => fillFromGps('pickup')}
             gpsLoading={gpsPickupLoading}
@@ -611,7 +722,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
                 color="text-[var(--color-secondary)]"
                 placeholder="Search delivery address..."
                 value={deliveryValue}
-                onChange={(v) => { setDeliveryValue(v); if (!v) setDeliveryCoords(null) }}
+                onChange={(v) => { setDeliveryValue(v); setDeliveryCoords(null) }}
                 onSelect={(place, coords) => { setDeliveryValue(place); setDeliveryCoords(coords ?? null) }}
                 onGpsClick={() => fillFromGps('destination')}
                 gpsLoading={gpsDestLoading}
@@ -633,192 +744,23 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             </div>
           )}
 
-          {/* Route map preview */}
-          {showMap && (
-            <div className="rounded-xl overflow-hidden border border-[#494847]/20">
-              <GoogleLiveMap
-                pickup={pickupCoords}
-                destination={deliveryCoords}
-                routeGeometry={routeGeometry}
-                height={200}
-              />
-              {/* Distance / duration — from the quote once it lands, from the client route in the meantime */}
-              <div className="flex items-center justify-around px-4 py-3 bg-[#262626] border-t border-[#494847]/20">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[var(--color-primary)] text-base">straighten</span>
-                  <div>
-                    <p className="text-xs font-black text-white">
-                      {(quote?.distanceMiles ?? routeInfo?.miles) ?? '—'} mi
-                      {routeInfo && <span className="text-[#adaaaa] font-semibold"> ({routeInfo.km} km)</span>}
-                    </p>
-                    <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Distance</p>
-                  </div>
-                </div>
-                <div className="w-px h-8 bg-[#494847]/30" />
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[var(--color-secondary)] text-base">schedule</span>
-                  <div>
-                    <p className="text-xs font-black text-white">{(quote?.durationMin ?? routeInfo?.duration_min) ?? '—'} min</p>
-                    <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Est. Drive</p>
-                  </div>
-                </div>
-                <div className="w-px h-8 bg-[#494847]/30" />
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#6ee7b7] text-base">payments</span>
-                  <div>
-                    {quoteLoading && !quote ? (
-                      <p className="text-xs font-black text-[#adaaaa]">…</p>
-                    ) : (
-                      <p className="text-xs font-black text-[#6ee7b7]">£{quote ? formatPrice(quote.finalPrice) : '—'}</p>
-                    )}
-                    <p className="text-[9px] text-[#adaaaa] uppercase tracking-wider">Price</p>
-                  </div>
-                </div>
-              </div>
-
-              {quoteError && (
-                <div className="px-4 py-2.5 border-t border-red-500/15 bg-red-500/5 flex items-start gap-2">
-                  <span className="material-symbols-outlined text-red-400 text-sm mt-0.5">error</span>
-                  <p className="text-[11px] text-red-400 leading-relaxed">{quoteError}</p>
-                </div>
-              )}
-
-              {/* Price breakdown: base → surge → discount → total */}
-              {quote && (
-                <div className="border-t border-[#494847]/20">
-                  <div className="px-4 py-2.5 flex items-center justify-between">
-                    <p className="text-[11px] text-[#adaaaa]">Base fare</p>
-                    <p className="text-xs font-bold text-white">£{formatPrice(quote.basePrice)}</p>
-                  </div>
-                  {quote.surgeMultiplier > 1 && (
-                    <div className="px-4 py-2.5 border-t border-[#fb923c]/15 bg-[#fb923c]/5 flex items-center justify-between">
-                      <p className="text-[11px] text-[#fb923c] flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[13px]">trending_up</span>
-                        Surge pricing ({quote.surgeMultiplier}×) — {quote.surgeFactors.map((f) => f.label).join(', ')}
-                      </p>
-                      <p className="text-xs font-bold text-[#fb923c]">
-                        +£{formatPrice(quote.surgedPrice - quote.basePrice)}
-                      </p>
-                    </div>
-                  )}
-                  {quote.discountAmount > 0 && (
-                    <div className="px-4 py-2.5 border-t border-[#6ee7b7]/15 bg-[#6ee7b7]/5 flex items-center justify-between">
-                      <p className="text-[11px] text-[#6ee7b7] flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[13px]">local_offer</span>
-                        {quote.discountLabel}
-                      </p>
-                      <p className="text-xs font-bold text-[#6ee7b7]">-£{formatPrice(quote.discountAmount)}</p>
-                    </div>
-                  )}
-                  <div className="px-4 py-3 bg-[#6ee7b7]/5 border-t border-[#6ee7b7]/20 flex items-center justify-between">
-                    <p className="text-[11px] text-[#adaaaa]">Total</p>
-                    <p className="text-lg font-black text-[#6ee7b7]">£{formatPrice(quote.finalPrice)}</p>
-                  </div>
-                </div>
-              )}
-
-              {walletBalance !== null && (
-                <div className="px-4 py-2 bg-[#1a1919] border-t border-[#494847]/10 flex items-center justify-between">
-                  <p className="text-[10px] text-[#adaaaa] flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[13px]">account_balance_wallet</span>
-                    Wallet balance
-                  </p>
-                  <p className={`text-[11px] font-bold ${insufficientFunds ? 'text-[#fb923c]' : 'text-[#adaaaa]'}`}>
-                    £{walletBalance.toFixed(2)}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Item description — optional */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Description <span className="text-[#494847] normal-case">(optional)</span></p>
-              <span className="text-[10px] text-[#494847]">{itemDescription.length}/300</span>
-            </div>
-            <textarea
-              value={itemDescription}
-              onChange={(e) => setItemDescription(e.target.value.slice(0, 300))}
-              placeholder="Describe what's being delivered — e.g. 3 boxes of clothing, a fragile glass vase, a birthday cake…"
-              rows={3}
-              className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors resize-none"
-            />
+</div>}
+          {step === 3 && <div className={styles.reviewStep}>
+            
+          <div className={styles.summary}>
+            <div><span>Pickup</span><p>{pickupValue}</p><button onClick={() => goTo(2)}>Edit</button></div>
+            <div><span>Delivery</span><p>{deliveryValue}</p><button onClick={() => goTo(2)}>Edit</button></div>
+            <div><span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
+          </div>
+          <div className={styles.price}>
+            <div><span>Base fare</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
+            {quote && quote.surgeMultiplier > 1 && <div><span>Surge ({quote.surgeMultiplier}×)</span><strong>+£{formatPrice(quote.surgedPrice - quote.basePrice)}</strong></div>}
+            {quote && quote.discountAmount > 0 && <div><span>{quote.discountLabel}</span><strong>−£{formatPrice(quote.discountAmount)}</strong></div>}
+            <div><span>Total</span><strong>{quoteLoading ? 'Calculating…' : price !== null ? `£${formatPrice(price)}` : '—'}</strong></div>
+            <div><span>Wallet balance</span><strong>{walletBalance !== null ? `£${walletBalance.toFixed(2)}` : 'Loading…'}</strong></div>
           </div>
 
-          {/* Item photos — optional */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Photos <span className="text-[#494847] normal-case">(optional)</span></p>
-              <span className="text-[10px] text-[#494847]">{itemPhotos.length}/{MAX_ITEM_PHOTOS}</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {itemPhotos.map((url) => (
-                <div key={url} className="relative w-16 h-16 rounded-xl overflow-hidden border border-[#494847]/20 group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="Item photo" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(url)}
-                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                    aria-label="Remove photo"
-                  >
-                    <span className="material-symbols-outlined text-white text-lg">delete</span>
-                  </button>
-                </div>
-              ))}
-              {itemPhotos.length < MAX_ITEM_PHOTOS && (
-                <label className={`w-16 h-16 rounded-xl border border-dashed flex items-center justify-center cursor-pointer transition-all ${
-                  uploadingPhotos
-                    ? 'border-[#494847]/20 opacity-50 cursor-wait'
-                    : 'border-[#494847]/30 hover:border-[var(--color-primary)]/40 text-[#adaaaa] hover:text-[var(--color-primary)]'
-                }`}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    disabled={uploadingPhotos}
-                    onChange={handlePhotoSelect}
-                    className="hidden"
-                  />
-                  <span className="material-symbols-outlined text-xl">
-                    {uploadingPhotos ? 'hourglass_empty' : 'add_a_photo'}
-                  </span>
-                </label>
-              )}
-            </div>
-            {photoError && (
-              <p className="text-[10px] text-red-400 mt-1.5">{photoError}</p>
-            )}
-          </div>
-
-          {/* Package size — determines which drivers (by vehicle) get matched */}
-          <div>
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider mb-2">Package Size</p>
-            <div className="grid grid-cols-2 gap-2">
-              {PACKAGE_SIZES.map((size) => {
-                const active = packageSize === size
-                const info = PACKAGE_SIZE_INFO[size]
-                return (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => setPackageSize(size)}
-                    className={`flex flex-col items-start gap-0.5 py-2.5 px-3 rounded-xl border text-left transition-all ${
-                      active
-                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/40'
-                        : 'bg-[#262626] border-[#494847]/20 hover:border-[#494847]/40'
-                    }`}
-                  >
-                    <span className={`text-xs font-bold ${active ? 'text-[var(--color-primary)]' : 'text-white'}`}>{info.label}</span>
-                    <span className="text-[10px] text-[#adaaaa] leading-snug">{info.description}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Promo code */}
+                      {/* Promo code */}
           <div>
             {!showPromoInput && !quote?.discountLabel ? (
               <button
@@ -864,28 +806,9 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             )}
           </div>
 
-          {/* Prohibited Items */}
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-red-500/15">
-              <span className="material-symbols-outlined text-red-400 text-base">block</span>
-              <p className="text-[11px] font-bold text-red-400 uppercase tracking-wider">Prohibited Items</p>
-            </div>
-            <div className="px-4 py-3 grid grid-cols-2 gap-2">
-              {PROHIBITED_ITEMS.map((item) => (
-                <div key={item.label} className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-red-400/70 text-sm">{item.icon}</span>
-                  <span className="text-[11px] text-[#adaaaa]">{item.label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="px-4 pb-3">
-              <p className="text-[10px] text-[#494847] leading-relaxed">
-                Shipping prohibited items may result in immediate cancellation, account suspension, and legal action.
-              </p>
-            </div>
-          </div>
 
-          {/* Confirmation checkbox */}
+            <p className={styles.prohibited}>Do not send: {PROHIBITED_ITEMS.map(item => item.label.toLowerCase()).join(', ')}.</p>
+                      {/* Confirmation checkbox */}
           <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
             confirmed ? 'border-green-500/40 bg-green-500/5' : 'border-[#494847]/20 bg-[#262626] hover:border-[#494847]/40'
           }`}>
@@ -900,34 +823,15 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             </p>
           </label>
 
-          {/* Insufficient wallet balance */}
-          {insufficientFunds && price !== null && (
-            <div className="flex items-start gap-3 p-3.5 rounded-xl border border-[#fb923c]/30 bg-[#fb923c]/5">
-              <span className="material-symbols-outlined text-[#fb923c] text-lg mt-0.5 shrink-0">account_balance_wallet</span>
-              <div>
-                <p className="text-xs font-bold text-[#fb923c]">Insufficient wallet balance</p>
-                <p className="text-[11px] text-[#adaaaa] mt-0.5 leading-relaxed">
-                  This delivery costs £{formatPrice(price)} — your wallet has £{(walletBalance ?? 0).toFixed(2)}.
-                  Add funds to continue; you'll return here to finish this request.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-[#494847]/15 shrink-0">
-          {!insufficientFunds && missingReason && (
-            <p className="text-[11px] text-[#fb923c] mb-3 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">info</span>
-              {missingReason}
-            </p>
-          )}
-          <div className="flex items-center justify-between gap-3">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
-            Cancel
-          </button>
-          {insufficientFunds ? (
+          </div>}
+        </div>
+        <footer className={styles.footer}>
+          {stepError && <p role="alert">{stepError}</p>}
+          {step === 3 && missingReason && <p role="status">{missingReason}</p>}
+          <div className={styles.actions}>
+            <button disabled={submitting || addingFunds} onClick={() => step === 1 ? onClose() : goTo(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button>
+            {step < 3 ? <button className={styles.continue} onClick={continueStep}>Continue</button> : <>          {insufficientFunds ? (
             <button
               onClick={handleAddFunds}
               disabled={addingFunds}
@@ -939,18 +843,18 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={submitting || !confirmed || !packageSize || !quote}
+              disabled={submitting || !!missingReason || quoteLoading || uploadingPhotos}
               className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{ boxShadow: confirmed ? '0 0 20px rgba(var(--brand-rgb),0.25)' : 'none' }}
             >
               <span className="material-symbols-outlined text-base">bolt</span>
-              {submitting ? 'Requesting…' : price !== null ? `Request Delivery — £${formatPrice(price)}` : 'Request Delivery'}
+              {submitting ? 'Requesting…' : price !== null ? `Confirm & Pay — £${formatPrice(price)}` : 'Request Delivery'}
             </button>
           )}
+</>}
           </div>
-        </div>
-      </div>
+        </footer>
+      </section>
     </div>
   )
 }
-
