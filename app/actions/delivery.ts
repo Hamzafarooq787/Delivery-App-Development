@@ -27,7 +27,7 @@ export type CreateDeliveryParams = {
 }
 
 export type CreateDeliveryResult =
-  | { data: { id: string } }
+  | { data: { id: string; tracking_number: string } }
   | { error: string; code?: "insufficient_funds" | "not_authenticated" | "invalid_price" }
 
 /**
