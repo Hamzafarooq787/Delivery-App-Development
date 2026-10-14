@@ -19,7 +19,7 @@ import {
   googleDetectCountryCode,
   type PlaceSuggestion,
 } from '@/lib/google'
-import { saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
+import { clearDeliveryDraft, saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
 
 interface NewDeliveryModalProps {
   onClose: () => void
@@ -107,6 +107,7 @@ function AddressInput({
     const coords = await googlePlaceCoords(s.placeId).catch(() => null)
     onSelect(s.text, coords)
     setSelecting(false)
+    if (coords) inputRef.current?.blur()
   }
 
   return (
@@ -172,6 +173,7 @@ function AddressInput({
 export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }: NewDeliveryModalProps) {
   const router = useRouter()
   const [step, setStep] = useState(1)
+  const [success, setSuccess] = useState<{ id: string; tracking_number: string } | null>(null)
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     frameRef.current?.querySelector<HTMLElement>('[aria-label="Close booking"]')?.focus()
@@ -470,7 +472,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     : null
 
   async function handleSubmit() {
-    if (submitting) return
+    if (submitting || success) return
     if (!pickupValue || !pickupCoords) { toast.error('Select a pickup address from the suggestions list.'); return }
     if ((!deliveryValue || !deliveryCoords) && !liveLocationActive) { toast.error('Select a delivery address from the suggestions list, or use live location.'); return }
     if (!packageSize) { toast.error('Select a package size.'); return }
@@ -507,13 +509,13 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         return
       }
 
-      // Stop live location if active when delivery is submitted
-      if (liveLocationActive) await stopLiveLocation()
-
-      toast.success('Delivery requested!')
-      onClose()
-      router.push('/dashboard/customer/active-deliveries')
-      router.refresh()
+      // Keep the receipt visible until the customer chooses where to go next.
+      setSuccess(result.data)
+      clearDeliveryDraft()
+      setSubmitting(false)
+      if (liveLocationActive) {
+        void stopLiveLocation().catch(() => { /* Cleanup failure must not repeat a paid booking. */ })
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unexpected error.')
       setSubmitting(false)
@@ -550,6 +552,26 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
       setAddingFunds(false)
     }
   }
+
+  if (success) return (
+    <div ref={frameRef} className={styles.overlay}>
+      <div className={styles.backdrop} />
+      <section role="dialog" aria-modal="true" aria-labelledby="delivery-success-title" className={styles.dialog}>
+        <header className={styles.header}><p>Collect &amp; Deliver</p><button autoFocus aria-label="Close confirmation" onClick={onClose}>×</button></header>
+        <div className={styles.success} role="status">
+          <span className={styles.successMark} aria-hidden="true">✓</span>
+          <h2 id="delivery-success-title">Thank you!</h2>
+          <p>Your delivery has been booked.</p>
+          <div className={styles.receipt}><span>Tracking code</span><strong>{success.tracking_number}</strong></div>
+          <p>We’ll let you know when a driver accepts your delivery.</p>
+        </div>
+        <footer className={styles.footer}><div className={styles.actions}>
+          <button onClick={onClose}>Done</button>
+          <button className={styles.continue} onClick={() => { onClose(); router.push(`/dashboard/customer/tracking?id=${encodeURIComponent(success.id)}`) }}>Track delivery</button>
+        </div></footer>
+      </section>
+    </div>
+  )
 
   return (
     <div ref={frameRef} className={styles.overlay} onKeyDown={(event) => {

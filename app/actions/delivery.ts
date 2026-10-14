@@ -113,7 +113,7 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     console.error("[Notify] Failed to send new-delivery push:", err)
   )
 
-  return { data: { id: deliveryId as string } }
+  return { data: { id: deliveryId as string, tracking_number } }
 }
 
 export async function getCustomerDeliveries() {
@@ -1195,3 +1195,4 @@ export async function markParcelCollected(deliveryId: string, photoUrl: string) 
   revalidatePath(`/dashboard/driver/jobs/${deliveryId}`)
   return { success: true }
 }
+
