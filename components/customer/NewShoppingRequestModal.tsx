@@ -22,6 +22,7 @@ function AddressField({ label, value, onChange, onSelect }: { label: string; val
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [dropdownHeight, setDropdownHeight] = useState(160)
   const input = useRef<HTMLInputElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sequence = useRef(0)
@@ -32,7 +33,7 @@ function AddressField({ label, value, onChange, onSelect }: { label: string; val
     if (timer.current) clearTimeout(timer.current)
     if (v.length < 3) return
     timer.current = setTimeout(async () => {
-      try { const list = await googlePlacesAutocomplete(v, {}); if (request === sequence.current) setSuggestions(list ?? []) }
+      try { const list = await googlePlacesAutocomplete(v, {}); if (request === sequence.current) { setDropdownHeight(Math.max(44, (window.visualViewport?.height ?? window.innerHeight) - (input.current?.getBoundingClientRect().bottom ?? 0) - 90)); setSuggestions(list ?? []) } }
       catch { if (request === sequence.current) setError('Address search failed. Please try again.') }
     }, 350)
   }
@@ -50,7 +51,7 @@ function AddressField({ label, value, onChange, onSelect }: { label: string; val
   return <div className={styles.field}>
     <label>{label}<input ref={input} aria-label={label} value={value} onChange={e => change(e.target.value)} placeholder="Start typing an address…" autoComplete="off" /></label>
     {busy && <small>Finding address…</small>}{error && <small role="alert">{error}</small>}
-    {suggestions.length > 0 && <div className={styles.suggestions} style={{ maxHeight: Math.max(44, (window.visualViewport?.height ?? window.innerHeight) - (input.current?.getBoundingClientRect().bottom ?? 0) - 90) }}>{suggestions.map(s => <button key={s.placeId} type="button" onMouseDown={e => e.preventDefault()} onClick={() => choose(s)}>{s.text}</button>)}</div>}
+    {suggestions.length > 0 && <div className={styles.suggestions} style={{ maxHeight: dropdownHeight }}>{suggestions.map(s => <button key={s.placeId} type="button" onMouseDown={e => e.preventDefault()} onClick={() => choose(s)}>{s.text}</button>)}</div>}
   </div>
 }
 
@@ -61,6 +62,9 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1)
   const [items, setItems] = useState<Item[]>([freshItem()])
   const [index, setIndex] = useState(0)
+  const [savedIds, setSavedIds] = useState<string[]>([])
+  const [editing, setEditing] = useState(true)
+  const [listPage, setListPage] = useState(0)
   const [details, setDetails] = useState(false)
   const [instructions, setInstructions] = useState(false)
   const [individual, setIndividual] = useState(false)
@@ -79,6 +83,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [locating, setLocating] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState<{ id: string; tracking_number: string } | null>(null)
+  const savedItems = items.filter(i => savedIds.includes(i.id))
   const item = items[index]
   const total = items.reduce((sum, i) => sum + (i.estimated_price ?? 0) * i.quantity, 0)
   useEffect(() => {
@@ -106,7 +111,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   }
   async function next() {
     if (lock.current || uploading) return
-    if (step === 1) { if (validItems()) go(2); return }
+    if (step === 1) { if (!savedItems.length) { setError('Add and save at least one item.'); return }; if (validItems()) go(2); return }
     if (step === 2) { if (!shopName.trim() || !shop || !delivery) { setError('Enter the shop name and select both addresses from suggestions.'); return }; go(3); return }
     if (step === 3) {
       if (!validItems() || !shop || !delivery) return
@@ -138,7 +143,29 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     setLocating(true)
     navigator.geolocation.getCurrentPosition(async pos => { try { const p = { lat: pos.coords.latitude, lng: pos.coords.longitude }; const address = await googleReverseGeocode(p.lat, p.lng); if (!address) throw new Error(); setDelivery({ ...p, address }); setDeliveryInput(address); setQuote(null) } catch { setError('Could not find your address. Please type it instead.') } finally { setLocating(false) } }, () => { setError('Location permission is unavailable. Please enter your address.'); setLocating(false) }, { timeout: 10000 })
   }
-  const navItems = <div className={styles.itemNav}><button disabled={index === 0 || uploading} onClick={() => { setIndex(index - 1); setDetails(false) }}>Previous item</button><span>{index + 1} / {items.length}</span><button disabled={index === items.length - 1 || uploading} onClick={() => { setIndex(index + 1); setDetails(false) }}>Next item</button></div>
+  function saveItem() {
+    if (!item.name.trim()) { setError('Enter an item name before saving.'); return }
+    if (!Number.isInteger(item.quantity) || item.quantity < 1 || (item.estimated_price != null && (!Number.isFinite(item.estimated_price) || item.estimated_price < 0))) { setError('Check the quantity and estimated price.'); return }
+    if (!savedIds.includes(item.id)) setSavedIds([...savedIds, item.id])
+    setEditing(false); setDetails(false); setError('')
+    setListPage(Math.floor((savedIds.includes(item.id) ? savedIds.indexOf(item.id) : savedIds.length) / 2) * 2)
+  }
+  function addItem() {
+    if (items.some(i => !savedIds.includes(i.id))) { setIndex(items.findIndex(i => !savedIds.includes(i.id))) }
+    else { setItems([...items, freshItem()]); setIndex(items.length) }
+    setEditing(true); setDetails(false); setError(''); setQuote(null)
+  }
+  function cancelEditor() {
+    if (!savedIds.includes(item.id)) {
+      const remaining = items.filter(i => i.id !== item.id)
+      setItems(remaining.length ? remaining : [freshItem()]); setIndex(0)
+    }
+    setEditing(false); setDetails(false); setError('')
+  }
+  function removeSaved(id: string) {
+    const remaining = items.filter(i => i.id !== id)
+    setItems(remaining.length ? remaining : [freshItem()]); setSavedIds(savedIds.filter(i => i !== id)); setIndex(Math.max(0, remaining.findIndex(i => i.id === item.id))); setReplacementIndex(0); setListPage(0); setQuote(null); if (item.id === id) { setEditing(false); setDetails(false) }
+  }
   return <div ref={frame} className={styles.overlay} onKeyDown={e => {
     if (e.key === 'Escape' && !loading && !uploading) onClose()
     if (e.key === 'Tab') { const all = Array.from(frame.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),textarea:not(:disabled)') ?? []).filter(el => el.getClientRects().length); const first = all[0], last = all[all.length - 1]; if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }; if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() } }
@@ -150,7 +177,18 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
       <main className={styles.body}>
         <h2 id="shopping-title">{success ? 'Thank you!' : ['What should we buy?','Choose your shop','If an item is unavailable','Review your shopping'][step - 1]}</h2>
         {success ? <div className={styles.success}><span aria-hidden="true">✓</span><p>Your shopping request is booked.</p><div className={styles.card}><small>Tracking code</small><strong>{success.tracking_number}</strong></div><p>We’ll let you know when a driver accepts your order.</p></div> : <>
-          {step === 1 && <div className={styles.stack}>
+          {step === 1 && <div className={styles.itemsStep}>
+            {savedItems.length > 0 && !details && <section className={styles.savedList} aria-label="Added shopping items">
+              <div className={styles.listHeading}><strong>Added items ({savedItems.length})</strong><span>{money(savedItems.reduce((sum,i) => sum + (i.estimated_price ?? 0) * i.quantity,0))}</span></div>
+              {savedItems.slice(listPage,listPage + 2).map(i => <div className={styles.savedItem} key={i.id}>
+                <div><strong>{i.name}</strong><small>Qty {i.quantity} · {i.estimated_price == null ? 'Price not entered' : money(i.estimated_price * i.quantity)}</small></div>
+                <button disabled={uploading} aria-label={`Edit ${i.name}`} onClick={() => { setIndex(items.findIndex(x => x.id === i.id)); setEditing(true); setDetails(false); setError('') }}>Edit</button>
+                <button disabled={uploading} aria-label={`Remove ${i.name}`} onClick={() => removeSaved(i.id)}>×</button>
+              </div>)}
+              {savedItems.length > 2 && <div className={styles.itemNav}><button disabled={listPage === 0} onClick={() => setListPage(listPage - 2)}>Previous items</button><span>{listPage + 1}–{Math.min(listPage + 2,savedItems.length)}</span><button disabled={listPage + 2 >= savedItems.length} onClick={() => setListPage(listPage + 2)}>Next items</button></div>}
+            </section>}
+            {editing ? <section className={`${styles.stack} ${styles.itemEditor}`} aria-label="Item editor">
+              <strong className={styles.editorTitle}>{savedIds.includes(item.id) ? 'Edit item' : 'Add an item'}</strong>
             {details ? <>
               <button className={styles.link} onClick={() => setDetails(false)}>← Back to item {index + 1}</button>
               <label>Brand, size or variant (optional)<input value={item.brand_size_variant ?? ''} onChange={e => update('brand_size_variant',e.target.value)} /></label>
@@ -162,10 +200,10 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
               <label>Item name<input value={item.name} onChange={e => update('name',e.target.value)} placeholder="e.g. Whole milk 2L" /></label>
               <div className={styles.columns}><label>Quantity<div className={styles.quantity}><button aria-label="Reduce quantity" disabled={item.quantity <= 1} onClick={() => update('quantity',item.quantity - 1)}>−</button><strong>{item.quantity}</strong><button aria-label="Increase quantity" onClick={() => update('quantity',item.quantity + 1)}>+</button></div></label><label>Est. price per item (£)<input type="number" min="0" step="0.01" value={item.estimated_price ?? ''} onChange={e => update('estimated_price',e.target.value === '' ? null : Number(e.target.value))} placeholder="Optional" /></label></div>
               <button className={styles.cardButton} onClick={() => setDetails(true)}>More details (optional) <span>Brand, size, notes and photo →</span></button>
-              {navItems}
-              <div className={styles.columns}><button className={styles.outline} onClick={() => { if (!item.name.trim()) { setError('Name this item before adding another.'); return }; setItems([...items,freshItem()]); setIndex(items.length); setQuote(null); setError('') }}>+ Add another item</button><button disabled={items.length === 1} onClick={() => { setItems(items.filter((_,n) => n !== index)); setIndex(Math.max(0,index - 1)); setQuote(null) }}>Remove item</button></div>
-              <p className={styles.hint}>{items.length} item{items.length === 1 ? '' : 's'} · Estimated items total {money(total)}</p>
             </>}
+
+            </section> : <button className={styles.outline} onClick={addItem}>+ Add another item</button>}
+            {!editing && savedItems.length === 0 && <p className={styles.hint}>Add your first item to start your shopping list.</p>}
           </div>}
           {step === 2 && <div className={styles.stack}>
             {instructions ? <><button className={styles.link} onClick={() => setInstructions(false)}>← Back to addresses</button><label>Shop instructions (optional)<textarea rows={3} value={shopInstructions} onChange={e => setShopInstructions(e.target.value)} /></label></> : <>
@@ -192,7 +230,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
         </>}
       </main>
       <footer>{error && <p role="alert">{error}</p>}<div className={styles.actions}>
-        {success ? <><button onClick={onClose}>Done</button><button className={styles.primary} onClick={() => { onClose(); router.push(`/dashboard/customer/tracking?id=${encodeURIComponent(success.id)}`) }}>Track order</button></> : <><button disabled={loading || uploading} onClick={() => { if (details) setDetails(false); else if (instructions) setInstructions(false); else if (step === 1) onClose(); else go(step - 1) }}>{details || instructions || step > 1 ? 'Back' : 'Cancel'}</button><button className={styles.primary} disabled={loading || uploading || (step === 4 && !quote)} onClick={() => { if (details) setDetails(false); else if (instructions) setInstructions(false); else if (step === 4) void submit(); else void next() }}>{uploading ? 'Uploading…' : loading ? 'Please wait…' : details || instructions ? 'Save details' : step === 4 ? `Confirm & Pay ${quote ? money(quote.totalCharge) : ''}` : 'Continue'}</button></>}
+        {success ? <><button onClick={onClose}>Done</button><button className={styles.primary} onClick={() => { onClose(); router.push(`/dashboard/customer/tracking?id=${encodeURIComponent(success.id)}`) }}>Track order</button></> : <><button disabled={loading || uploading} onClick={() => { if (details) setDetails(false); else if (instructions) setInstructions(false); else if (step === 1 && editing) cancelEditor(); else if (step === 1) onClose(); else go(step - 1) }}>{step === 1 && editing && !details ? 'Cancel item' : details || instructions || step > 1 ? 'Back' : 'Cancel'}</button><button className={styles.primary} disabled={loading || uploading || (step === 4 && !quote)} onClick={() => { if (details) setDetails(false); else if (instructions) setInstructions(false); else if (step === 1 && editing) saveItem(); else if (step === 4) void submit(); else void next() }}>{uploading ? 'Uploading…' : loading ? 'Please wait…' : details || instructions ? 'Save details' : step === 1 && editing ? 'Save item' : step === 4 ? `Confirm & Pay ${quote ? money(quote.totalCharge) : ''}` : 'Continue'}</button></>}
       </div></footer>
     </section>
   </div>
