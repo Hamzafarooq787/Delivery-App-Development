@@ -93,11 +93,11 @@ export function LiveChat() {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                  <MessageSquare className="h-4 w-4 text-primary" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-strong)]/10">
+                  <MessageSquare className="h-4 w-4 text-[var(--brand-soft)]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Driver Support</p>
+                  <p className="text-sm font-semibold text-[var(--color-on-surface)]">Driver Support</p>
                   <p className="text-xs text-green-500">AI Assistant · Online</p>
                 </div>
               </div>
@@ -121,8 +121,8 @@ export function LiveChat() {
                   <div
                     className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                       msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-secondary text-foreground rounded-bl-sm"
+                        ? "bg-[var(--brand-strong)] text-[var(--brand-ink)] rounded-br-sm"
+                        : "bg-[var(--color-surface-container-highest)] text-[var(--color-on-surface)] rounded-bl-sm"
                     }`}
                   >
                     {msg.content}
@@ -132,7 +132,7 @@ export function LiveChat() {
 
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-secondary rounded-2xl rounded-bl-sm px-3.5 py-2.5 flex items-center gap-1.5">
+                  <div className="bg-[var(--color-surface-container-highest)] rounded-2xl rounded-bl-sm px-3.5 py-2.5 flex items-center gap-1.5">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Typing…</span>
                   </div>

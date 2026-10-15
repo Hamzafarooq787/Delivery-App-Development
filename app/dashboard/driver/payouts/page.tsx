@@ -98,7 +98,7 @@ export default async function DriverPayoutsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">Payouts</h2>
-          <p className="text-[#adaaaa] mt-1">Your earnings breakdown and withdrawal history.</p>
+          <p className="text-[var(--color-on-surface-variant)] mt-1">Your earnings breakdown and withdrawal history.</p>
         </div>
         <RequestPayoutButton pendingBalance={pendingBalance} />
       </div>
@@ -106,32 +106,32 @@ export default async function DriverPayoutsPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
         {/* Pending balance — highlighted */}
-        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden border border-[var(--color-primary)]/20 shadow-lg">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-[var(--color-primary)]/10 rounded-full blur-3xl" />
+        <div className="bg-[var(--brand-panel)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden border border-[var(--brand-strong)]/20 shadow-lg">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-[var(--brand-strong)]/10 rounded-full blur-3xl" />
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">Available Balance</span>
-            <span className="material-symbols-outlined text-[var(--color-primary)]">account_balance_wallet</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--brand-soft)]">Available Balance</span>
+            <span className="material-symbols-outlined text-[var(--brand-soft)]">account_balance_wallet</span>
           </div>
           <p className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(pendingBalance)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">Ready to withdraw</p>
+          <p className="text-xs text-[var(--color-on-surface-variant)] mt-1">Ready to withdraw</p>
         </div>
 
-        <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/5">
+        <div className="bg-[var(--brand-panel)] p-6 rounded-2xl border border-[var(--color-outline-variant)]/5">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#adaaaa]">Total Earned</span>
-            <span className="material-symbols-outlined text-[#adaaaa]">emoji_events</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">Total Earned</span>
+            <span className="material-symbols-outlined text-[var(--color-on-surface-variant)]">emoji_events</span>
           </div>
           <p className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(totalEarned)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">{allEarnings.length} completed job{allEarnings.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs text-[var(--color-on-surface-variant)] mt-1">{allEarnings.length} completed job{allEarnings.length !== 1 ? "s" : ""}</p>
         </div>
 
-        <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/5">
+        <div className="bg-[var(--brand-panel)] p-6 rounded-2xl border border-[var(--color-outline-variant)]/5">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#adaaaa]">Total Paid Out</span>
-            <span className="material-symbols-outlined text-[#adaaaa]">payments</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">Total Paid Out</span>
+            <span className="material-symbols-outlined text-[var(--color-on-surface-variant)]">payments</span>
           </div>
           <p className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(totalPaidOut)}</p>
-          <p className="text-xs text-[#adaaaa] mt-1">
+          <p className="text-xs text-[var(--color-on-surface-variant)] mt-1">
             {payouts.filter(p => p.status === "paid").length} payout{payouts.filter(p => p.status === "paid").length !== 1 ? "s" : ""} processed
           </p>
         </div>
@@ -141,25 +141,25 @@ export default async function DriverPayoutsPage() {
         {/* Earnings per delivery */}
         <div className="lg:col-span-7 flex flex-col">
           <h3 className="text-lg font-bold font-headline text-white mb-5">Earnings per Delivery</h3>
-          <div className="bg-[#1a1919] rounded-2xl overflow-hidden flex-1">
+          <div className="bg-[var(--brand-panel)] rounded-2xl overflow-hidden flex-1">
             {allEarnings.length === 0 ? (
               <div className="py-16 text-center px-8">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#262626] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[var(--color-primary)]">local_shipping</span>
+                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[var(--color-surface-container-highest)] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[var(--brand-soft)]">local_shipping</span>
                 </div>
                 <p className="text-sm font-bold text-white mb-1">No earnings yet</p>
-                <p className="text-xs text-[#adaaaa]">Complete deliveries to see your earnings here.</p>
+                <p className="text-xs text-[var(--color-on-surface-variant)]">Complete deliveries to see your earnings here.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <div className="min-w-[460px]">
-                  <div className="grid grid-cols-12 px-6 py-4 border-b border-[#494847]/10 text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
+                  <div className="grid grid-cols-12 px-6 py-4 border-b border-[var(--color-outline-variant)]/10 text-[10px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">
                     <div className="col-span-5">Delivery</div>
                     <div className="col-span-3 text-right">Fare</div>
                     <div className="col-span-2 text-right">Your Cut</div>
                     <div className="col-span-2 text-right">Status</div>
                   </div>
-                  <div className="divide-y divide-[#494847]/5">
+                  <div className="divide-y divide-[var(--color-outline-variant)]/5">
                     {allEarnings.map((e) => {
                       const dr = e.delivery_requests as any
                       // price may come from the joined delivery_requests row
@@ -169,17 +169,17 @@ export default async function DriverPayoutsPage() {
                       const fare = price ?? (e.amount != null ? Math.round(e.amount / 0.75 * 100) / 100 : 0)
                       const isPaid = e.status === "paid"
                       return (
-                        <div key={e.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-[#201f1f] transition-colors">
+                        <div key={e.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-[var(--color-surface-container-high)] transition-colors">
                           <div className="col-span-5 min-w-0">
                             <p className="text-sm font-bold text-white truncate">
                               {tracking ?? `KV-${e.id.slice(0, 8).toUpperCase()}`}
                             </p>
-                            <p className="text-xs text-[#adaaaa]">
+                            <p className="text-xs text-[var(--color-on-surface-variant)]">
                               {new Date(e.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}
                             </p>
                           </div>
                           <div className="col-span-3 text-right">
-                            <p className="text-xs text-[#adaaaa]">{fmt(fare)}</p>
+                            <p className="text-xs text-[var(--color-on-surface-variant)]">{fmt(fare)}</p>
                           </div>
                           <div className="col-span-2 text-right">
                             <p className="text-sm font-black text-white">{fmt(e.amount ?? 0)}</p>
@@ -207,21 +207,21 @@ export default async function DriverPayoutsPage() {
         {/* Payout history */}
         <div className="lg:col-span-5 flex flex-col">
           <h3 className="text-lg font-bold font-headline text-white mb-5">Payout History</h3>
-          <div className="bg-[#1a1919] rounded-2xl overflow-hidden flex-1">
+          <div className="bg-[var(--brand-panel)] rounded-2xl overflow-hidden flex-1">
             {payouts.length === 0 ? (
               <div className="py-16 text-center px-8">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#262626] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[#adaaaa]">history</span>
+                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[var(--color-surface-container-highest)] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[var(--color-on-surface-variant)]">history</span>
                 </div>
                 <p className="text-sm font-bold text-white mb-1">No payouts yet</p>
-                <p className="text-xs text-[#adaaaa]">
+                <p className="text-xs text-[var(--color-on-surface-variant)]">
                   {pendingBalance > 0
                     ? `You have ${fmt(pendingBalance)} available — click Request Payout above.`
                     : "Request your first payout once you have earnings."}
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-[#494847]/5">
+              <div className="divide-y divide-[var(--color-outline-variant)]/5">
                 {payouts.map((p) => {
                   type StatusKey = "paid" | "approved" | "pending" | "rejected"
                   const STATUS_MAP: Record<StatusKey, { icon: string; iconColor: string; iconBg: string; label: string; labelColor: string }> = {
@@ -233,7 +233,7 @@ export default async function DriverPayoutsPage() {
                   const statusCfg = STATUS_MAP[p.status as StatusKey] ?? STATUS_MAP.pending
 
                   return (
-                    <div key={p.id} className="flex items-center justify-between px-6 py-4 hover:bg-[#201f1f] transition-colors">
+                    <div key={p.id} className="flex items-center justify-between px-6 py-4 hover:bg-[var(--color-surface-container-high)] transition-colors">
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${statusCfg.iconBg}`}>
                           <span className={`material-symbols-outlined text-lg ${statusCfg.iconColor}`}>
@@ -242,7 +242,7 @@ export default async function DriverPayoutsPage() {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-white">#{p.id.slice(0, 8).toUpperCase()}</p>
-                          <p className="text-xs text-[#adaaaa]">
+                          <p className="text-xs text-[var(--color-on-surface-variant)]">
                             {new Date(p.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
                           </p>
                         </div>
@@ -263,19 +263,19 @@ export default async function DriverPayoutsPage() {
           </div>
 
           {/* Commission info */}
-          <div className="mt-4 bg-[#1a1919] rounded-2xl p-5 border border-[#494847]/10">
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Commission Structure</p>
+          <div className="mt-4 bg-[var(--brand-panel)] rounded-2xl p-5 border border-[var(--color-outline-variant)]/10">
+            <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-3">Commission Structure</p>
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-white font-bold">Your share</span>
                 <span className="text-[#6ee7b7] font-black">75%</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-[#adaaaa]">Platform fee</span>
+                <span className="text-[var(--color-on-surface-variant)]">Platform fee</span>
                 <span className="text-[var(--color-secondary)] font-bold">25%</span>
               </div>
             </div>
-            <div className="mt-3 h-2 rounded-full bg-[#262626] overflow-hidden flex">
+            <div className="mt-3 h-2 rounded-full bg-[var(--color-surface-container-highest)] overflow-hidden flex">
               <div className="h-full bg-[#6ee7b7] rounded-l-full" style={{ width: "75%" }} />
               <div className="h-full bg-[var(--color-secondary)] rounded-r-full" style={{ width: "25%" }} />
             </div>

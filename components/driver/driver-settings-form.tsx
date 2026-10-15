@@ -41,35 +41,35 @@ export function DriverSettingsForm({ fullName, phone, email }: Props) {
       {/* Profile Information fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 md:gap-x-8 gap-y-5 md:gap-y-6">
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">Full Name</label>
+          <label className="text-xs font-semibold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Full Name</label>
           <input
             name="full_name"
-            className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all outline-none"
+            className="w-full bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--brand-strong)]/30 focus:border-[var(--brand-strong)] transition-all outline-none"
             type="text"
             defaultValue={fullName}
           />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">Phone Number</label>
+          <label className="text-xs font-semibold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Phone Number</label>
           <input
             name="phone"
-            className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all outline-none"
+            className="w-full bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--brand-strong)]/30 focus:border-[var(--brand-strong)] transition-all outline-none"
             type="tel"
             defaultValue={phone}
           />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">Email Address</label>
+          <label className="text-xs font-semibold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Email Address</label>
           <input
-            className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white transition-all outline-none opacity-60 cursor-not-allowed"
+            className="w-full bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/10 rounded-lg p-3 text-white transition-all outline-none opacity-60 cursor-not-allowed"
             type="email"
             value={email}
             readOnly
           />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-[#adaaaa] uppercase tracking-wider">Home Base</label>
-          <select className="w-full bg-[#262626] border border-[#494847]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all appearance-none outline-none">
+          <label className="text-xs font-semibold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Home Base</label>
+          <select className="w-full bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/10 rounded-lg p-3 text-white focus:ring-1 focus:ring-[var(--brand-strong)]/30 focus:border-[var(--brand-strong)] transition-all appearance-none outline-none">
             <option>San Francisco - Sector 7</option>
             <option>Oakland - Hub East</option>
             <option>San Jose - South Zone</option>
@@ -89,14 +89,14 @@ export function DriverSettingsActions({ saving, onDiscard }: { saving?: boolean;
         type="button"
         form="driver-settings-form"
         onClick={onDiscard}
-        className="px-4 md:px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[#262626] text-white hover:bg-[#2c2c2c] transition-all"
+        className="px-4 md:px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[var(--color-surface-container-highest)] text-white hover:bg-[var(--color-surface-bright)] transition-all"
       >
         Discard
       </button>
       <button
         type="submit"
         form="driver-settings-form"
-        className="px-4 md:px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[var(--color-primary)] text-[var(--color-on-primary)] transition-all"
+        className="px-4 md:px-6 py-2.5 rounded-lg font-headline font-bold text-sm bg-[var(--brand-strong)] text-[var(--brand-ink)] transition-all"
         style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
       >
         Save Profile

@@ -143,10 +143,10 @@ export default async function DriverDashboard() {
 
   const STATUS_ICON: Record<string, { icon: string; color: string }> = {
     delivered:  { icon: "check_circle",   color: "text-[#6ee7b7]" },
-    in_transit: { icon: "directions_car", color: "text-[var(--color-primary)]" },
-    collected:  { icon: "inventory_2",    color: "text-[var(--color-primary)]" },
+    in_transit: { icon: "directions_car", color: "text-[var(--brand-soft)]" },
+    collected:  { icon: "inventory_2",    color: "text-[var(--brand-soft)]" },
     accepted:   { icon: "local_shipping", color: "text-[var(--color-secondary)]" },
-    requested:  { icon: "schedule",       color: "text-[#adaaaa]" },
+    requested:  { icon: "schedule",       color: "text-[var(--color-on-surface-variant)]" },
     cancelled:  { icon: "cancel",         color: "text-[#ff6e84]" },
   }
 
@@ -157,7 +157,7 @@ export default async function DriverDashboard() {
         <h2 className="text-2xl md:text-3xl font-black font-headline tracking-tighter text-white">
           Dashboard
         </h2>
-        <p className="text-[#adaaaa] font-medium mt-1">
+        <p className="text-[var(--color-on-surface-variant)] font-medium mt-1">
           Real-time logistics performance and active ops.
         </p>
       </header>
@@ -166,14 +166,14 @@ export default async function DriverDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
 
         {/* ── Earnings Card ── */}
-        <div className="md:col-span-4 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-5 md:p-8 flex flex-col justify-between border border-[#494847]/15 hover:bg-[#201f1f] transition-all group">
+        <div className="md:col-span-4 bg-[var(--brand-panel)] backdrop-blur-xl rounded-xl p-5 md:p-8 flex flex-col justify-between border border-[var(--color-outline-variant)]/15 hover:bg-[var(--color-surface-container-high)] transition-all group">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">
+              <span className="text-xs font-bold uppercase tracking-widest text-[var(--brand-soft)]">
                 Today's Earnings
               </span>
               <span
-                className="material-symbols-outlined text-[var(--color-primary)]"
+                className="material-symbols-outlined text-[var(--brand-soft)]"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
                 payments
@@ -182,8 +182,8 @@ export default async function DriverDashboard() {
             <h3 className="text-4xl md:text-5xl font-black font-headline tracking-tighter text-white mb-2">
               £{todayTotal.toFixed(2)}
             </h3>
-            <p className="text-xs text-[#adaaaa]">
-              All time: <span className="text-[var(--color-primary)] font-bold">£{totalEarnings.toFixed(2)}</span>
+            <p className="text-xs text-[var(--color-on-surface-variant)]">
+              All time: <span className="text-[var(--brand-soft)] font-bold">£{totalEarnings.toFixed(2)}</span>
               &nbsp;·&nbsp;your 75% share
             </p>
             {pendingPayoutAmount > 0 && (
@@ -202,7 +202,7 @@ export default async function DriverDashboard() {
             {bars.map((h, i) => (
               <div
                 key={i}
-                className={`flex-1 rounded-sm ${i === 6 ? "bg-[var(--color-primary)]" : "bg-[var(--color-primary)]/20"}`}
+                className={`flex-1 rounded-sm ${i === 6 ? "bg-[var(--brand-strong)]" : "bg-[var(--brand-strong)]/20"}`}
                 style={{
                   height: `${h}%`,
                   boxShadow: i === 6 ? "0px 0px 10px rgba(var(--brand-rgb),0.4)" : undefined,
@@ -214,18 +214,18 @@ export default async function DriverDashboard() {
 
         {/* ── Stats Cards ── */}
         <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-1 gap-4 md:gap-6">
-          <div className="flex-1 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-6 hover:bg-[#201f1f] transition-all border border-[#494847]/15">
+          <div className="flex-1 bg-[var(--brand-panel)] backdrop-blur-xl rounded-xl p-6 hover:bg-[var(--color-surface-container-high)] transition-all border border-[var(--color-outline-variant)]/15">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-8 h-8 rounded-lg bg-[var(--color-secondary)]/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-[var(--color-secondary)] text-lg">local_shipping</span>
               </div>
-              <span className="text-xs font-bold text-[#adaaaa]">Completed Jobs</span>
+              <span className="text-xs font-bold text-[var(--color-on-surface-variant)]">Completed Jobs</span>
             </div>
             <div className="text-4xl font-black font-headline text-white">
               {String(completedJobs.length).padStart(2, "0")}
             </div>
           </div>
-          <div className="flex-1 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-6 hover:bg-[#201f1f] transition-all border-l-4 border-[var(--color-secondary)]">
+          <div className="flex-1 bg-[var(--brand-panel)] backdrop-blur-xl rounded-xl p-6 hover:bg-[var(--color-surface-container-high)] transition-all border-l-4 border-[var(--color-secondary)]">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-8 h-8 rounded-lg bg-[var(--color-secondary)]/20 flex items-center justify-center">
                 <span
@@ -244,7 +244,7 @@ export default async function DriverDashboard() {
         </div>
 
         {/* ── Active Map / Current Route ── */}
-        <div className="md:col-span-5 relative rounded-xl overflow-hidden bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/15 group min-h-[220px] md:min-h-[300px]">
+        <div className="md:col-span-5 relative rounded-xl overflow-hidden bg-[var(--brand-panel)] backdrop-blur-xl border border-[var(--color-outline-variant)]/15 group min-h-[220px] md:min-h-[300px]">
           <Image
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4gQyry9h81vqsFnspcq3X1Q1ZwbK-FtYMmFr8Rrz-kmla893fw9bVfdPAYDf7n72uazhdT5U5YSI26qz4WqU3lnTWcIUNeXOZIKvzZQOJYO8GtWEJMsKpfgSoVPCCO8qEBlUKXqubCinxsUnvV1PrigqkLl8nc49EnuGT_URTfeX7zscwERnv_yjv97J2_SpC_mAsmGoAjaCza0uzwJHs159VTU-srl7vTJyXlxGnRNkALdggwdng1fcXRDVVRkK7JXHrq6N5DA"
             alt="Active Job Map Tracking"
@@ -252,15 +252,15 @@ export default async function DriverDashboard() {
             className="object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700 scale-105 group-hover:scale-100"
             unoptimized
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-bg)] via-transparent to-transparent" />
           <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
             <div className="min-w-0 mr-4">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-[#adaaaa] mb-1">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)] mb-1">
                 {activeJob ? "Current Route" : "No Active Job"}
               </p>
               <p className="text-sm font-bold text-white truncate">{routeLabel}</p>
               {activeJob && (
-                <p className="text-[10px] text-[#adaaaa] capitalize mt-0.5">{activeJob.status.replace("_", " ")}</p>
+                <p className="text-[10px] text-[var(--color-on-surface-variant)] capitalize mt-0.5">{activeJob.status.replace("_", " ")}</p>
               )}
             </div>
             {activeJob ? (
@@ -269,7 +269,7 @@ export default async function DriverDashboard() {
                   href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 bg-[var(--color-primary)] text-[var(--color-on-primary)] px-4 py-2 rounded font-bold text-xs"
+                  className="shrink-0 bg-[var(--brand-strong)] text-[var(--brand-ink)] px-4 py-2 rounded font-bold text-xs"
                   style={{ boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.4)" }}
                 >
                   Open Maps
@@ -277,7 +277,7 @@ export default async function DriverDashboard() {
               ) : (
                 <Link
                   href={`/dashboard/driver/jobs/${activeJob.id}`}
-                  className="shrink-0 bg-[var(--color-primary)] text-[var(--color-on-primary)] px-4 py-2 rounded font-bold text-xs"
+                  className="shrink-0 bg-[var(--brand-strong)] text-[var(--brand-ink)] px-4 py-2 rounded font-bold text-xs"
                   style={{ boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.4)" }}
                 >
                   View Job
@@ -286,7 +286,7 @@ export default async function DriverDashboard() {
             ) : (
               <Link
                 href="/dashboard/driver/jobs/available"
-                className="shrink-0 bg-[var(--color-primary)] text-[var(--color-on-primary)] px-4 py-2 rounded font-bold text-xs"
+                className="shrink-0 bg-[var(--brand-strong)] text-[var(--brand-ink)] px-4 py-2 rounded font-bold text-xs"
                 style={{ boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.4)" }}
               >
                 Find Jobs
@@ -296,31 +296,31 @@ export default async function DriverDashboard() {
         </div>
 
         {/* ── Recent Activity ── */}
-        <div className="lg:col-span-8 bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-4 md:p-8 border border-[#494847]/15">
+        <div className="lg:col-span-8 bg-[var(--brand-panel)] backdrop-blur-xl rounded-xl p-4 md:p-8 border border-[var(--color-outline-variant)]/15">
           <div className="flex items-center justify-between mb-4 md:mb-8">
             <h4 className="text-lg font-bold font-headline text-white">Recent Activity</h4>
-            <Link href="/dashboard/driver/jobs/completed" className="text-xs font-bold text-[var(--color-primary)] hover:underline">
+            <Link href="/dashboard/driver/jobs/completed" className="text-xs font-bold text-[var(--brand-soft)] hover:underline">
               View History
             </Link>
           </div>
           <div className="space-y-4">
             {recentActivity.length === 0 ? (
               <div className="py-8 text-center">
-                <span className="material-symbols-outlined text-[#494847] text-3xl mb-3 block">local_shipping</span>
+                <span className="material-symbols-outlined text-[var(--color-outline-variant)] text-3xl mb-3 block">local_shipping</span>
                 <p className="text-sm font-bold text-white mb-1">No jobs yet</p>
-                <p className="text-xs text-[#adaaaa]">
+                <p className="text-xs text-[var(--color-on-surface-variant)]">
                   Your delivery history will appear here once you accept jobs.
                 </p>
                 <Link
                   href="/dashboard/driver/jobs/available"
-                  className="inline-block mt-4 px-4 py-2 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-bold hover:bg-[var(--color-primary)]/20 transition-colors"
+                  className="inline-block mt-4 px-4 py-2 rounded-lg bg-[var(--brand-strong)]/10 text-[var(--brand-soft)] text-xs font-bold hover:bg-[var(--brand-strong)]/20 transition-colors"
                 >
                   Browse Available Jobs
                 </Link>
               </div>
             ) : (
               recentActivity.map((job) => {
-                const cfg = STATUS_ICON[job.status] ?? { icon: "local_shipping", color: "text-[#adaaaa]" }
+                const cfg = STATUS_ICON[job.status] ?? { icon: "local_shipping", color: "text-[var(--color-on-surface-variant)]" }
                 const isCompleted = job.status === "delivered"
                 const earning = isCompleted && job.price ? `+£${(job.price * 0.75).toFixed(2)}` : null
                 const statusLabel = job.status.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
@@ -328,17 +328,17 @@ export default async function DriverDashboard() {
                   <Link
                     key={job.id}
                     href={`/dashboard/driver/jobs/${job.id}`}
-                    className="flex items-center justify-between p-4 rounded-lg bg-[#1a1919]/50 hover:bg-[#1a1919] transition-all"
+                    className="flex items-center justify-between p-4 rounded-lg bg-[var(--brand-panel)]/50 hover:bg-[var(--brand-panel)] transition-all"
                   >
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-[#1a1919] flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-[var(--brand-panel)] flex items-center justify-center shrink-0">
                         <span className={`material-symbols-outlined ${cfg.color}`}>{cfg.icon}</span>
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-white truncate">
                           {job.tracking_number ?? job.id.slice(0, 8).toUpperCase()}
                         </p>
-                        <p className="text-xs text-[#adaaaa] truncate">
+                        <p className="text-xs text-[var(--color-on-surface-variant)] truncate">
                           {job.pickup_address ?? "—"}
                         </p>
                       </div>
@@ -349,7 +349,7 @@ export default async function DriverDashboard() {
                       ) : (
                         <p className="text-sm font-bold text-white capitalize">{statusLabel}</p>
                       )}
-                      <p className="text-[10px] text-[#adaaaa]">
+                      <p className="text-[10px] text-[var(--color-on-surface-variant)]">
                         {new Date(job.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}
                       </p>
                     </div>
@@ -363,10 +363,10 @@ export default async function DriverDashboard() {
         {/* ── Driver Performance Card ── */}
         <div className="lg:col-span-4 flex flex-col gap-4 md:gap-6">
           <div
-            className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-xl p-4 md:p-8 border-t-2 border-[var(--color-primary)]"
+            className="bg-[var(--brand-panel)] backdrop-blur-xl rounded-xl p-4 md:p-8 border-t-2 border-[var(--brand-strong)]"
             style={{ background: "linear-gradient(to bottom right, rgba(var(--brand-rgb),0.1), transparent)" }}
           >
-            <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-widest mb-6">
+            <h4 className="text-xs font-bold text-[var(--brand-soft)] uppercase tracking-widest mb-6">
               Driver Tier: {tier}
             </h4>
             <div className="flex items-end justify-between mb-2">
@@ -375,9 +375,9 @@ export default async function DriverDashboard() {
                 {completedJobs.length === 0 ? "—" : `${reliability}%`}
               </span>
             </div>
-            <div className="w-full bg-[#1a1919] h-2 rounded-full mb-8">
+            <div className="w-full bg-[var(--brand-panel)] h-2 rounded-full mb-8">
               <div
-                className="bg-[var(--color-primary)] h-full rounded-full transition-all"
+                className="bg-[var(--brand-strong)] h-full rounded-full transition-all"
                 style={{
                   width: completedJobs.length === 0 ? "0%" : `${reliability}%`,
                   boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.4)",
@@ -385,12 +385,12 @@ export default async function DriverDashboard() {
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-[#1a1919]/30 rounded">
-                <p className="text-[10px] text-[#adaaaa] font-bold uppercase">Completed</p>
+              <div className="p-3 bg-[var(--brand-panel)]/30 rounded">
+                <p className="text-[10px] text-[var(--color-on-surface-variant)] font-bold uppercase">Completed</p>
                 <p className="text-lg font-bold text-white">{completedJobs.length}</p>
               </div>
-              <div className="p-3 bg-[#1a1919]/30 rounded">
-                <p className="text-[10px] text-[#adaaaa] font-bold uppercase">Cancelled</p>
+              <div className="p-3 bg-[var(--brand-panel)]/30 rounded">
+                <p className="text-[10px] text-[var(--color-on-surface-variant)] font-bold uppercase">Cancelled</p>
                 <p className="text-lg font-bold text-white">{cancelledJobs.length}</p>
               </div>
             </div>

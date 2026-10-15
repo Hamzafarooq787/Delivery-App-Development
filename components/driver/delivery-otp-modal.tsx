@@ -84,20 +84,20 @@ export function DeliveryOtpModal({ deliveryId, onClose, onSuccess }: Props) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => { if (!busy) onClose() }} />
-      <div className="relative w-full max-w-md bg-[#1a1919] rounded-2xl border border-[#494847]/20 shadow-2xl flex flex-col" style={{ maxHeight: "92dvh" }}>
+      <div className="relative w-full max-w-md bg-[var(--brand-panel)] rounded-2xl border border-[var(--color-outline-variant)]/20 shadow-2xl flex flex-col" style={{ maxHeight: "92dvh" }}>
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#494847]/15 shrink-0">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-outline-variant)]/15 shrink-0">
           <div className="w-9 h-9 rounded-xl bg-[#6ee7b7]/10 flex items-center justify-center">
             <span className="material-symbols-outlined text-[#6ee7b7]">local_shipping</span>
           </div>
           <div>
             <p className="text-sm font-bold text-white">Confirm Delivery</p>
-            <p className="text-[10px] text-[#adaaaa] uppercase tracking-wider">
+            <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase tracking-wider">
               {step === "camera" ? "Step 1 of 2 — Photo Proof" : step === "preview" ? "Step 1 of 2 — Confirm Photo" : "Step 2 of 2 — Delivery Code"}
             </p>
           </div>
-          <button onClick={onClose} disabled={busy} className="ml-auto p-1.5 rounded-lg text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors disabled:opacity-40">
+          <button onClick={onClose} disabled={busy} className="ml-auto p-1.5 rounded-lg text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors disabled:opacity-40">
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
@@ -107,13 +107,13 @@ export function DeliveryOtpModal({ deliveryId, onClose, onSuccess }: Props) {
           {/* STEP 1 — Camera */}
           {step === "camera" && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-[#494847]/20 bg-[#262626] p-8 flex flex-col items-center gap-4">
+              <div className="rounded-xl border border-[var(--color-outline-variant)]/20 bg-[var(--color-surface-container-highest)] p-8 flex flex-col items-center gap-4">
                 <div className="w-20 h-20 rounded-full bg-[#6ee7b7]/10 border border-[#6ee7b7]/20 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[#6ee7b7] text-4xl">photo_camera</span>
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-bold text-white">Photograph the Delivered Package</p>
-                  <p className="text-[11px] text-[#adaaaa] mt-1">Show the package at the drop-off location as proof of delivery</p>
+                  <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-1">Show the package at the drop-off location as proof of delivery</p>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -131,23 +131,23 @@ export function DeliveryOtpModal({ deliveryId, onClose, onSuccess }: Props) {
                   Open Camera
                 </button>
               </div>
-              <p className="text-[10px] text-[#494847] text-center">Image is automatically compressed for faster upload</p>
+              <p className="text-[10px] text-[var(--color-outline-variant)] text-center">Image is automatically compressed for faster upload</p>
             </div>
           )}
 
           {/* STEP 2 — Preview */}
           {step === "preview" && previewUrl && (
             <div className="space-y-4">
-              <div className="rounded-xl overflow-hidden border border-[#494847]/20">
+              <div className="rounded-xl overflow-hidden border border-[var(--color-outline-variant)]/20">
                 <img src={previewUrl} alt="Delivered package" className="w-full object-cover" style={{ maxHeight: 280 }} />
               </div>
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#6ee7b7]/5 border border-[#6ee7b7]/20">
                 <span className="material-symbols-outlined text-[#6ee7b7] text-base">check_circle</span>
-                <p className="text-[12px] text-[#adaaaa]">Photo captured. Compressed for efficient upload.</p>
+                <p className="text-[12px] text-[var(--color-on-surface-variant)]">Photo captured. Compressed for efficient upload.</p>
               </div>
               <button
                 onClick={() => { setStep("camera"); setPreviewUrl(null); setCompressedBlob(null) }}
-                className="w-full py-2 rounded-xl border border-[#494847]/30 text-[#adaaaa] text-sm font-bold hover:text-white hover:bg-[#262626] transition-colors"
+                className="w-full py-2 rounded-xl border border-[var(--color-outline-variant)]/30 text-[var(--color-on-surface-variant)] text-sm font-bold hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors"
               >
                 Retake Photo
               </button>
@@ -157,7 +157,7 @@ export function DeliveryOtpModal({ deliveryId, onClose, onSuccess }: Props) {
           {/* STEP 3 — OTP */}
           {step === "otp" && (
             <div className="space-y-5 text-center">
-              <p className="text-sm text-[#adaaaa] leading-relaxed">
+              <p className="text-sm text-[var(--color-on-surface-variant)] leading-relaxed">
                 Ask the customer for their 4-digit delivery code and enter it below to confirm handoff.
               </p>
               <div className="flex justify-center">
@@ -177,15 +177,15 @@ export function DeliveryOtpModal({ deliveryId, onClose, onSuccess }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-[#494847]/15 shrink-0 flex gap-3">
+        <div className="px-5 py-4 border-t border-[var(--color-outline-variant)]/15 shrink-0 flex gap-3">
           {step === "camera" && (
-            <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
+            <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors">
               Cancel
             </button>
           )}
           {step === "preview" && (
             <>
-              <button onClick={() => setStep("camera")} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
+              <button onClick={() => setStep("camera")} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors">
                 ← Back
               </button>
               <button
@@ -200,7 +200,7 @@ export function DeliveryOtpModal({ deliveryId, onClose, onSuccess }: Props) {
           )}
           {step === "otp" && (
             <>
-              <button onClick={onClose} disabled={isPending} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors disabled:opacity-40">
+              <button onClick={onClose} disabled={isPending} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors disabled:opacity-40">
                 Cancel
               </button>
               <button

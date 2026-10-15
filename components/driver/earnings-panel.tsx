@@ -60,15 +60,15 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">Earnings</h2>
-          <p className="text-[#adaaaa] mt-1">Your share of every completed delivery — 75% of the fare.</p>
+          <p className="text-[var(--color-on-surface-variant)] mt-1">Your share of every completed delivery — 75% of the fare.</p>
         </div>
-        <div className="flex bg-[#1a1919] p-1 rounded-xl">
+        <div className="flex bg-[var(--brand-panel)] p-1 rounded-xl">
           {(["Daily", "Weekly", "Monthly"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-6 py-2 text-xs font-bold rounded-lg transition-all ${
-                activeTab === tab ? "bg-[#201f1f] text-white" : "text-[#adaaaa] hover:text-white"
+                activeTab === tab ? "bg-[var(--color-surface-container-high)] text-white" : "text-[var(--color-on-surface-variant)] hover:text-white"
               }`}
             >
               {tab}
@@ -78,9 +78,9 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
       </div>
 
       {/* Commission split notice */}
-      <div className="flex items-center gap-3 bg-[#1a1919] border border-[#494847]/20 rounded-xl px-5 py-4 mb-8">
-        <span className="material-symbols-outlined text-[var(--color-primary)]">info</span>
-        <p className="text-sm text-[#adaaaa]">
+      <div className="flex items-center gap-3 bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-xl px-5 py-4 mb-8">
+        <span className="material-symbols-outlined text-[var(--brand-soft)]">info</span>
+        <p className="text-sm text-[var(--color-on-surface-variant)]">
           Your earnings are <span className="text-white font-bold">75%</span> of each delivery fare.
           The remaining <span className="text-[var(--color-secondary)] font-bold">25%</span> is the platform commission.
           Taxes will be introduced in a future update.
@@ -89,31 +89,31 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
-        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden group border border-[#494847]/10 shadow-lg">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-[var(--color-primary)]/10 rounded-full blur-3xl group-hover:bg-[var(--color-primary)]/20 transition-all" />
+        <div className="bg-[var(--brand-panel)] backdrop-blur-xl p-6 rounded-2xl relative overflow-hidden group border border-[var(--color-outline-variant)]/10 shadow-lg">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-[var(--brand-strong)]/10 rounded-full blur-3xl group-hover:bg-[var(--brand-strong)]/20 transition-all" />
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">Today</span>
-            <span className="material-symbols-outlined text-[var(--color-primary)]">today</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--brand-soft)]">Today</span>
+            <span className="material-symbols-outlined text-[var(--brand-soft)]">today</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(todayTotal)}</span>
           </div>
         </div>
 
-        <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/5 shadow-md">
+        <div className="bg-[var(--brand-panel)] p-6 rounded-2xl border border-[var(--color-outline-variant)]/5 shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#adaaaa]">This Week</span>
-            <span className="material-symbols-outlined text-[#adaaaa]">calendar_view_week</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">This Week</span>
+            <span className="material-symbols-outlined text-[var(--color-on-surface-variant)]">calendar_view_week</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(weekTotal)}</span>
           </div>
         </div>
 
-        <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/5 shadow-md">
+        <div className="bg-[var(--brand-panel)] p-6 rounded-2xl border border-[var(--color-outline-variant)]/5 shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#adaaaa]">This Month</span>
-            <span className="material-symbols-outlined text-[#adaaaa]">calendar_month</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">This Month</span>
+            <span className="material-symbols-outlined text-[var(--color-on-surface-variant)]">calendar_month</span>
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-3xl md:text-4xl font-black font-headline text-white">{fmt(monthTotal)}</span>
@@ -128,43 +128,43 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
             <h3 className="text-lg font-bold font-headline text-white">
               {activeTab === "Daily" ? "Today's" : activeTab === "Weekly" ? "This Week's" : "This Month's"} Transactions
             </h3>
-            <span className="text-[var(--color-primary)] text-xs font-bold">{filtered.length} jobs</span>
+            <span className="text-[var(--brand-soft)] text-xs font-bold">{filtered.length} jobs</span>
           </div>
-          <div className="bg-[#1a1919] rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-[var(--brand-panel)] rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <div className="min-w-[560px]">
-                <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#494847]/10 text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[var(--color-outline-variant)]/10 text-[10px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">
                   <div className="col-span-5">Job Details</div>
                   <div className="col-span-3 text-right">Fare</div>
                   <div className="col-span-2 text-right">Comm.</div>
                   <div className="col-span-2 text-right">Your Cut</div>
                 </div>
-                <div className="divide-y divide-[#494847]/5">
+                <div className="divide-y divide-[var(--color-outline-variant)]/5">
                   {filtered.length === 0 ? (
-                    <div className="py-16 text-center text-[#adaaaa] text-sm">No earnings for this period.</div>
+                    <div className="py-16 text-center text-[var(--color-on-surface-variant)] text-sm">No earnings for this period.</div>
                   ) : (
                     filtered.map((e) => {
                       const fare = e.delivery_requests?.price ?? (e.amount ?? 0) / 0.75
                       const commission = e.commission_amount ?? (fare * 0.25)
                       const driverCut = e.amount ?? (fare * 0.75)
                       return (
-                        <div key={e.id} className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-[#201f1f] transition-colors">
+                        <div key={e.id} className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-[var(--color-surface-container-high)] transition-colors">
                           <div className="col-span-5 flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-[#262626] flex items-center justify-center shrink-0">
-                              <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">local_shipping</span>
+                            <div className="w-9 h-9 rounded-lg bg-[var(--color-surface-container-highest)] flex items-center justify-center shrink-0">
+                              <span className="material-symbols-outlined text-[var(--brand-soft)] text-lg">local_shipping</span>
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-white truncate">
                                 {e.delivery_requests?.pickup_address ?? "Delivery"}
                               </p>
-                              <p className="text-xs text-[#adaaaa]">
+                              <p className="text-xs text-[var(--color-on-surface-variant)]">
                                 {new Date(e.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}
                               </p>
                             </div>
                           </div>
                           {/* Fare */}
                           <div className="col-span-3 text-right">
-                            <p className="text-sm font-semibold text-[#adaaaa]">{fmt(fare)}</p>
+                            <p className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{fmt(fare)}</p>
                           </div>
                           {/* Commission 25% */}
                           <div className="col-span-2 text-right">
@@ -190,8 +190,8 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
           <h3 className="text-lg font-bold font-headline text-white">Insights</h3>
 
           {/* Earnings Velocity chart */}
-          <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/5">
-            <p className="text-[10px] uppercase font-bold tracking-widest text-[#adaaaa] mb-4">Earnings Velocity</p>
+          <div className="bg-[var(--brand-panel)] p-6 rounded-2xl border border-[var(--color-outline-variant)]/5">
+            <p className="text-[10px] uppercase font-bold tracking-widest text-[var(--color-on-surface-variant)] mb-4">Earnings Velocity</p>
             <div className="h-32 flex items-end justify-between gap-1 mb-4">
               {[...Array(7)].map((_, i) => {
                 const d = new Date()
@@ -214,35 +214,35 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                 return (
                   <div
                     key={i}
-                    className={`w-full rounded-t ${i === 6 ? "bg-[var(--color-primary)]" : "bg-[var(--color-primary)]/20"}`}
+                    className={`w-full rounded-t ${i === 6 ? "bg-[var(--brand-strong)]" : "bg-[var(--brand-strong)]/20"}`}
                     style={{ height: `${Math.max(pct, 4)}%`, boxShadow: i === 6 ? "0px 0px 10px rgba(var(--brand-rgb),0.4)" : undefined }}
                   />
                 )
               })}
             </div>
-            <p className="text-xs text-[#adaaaa] text-center">Last 7 days of earnings activity.</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)] text-center">Last 7 days of earnings activity.</p>
           </div>
 
           {/* All-time card */}
-          <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl p-6 rounded-2xl border border-[var(--color-primary)]/20">
+          <div className="bg-[var(--brand-panel)] backdrop-blur-xl p-6 rounded-2xl border border-[var(--brand-strong)]/20">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-[var(--color-on-primary)]"
+              <div className="w-10 h-10 rounded-full bg-[var(--brand-strong)] flex items-center justify-center text-[var(--brand-ink)]"
                 style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.3)" }}>
                 <span className="material-symbols-outlined">account_balance_wallet</span>
               </div>
               <div>
                 <p className="text-sm font-bold text-white">Total Earned</p>
-                <p className="text-[10px] text-[#adaaaa] font-medium">All time · after commission</p>
+                <p className="text-[10px] text-[var(--color-on-surface-variant)] font-medium">All time · after commission</p>
               </div>
             </div>
             <p className="text-3xl font-black font-headline text-white mb-2">{fmt(allTimeTotal)}</p>
-            <p className="text-xs text-[#adaaaa]">{earnings.length} completed jobs</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)]">{earnings.length} completed jobs</p>
 
             {/* Split breakdown */}
             {earnings.length > 0 && (
-              <div className="mt-5 pt-5 border-t border-[#494847]/20 space-y-2">
+              <div className="mt-5 pt-5 border-t border-[var(--color-outline-variant)]/20 space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#adaaaa]">Total fares collected</span>
+                  <span className="text-[var(--color-on-surface-variant)]">Total fares collected</span>
                   <span className="text-white font-bold">
                     {fmt(earnings.reduce((s, e) => {
                       const fare = e.delivery_requests?.price ?? (e.amount ?? 0) / 0.75
@@ -256,7 +256,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                     -{fmt(earnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0))}
                   </span>
                 </div>
-                <div className="flex justify-between text-xs border-t border-[#494847]/20 pt-2 mt-1">
+                <div className="flex justify-between text-xs border-t border-[var(--color-outline-variant)]/20 pt-2 mt-1">
                   <span className="text-[#6ee7b7] font-bold">Your earnings (75%)</span>
                   <span className="text-[#6ee7b7] font-black">{fmt(allTimeTotal)}</span>
                 </div>
