@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import Sidebar from '@/components/customer/Sidebar'
 import BottomNav from '@/components/customer/BottomNav'
+import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import dynamic from 'next/dynamic'
 import {
   loadDeliveryDraft,
@@ -81,17 +81,12 @@ export default function CustomerDashboardLayout({
 
   return (
     <div
-      className={
-        isHome || hasPageFrame
-          ? 'bg-surface-container-low'
-          : 'min-h-screen bg-surface-container-low'
-      }
+      className={`${navStyles.scope} ${isHome || hasPageFrame ? 'bg-surface-container-low' : 'min-h-screen bg-surface-container-low'}`}
     >
       {/* Top bar chrome comes from each page's own <Header /> — mounting
           CustomerTopBar here as well rendered two top bars at once. */}
       {!isHome && !hasPageFrame && (
         <>
-          <Sidebar />
           <BottomNav />
         </>
       )}
