@@ -6,10 +6,17 @@ import { toast } from 'sonner'
 import Sidebar from '@/components/customer/Sidebar'
 import BottomNav from '@/components/customer/BottomNav'
 import dynamic from 'next/dynamic'
-import { loadDeliveryDraft, clearDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
+import {
+  loadDeliveryDraft,
+  clearDeliveryDraft,
+  type DeliveryDraft,
+} from '@/lib/delivery-draft'
 
 // Lazy-load so Google Maps SDK doesn't block layout hydration
-const NewDeliveryModal = dynamic(() => import('@/components/customer/NewDeliveryModal'), { ssr: false })
+const NewDeliveryModal = dynamic(
+  () => import('@/components/customer/NewDeliveryModal'),
+  { ssr: false },
+)
 
 export default function CustomerDashboardLayout({
   children,
@@ -17,8 +24,19 @@ export default function CustomerDashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const isHome = usePathname() === '/dashboard/customer'
-  const [focusAddress, setFocusAddress] = useState<'pickup' | 'delivery' | undefined>()
+  const pathname = usePathname()
+  const isHome = pathname === '/dashboard/customer'
+  const hasPageFrame = [
+    'active-deliveries',
+    'history',
+    'payments',
+    'addresses',
+    'support',
+    'settings',
+  ].some((page) => pathname === `/dashboard/customer/${page}`)
+  const [focusAddress, setFocusAddress] = useState<
+    'pickup' | 'delivery' | undefined
+  >()
   const [showModal, setShowModal] = useState(false)
   const [resumeDraft, setResumeDraft] = useState<DeliveryDraft | null>(null)
 
@@ -26,7 +44,9 @@ export default function CustomerDashboardLayout({
   useEffect(() => {
     const open = (event: Event) => {
       const focus = (event as CustomEvent<{ focus?: string }>).detail?.focus
-      setFocusAddress(focus === 'pickup' || focus === 'delivery' ? focus : undefined)
+      setFocusAddress(
+        focus === 'pickup' || focus === 'delivery' ? focus : undefined,
+      )
       setShowModal(true)
     }
     document.addEventListener('open-new-delivery', open)
@@ -53,24 +73,39 @@ export default function CustomerDashboardLayout({
     if (draft) {
       setResumeDraft(draft)
       setShowModal(true)
-      toast.success('Funds added — continue your delivery request.', { duration: 6000 })
+      toast.success('Funds added — continue your delivery request.', {
+        duration: 6000,
+      })
     }
   }, [router])
 
   return (
-    <div className={isHome ? "bg-surface-container-low" : "min-h-screen bg-surface-container-low"}>
+    <div
+      className={
+        isHome || hasPageFrame
+          ? 'bg-surface-container-low'
+          : 'min-h-screen bg-surface-container-low'
+      }
+    >
       {/* Top bar chrome comes from each page's own <Header /> — mounting
           CustomerTopBar here as well rendered two top bars at once. */}
-      {!isHome && <><Sidebar /><BottomNav /></>}
+      {!isHome && !hasPageFrame && (
+        <>
+          <Sidebar />
+          <BottomNav />
+        </>
+      )}
       {children}
       {showModal && (
         <NewDeliveryModal
           initialDraft={resumeDraft}
           focusAddress={focusAddress}
-          onClose={() => { setShowModal(false); setResumeDraft(null) }}
+          onClose={() => {
+            setShowModal(false)
+            setResumeDraft(null)
+          }}
         />
       )}
     </div>
   )
 }
-

@@ -2,8 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import Header from '@/components/customer/Header'
-import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { MapPin, Plus, Pencil, Trash2, Navigation, Home } from 'lucide-react'
+import {
+  CustomerPage,
+  CustomerDialog,
+  CustomerEmpty,
+  CustomerPagination,
+  shortDate,
+  useCustomerPageSize,
+} from '@/components/customer/CustomerPage'
+import styles from '@/components/customer/CustomerPages.module.css'
 
 type AddressRow = {
   id: string
@@ -12,7 +20,10 @@ type AddressRow = {
 }
 
 export default function AddressesPage() {
-  const [showModal, setShowModal] = useState(false)
+  const [page, setPage] = useState(1)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [locating, setLocating] = useState(false)
+  const size = useCustomerPageSize(2, 2)
   const [addresses, setAddresses] = useState<AddressRow[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -29,8 +40,16 @@ export default function AddressesPage() {
     let cancelled = false
     async function load() {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { if (!cancelled) { setAddresses([]); setLoading(false) }; return }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        if (!cancelled) {
+          setAddresses([])
+          setLoading(false)
+        }
+        return
+      }
       if (cancelled) return
       setUserId(user.id)
       const { data, error } = await supabase
@@ -42,13 +61,18 @@ export default function AddressesPage() {
       if (error) {
         console.error('[v0] addresses fetch error', error)
         setAddresses([])
+        setErrorMsg(
+          'Could not load your addresses. Please refresh and try again.',
+        )
       } else {
         setAddresses((data ?? []) as AddressRow[])
       }
       setLoading(false)
     }
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [supabase])
 
   function openAddForm() {
@@ -97,7 +121,9 @@ export default function AddressesPage() {
         setErrorMsg(error.message || 'Failed to update address.')
         return
       }
-      setAddresses((prev) => prev.map((a) => (a.id === editingId ? (data as AddressRow) : a)))
+      setAddresses((prev) =>
+        prev.map((a) => (a.id === editingId ? (data as AddressRow) : a)),
+      )
       closeForm()
     } else {
       const { data, error } = await supabase
@@ -134,209 +160,215 @@ export default function AddressesPage() {
     if (editingId === id) closeForm()
   }
 
+  const current = Math.min(
+    page,
+    Math.max(1, Math.ceil(addresses.length / size)),
+  )
+  const visible = addresses.slice((current - 1) * size, current * size)
+  const focusedAddress = addresses.find((a) => a.id === selected) ?? visible[0]
+  async function useLocation() {
+    if (!navigator.geolocation) {
+      setErrorMsg(
+        'Location is unavailable on this device. Please enter an address.',
+      )
+      return
+    }
+    setLocating(true)
+    setErrorMsg(null)
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const response = await fetch(
+            `/api/google/geocode?latlng=${position.coords.latitude},${position.coords.longitude}`,
+          )
+          const result = await response.json()
+          const address = result.results?.[0]?.formatted_address
+          if (!response.ok || !address)
+            throw new Error(
+              'Could not find your address. Please enter it manually.',
+            )
+          setEditingId(null)
+          setAddressInput(address)
+          setFormOpen(true)
+        } catch {
+          setErrorMsg('Could not find your address. Please enter it manually.')
+        } finally {
+          setLocating(false)
+        }
+      },
+      () => {
+        setLocating(false)
+        setErrorMsg(
+          'Location access was unavailable. You can still add an address manually.',
+        )
+      },
+      { timeout: 10000 },
+    )
+  }
   return (
-    <>
-      <Header onNewDelivery={() => setShowModal(true)} />
-      <main className="pt-16 pb-28 md:pb-8 md:ml-64 min-h-screen bg-surface-container-low">
-        <div className="px-4 md:p-10 max-w-7xl mx-auto">
-          {/* Page Header */}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 md:gap-6 mb-8 md:mb-12">
-            <div>
-              <nav className="flex text-xs font-label text-on-surface-variant mb-2 gap-2">
-                <span>Settings</span>
-                <span>/</span>
-                <span className="text-primary">Addresses</span>
-              </nav>
-              <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-on-surface">
-                Saved Addresses
-              </h2>
-              <p className="text-on-surface-variant mt-2 max-w-md text-sm">
-                Save the locations you ship to and from for faster delivery requests.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={openAddForm}
-              className="self-start md:self-auto px-5 py-2.5 bg-primary text-on-primary rounded-xl text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-base">add_location_alt</span>
-              Add Address
-            </button>
-          </div>
-
-          {/* Inline Add/Edit Form */}
-          {formOpen && (
-            <form
-              onSubmit={handleSubmit}
-              className="glass-card rounded-xl border border-outline-variant/15 p-6 mb-8"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-headline font-bold text-on-surface text-lg">
-                  {editingId ? 'Edit Address' : 'New Address'}
-                </h3>
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  className="p-2 hover:bg-white/10 rounded-lg text-on-surface-variant transition-colors"
-                  aria-label="Close"
-                >
-                  <span className="material-symbols-outlined text-sm">close</span>
-                </button>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">
-                  Address
-                </label>
-                <textarea
-                  value={addressInput}
-                  onChange={(e) => setAddressInput(e.target.value)}
-                  rows={3}
-                  className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface resize-none"
-                  placeholder="Street, City, Postal code, Country"
-                  autoFocus
-                />
-              </div>
-              <div className="flex justify-end items-center gap-3 mt-4 flex-wrap">
-                {errorMsg && (
-                  <span className="text-xs text-error font-medium">{errorMsg}</span>
-                )}
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  disabled={saving}
-                  className="px-4 py-2 bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors rounded-lg text-xs font-bold border border-outline-variant/15 disabled:opacity-60"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-6 py-2 bg-primary text-on-primary hover:brightness-110 transition-colors rounded-lg text-xs font-bold disabled:opacity-60"
-                >
-                  {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Add Address'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Address List */}
+    <CustomerPage
+      title="Saved addresses"
+      subtitle="Manage your pickup and delivery addresses."
+      action={
+        <button
+          className={`${styles.primary} ${styles.desktopOnly}`}
+          onClick={openAddForm}
+        >
+          <Plus size={17} />
+          Add address
+        </button>
+      }
+    >
+      {errorMsg && !formOpen && (
+        <p className={styles.error} role="alert">
+          {errorMsg}
+        </p>
+      )}
+      <div className={styles.addressLayout}>
+        <div className={styles.content}>
           {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <span className="font-label text-xs text-on-surface-variant uppercase tracking-widest">
-                Loading addresses...
-              </span>
-            </div>
-          ) : addresses.length === 0 ? (
-            <div className="bg-surface-container rounded-xl border border-outline-variant/10 px-8 py-16 flex flex-col items-center justify-center text-center">
-              <div className="w-14 h-14 rounded-2xl bg-surface-container-highest flex items-center justify-center text-primary mb-4">
-                <span className="material-symbols-outlined">location_off</span>
-              </div>
-              <h3 className="font-headline font-bold text-lg text-on-surface">No saved addresses</h3>
-              <p className="text-sm text-on-surface-variant mt-2 max-w-md">
-                Add the locations you frequently ship to or from. They&apos;ll be ready to pick when you create a new delivery.
-              </p>
-              <button
-                type="button"
-                onClick={openAddForm}
-                className="mt-6 bg-primary text-on-primary px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
-              >
-                Add Your First Address
-              </button>
-            </div>
+            <CustomerEmpty loading>Loading addresses</CustomerEmpty>
+          ) : !addresses.length ? (
+            <CustomerEmpty>
+              Add your first address for faster bookings.
+            </CustomerEmpty>
           ) : (
-            <>
-              {/* ── MOBILE: list view ── */}
-              <div className="md:hidden bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/10">
-                {addresses.map((addr) => (
-                  <div
-                    key={addr.id}
-                    className="flex items-center gap-3 px-4 py-4 border-b border-outline-variant/8 last:border-b-0"
-                  >
-                    <div className="bg-primary/20 p-2.5 rounded-xl shrink-0">
-                      <span className="material-symbols-outlined text-primary text-base">location_on</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-on-surface truncate">{addr.address}</p>
-                      <p className="text-[10px] text-on-surface-variant mt-0.5">
-                        {addr.created_at ? new Date(addr.created_at).toLocaleDateString() : 'Saved'}
-                      </p>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => openEditForm(addr)}
-                        className="p-2 hover:bg-white/10 rounded-lg text-on-surface-variant transition-colors"
-                        aria-label="Edit"
-                      >
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(addr.id)}
-                        className="p-2 hover:bg-error/10 hover:text-error rounded-lg text-on-surface-variant transition-colors"
-                        aria-label="Delete"
-                      >
-                        <span className="material-symbols-outlined text-sm">delete</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* ── DESKTOP: card grid ── */}
-            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {addresses.map((addr) => (
-                <div
+            <div className={styles.addressCards}>
+              {visible.map((addr) => (
+                <article
                   key={addr.id}
-                  className="glass-card p-6 rounded-xl relative group overflow-hidden transition-all hover:-translate-y-1 border border-white/5"
+                  className={`${styles.panel} ${styles.addressCard}`}
                 >
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="bg-primary/20 p-2 rounded-lg flex-shrink-0">
-                        <span className="material-symbols-outlined text-primary">location_on</span>
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-headline font-bold text-on-surface truncate">Saved Address</h3>
-                        <span className="text-[10px] tracking-widest text-primary font-bold uppercase">
-                          {addr.created_at
-                            ? new Date(addr.created_at).toLocaleDateString()
-                            : 'Saved'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => openEditForm(addr)}
-                        className="p-2 hover:bg-white/10 rounded-lg text-on-surface-variant transition-colors"
-                        aria-label="Edit address"
-                      >
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(addr.id)}
-                        className="p-2 hover:bg-error/10 hover:text-error rounded-lg text-on-surface-variant transition-colors"
-                        aria-label="Delete address"
-                      >
-                        <span className="material-symbols-outlined text-sm">delete</span>
-                      </button>
+                  <div className={styles.cardTop}>
+                    <span className={styles.iconTile}>
+                      <Home size={23} aria-hidden />
+                    </span>
+                    <div>
+                      <h2>Saved address</h2>
+                      <p>{shortDate(addr.created_at)}</p>
                     </div>
                   </div>
-                  <div className="p-4 bg-surface-container-lowest/50 rounded-lg">
-                    <p className="text-sm font-medium leading-relaxed text-on-surface-variant whitespace-pre-line">
-                      {addr.address}
-                    </p>
+                  <address>{addr.address}</address>
+                  <div className={styles.addressButtons}>
+                    <button
+                      className={styles.secondary}
+                      onClick={() => openEditForm(addr)}
+                    >
+                      <Pencil size={15} />
+                      Edit
+                    </button>
+                    <button
+                      className={`${styles.secondary} ${styles.desktopOnly}`}
+                      aria-label={`Show ${addr.address} on map`}
+                      onClick={() => setSelected(addr.id)}
+                    >
+                      <MapPin size={17} />
+                    </button>
+                    <button
+                      className={styles.secondary}
+                      aria-label={`Delete ${addr.address}`}
+                      onClick={() => handleDelete(addr.id)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
-            </>
           )}
+          <CustomerPagination
+            page={current}
+            size={size}
+            count={addresses.length}
+            onChange={setPage}
+          />
+          <div className={styles.addressMobileActions}>
+            <button className={styles.primary} onClick={openAddForm}>
+              <Plus size={20} />
+              Add address
+            </button>
+            <button
+              className={styles.secondary}
+              disabled={locating}
+              onClick={useLocation}
+            >
+              <Navigation size={17} />
+              {locating ? 'Finding your address…' : 'Use current location'}
+            </button>
+          </div>
         </div>
-      </main>
-
-      {showModal && <NewDeliveryModal onClose={() => setShowModal(false)} />}
-    </>
+        <aside className={`${styles.panel} ${styles.addressMap}`}>
+          {focusedAddress ? (
+            <>
+              <iframe
+                key={focusedAddress.id}
+                title="Selected saved address on map"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(focusedAddress.address)}&output=embed`}
+              />
+              <p>
+                <MapPin
+                  size={15}
+                  style={{ display: 'inline', marginRight: 6 }}
+                />
+                {focusedAddress.address}
+              </p>
+            </>
+          ) : (
+            <CustomerEmpty>
+              Your saved locations will appear here.
+            </CustomerEmpty>
+          )}
+        </aside>
+      </div>
+      {formOpen && (
+        <CustomerDialog
+          title={editingId ? 'Edit address' : 'Add address'}
+          onClose={() => {
+            if (!saving) closeForm()
+          }}
+        >
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="customer-address">
+              Address
+              <textarea
+                id="customer-address"
+                className={styles.input}
+                rows={3}
+                required
+                maxLength={500}
+                value={addressInput}
+                onChange={(e) => setAddressInput(e.target.value)}
+                placeholder="Street, city and postcode"
+                autoComplete="street-address"
+              />
+            </label>
+            {errorMsg && (
+              <p className={styles.error} role="alert">
+                {errorMsg}
+              </p>
+            )}
+            <div className={styles.formActions}>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={saving}
+                onClick={closeForm}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.primary}
+                type="submit"
+                disabled={saving}
+              >
+                {saving ? 'Saving…' : 'Save address'}
+              </button>
+            </div>
+          </form>
+        </CustomerDialog>
+      )}
+    </CustomerPage>
   )
 }

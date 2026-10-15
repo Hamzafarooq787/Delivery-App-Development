@@ -1,10 +1,27 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Header from '@/components/customer/Header'
-import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import Link from 'next/link'
+import {
+  Bell,
+  ChevronRight,
+  CircleHelp,
+  LockKeyhole,
+  LogOut,
+  MapPin,
+  UserRound,
+} from 'lucide-react'
+import { LogoutButton } from '@/components/auth/logout-button'
+import {
+  CustomerDialog,
+  CustomerPage,
+} from '@/components/customer/CustomerPage'
+import styles from '@/components/customer/CustomerPages.module.css'
 import { createClient } from '@/lib/supabase/client'
-import { getMarketingConsent, updateMarketingConsent } from '@/app/actions/marketing'
+import {
+  getMarketingConsent,
+  updateMarketingConsent,
+} from '@/app/actions/marketing'
 
 const NOTIF_STORAGE_KEY = 'kv_notification_prefs'
 
@@ -14,12 +31,23 @@ const defaultNotifPrefs: NotifPrefs = { email: true, sms: true, push: false }
 type MarketingPrefs = { email: boolean; push: boolean }
 
 export default function SettingsPage() {
-  const [showModal, setShowModal] = useState(false)
+  const [section, setSection] = useState<
+    'profile' | 'notifications' | 'security'
+  >('profile')
+  const [editing, setEditing] = useState<
+    'profile' | 'notifications' | 'security' | null
+  >(null)
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(defaultNotifPrefs)
-  const [marketingPrefs, setMarketingPrefs] = useState<MarketingPrefs>({ email: false, push: false })
+  const [marketingPrefs, setMarketingPrefs] = useState<MarketingPrefs>({
+    email: false,
+    push: false,
+  })
   const [marketingLoaded, setMarketingLoaded] = useState(false)
   const [savingMarketing, setSavingMarketing] = useState(false)
-  const [marketingMessage, setMarketingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [marketingMessage, setMarketingMessage] = useState<{
+    type: 'success' | 'error'
+    text: string
+  } | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
   const [userId, setUserId] = useState<string | null>(null)
@@ -29,19 +57,26 @@ export default function SettingsPage() {
   const [initialFullName, setInitialFullName] = useState('')
   const [initialPhone, setInitialPhone] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [saveMessage, setSaveMessage] = useState<{
+    type: 'success' | 'error'
+    text: string
+  } | null>(null)
 
   // Password change
-  const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [savingPassword, setSavingPassword] = useState(false)
-  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [passwordMessage, setPasswordMessage] = useState<{
+    type: 'success' | 'error'
+    text: string
+  } | null>(null)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) return
       if (cancelled) return
       setUserId(user.id)
@@ -53,7 +88,11 @@ export default function SettingsPage() {
         .maybeSingle()
       if (cancelled) return
       if (error) {
-        console.error('[v0] settings load error — code:', error.code, error.message)
+        console.error(
+          '[v0] settings load error — code:',
+          error.code,
+          error.message,
+        )
         return
       }
       const nm = data?.full_name ?? ''
@@ -64,7 +103,9 @@ export default function SettingsPage() {
       setInitialPhone(ph)
     }
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [supabase])
 
   // Load real marketing consent from the database
@@ -73,11 +114,16 @@ export default function SettingsPage() {
     async function loadMarketing() {
       const { data } = await getMarketingConsent()
       if (cancelled || !data) return
-      setMarketingPrefs({ email: data.marketing_email_opt_in, push: data.marketing_push_opt_in })
+      setMarketingPrefs({
+        email: data.marketing_email_opt_in,
+        push: data.marketing_push_opt_in,
+      })
       setMarketingLoaded(true)
     }
     loadMarketing()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   async function toggleMarketing(key: keyof MarketingPrefs) {
@@ -86,7 +132,10 @@ export default function SettingsPage() {
     setMarketingPrefs(next)
     setSavingMarketing(true)
     setMarketingMessage(null)
-    const { error } = await updateMarketingConsent({ emailOptIn: next.email, pushOptIn: next.push })
+    const { error } = await updateMarketingConsent({
+      emailOptIn: next.email,
+      pushOptIn: next.push,
+    })
     setSavingMarketing(false)
     if (error) {
       setMarketingPrefs(marketingPrefs) // revert on failure
@@ -103,9 +152,18 @@ export default function SettingsPage() {
       if (raw) {
         const parsed = JSON.parse(raw)
         setNotifPrefs({
-          email: typeof parsed.email === 'boolean' ? parsed.email : defaultNotifPrefs.email,
-          sms: typeof parsed.sms === 'boolean' ? parsed.sms : defaultNotifPrefs.sms,
-          push: typeof parsed.push === 'boolean' ? parsed.push : defaultNotifPrefs.push,
+          email:
+            typeof parsed.email === 'boolean'
+              ? parsed.email
+              : defaultNotifPrefs.email,
+          sms:
+            typeof parsed.sms === 'boolean'
+              ? parsed.sms
+              : defaultNotifPrefs.sms,
+          push:
+            typeof parsed.push === 'boolean'
+              ? parsed.push
+              : defaultNotifPrefs.push,
         })
       }
     } catch {
@@ -116,7 +174,9 @@ export default function SettingsPage() {
   function toggleNotif(key: keyof NotifPrefs) {
     setNotifPrefs((prev) => {
       const next = { ...prev, [key]: !prev[key] }
-      try { localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(next)) } catch {}
+      try {
+        localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(next))
+      } catch {}
       return next
     })
   }
@@ -133,11 +193,16 @@ export default function SettingsPage() {
       .single()
     setSaving(false)
     if (error) {
-      console.error('[v0] settings save error — code:', error.code, error.message)
+      console.error(
+        '[v0] settings save error — code:',
+        error.code,
+        error.message,
+      )
       // PGRST116 = 0 rows matched — RLS is blocking the update
-      const msg = error.code === 'PGRST116'
-        ? 'Save blocked — RLS policy missing. Run the SQL fix in your Supabase dashboard.'
-        : error.message || 'Failed to save profile.'
+      const msg =
+        error.code === 'PGRST116'
+          ? 'Save blocked — RLS policy missing. Run the SQL fix in your Supabase dashboard.'
+          : error.message || 'Failed to save profile.'
       setSaveMessage({ type: 'error', text: msg })
       return
     }
@@ -158,7 +223,10 @@ export default function SettingsPage() {
     if (savingPassword) return
     setPasswordMessage(null)
     if (newPassword.length < 8) {
-      setPasswordMessage({ type: 'error', text: 'Password must be at least 8 characters.' })
+      setPasswordMessage({
+        type: 'error',
+        text: 'Password must be at least 8 characters.',
+      })
       return
     }
     if (newPassword !== confirmPassword) {
@@ -170,320 +238,376 @@ export default function SettingsPage() {
     setSavingPassword(false)
     if (error) {
       console.error('[v0] password update error', error)
-      setPasswordMessage({ type: 'error', text: error.message || 'Failed to update password.' })
+      setPasswordMessage({
+        type: 'error',
+        text: error.message || 'Failed to update password.',
+      })
       return
     }
     setPasswordMessage({ type: 'success', text: 'Password updated.' })
     setNewPassword('')
     setConfirmPassword('')
-    setShowPasswordForm(false)
+    setEditing(null)
   }
 
-  return (
-    <>
-      <Header onNewDelivery={() => setShowModal(true)} />
-      <main className="pt-16 pb-28 md:pb-8 md:ml-64 min-h-screen bg-surface-container-low">
-        <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 md:py-12">
-          {/* Page Header */}
-          <div className="mb-8 md:mb-12">
-            <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter mb-2 text-on-surface">
-              Settings
-            </h2>
-            <p className="text-on-surface-variant max-w-2xl text-sm">
-              Manage your profile, security, and notification preferences.
-            </p>
+  const profileForm = (
+    <form
+      className={styles.formPanel}
+      onSubmit={(e) => {
+        e.preventDefault()
+        void handleSaveProfile()
+      }}
+    >
+      <h2>Profile details</h2>
+      <label>
+        Full name
+        <input
+          className={styles.input}
+          type="text"
+          autoComplete="name"
+          maxLength={100}
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Your full name"
+        />
+      </label>
+      <label>
+        Email address
+        <input
+          className={styles.input}
+          type="email"
+          autoComplete="email"
+          value={email}
+          readOnly
+        />
+      </label>
+      <label>
+        Phone number
+        <input
+          className={styles.input}
+          type="tel"
+          autoComplete="tel"
+          maxLength={40}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Your phone number"
+        />
+      </label>
+      {saveMessage && (
+        <p
+          role="status"
+          className={
+            saveMessage.type === 'error' ? styles.error : styles.message
+          }
+        >
+          {saveMessage.text}
+        </p>
+      )}
+      <div className={styles.formActions}>
+        <button
+          className={styles.primary}
+          disabled={saving || !userId}
+          type="submit"
+        >
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+        <button
+          type="button"
+          className={styles.secondary}
+          disabled={saving}
+          onClick={handleDiscardProfile}
+        >
+          Discard
+        </button>
+      </div>
+    </form>
+  )
+  const notificationForm = (
+    <div className={styles.formPanel}>
+      <h2>Notification preferences</h2>
+      <p className={styles.muted} style={{ fontSize: 12 }}>
+        Delivery notification preferences on this device.
+      </p>
+      {(['email', 'sms', 'push'] as const).map((key) => (
+        <div key={key} className={styles.switchRow}>
+          <div>
+            <strong>
+              {key === 'sms'
+                ? 'SMS'
+                : key === 'push'
+                  ? 'Push notifications'
+                  : 'Email'}
+            </strong>
+            <small>
+              {key === 'push'
+                ? 'Browser permission is also required'
+                : 'Your saved preference on this device'}
+            </small>
           </div>
-
-          <div className="grid grid-cols-12 gap-8">
-            {/* Profile + Security (left) */}
-            <section className="col-span-12 lg:col-span-7 space-y-6">
-              {/* Profile Section */}
-              <div className="glass-card border border-outline-variant/15 rounded-xl p-8">
-                <div className="flex items-center space-x-3 mb-8">
-                  <span className="material-symbols-outlined text-primary">account_circle</span>
-                  <h3 className="text-xl font-bold font-headline text-on-surface">Profile</h3>
-                </div>
-                <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleSaveProfile() }}>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">
-                      Full Name
-                    </label>
-                    <input
-                      className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface"
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Your full name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">
-                      Email Address
-                    </label>
-                    <input
-                      className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm outline-none text-on-surface-variant disabled:opacity-70"
-                      type="email"
-                      value={email}
-                      readOnly
-                      disabled
-                    />
-                    <p className="text-[10px] text-on-surface-variant ml-1">
-                      Email is managed by your sign-in provider.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">
-                      Phone Number
-                    </label>
-                    <input
-                      className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+1 555 000 0000"
-                    />
-                  </div>
-                  <div className="pt-4 flex justify-end items-center gap-4 flex-wrap">
-                    {saveMessage && (
-                      <span className={`text-xs font-medium ${saveMessage.type === 'success' ? 'text-primary' : 'text-error'}`}>
-                        {saveMessage.text}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleDiscardProfile}
-                      disabled={saving}
-                      className="px-6 py-2 bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors rounded-lg text-sm font-bold border border-outline-variant/15 disabled:opacity-60"
-                    >
-                      Discard
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving || !userId}
-                      className="px-8 py-2 bg-primary text-on-primary hover:brightness-110 transition-colors rounded-lg text-sm font-extrabold shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60"
-                    >
-                      {saving ? 'Saving...' : 'Update Profile'}
-                    </button>
-                  </div>
-                </form>
+          <button
+            className={styles.switch}
+            role="switch"
+            aria-checked={notifPrefs[key]}
+            aria-label={`${key} notifications`}
+            onClick={() => toggleNotif(key)}
+          >
+            <span />
+          </button>
+        </div>
+      ))}
+      <h3>Offers and promotions</h3>
+      {(['email', 'push'] as const).map((key) => (
+        <div className={styles.switchRow} key={key}>
+          <div>
+            <strong>{key === 'email' ? 'Email offers' : 'Push offers'}</strong>
+            <small>Optional marketing updates</small>
+          </div>
+          <button
+            className={styles.switch}
+            role="switch"
+            aria-checked={marketingPrefs[key]}
+            aria-label={`Marketing ${key}`}
+            disabled={savingMarketing || !marketingLoaded}
+            onClick={() => void toggleMarketing(key)}
+          >
+            <span />
+          </button>
+        </div>
+      ))}
+      {marketingMessage && (
+        <p
+          className={
+            marketingMessage.type === 'error' ? styles.error : styles.message
+          }
+          role="status"
+        >
+          {marketingMessage.text}
+        </p>
+      )}
+    </div>
+  )
+  const passwordForm = (
+    <form
+      className={styles.formPanel}
+      onSubmit={(e) => {
+        e.preventDefault()
+        void handleChangePassword()
+      }}
+    >
+      <h2>Change password</h2>
+      <p className={styles.muted} style={{ fontSize: 12 }}>
+        Use at least eight characters.
+      </p>
+      <label>
+        New password
+        <input
+          className={styles.input}
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+        />
+      </label>
+      <label>
+        Confirm password
+        <input
+          className={styles.input}
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+      </label>
+      {passwordMessage && (
+        <p
+          role="status"
+          className={
+            passwordMessage.type === 'error' ? styles.error : styles.message
+          }
+        >
+          {passwordMessage.text}
+        </p>
+      )}
+      <button
+        className={styles.primary}
+        disabled={savingPassword}
+        type="submit"
+      >
+        {savingPassword ? 'Updating…' : 'Update password'}
+      </button>
+    </form>
+  )
+  const sections = [
+    { key: 'profile' as const, label: 'Profile', icon: UserRound },
+    { key: 'notifications' as const, label: 'Notifications', icon: Bell },
+    { key: 'security' as const, label: 'Security', icon: LockKeyhole },
+  ]
+  return (
+    <CustomerPage
+      title="Your account"
+      subtitle="Manage your personal details, notifications and security."
+    >
+      <div className={styles.settingsLayout}>
+        <nav
+          className={styles.settingsTabs}
+          role="tablist"
+          aria-label="Account settings"
+        >
+          {sections.map(({ key, label, icon: Icon }) => (
+            <button
+              role="tab"
+              key={key}
+              aria-selected={section === key}
+              onClick={() => setSection(key)}
+            >
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
+          <Link
+            className={styles.textButton}
+            href="/dashboard/customer/addresses"
+          >
+            <MapPin size={17} />
+            Saved addresses
+          </Link>
+          <Link
+            className={styles.textButton}
+            href="/dashboard/customer/support"
+          >
+            <CircleHelp size={17} />
+            Help & support
+          </Link>
+        </nav>
+        <section className={`${styles.panel} ${styles.formPanel}`}>
+          {section === 'profile'
+            ? profileForm
+            : section === 'notifications'
+              ? notificationForm
+              : passwordForm}
+        </section>
+        <aside className={styles.settingSide}>
+          <div className={styles.panel}>
+            <h2>Notification preferences</h2>
+            <div className={styles.switchRow}>
+              <div>
+                <strong>Order updates</strong>
+                <small>View your notification preferences</small>
               </div>
-
-              {/* Security Section */}
-              <div className="glass-card border border-outline-variant/15 rounded-xl p-8">
-                <div className="flex items-center space-x-3 mb-8">
-                  <span className="material-symbols-outlined text-primary">security</span>
-                  <h3 className="text-xl font-bold font-headline text-on-surface">Security</h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="p-4 bg-surface-container-low/50 rounded-xl">
-                    <div className="flex items-start justify-between">
-                      <div className="flex space-x-4">
-                        <div className="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center">
-                          <span
-                            className="material-symbols-outlined text-primary"
-                            style={{ fontVariationSettings: "'FILL' 1" }}
-                          >
-                            lock
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold mb-1 text-on-surface">Account Password</p>
-                          <p className="text-xs text-on-surface-variant">
-                            Use a strong, unique password with at least 8 characters.
-                          </p>
-                        </div>
-                      </div>
-                      {!showPasswordForm && (
-                        <button
-                          type="button"
-                          onClick={() => { setShowPasswordForm(true); setPasswordMessage(null) }}
-                          className="px-4 py-2 bg-surface-container-highest hover:bg-surface-bright text-on-surface text-xs font-bold rounded-lg transition-colors border border-outline-variant/20 whitespace-nowrap"
-                        >
-                          Change Password
-                        </button>
-                      )}
-                    </div>
-
-                    {showPasswordForm && (
-                      <div className="mt-6 space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">
-                            New Password
-                          </label>
-                          <input
-                            className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface"
-                            type="password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="At least 8 characters"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant ml-1">
-                            Confirm Password
-                          </label>
-                          <input
-                            className="w-full bg-surface-container-highest border border-outline-variant/10 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none text-on-surface"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Re-enter new password"
-                          />
-                        </div>
-                        <div className="flex justify-end items-center gap-3 flex-wrap">
-                          {passwordMessage && (
-                            <span className={`text-xs font-medium ${passwordMessage.type === 'success' ? 'text-primary' : 'text-error'}`}>
-                              {passwordMessage.text}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowPasswordForm(false)
-                              setNewPassword('')
-                              setConfirmPassword('')
-                              setPasswordMessage(null)
-                            }}
-                            disabled={savingPassword}
-                            className="px-4 py-2 bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors rounded-lg text-xs font-bold border border-outline-variant/15 disabled:opacity-60"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleChangePassword}
-                            disabled={savingPassword}
-                            className="px-6 py-2 bg-primary text-on-primary hover:brightness-110 transition-colors rounded-lg text-xs font-bold disabled:opacity-60"
-                          >
-                            {savingPassword ? 'Saving...' : 'Save Password'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {!showPasswordForm && passwordMessage?.type === 'success' && (
-                      <p className="mt-4 text-xs text-primary">{passwordMessage.text}</p>
-                    )}
-                  </div>
-                </div>
+              <button
+                className={styles.textButton}
+                onClick={() => setSection('notifications')}
+              >
+                Manage
+                <ChevronRight size={14} />
+              </button>
+            </div>
+            <div className={styles.switchRow}>
+              <div>
+                <strong>Email offers</strong>
+                <small>Offers and service updates</small>
               </div>
-            </section>
-
-            {/* Notifications (right) */}
-            <section className="col-span-12 lg:col-span-5 space-y-6">
-              <div className="glass-card border border-outline-variant/15 rounded-xl p-8">
-                <div className="flex items-center space-x-3 mb-8">
-                  <span className="material-symbols-outlined text-secondary">notifications_active</span>
-                  <h3 className="text-xl font-bold font-headline text-on-surface">
-                    Notifications
-                  </h3>
-                </div>
-                <div className="space-y-6">
-                  <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">
-                    Delivery alerts
-                  </p>
-
-                  {([
-                    {
-                      key: 'email' as const,
-                      label: 'Email Alerts',
-                      desc: 'Receive delivery updates and receipts via email.',
-                    },
-                    {
-                      key: 'sms' as const,
-                      label: 'SMS Alerts',
-                      desc: 'Get text messages for status changes on your deliveries.',
-                    },
-                    {
-                      key: 'push' as const,
-                      label: 'Push Notifications',
-                      desc: 'Real-time browser notifications when your driver moves.',
-                    },
-                  ]).map((toggle, idx) => (
-                    <div key={toggle.key}>
-                      {idx > 0 && <div className="h-px bg-outline-variant/10 mb-6" />}
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1 pr-4">
-                          <p className="text-sm font-medium text-on-surface">{toggle.label}</p>
-                          <p className="text-xs text-on-surface-variant">{toggle.desc}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => toggleNotif(toggle.key)}
-                          aria-pressed={notifPrefs[toggle.key]}
-                          className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
-                            notifPrefs[toggle.key] ? 'bg-primary' : 'bg-surface-container-highest'
-                          }`}
-                        >
-                          <div
-                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${
-                              notifPrefs[toggle.key] ? 'right-0.5' : 'left-0.5'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  <p className="text-[10px] text-on-surface-variant mt-2">
-                    Preferences are saved on this device.
-                  </p>
-                </div>
-              </div>
-
-              <div className="glass-card border border-outline-variant/15 rounded-xl p-8">
-                <div className="flex items-center space-x-3 mb-2">
-                  <span className="material-symbols-outlined text-secondary">campaign</span>
-                  <h3 className="text-xl font-bold font-headline text-on-surface">
-                    Marketing Preferences
-                  </h3>
-                </div>
-                <p className="text-xs text-on-surface-variant mb-6">
-                  Promotional offers, discount codes, and reminders to come back. Off by default — opt in anytime.
-                </p>
-                <div className="space-y-6">
-                  {([
-                    { key: 'email' as const, label: 'Marketing Emails', desc: 'Promotions, discount codes, and updates by email.' },
-                    { key: 'push' as const, label: 'Marketing Push', desc: 'Promotions and reminders as push notifications.' },
-                  ]).map((toggle, idx) => (
-                    <div key={toggle.key}>
-                      {idx > 0 && <div className="h-px bg-outline-variant/10 mb-6" />}
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1 pr-4">
-                          <p className="text-sm font-medium text-on-surface">{toggle.label}</p>
-                          <p className="text-xs text-on-surface-variant">{toggle.desc}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => toggleMarketing(toggle.key)}
-                          disabled={!marketingLoaded || savingMarketing}
-                          aria-pressed={marketingPrefs[toggle.key]}
-                          className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${
-                            marketingPrefs[toggle.key] ? 'bg-primary' : 'bg-surface-container-highest'
-                          }`}
-                        >
-                          <div
-                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all ${
-                              marketingPrefs[toggle.key] ? 'right-0.5' : 'left-0.5'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {marketingMessage && (
-                    <p className={`text-xs font-medium ${marketingMessage.type === 'success' ? 'text-primary' : 'text-error'}`}>
-                      {marketingMessage.text}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </section>
+              <button
+                className={styles.switch}
+                role="switch"
+                aria-checked={marketingPrefs.email}
+                aria-label="Marketing email offers"
+                disabled={savingMarketing || !marketingLoaded}
+                onClick={() => void toggleMarketing('email')}
+              >
+                <span />
+              </button>
+            </div>
+          </div>
+          <div className={styles.panel}>
+            <h2>Security</h2>
+            <p style={{ marginTop: 10 }}>
+              Manage your password and account access.
+            </p>
+            <button
+              className={styles.secondary}
+              style={{ marginTop: 14 }}
+              onClick={() => setSection('security')}
+            >
+              <LockKeyhole size={16} />
+              Change password
+            </button>
+          </div>
+          <LogoutButton className={styles.danger}>
+            <LogOut size={17} />
+            Sign out
+          </LogoutButton>
+        </aside>
+      </div>
+      <div className={styles.settingsOverview}>
+        <div className={`${styles.panel} ${styles.profileIdentity}`}>
+          <span className={styles.avatar}>
+            {fullName ? (
+              fullName
+                .split(/\s+/)
+                .map((x) => x[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase()
+            ) : (
+              <UserRound size={23} />
+            )}
+          </span>
+          <div>
+            <strong>{fullName || 'Your account'}</strong>
+            <small>{email || 'Loading your details…'}</small>
           </div>
         </div>
-      </main>
-
-      {showModal && <NewDeliveryModal onClose={() => setShowModal(false)} />}
-    </>
+        <div className={`${styles.panel} ${styles.accountLinks}`}>
+          {sections.map(({ key, label, icon: Icon }) => (
+            <button key={key} onClick={() => setEditing(key)}>
+              <Icon size={21} />
+              {key === 'profile' ? 'Personal details' : label}
+              <ChevronRight size={18} />
+            </button>
+          ))}
+          <Link href="/dashboard/customer/support">
+            <CircleHelp size={21} />
+            Help & support
+            <ChevronRight size={18} />
+          </Link>
+        </div>
+        <div className={`${styles.panel} ${styles.accountLinks}`}>
+          <Link href="/dashboard/customer/addresses">
+            <MapPin size={21} />
+            Saved addresses
+            <ChevronRight size={18} />
+          </Link>
+        </div>
+        <LogoutButton className={styles.danger}>
+          <LogOut size={18} />
+          Sign out
+        </LogoutButton>
+      </div>
+      {editing && (
+        <CustomerDialog
+          title={
+            editing === 'profile'
+              ? 'Personal details'
+              : editing === 'notifications'
+                ? 'Notifications'
+                : 'Security'
+          }
+          onClose={() => {
+            if (!saving && !savingPassword) setEditing(null)
+          }}
+        >
+          {editing === 'profile'
+            ? profileForm
+            : editing === 'notifications'
+              ? notificationForm
+              : passwordForm}
+        </CustomerDialog>
+      )}
+    </CustomerPage>
   )
 }
-
