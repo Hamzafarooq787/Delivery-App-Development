@@ -4,20 +4,35 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
+import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
 import { getDeliveryOtp } from '@/app/actions/delivery'
-import { getMyRatingForDelivery, getRatingSummary, type Rating } from '@/app/actions/ratings'
+import {
+  getMyRatingForDelivery,
+  getRatingSummary,
+  type Rating,
+} from '@/app/actions/ratings'
 import { RatingPrompt } from '@/components/shared/rating-prompt'
 import { formatPrice } from '@/lib/pricing'
 
 const OTP_VISIBLE_STATUSES = ['accepted', 'collected', 'in_transit']
 
-const STATUS_ORDER = ['requested', 'accepted', 'collected', 'in_transit', 'delivered']
+const STATUS_ORDER = [
+  'requested',
+  'accepted',
+  'collected',
+  'in_transit',
+  'delivered',
+]
 
 function formatLogTime(iso: string) {
   const d = new Date(iso)
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return (
+    d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+    ' · ' +
+    d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  )
 }
 
 type Driver = { full_name: string | null } | null
@@ -30,16 +45,45 @@ function driverInitials(d: Driver) {
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  requested:  { bg: 'bg-[#adaaaa]/10', text: 'text-[#adaaaa]',  dot: 'bg-[#adaaaa]'  },
-  accepted:   { bg: 'bg-[var(--color-primary)]/10', text: 'text-[var(--color-primary)]',  dot: 'bg-[var(--color-primary)]'  },
-  collected:  { bg: 'bg-[var(--color-secondary)]/10', text: 'text-[var(--color-secondary)]',  dot: 'bg-[var(--color-secondary)]'  },
-  in_transit: { bg: 'bg-[#6ee7b7]/10', text: 'text-[#6ee7b7]',  dot: 'bg-[#6ee7b7]'  },
-  delivered:  { bg: 'bg-[#6ee7b7]/10', text: 'text-[#6ee7b7]',  dot: 'bg-[#6ee7b7]'  },
-  cancelled:  { bg: 'bg-[#ff6e84]/10', text: 'text-[#ff6e84]',  dot: 'bg-[#ff6e84]'  },
-}
+const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
+  {
+    requested: {
+      bg: 'bg-[#adaaaa]/10',
+      text: 'text-[#adaaaa]',
+      dot: 'bg-[#adaaaa]',
+    },
+    accepted: {
+      bg: 'bg-[var(--color-primary)]/10',
+      text: 'text-[var(--color-primary)]',
+      dot: 'bg-[var(--color-primary)]',
+    },
+    collected: {
+      bg: 'bg-[var(--color-secondary)]/10',
+      text: 'text-[var(--color-secondary)]',
+      dot: 'bg-[var(--color-secondary)]',
+    },
+    in_transit: {
+      bg: 'bg-[#6ee7b7]/10',
+      text: 'text-[#6ee7b7]',
+      dot: 'bg-[#6ee7b7]',
+    },
+    delivered: {
+      bg: 'bg-[#6ee7b7]/10',
+      text: 'text-[#6ee7b7]',
+      dot: 'bg-[#6ee7b7]',
+    },
+    cancelled: {
+      bg: 'bg-[#ff6e84]/10',
+      text: 'text-[#ff6e84]',
+      dot: 'bg-[#ff6e84]',
+    },
+  }
 
-function buildSteps(status: string, logs: { status: string; created_at: string }[], createdAt: string) {
+function buildSteps(
+  status: string,
+  logs: { status: string; created_at: string }[],
+  createdAt: string,
+) {
   const cur = STATUS_ORDER.indexOf(status.toLowerCase())
   const isDelivered = status === 'delivered'
   return STATUS_ORDER.map((st, i) => {
@@ -49,40 +93,51 @@ function buildSteps(status: string, logs: { status: string; created_at: string }
       label: st.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       detail: timestamp ? formatLogTime(timestamp) : '',
       // When delivered, ALL steps are done (including the last one)
-      done:   isDelivered ? true : (cur !== -1 && i < cur),
+      done: isDelivered ? true : cur !== -1 && i < cur,
       active: isDelivered ? false : i === cur,
     }
   })
 }
 
 function TrackingPageInner() {
-  const [showModal, setShowModal]   = useState(false)
-  const [shipment,  setShipment]    = useState<any>(null)
-  const [driver,    setDriver]      = useState<Driver>(null)
-  const [otp,       setOtp]         = useState<string | null>(null)
-  const [steps,     setSteps]       = useState(STATUS_ORDER.map((s) => ({
-    label: s.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-    detail: '', done: false, active: false,
-  })))
-  const [myRating,     setMyRating]     = useState<Rating | null>(null)
-  const [driverRating, setDriverRating] = useState<{ average: number | null; count: number }>({ average: null, count: 0 })
-  const [userId,    setUserId]      = useState('')
-  const supabase    = useMemo(() => createClient(), [])
+  const [showModal, setShowModal] = useState(false)
+  const [shipment, setShipment] = useState<any>(null)
+  const [driver, setDriver] = useState<Driver>(null)
+  const [otp, setOtp] = useState<string | null>(null)
+  const [steps, setSteps] = useState(
+    STATUS_ORDER.map((s) => ({
+      label: s.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      detail: '',
+      done: false,
+      active: false,
+    })),
+  )
+  const [myRating, setMyRating] = useState<Rating | null>(null)
+  const [driverRating, setDriverRating] = useState<{
+    average: number | null
+    count: number
+  }>({ average: null, count: 0 })
+  const [userId, setUserId] = useState('')
+  const supabase = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
-  const requestedId  = searchParams.get('id')
+  const requestedId = searchParams.get('id')
 
   // ── Initial load ────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user || cancelled) return
       setUserId(user.id)
 
       // Always select parcel_image_url so we can show it when delivered
       let q = supabase
         .from('delivery_requests')
-        .select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls,price,base_price,surge_multiplier,discount_amount,promo_code')
+        .select(
+          'id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls,price,base_price,surge_multiplier,discount_amount,promo_code',
+        )
         .eq('customer_id', user.id)
 
       if (requestedId) {
@@ -91,14 +146,24 @@ function TrackingPageInner() {
       } else {
         // No ID — prefer active, fallback to most recent delivered
         q = q
-          .in('status', ['requested', 'accepted', 'collected', 'in_transit', 'delivered'])
+          .in('status', [
+            'requested',
+            'accepted',
+            'collected',
+            'in_transit',
+            'delivered',
+          ])
           .order('created_at', { ascending: false })
           .limit(1)
       }
 
       const { data, error } = await q.maybeSingle()
       if (cancelled || error) return
-      if (!data) { setShipment(null); setDriver(null); return }
+      if (!data) {
+        setShipment(null)
+        setDriver(null)
+        return
+      }
 
       applyShipment(data)
 
@@ -107,10 +172,15 @@ function TrackingPageInner() {
         .select('status, created_at')
         .eq('delivery_id', data.id)
         .order('created_at', { ascending: true })
-      if (!cancelled) setSteps(buildSteps(data.status, logs ?? [], data.created_at))
+      if (!cancelled)
+        setSteps(buildSteps(data.status, logs ?? [], data.created_at))
 
       if (data.driver_id) {
-        const { data: drv } = await supabase.from('users').select('full_name').eq('id', data.driver_id).maybeSingle()
+        const { data: drv } = await supabase
+          .from('users')
+          .select('full_name')
+          .eq('id', data.driver_id)
+          .maybeSingle()
         if (!cancelled) setDriver(drv as Driver)
 
         const summary = await getRatingSummary(data.driver_id)
@@ -126,7 +196,9 @@ function TrackingPageInner() {
       }
     }
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [supabase, requestedId])
 
   // ── Realtime: watch delivery_requests for live status updates ───────────────
@@ -135,59 +207,76 @@ function TrackingPageInner() {
 
     const channel = supabase
       .channel(`tracking-delivery-${shipment.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'delivery_requests',
-        filter: `id=eq.${shipment.id}`,
-      }, async (payload) => {
-        const updated = payload.new as any
-        if (!updated) return
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'delivery_requests',
+          filter: `id=eq.${shipment.id}`,
+        },
+        async (payload) => {
+          const updated = payload.new as any
+          if (!updated) return
 
-        // Merge new fields into shipment state
-        setShipment((prev: any) => ({ ...prev, ...updated }))
+          // Merge new fields into shipment state
+          setShipment((prev: any) => ({ ...prev, ...updated }))
 
-        const { data: logs } = await supabase
-          .from('delivery_status_logs')
-          .select('status, created_at')
-          .eq('delivery_id', updated.id)
-          .order('created_at', { ascending: true })
-        setSteps(buildSteps(updated.status, logs ?? [], updated.created_at ?? shipment.created_at))
+          const { data: logs } = await supabase
+            .from('delivery_status_logs')
+            .select('status, created_at')
+            .eq('delivery_id', updated.id)
+            .order('created_at', { ascending: true })
+          setSteps(
+            buildSteps(
+              updated.status,
+              logs ?? [],
+              updated.created_at ?? shipment.created_at,
+            ),
+          )
 
-        // If driver changed (e.g. reassigned), re-fetch driver name + rating
-        if (updated.driver_id && updated.driver_id !== shipment.driver_id) {
-          const { data: drv } = await supabase
-            .from('users').select('full_name').eq('id', updated.driver_id).maybeSingle()
-          setDriver(drv as Driver)
-          const summary = await getRatingSummary(updated.driver_id)
-          setDriverRating(summary)
-        }
+          // If driver changed (e.g. reassigned), re-fetch driver name + rating
+          if (updated.driver_id && updated.driver_id !== shipment.driver_id) {
+            const { data: drv } = await supabase
+              .from('users')
+              .select('full_name')
+              .eq('id', updated.driver_id)
+              .maybeSingle()
+            setDriver(drv as Driver)
+            const summary = await getRatingSummary(updated.driver_id)
+            setDriverRating(summary)
+          }
 
-        if (updated.status === 'delivered') {
-          const { data: rating } = await getMyRatingForDelivery(updated.id)
-          setMyRating(rating)
-        }
-      })
+          if (updated.status === 'delivered') {
+            const { data: rating } = await getMyRatingForDelivery(updated.id)
+            setMyRating(rating)
+          }
+        },
+      )
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [supabase, shipment?.id])
 
   function applyShipment(data: any) {
     setShipment(data)
   }
 
-  const statusCfg  = STATUS_COLORS[shipment?.status] ?? STATUS_COLORS.requested
+  const statusCfg = STATUS_COLORS[shipment?.status] ?? STATUS_COLORS.requested
   const isDelivered = shipment?.status === 'delivered'
 
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} userId={userId} />
 
-      <main className="fixed top-16 left-0 md:left-64 right-0 bottom-16 md:bottom-0 overflow-hidden flex flex-col md:flex-row">
-
+      <main
+        className={`${navStyles.trackingContent} overflow-hidden flex flex-col md:flex-row`}
+      >
         {/* ── Info Panel ─────────────────────────────────────────── */}
-        <aside className="
+        <aside
+          className="
           order-2 md:order-1
           md:w-[320px] md:flex-shrink-0
           flex-[5] md:flex-none md:h-full
@@ -196,7 +285,8 @@ function TrackingPageInner() {
           rounded-t-2xl md:rounded-none
           overflow-y-auto md:overflow-hidden
           z-10
-        ">
+        "
+        >
           {/* Drag handle — mobile only */}
           <div className="md:hidden flex justify-center pt-3 pb-2 shrink-0 sticky top-0 bg-[#0e0e0e] z-20">
             <div className="w-12 h-1 rounded-full bg-[#494847]/60" />
@@ -205,12 +295,19 @@ function TrackingPageInner() {
           {/* ── Delivered banner ── */}
           {isDelivered && (
             <div className="mx-4 mt-3 mb-1 flex items-center gap-3 bg-[#6ee7b7]/10 border border-[#6ee7b7]/20 rounded-2xl px-4 py-3 shrink-0">
-              <span className="material-symbols-outlined text-[#6ee7b7] text-2xl shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>
+              <span
+                className="material-symbols-outlined text-[#6ee7b7] text-2xl shrink-0"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
                 check_circle
               </span>
               <div>
-                <p className="text-sm font-bold text-[#6ee7b7]">Delivery Complete!</p>
-                <p className="text-[11px] text-[#adaaaa] mt-0.5">Your parcel has been delivered successfully.</p>
+                <p className="text-sm font-bold text-[#6ee7b7]">
+                  Delivery Complete!
+                </p>
+                <p className="text-[11px] text-[#adaaaa] mt-0.5">
+                  Your parcel has been delivered successfully.
+                </p>
               </div>
             </div>
           )}
@@ -222,22 +319,31 @@ function TrackingPageInner() {
                 {isDelivered ? 'Delivery Record' : 'Live Tracking'}
               </p>
               {shipment && (
-                <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusCfg.bg} ${statusCfg.text} border-current/20`}>
-                  <span className={`w-2 h-2 rounded-full ${statusCfg.dot} ${shipment.status === 'in_transit' ? 'animate-pulse' : ''}`} />
+                <span
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusCfg.bg} ${statusCfg.text} border-current/20`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${statusCfg.dot} ${shipment.status === 'in_transit' ? 'animate-pulse' : ''}`}
+                  />
                   {shipment.status?.replace('_', ' ')}
                 </span>
               )}
             </div>
             <p className="text-lg font-black font-headline text-white leading-tight">
               {shipment
-                ? (shipment.tracking_number ?? `KV-${shipment.id.slice(0, 8).toUpperCase()}`)
+                ? (shipment.tracking_number ??
+                  `KV-${shipment.id.slice(0, 8).toUpperCase()}`)
                 : 'No shipment found'}
             </p>
             {shipment && (
               <p className="text-xs text-[#adaaaa] mt-1 leading-relaxed">
-                <span className="font-medium text-white/70">{shipment.pickup_address}</span>
+                <span className="font-medium text-white/70">
+                  {shipment.pickup_address}
+                </span>
                 <span className="mx-1.5 text-[var(--color-primary)]">→</span>
-                <span className="font-medium text-white/70">{shipment.delivery_address}</span>
+                <span className="font-medium text-white/70">
+                  {shipment.delivery_address}
+                </span>
               </p>
             )}
           </div>
@@ -246,29 +352,44 @@ function TrackingPageInner() {
           {shipment?.price != null && (
             <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0 bg-[#1a1919]">
               <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#494847]/15">
-                <span className="material-symbols-outlined text-[#6ee7b7] text-base">payments</span>
-                <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Payment</p>
+                <span className="material-symbols-outlined text-[#6ee7b7] text-base">
+                  payments
+                </span>
+                <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">
+                  Payment
+                </p>
               </div>
               <div className="px-3 py-3 space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[#adaaaa]">Base fare</span>
-                  <span className="text-white font-semibold">£{formatPrice(shipment.base_price ?? shipment.price)}</span>
+                  <span className="text-white font-semibold">
+                    £{formatPrice(shipment.base_price ?? shipment.price)}
+                  </span>
                 </div>
                 {shipment.surge_multiplier > 1 && (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#fb923c]">Surge pricing</span>
-                    <span className="text-[#fb923c] font-semibold">{shipment.surge_multiplier}× applied</span>
+                    <span className="text-[#fb923c] font-semibold">
+                      {shipment.surge_multiplier}× applied
+                    </span>
                   </div>
                 )}
                 {shipment.discount_amount > 0 && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#6ee7b7]">Discount{shipment.promo_code ? ` (${shipment.promo_code})` : ''}</span>
-                    <span className="text-[#6ee7b7] font-semibold">−£{formatPrice(shipment.discount_amount)}</span>
+                    <span className="text-[#6ee7b7]">
+                      Discount
+                      {shipment.promo_code ? ` (${shipment.promo_code})` : ''}
+                    </span>
+                    <span className="text-[#6ee7b7] font-semibold">
+                      −£{formatPrice(shipment.discount_amount)}
+                    </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-sm pt-1.5 border-t border-[#494847]/15">
                   <span className="text-white font-bold">Total paid</span>
-                  <span className="text-white font-black">£{formatPrice(shipment.price)}</span>
+                  <span className="text-white font-black">
+                    £{formatPrice(shipment.price)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -279,74 +400,125 @@ function TrackingPageInner() {
             <div className="mx-4 mt-3 shrink-0">
               {myRating ? (
                 <div className="rounded-2xl border border-[#494847]/15 bg-[#1a1919] px-4 py-3 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-yellow-400 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                  <span
+                    className="material-symbols-outlined text-yellow-400 text-lg"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    star
+                  </span>
                   <div>
-                    <p className="text-sm text-white">You rated this delivery {myRating.score}/5</p>
+                    <p className="text-sm text-white">
+                      You rated this delivery {myRating.score}/5
+                    </p>
                     <p className="text-[10px] text-[#adaaaa] mt-0.5">
-                      {myRating.status === 'pending' ? 'Pending admin review' : myRating.status === 'approved' ? 'Published' : 'Not published'}
+                      {myRating.status === 'pending'
+                        ? 'Pending admin review'
+                        : myRating.status === 'approved'
+                          ? 'Published'
+                          : 'Not published'}
                     </p>
                   </div>
                 </div>
               ) : (
-                <RatingPrompt deliveryId={shipment.id} ratedLabel="your driver" />
+                <RatingPrompt
+                  deliveryId={shipment.id}
+                  ratedLabel="your driver"
+                />
               )}
             </div>
           )}
 
           {/* ── Delivery code ── */}
-          {otp && shipment && OTP_VISIBLE_STATUSES.includes(shipment.status) && (
-            <div className="mx-4 mt-3 rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 px-4 py-4 shrink-0">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-primary)] mb-1.5">Delivery Code</p>
-                  <p className="text-3xl font-black font-mono tracking-[0.3em] text-white">{otp}</p>
+          {otp &&
+            shipment &&
+            OTP_VISIBLE_STATUSES.includes(shipment.status) && (
+              <div className="mx-4 mt-3 rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 px-4 py-4 shrink-0">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-primary)] mb-1.5">
+                      Delivery Code
+                    </p>
+                    <p className="text-3xl font-black font-mono tracking-[0.3em] text-white">
+                      {otp}
+                    </p>
+                  </div>
+                  <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl shrink-0">
+                    lock
+                  </span>
                 </div>
-                <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl shrink-0">lock</span>
+                <p className="text-[11px] text-[#adaaaa] mt-2.5 leading-relaxed">
+                  Share this code with your driver only when they arrive with
+                  your package — they'll need it to confirm delivery.
+                </p>
               </div>
-              <p className="text-[11px] text-[#adaaaa] mt-2.5 leading-relaxed">
-                Share this code with your driver only when they arrive with your package — they'll need it to confirm delivery.
-              </p>
-            </div>
-          )}
+            )}
 
           {/* ── ETA / Completion row ── */}
           {!isDelivered && (
             <div className="px-5 py-4 border-b border-[#494847]/20 shrink-0 flex items-center justify-between gap-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#adaaaa] mb-1">Estimated Arrival</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#adaaaa] mb-1">
+                  Estimated Arrival
+                </p>
                 <p className="text-3xl font-black font-headline text-white tracking-tighter">
                   {shipment?.status === 'in_transit' ? 'LIVE' : '--:--'}
                 </p>
                 <p className="text-xs text-[#adaaaa]/60 mt-0.5">
-                  {shipment?.status === 'in_transit' ? 'Driver en route' : 'Awaiting dispatch'}
+                  {shipment?.status === 'in_transit'
+                    ? 'Driver en route'
+                    : 'Awaiting dispatch'}
                 </p>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>schedule</span>
+                <span
+                  className="material-symbols-outlined text-[var(--color-primary)] text-2xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  schedule
+                </span>
               </div>
             </div>
           )}
 
           {/* ── Item description + photos submitted at booking ── */}
-          {(shipment?.item_description || (shipment?.item_photo_urls && shipment.item_photo_urls.length > 0)) && (
+          {(shipment?.item_description ||
+            (shipment?.item_photo_urls &&
+              shipment.item_photo_urls.length > 0)) && (
             <div className="mx-4 my-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0 bg-[#1a1919]">
               <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#494847]/15">
-                <span className="material-symbols-outlined text-[var(--color-primary)] text-base">inventory_2</span>
-                <p className="text-[11px] font-bold text-[var(--color-primary)] uppercase tracking-wider">Item Details</p>
+                <span className="material-symbols-outlined text-[var(--color-primary)] text-base">
+                  inventory_2
+                </span>
+                <p className="text-[11px] font-bold text-[var(--color-primary)] uppercase tracking-wider">
+                  Item Details
+                </p>
               </div>
               <div className="px-3 py-3 space-y-2.5">
                 {shipment?.item_description && (
-                  <p className="text-sm text-white whitespace-pre-wrap">{shipment.item_description}</p>
+                  <p className="text-sm text-white whitespace-pre-wrap">
+                    {shipment.item_description}
+                  </p>
                 )}
-                {shipment?.item_photo_urls && shipment.item_photo_urls.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {shipment.item_photo_urls.map((url: string) => (
-                      <a key={url} href={url} target="_blank" rel="noreferrer" className="w-16 h-16 rounded-lg overflow-hidden border border-[#494847]/20 shrink-0">
-                        <img src={url} alt="Item" className="w-full h-full object-cover" />
-                      </a>
-                    ))}
-                  </div>
-                )}
+                {shipment?.item_photo_urls &&
+                  shipment.item_photo_urls.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {shipment.item_photo_urls.map((url: string) => (
+                        <a
+                          key={url}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="w-16 h-16 rounded-lg overflow-hidden border border-[#494847]/20 shrink-0"
+                        >
+                          <img
+                            src={url}
+                            alt="Item"
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           )}
@@ -355,8 +527,15 @@ function TrackingPageInner() {
           {shipment?.parcel_image_url && (
             <div className="mx-4 my-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0">
               <div className="flex items-center gap-2 px-3 py-2.5 bg-[#1a1919] border-b border-[#494847]/15">
-                <span className="material-symbols-outlined text-[#6ee7b7] text-base" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Parcel Photo at Pickup</p>
+                <span
+                  className="material-symbols-outlined text-[#6ee7b7] text-base"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  verified
+                </span>
+                <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">
+                  Parcel Photo at Pickup
+                </p>
               </div>
               <img
                 src={shipment.parcel_image_url}
@@ -371,8 +550,15 @@ function TrackingPageInner() {
           {shipment?.delivered_image_url && (
             <div className="mx-4 my-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0">
               <div className="flex items-center gap-2 px-3 py-2.5 bg-[#1a1919] border-b border-[#494847]/15">
-                <span className="material-symbols-outlined text-[#6ee7b7] text-base" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Proof of Delivery</p>
+                <span
+                  className="material-symbols-outlined text-[#6ee7b7] text-base"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  verified
+                </span>
+                <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">
+                  Proof of Delivery
+                </p>
               </div>
               <img
                 src={shipment.delivered_image_url}
@@ -385,34 +571,55 @@ function TrackingPageInner() {
 
           {/* ── Shipment Path Timeline ── */}
           <div className="md:flex-1 md:overflow-y-auto px-5 py-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#adaaaa]/70 mb-5">Shipment Path</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#adaaaa]/70 mb-5">
+              Shipment Path
+            </p>
             <div className="space-y-0">
               {steps.map((step, i) => (
                 <div key={step.label} className="flex gap-4 relative">
                   {i < steps.length - 1 && (
-                    <div className={`absolute left-[15px] top-8 bottom-0 w-px ${step.done ? 'bg-[#6ee7b7]/40' : 'bg-[#494847]/30'}`} />
+                    <div
+                      className={`absolute left-[15px] top-8 bottom-0 w-px ${step.done ? 'bg-[#6ee7b7]/40' : 'bg-[#494847]/30'}`}
+                    />
                   )}
-                  <div className={`relative z-10 mt-0.5 w-8 h-8 rounded-full flex items-center justify-center border-2 shrink-0 transition-all ${
-                    step.done && !step.active
-                      ? 'bg-[#6ee7b7] border-[#6ee7b7]'
-                      : step.active
-                      ? 'bg-[var(--color-primary)] border-[var(--color-primary)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.45)]'
-                      : 'bg-transparent border-[#494847]/30'
-                  }`}>
+                  <div
+                    className={`relative z-10 mt-0.5 w-8 h-8 rounded-full flex items-center justify-center border-2 shrink-0 transition-all ${
+                      step.done && !step.active
+                        ? 'bg-[#6ee7b7] border-[#6ee7b7]'
+                        : step.active
+                          ? 'bg-[var(--color-primary)] border-[var(--color-primary)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.45)]'
+                          : 'bg-transparent border-[#494847]/30'
+                    }`}
+                  >
                     {step.done && !step.active && (
-                      <span className="material-symbols-outlined text-[#052e16] text-sm" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>check</span>
+                      <span
+                        className="material-symbols-outlined text-[#052e16] text-sm"
+                        style={{
+                          fontVariationSettings: "'FILL' 1, 'wght' 700",
+                        }}
+                      >
+                        check
+                      </span>
                     )}
                     {step.active && (
                       <div className="w-2.5 h-2.5 rounded-full bg-white shadow-sm" />
                     )}
                   </div>
                   <div className="pb-6 min-w-0">
-                    <p className={`text-sm font-bold leading-tight ${
-                      step.done && !step.active ? 'text-[#6ee7b7]' : step.active ? 'text-[var(--color-primary)]' : 'text-[#494847]'
-                    }`}>
+                    <p
+                      className={`text-sm font-bold leading-tight ${
+                        step.done && !step.active
+                          ? 'text-[#6ee7b7]'
+                          : step.active
+                            ? 'text-[var(--color-primary)]'
+                            : 'text-[#494847]'
+                      }`}
+                    >
                       {step.label}
                     </p>
-                    <p className={`text-xs mt-1 ${step.done || step.active ? 'text-[#adaaaa]' : 'text-[#494847]/60'}`}>
+                    <p
+                      className={`text-xs mt-1 ${step.done || step.active ? 'text-[#adaaaa]' : 'text-[#494847]/60'}`}
+                    >
                       {step.detail}
                     </p>
                   </div>
@@ -429,13 +636,28 @@ function TrackingPageInner() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-white truncate">
-                  {driver?.full_name || (shipment?.driver_id ? 'Driver assigned' : 'Awaiting driver')}
+                  {driver?.full_name ||
+                    (shipment?.driver_id
+                      ? 'Driver assigned'
+                      : 'Awaiting driver')}
                 </p>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <span className="material-symbols-outlined text-sm text-yellow-400" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-sm font-bold text-white">{driverRating.average != null ? driverRating.average.toFixed(2) : 'New'}</span>
+                  <span
+                    className="material-symbols-outlined text-sm text-yellow-400"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    star
+                  </span>
+                  <span className="text-sm font-bold text-white">
+                    {driverRating.average != null
+                      ? driverRating.average.toFixed(2)
+                      : 'New'}
+                  </span>
                   {driverRating.count > 0 && (
-                    <span className="text-xs text-[#adaaaa] ml-1">· {driverRating.count} {driverRating.count === 1 ? 'rating' : 'ratings'}</span>
+                    <span className="text-xs text-[#adaaaa] ml-1">
+                      · {driverRating.count}{' '}
+                      {driverRating.count === 1 ? 'rating' : 'ratings'}
+                    </span>
                   )}
                 </div>
               </div>
@@ -443,11 +665,15 @@ function TrackingPageInner() {
             {!isDelivered && (
               <div className="grid grid-cols-2 gap-3">
                 <button className="bg-[#262626] hover:bg-[#303030] text-white text-sm font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors border border-[#494847]/20 active:scale-95">
-                  <span className="material-symbols-outlined text-base text-[#adaaaa]">mail</span>
+                  <span className="material-symbols-outlined text-base text-[#adaaaa]">
+                    mail
+                  </span>
                   Message
                 </button>
                 <button className="bg-[var(--color-primary)] hover:brightness-110 text-[var(--color-on-primary)] text-sm font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-[var(--color-primary)]/20">
-                  <span className="material-symbols-outlined text-base">call</span>
+                  <span className="material-symbols-outlined text-base">
+                    call
+                  </span>
                   Call
                 </button>
               </div>
@@ -462,12 +688,18 @@ function TrackingPageInner() {
             driverId={isDelivered ? null : (shipment?.driver_id ?? null)}
             pickup={
               shipment?.pickup_lat != null && shipment?.pickup_lng != null
-                ? { lat: Number(shipment.pickup_lat), lng: Number(shipment.pickup_lng) }
+                ? {
+                    lat: Number(shipment.pickup_lat),
+                    lng: Number(shipment.pickup_lng),
+                  }
                 : null
             }
             destination={
               shipment?.delivery_lat != null && shipment?.delivery_lng != null
-                ? { lat: Number(shipment.delivery_lat), lng: Number(shipment.delivery_lng) }
+                ? {
+                    lat: Number(shipment.delivery_lat),
+                    lng: Number(shipment.delivery_lng),
+                  }
                 : null
             }
             customerId={null}
@@ -481,9 +713,12 @@ function TrackingPageInner() {
           {shipment && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
               <div className="flex items-center gap-2 bg-[#0e0e0e]/85 backdrop-blur-md border border-[#494847]/30 rounded-full px-4 py-2 shadow-lg">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${statusCfg.dot} ${shipment.status === 'in_transit' ? 'animate-pulse' : ''}`} />
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${statusCfg.dot} ${shipment.status === 'in_transit' ? 'animate-pulse' : ''}`}
+                />
                 <span className="text-xs font-bold text-white font-mono">
-                  {shipment.tracking_number ?? `KV-${shipment.id.slice(0, 8).toUpperCase()}`}
+                  {shipment.tracking_number ??
+                    `KV-${shipment.id.slice(0, 8).toUpperCase()}`}
                 </span>
                 <span className="text-[10px] text-[#adaaaa] uppercase tracking-wider">
                   {shipment.status?.replace('_', ' ')}
@@ -494,10 +729,18 @@ function TrackingPageInner() {
 
           {/* Map controls */}
           <div className="absolute bottom-6 right-4 z-10 flex flex-col gap-2">
-            <button className="w-11 h-11 bg-[#0e0e0e]/85 backdrop-blur-sm rounded-xl border border-[#494847]/30 flex items-center justify-center text-[#adaaaa] hover:text-white hover:bg-[#262626]/80 transition-all" title="Centre map">
-              <span className="material-symbols-outlined text-xl">my_location</span>
+            <button
+              className="w-11 h-11 bg-[#0e0e0e]/85 backdrop-blur-sm rounded-xl border border-[#494847]/30 flex items-center justify-center text-[#adaaaa] hover:text-white hover:bg-[#262626]/80 transition-all"
+              title="Centre map"
+            >
+              <span className="material-symbols-outlined text-xl">
+                my_location
+              </span>
             </button>
-            <button className="w-11 h-11 bg-[#0e0e0e]/85 backdrop-blur-sm rounded-xl border border-[#494847]/30 flex items-center justify-center text-[#adaaaa] hover:text-white hover:bg-[#262626]/80 transition-all" title="Map layers">
+            <button
+              className="w-11 h-11 bg-[#0e0e0e]/85 backdrop-blur-sm rounded-xl border border-[#494847]/30 flex items-center justify-center text-[#adaaaa] hover:text-white hover:bg-[#262626]/80 transition-all"
+              title="Map layers"
+            >
               <span className="material-symbols-outlined text-xl">layers</span>
             </button>
           </div>
@@ -506,9 +749,15 @@ function TrackingPageInner() {
           {!shipment && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="bg-[#0e0e0e]/85 backdrop-blur-md border border-[#494847]/20 rounded-2xl px-8 py-7 text-center">
-                <span className="material-symbols-outlined text-5xl text-[#494847] block mb-3">explore_off</span>
-                <p className="text-white font-bold text-base">No shipment found</p>
-                <p className="text-[#adaaaa] text-sm mt-1">Check your delivery history for past orders</p>
+                <span className="material-symbols-outlined text-5xl text-[#494847] block mb-3">
+                  explore_off
+                </span>
+                <p className="text-white font-bold text-base">
+                  No shipment found
+                </p>
+                <p className="text-[#adaaaa] text-sm mt-1">
+                  Check your delivery history for past orders
+                </p>
               </div>
             </div>
           )}
@@ -517,16 +766,22 @@ function TrackingPageInner() {
           {isDelivered && (
             <div className="absolute bottom-6 left-4 z-10 pointer-events-none">
               <div className="flex items-center gap-2 bg-[#6ee7b7]/15 backdrop-blur-md border border-[#6ee7b7]/30 rounded-2xl px-4 py-3 shadow-lg">
-                <span className="material-symbols-outlined text-[#6ee7b7] text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                <span
+                  className="material-symbols-outlined text-[#6ee7b7] text-xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  check_circle
+                </span>
                 <div>
                   <p className="text-xs font-bold text-[#6ee7b7]">Delivered</p>
-                  <p className="text-[10px] text-[#adaaaa]">Route shown above</p>
+                  <p className="text-[10px] text-[#adaaaa]">
+                    Route shown above
+                  </p>
                 </div>
               </div>
             </div>
           )}
         </div>
-
       </main>
 
       {showModal && <NewDeliveryModal onClose={() => setShowModal(false)} />}
@@ -541,4 +796,3 @@ export default function LiveTrackingPage() {
     </Suspense>
   )
 }
-
