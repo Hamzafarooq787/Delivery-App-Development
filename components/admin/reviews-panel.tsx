@@ -10,7 +10,7 @@ function Stars({ score }: { score: number }) {
         <span
           key={n}
           className="material-symbols-outlined text-base"
-          style={{ fontVariationSettings: n <= score ? "'FILL' 1" : "'FILL' 0", color: n <= score ? "#facc15" : "#494847" }}
+          style={{ fontVariationSettings: n <= score ? "'FILL' 1" : "'FILL' 0", color: n <= score ? "#facc15" : "var(--color-outline-variant)" }}
         >
           star
         </span>
@@ -38,14 +38,14 @@ function ReviewCard({ rating, onResolved }: { rating: PendingRating; onResolved:
   const ratedLabel = rating.rater_role === "customer" ? "Driver" : "Customer"
 
   return (
-    <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-3">
+    <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs text-[#adaaaa]">
+          <p className="text-xs text-[var(--color-on-surface-variant)]">
             <span className="font-bold text-white">{rating.rater?.full_name ?? "Unknown"}</span> ({raterLabel}) rated{" "}
             <span className="font-bold text-white">{rating.rated?.full_name ?? "Unknown"}</span> ({ratedLabel})
           </p>
-          <p className="text-[10px] text-[#494847] mt-0.5 font-mono">
+          <p className="text-[10px] text-[var(--color-outline-variant)] mt-0.5 font-mono">
             {rating.delivery?.tracking_number ?? `Delivery ${rating.delivery_id.slice(0, 8).toUpperCase()}`}
           </p>
         </div>
@@ -53,7 +53,7 @@ function ReviewCard({ rating, onResolved }: { rating: PendingRating; onResolved:
       </div>
 
       {rating.comment && (
-        <p className="text-sm text-white bg-[#131313] border border-[#494847]/10 rounded-lg px-3 py-2.5 leading-relaxed">
+        <p className="text-sm text-white bg-[var(--brand-bg)] border border-[var(--color-outline-variant)]/10 rounded-lg px-3 py-2.5 leading-relaxed">
           "{rating.comment}"
         </p>
       )}
@@ -90,21 +90,21 @@ export function ReviewsPanel({ initialRatings }: { initialRatings: PendingRating
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">Reviews</h1>
-          <p className="text-[#adaaaa] mt-1">Approve or reject ratings before they're published to the other party.</p>
+          <p className="text-[var(--color-on-surface-variant)] mt-1">Approve or reject ratings before they're published to the other party.</p>
         </div>
         {ratings.length > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
-            <span className="text-xs font-bold text-[var(--color-primary)]">{ratings.length} pending</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-[var(--brand-strong)] animate-pulse" />
+            <span className="text-xs font-bold text-[var(--brand-soft)]">{ratings.length} pending</span>
           </div>
         )}
       </div>
 
       {ratings.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#494847]/30 bg-[#1a1919] px-6 py-20 text-center">
-          <span className="material-symbols-outlined text-4xl text-[#494847] mb-3 block">rate_review</span>
+        <div className="rounded-xl border border-dashed border-[var(--color-outline-variant)]/30 bg-[var(--brand-panel)] px-6 py-20 text-center">
+          <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)] mb-3 block">rate_review</span>
           <p className="text-base font-semibold text-white">No pending reviews</p>
-          <p className="mt-1 text-sm text-[#adaaaa]">New ratings will show up here for approval.</p>
+          <p className="mt-1 text-sm text-[var(--color-on-surface-variant)]">New ratings will show up here for approval.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

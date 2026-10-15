@@ -86,18 +86,18 @@ export default async function AdminReportsPage() {
   ]
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 md:mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-headline font-black tracking-tight text-white">Platform Analytics</h1>
-          <p className="text-[#adaaaa] mt-2 text-sm">
+          <p className="text-[var(--color-on-surface-variant)] mt-2 text-sm">
             Live telemetry data — all insights since platform inception.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-[#1a1919] border border-[#494847]/20 px-4 py-2.5 rounded-xl hover:border-[var(--color-primary)]/40 transition-colors">
-            <span className="material-symbols-outlined text-sm text-[var(--color-primary)]">download</span>
+          <button className="flex items-center gap-2 bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 px-4 py-2.5 rounded-xl hover:border-[var(--brand-strong)]/40 transition-colors">
+            <span className="material-symbols-outlined text-sm text-[var(--brand-soft)]">download</span>
             <span className="text-white text-sm font-semibold">Export</span>
           </button>
         </div>
@@ -106,22 +106,22 @@ export default async function AdminReportsPage() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6 md:mb-8">
         {REPORTS.map((stat) => (
-          <div key={stat.label} className="bg-[#1a1919] p-6 rounded-xl">
+          <div key={stat.label} className="bg-[var(--brand-panel)] p-6 rounded-xl">
             <div className="flex items-start justify-between mb-4">
-              <p className="text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">{stat.label}</p>
-              <span className="material-symbols-outlined text-[var(--color-primary)] text-xl">{stat.icon}</span>
+              <p className="text-[var(--color-on-surface-variant)] text-[10px] uppercase tracking-widest font-bold">{stat.label}</p>
+              <span className="material-symbols-outlined text-[var(--brand-soft)] text-xl">{stat.icon}</span>
             </div>
             <p className="text-3xl font-extrabold font-headline text-white">{stat.value}</p>
             <div className="flex items-center gap-1 mt-2">
               <span
-                className={`material-symbols-outlined text-[10px] ${stat.up ? "text-[var(--color-primary)]" : "text-[#ff6e84]"}`}
+                className={`material-symbols-outlined text-[10px] ${stat.up ? "text-[var(--brand-soft)]" : "text-[#ff6e84]"}`}
               >
                 {stat.up ? "arrow_upward" : "arrow_downward"}
               </span>
-              <span className={`text-xs font-bold ${stat.up ? "text-[var(--color-primary)]" : "text-[#ff6e84]"}`}>
+              <span className={`text-xs font-bold ${stat.up ? "text-[var(--brand-soft)]" : "text-[#ff6e84]"}`}>
                 {stat.delta}
               </span>
-              <span className="text-[10px] text-[#adaaaa]">vs. last period</span>
+              <span className="text-[10px] text-[var(--color-on-surface-variant)]">vs. last period</span>
             </div>
           </div>
         ))}
@@ -130,13 +130,13 @@ export default async function AdminReportsPage() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 mb-6 md:mb-8">
         {/* Revenue Chart — 8 cols */}
-        <div className="col-span-1 lg:col-span-8 bg-[#1a1919] p-5 md:p-6 rounded-xl">
+        <div className="col-span-1 lg:col-span-8 bg-[var(--brand-panel)] p-5 md:p-6 rounded-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-white font-headline">Revenue Momentum</h3>
-              <p className="text-[#adaaaa] text-xs">Weekly earnings in GBP (£)</p>
+              <p className="text-[var(--color-on-surface-variant)] text-xs">Weekly earnings in GBP (£)</p>
             </div>
-            <span className="text-[10px] text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 rounded-full font-bold">
+            <span className="text-[10px] text-[var(--brand-soft)] bg-[var(--brand-strong)]/10 px-3 py-1 rounded-full font-bold">
               7-Day Window
             </span>
           </div>
@@ -144,47 +144,47 @@ export default async function AdminReportsPage() {
         </div>
 
         {/* Status Donut — 4 cols */}
-        <div className="col-span-1 lg:col-span-4 bg-[#1a1919] p-5 md:p-6 rounded-xl">
+        <div className="col-span-1 lg:col-span-4 bg-[var(--brand-panel)] p-5 md:p-6 rounded-xl">
           <div className="mb-6">
             <h3 className="text-lg font-bold text-white font-headline">Delivery Status</h3>
-            <p className="text-[#adaaaa] text-xs">Breakdown by state</p>
+            <p className="text-[var(--color-on-surface-variant)] text-xs">Breakdown by state</p>
           </div>
           <OrderStatusChart data={statusData} />
         </div>
       </div>
 
       {/* Top Drivers Table */}
-      <div className="bg-[#1a1919] rounded-xl overflow-hidden">
-        <div className="px-6 md:px-8 py-5 border-b border-[#494847]/10 flex items-center justify-between">
+      <div className="bg-[var(--brand-panel)] rounded-xl overflow-hidden">
+        <div className="px-6 md:px-8 py-5 border-b border-[var(--color-outline-variant)]/10 flex items-center justify-between">
           <h3 className="text-base font-bold text-white font-headline">Top Field Agents</h3>
-          <a href="/dashboard/admin/drivers" className="text-xs text-[var(--color-primary)] hover:underline">
+          <a href="/dashboard/admin/drivers" className="text-xs text-[var(--brand-soft)] hover:underline">
             View All
           </a>
         </div>
         <div className="overflow-x-auto">
         <table className="w-full text-left min-w-[480px]">
           <thead>
-            <tr className="bg-[#201f1f] text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
+            <tr className="bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)] text-[10px] uppercase tracking-widest font-bold">
               <th className="px-8 py-4">Rank</th>
               <th className="px-8 py-4">Agent</th>
               <th className="px-8 py-4 text-right">Completed</th>
               <th className="px-8 py-4 text-right">Rating</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#494847]/5">
+          <tbody className="divide-y divide-[var(--color-outline-variant)]/5">
             {topDrivers.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-10 text-center text-[#adaaaa] text-sm">
+                <td colSpan={4} className="py-10 text-center text-[var(--color-on-surface-variant)] text-sm">
                   No driver data available
                 </td>
               </tr>
             ) : (
               topDrivers.map((driver, i) => (
-                <tr key={driver.id} className="hover:bg-[#201f1f] transition-colors">
+                <tr key={driver.id} className="hover:bg-[var(--color-surface-container-high)] transition-colors">
                   <td className="px-8 py-5">
                     <span
                       className={`text-xs font-extrabold font-headline ${
-                        i === 0 ? "text-[var(--color-primary)]" : i === 1 ? "text-[var(--color-secondary)]" : "text-[#adaaaa]"
+                        i === 0 ? "text-[var(--brand-soft)]" : i === 1 ? "text-[var(--color-secondary)]" : "text-[var(--color-on-surface-variant)]"
                       }`}
                     >
                       #{i + 1}
@@ -192,19 +192,19 @@ export default async function AdminReportsPage() {
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] text-xs font-bold">
+                      <div className="w-9 h-9 rounded-full bg-[var(--brand-strong)]/10 flex items-center justify-center text-[var(--brand-soft)] text-xs font-bold">
                         {(driver.full_name ?? driver.email ?? "?").slice(0, 2).toUpperCase()}
                       </div>
                       <div>
                         <p className="text-white text-sm font-semibold">{driver.full_name ?? "Unknown"}</p>
-                        <p className="text-[#adaaaa] text-[10px]">{driver.email}</p>
+                        <p className="text-[var(--color-on-surface-variant)] text-[10px]">{driver.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-5 text-right text-white font-bold text-sm">—</td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span className="material-symbols-outlined text-xs text-[var(--color-primary)]">star</span>
+                      <span className="material-symbols-outlined text-xs text-[var(--brand-soft)]">star</span>
                       <span className="text-white font-bold text-sm">—</span>
                     </div>
                   </td>

@@ -52,8 +52,8 @@ export function AssignDriverDropdown({
         onClick={() => setOpen((v) => !v)}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all whitespace-nowrap ${
           localDriverId
-            ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20"
-            : "bg-[#262626] border-[#494847]/20 text-[#adaaaa] hover:text-white hover:bg-[#2c2c2c]"
+            ? "bg-[var(--brand-strong)]/10 border-[var(--brand-strong)]/20 text-[var(--brand-soft)] hover:bg-[var(--brand-strong)]/20"
+            : "bg-[var(--color-surface-container-highest)] border-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-bright)]"
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         {isPending ? (
@@ -78,17 +78,17 @@ export function AssignDriverDropdown({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-xl bg-[#1a1919] border border-[#494847]/20 shadow-2xl overflow-hidden">
-          <div className="px-3 py-2 border-b border-[#494847]/10">
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Select Driver</p>
+        <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-xl bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 shadow-2xl overflow-hidden">
+          <div className="px-3 py-2 border-b border-[var(--color-outline-variant)]/10">
+            <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Select Driver</p>
           </div>
           <div className="max-h-56 overflow-y-auto">
             {/* Unassign option */}
             <button
               type="button"
               onClick={() => handleSelect(null)}
-              className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors hover:bg-[#262626] ${
-                !localDriverId ? "text-[#ff6e84]" : "text-[#adaaaa]"
+              className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors hover:bg-[var(--color-surface-container-highest)] ${
+                !localDriverId ? "text-[#ff6e84]" : "text-[var(--color-on-surface-variant)]"
               }`}
             >
               <span className="material-symbols-outlined text-sm">person_remove</span>
@@ -96,27 +96,27 @@ export function AssignDriverDropdown({
             </button>
 
             {drivers.length === 0 ? (
-              <p className="px-3 py-3 text-xs text-[#adaaaa] text-center">No approved drivers</p>
+              <p className="px-3 py-3 text-xs text-[var(--color-on-surface-variant)] text-center">No approved drivers</p>
             ) : (
               drivers.map((driver) => (
                 <button
                   key={driver.id}
                   type="button"
                   onClick={() => handleSelect(driver.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors hover:bg-[#262626] ${
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors hover:bg-[var(--color-surface-container-highest)] ${
                     driver.id === localDriverId
-                      ? "text-[var(--color-primary)] font-bold"
+                      ? "text-[var(--brand-soft)] font-bold"
                       : "text-white"
                   }`}
                 >
-                  <div className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
-                    <span className="text-[8px] font-bold text-[var(--color-primary)]">
+                  <div className="w-5 h-5 rounded-full bg-[var(--brand-strong)]/10 flex items-center justify-center shrink-0">
+                    <span className="text-[8px] font-bold text-[var(--brand-soft)]">
                       {driver.full_name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <span className="truncate">{driver.full_name}</span>
                   {driver.id === localDriverId && (
-                    <span className="material-symbols-outlined text-xs ml-auto shrink-0 text-[var(--color-primary)]">check</span>
+                    <span className="material-symbols-outlined text-xs ml-auto shrink-0 text-[var(--brand-soft)]">check</span>
                   )}
                 </button>
               ))

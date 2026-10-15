@@ -21,8 +21,8 @@ import {
   type SurgeSettings, type BusyPeriodRuleRow, type BusyPeriodRuleInput,
 } from "@/app/actions/pricing"
 
-const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-const LABEL = "text-xs font-semibold text-[#adaaaa] uppercase tracking-wider"
+const INPUT = "w-full bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:border-[var(--brand-strong)]/40 focus:ring-1 focus:ring-[var(--brand-strong)]/20 transition-all"
+const LABEL = "text-xs font-semibold text-[var(--color-on-surface-variant)] uppercase tracking-wider"
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
@@ -31,12 +31,12 @@ function Toggle({ checked, onChange, label, description }: { checked: boolean; o
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
         <p className="text-sm font-bold text-white">{label}</p>
-        {description && <p className="text-xs text-[#adaaaa] mt-0.5">{description}</p>}
+        {description && <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">{description}</p>}
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${checked ? "bg-[#6ee7b7]" : "bg-[#494847]/40"}`}
+        className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${checked ? "bg-[#6ee7b7]" : "bg-[var(--color-outline-variant)]/40"}`}
       >
         <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`} />
       </button>
@@ -49,7 +49,7 @@ function SaveButton({ isPending, label = "Save Changes" }: { isPending: boolean;
     <button
       type="submit"
       disabled={isPending}
-      className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
+      className="px-5 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
     >
       {isPending ? "Saving…" : label}
     </button>
@@ -103,10 +103,10 @@ function PromoCodeModal({ initial, editingId, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { if (!isPending) onClose() }} />
-      <div className="relative w-full max-w-lg bg-[#1a1919] border border-[#494847]/20 rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15 shrink-0">
+      <div className="relative w-full max-w-lg bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-outline-variant)]/15 shrink-0">
           <h2 className="text-base font-bold text-white">{editingId ? "Edit Promo Code" : "New Promo Code"}</h2>
-          <button onClick={onClose} className="text-[#adaaaa] hover:text-white">
+          <button onClick={onClose} className="text-[var(--color-on-surface-variant)] hover:text-white">
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
@@ -126,10 +126,10 @@ function PromoCodeModal({ initial, editingId, onClose, onSaved }: {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className={LABEL}>Discount Type</label>
-              <div className="flex rounded-xl bg-[#262626] border border-[#494847]/20 p-1">
+              <div className="flex rounded-xl bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 p-1">
                 {(["percentage", "fixed"] as const).map((t) => (
                   <button key={t} type="button" onClick={() => set("discount_type", t)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.discount_type === t ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.discount_type === t ? "bg-[var(--brand-strong)] text-[var(--brand-ink)]" : "text-[var(--color-on-surface-variant)]"}`}>
                     {t === "percentage" ? "% Off" : "£ Off"}
                   </button>
                 ))}
@@ -184,9 +184,9 @@ function PromoCodeModal({ initial, editingId, onClose, onSaved }: {
           {error && <p className="text-xs text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 rounded-xl px-4 py-3">{error}</p>}
         </div>
 
-        <div className="px-5 py-4 border-t border-[#494847]/15 flex items-center justify-end gap-3 shrink-0">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] transition-all disabled:opacity-60">
+        <div className="px-5 py-4 border-t border-[var(--color-outline-variant)]/15 flex items-center justify-end gap-3 shrink-0">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] transition-all disabled:opacity-60">
             {isPending ? "Saving…" : "Save Code"}
           </button>
         </div>
@@ -234,22 +234,22 @@ function PromoCodesSection({ initial }: { initial: PromoCode[] }) {
       )}
 
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-[#adaaaa]">{codes.length} promo code{codes.length !== 1 ? "s" : ""}</p>
-        <button onClick={() => setModalState({ input: EMPTY_PROMO })} className="flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs rounded-xl hover:bg-[var(--color-primary-fixed-dim)] transition-all">
+        <p className="text-sm text-[var(--color-on-surface-variant)]">{codes.length} promo code{codes.length !== 1 ? "s" : ""}</p>
+        <button onClick={() => setModalState({ input: EMPTY_PROMO })} className="flex items-center gap-1.5 px-4 py-2 bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-xs rounded-xl hover:bg-[var(--color-primary-fixed-dim)] transition-all">
           <span className="material-symbols-outlined text-sm">add</span>New Code
         </button>
       </div>
 
       {codes.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#494847]/30 bg-[#1a1919] px-6 py-16 text-center">
-          <span className="material-symbols-outlined text-4xl text-[#494847] mb-3 block">local_offer</span>
+        <div className="rounded-xl border border-dashed border-[var(--color-outline-variant)]/30 bg-[var(--brand-panel)] px-6 py-16 text-center">
+          <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)] mb-3 block">local_offer</span>
           <p className="text-sm font-semibold text-white">No promo codes yet</p>
-          <p className="mt-1 text-xs text-[#adaaaa]">Create one for seasonal or general promotions.</p>
+          <p className="mt-1 text-xs text-[var(--color-on-surface-variant)]">Create one for seasonal or general promotions.</p>
         </div>
       ) : (
-        <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl overflow-hidden overflow-x-auto">
+        <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl overflow-hidden overflow-x-auto">
           <table className="w-full text-left min-w-[640px]">
-            <thead className="bg-[#131313] text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
+            <thead className="bg-[var(--brand-bg)] text-[10px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">
               <tr>
                 <th className="px-4 py-3">Code</th>
                 <th className="px-4 py-3">Discount</th>
@@ -259,29 +259,29 @@ function PromoCodesSection({ initial }: { initial: PromoCode[] }) {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#494847]/10">
+            <tbody className="divide-y divide-[var(--color-outline-variant)]/10">
               {codes.map((c) => (
-                <tr key={c.id} className="hover:bg-[#201f1f]/40">
+                <tr key={c.id} className="hover:bg-[var(--color-surface-container-high)]/40">
                   <td className="px-4 py-3">
                     <p className="text-sm font-bold text-white font-mono">{c.code}</p>
-                    {c.description && <p className="text-[10px] text-[#adaaaa]">{c.description}</p>}
+                    {c.description && <p className="text-[10px] text-[var(--color-on-surface-variant)]">{c.description}</p>}
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {c.discount_type === "percentage" ? `${c.discount_value}%` : `£${c.discount_value.toFixed(2)}`}
-                    {c.max_discount_amount && <span className="text-[#adaaaa]"> (max £{c.max_discount_amount.toFixed(2)})</span>}
+                    {c.max_discount_amount && <span className="text-[var(--color-on-surface-variant)]"> (max £{c.max_discount_amount.toFixed(2)})</span>}
                   </td>
-                  <td className="px-4 py-3 text-xs text-[#adaaaa]">
+                  <td className="px-4 py-3 text-xs text-[var(--color-on-surface-variant)]">
                     {c.usage_limit_per_user}/customer{c.usage_limit_total ? ` · ${c.usage_limit_total} total` : ""}
                   </td>
-                  <td className="px-4 py-3 text-xs text-[#adaaaa]">{c.valid_until ? new Date(c.valid_until).toLocaleDateString("en-GB") : "No expiry"}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--color-on-surface-variant)]">{c.valid_until ? new Date(c.valid_until).toLocaleDateString("en-GB") : "No expiry"}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${c.active ? "bg-green-500/10 text-green-400" : "bg-[#494847]/20 text-[#adaaaa]"}`}>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${c.active ? "bg-green-500/10 text-green-400" : "bg-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)]"}`}>
                       {c.active ? "Active" : "Inactive"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button onClick={() => setModalState({ input: codeToInput(c), id: c.id })} className="p-1.5 rounded-lg text-[#adaaaa] hover:text-white hover:bg-[#262626]">
+                      <button onClick={() => setModalState({ input: codeToInput(c), id: c.id })} className="p-1.5 rounded-lg text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)]">
                         <span className="material-symbols-outlined text-base">edit</span>
                       </button>
                       <button onClick={() => handleDelete(c.id)} disabled={isPending && deletingId === c.id} className="p-1.5 rounded-lg text-[#ff6e84]/70 hover:text-[#ff6e84] hover:bg-[#ff6e84]/10 disabled:opacity-40">
@@ -326,14 +326,14 @@ function AutomaticDiscountCard({ discount, title, description, icon }: {
   }
 
   return (
-    <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4">
+    <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-[var(--brand-strong)]/10 flex items-center justify-center text-[var(--brand-soft)] shrink-0">
           <span className="material-symbols-outlined">{icon}</span>
         </div>
         <div>
           <p className="text-sm font-bold text-white">{title}</p>
-          <p className="text-xs text-[#adaaaa]">{description}</p>
+          <p className="text-xs text-[var(--color-on-surface-variant)]">{description}</p>
         </div>
       </div>
 
@@ -342,10 +342,10 @@ function AutomaticDiscountCard({ discount, title, description, icon }: {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className={LABEL}>Discount Type</label>
-          <div className="flex rounded-xl bg-[#262626] border border-[#494847]/20 p-1">
+          <div className="flex rounded-xl bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 p-1">
             {(["percentage", "fixed"] as const).map((t) => (
               <button key={t} type="button" onClick={() => set("discount_type", t)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.discount_type === t ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.discount_type === t ? "bg-[var(--brand-strong)] text-[var(--brand-ink)]" : "text-[var(--color-on-surface-variant)]"}`}>
                 {t === "percentage" ? "% Off" : "£ Off"}
               </button>
             ))}
@@ -430,7 +430,7 @@ function SurgePricingSection({ initial }: { initial: SurgeSettings | null }) {
 
   return (
     <div className="max-w-2xl space-y-5">
-      <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5">
+      <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5">
         <Toggle
           checked={form.master_enabled}
           onChange={(v) => set("master_enabled", v)}
@@ -439,8 +439,8 @@ function SurgePricingSection({ initial }: { initial: SurgeSettings | null }) {
         />
       </div>
 
-      <div className={`bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4 transition-opacity ${!form.master_enabled ? "opacity-50" : ""}`}>
-        <p className="text-sm font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[var(--color-primary)] text-base">groups</span>High Demand</p>
+      <div className={`bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5 space-y-4 transition-opacity ${!form.master_enabled ? "opacity-50" : ""}`}>
+        <p className="text-sm font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[var(--brand-soft)] text-base">groups</span>High Demand</p>
         <Toggle checked={form.demand_enabled} onChange={(v) => set("demand_enabled", v)} label="Enabled" description="Triggers when pending orders significantly outnumber online drivers" />
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -454,8 +454,8 @@ function SurgePricingSection({ initial }: { initial: SurgeSettings | null }) {
         </div>
       </div>
 
-      <div className={`bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4 transition-opacity ${!form.master_enabled ? "opacity-50" : ""}`}>
-        <p className="text-sm font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[var(--color-primary)] text-base">traffic</span>Heavy Traffic</p>
+      <div className={`bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5 space-y-4 transition-opacity ${!form.master_enabled ? "opacity-50" : ""}`}>
+        <p className="text-sm font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[var(--brand-soft)] text-base">traffic</span>Heavy Traffic</p>
         <Toggle checked={form.traffic_enabled} onChange={(v) => set("traffic_enabled", v)} label="Enabled" description="Triggers when live traffic significantly slows the route, via Google Maps" />
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -469,10 +469,10 @@ function SurgePricingSection({ initial }: { initial: SurgeSettings | null }) {
         </div>
       </div>
 
-      <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-2">
+      <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5 space-y-2">
         <label className={LABEL}>Maximum Total Multiplier</label>
         <input type="number" min={1} step={0.1} className={`${INPUT} max-w-[160px]`} value={form.max_total_multiplier} onChange={(e) => set("max_total_multiplier", parseFloat(e.target.value) || 1)} />
-        <p className="text-[11px] text-[#adaaaa]">
+        <p className="text-[11px] text-[var(--color-on-surface-variant)]">
           Busy-period, demand, and traffic factors never stack — the single strongest applicable factor applies, capped at this multiplier.
         </p>
       </div>
@@ -516,10 +516,10 @@ function BusyPeriodRuleModal({ initial, editingId, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { if (!isPending) onClose() }} />
-      <div className="relative w-full max-w-md bg-[#1a1919] border border-[#494847]/20 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15">
+      <div className="relative w-full max-w-md bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-outline-variant)]/15">
           <h2 className="text-base font-bold text-white">{editingId ? "Edit Busy Period" : "New Busy Period"}</h2>
-          <button onClick={onClose} className="text-[#adaaaa] hover:text-white"><span className="material-symbols-outlined text-lg">close</span></button>
+          <button onClick={onClose} className="text-[var(--color-on-surface-variant)] hover:text-white"><span className="material-symbols-outlined text-lg">close</span></button>
         </div>
         <div className="px-5 py-5 space-y-4">
           <div className="space-y-1.5">
@@ -550,9 +550,9 @@ function BusyPeriodRuleModal({ initial, editingId, onClose, onSaved }: {
           <Toggle checked={form.active} onChange={(v) => set("active", v)} label="Active" />
           {error && <p className="text-xs text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 rounded-xl px-4 py-3">{error}</p>}
         </div>
-        <div className="px-5 py-4 border-t border-[#494847]/15 flex items-center justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626]">Cancel</button>
-          <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] disabled:opacity-60">
+        <div className="px-5 py-4 border-t border-[var(--color-outline-variant)]/15 flex items-center justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)]">Cancel</button>
+          <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] disabled:opacity-60">
             {isPending ? "Saving…" : "Save Rule"}
           </button>
         </div>
@@ -591,33 +591,33 @@ function BusyPeriodsSection({ initial }: { initial: BusyPeriodRuleRow[] }) {
       )}
 
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-[#adaaaa]">{rules.length} rule{rules.length !== 1 ? "s" : ""}</p>
-        <button onClick={() => setModalState({ input: EMPTY_RULE })} className="flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs rounded-xl hover:bg-[var(--color-primary-fixed-dim)] transition-all">
+        <p className="text-sm text-[var(--color-on-surface-variant)]">{rules.length} rule{rules.length !== 1 ? "s" : ""}</p>
+        <button onClick={() => setModalState({ input: EMPTY_RULE })} className="flex items-center gap-1.5 px-4 py-2 bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-xs rounded-xl hover:bg-[var(--color-primary-fixed-dim)] transition-all">
           <span className="material-symbols-outlined text-sm">add</span>New Rule
         </button>
       </div>
 
       {rules.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#494847]/30 bg-[#1a1919] px-6 py-16 text-center">
-          <span className="material-symbols-outlined text-4xl text-[#494847] mb-3 block">schedule</span>
+        <div className="rounded-xl border border-dashed border-[var(--color-outline-variant)]/30 bg-[var(--brand-panel)] px-6 py-16 text-center">
+          <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)] mb-3 block">schedule</span>
           <p className="text-sm font-semibold text-white">No busy period rules yet</p>
-          <p className="mt-1 text-xs text-[#adaaaa]">Add time-based rules like weekday rush hour.</p>
+          <p className="mt-1 text-xs text-[var(--color-on-surface-variant)]">Add time-based rules like weekday rush hour.</p>
         </div>
       ) : (
         <div className="space-y-2.5">
           {rules.map((r) => (
-            <div key={r.id} className="flex items-center gap-3 bg-[#1a1919] border border-[#494847]/15 rounded-xl px-4 py-3">
+            <div key={r.id} className="flex items-center gap-3 bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl px-4 py-3">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">{r.label}</p>
-                <p className="text-xs text-[#adaaaa]">
+                <p className="text-xs text-[var(--color-on-surface-variant)]">
                   {r.day_of_week === null ? "Every day" : DAY_NAMES[r.day_of_week]} · {r.start_time.slice(0, 5)}–{r.end_time.slice(0, 5)} · {r.multiplier}× multiplier
                 </p>
               </div>
-              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ${r.active ? "bg-green-500/10 text-green-400" : "bg-[#494847]/20 text-[#adaaaa]"}`}>
+              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ${r.active ? "bg-green-500/10 text-green-400" : "bg-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)]"}`}>
                 {r.active ? "Active" : "Inactive"}
               </span>
               <div className="flex items-center gap-1.5 shrink-0">
-                <button onClick={() => setModalState({ input: r, id: r.id })} className="p-1.5 rounded-lg text-[#adaaaa] hover:text-white hover:bg-[#262626]">
+                <button onClick={() => setModalState({ input: r, id: r.id })} className="p-1.5 rounded-lg text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)]">
                   <span className="material-symbols-outlined text-base">edit</span>
                 </button>
                 <button onClick={() => handleDelete(r.id)} disabled={isPending && deletingId === r.id} className="p-1.5 rounded-lg text-[#ff6e84]/70 hover:text-[#ff6e84] hover:bg-[#ff6e84]/10 disabled:opacity-40">
@@ -659,16 +659,16 @@ export function PromotionsPanel({
     <div className="px-4 md:px-8 py-6 md:py-8">
       <div className="mb-6 md:mb-8">
         <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">Promotions & Pricing</h1>
-        <p className="text-[#adaaaa] mt-1">Discount codes, automatic rewards, and surge pricing rules.</p>
+        <p className="text-[var(--color-on-surface-variant)] mt-1">Discount codes, automatic rewards, and surge pricing rules.</p>
       </div>
 
-      <div className="flex rounded-xl bg-[#1a1919] border border-[#494847]/20 p-1 w-fit mb-6 overflow-x-auto">
+      <div className="flex rounded-xl bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 p-1 w-fit mb-6 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-              tab === t.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa] hover:text-white"
+              tab === t.key ? "bg-[var(--brand-strong)] text-[var(--brand-ink)]" : "text-[var(--color-on-surface-variant)] hover:text-white"
             }`}
           >
             <span className="material-symbols-outlined text-sm">{t.icon}</span>

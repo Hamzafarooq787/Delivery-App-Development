@@ -93,11 +93,11 @@ export function SettingsTabsClient({
               onClick={() => setActiveTab(tab.label)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === tab.label
-                  ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                  : "text-[#adaaaa] hover:text-white hover:bg-[#1a1919]"
+                  ? "bg-[var(--brand-strong)]/10 text-[var(--brand-soft)]"
+                  : "text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--brand-panel)]"
               }`}
             >
-              <span className={`material-symbols-outlined text-base ${activeTab === tab.label ? "text-[var(--color-primary)]" : ""}`}>
+              <span className={`material-symbols-outlined text-base ${activeTab === tab.label ? "text-[var(--brand-soft)]" : ""}`}>
                 {tab.icon}
               </span>
               {tab.label}
@@ -112,9 +112,9 @@ export function SettingsTabsClient({
         {activeTab === "Theme" && <BrandThemePanel />}
         {/* General */}
         {activeTab === "General" && (
-          <div className="bg-[#1a1919] rounded-xl p-5 md:p-6">
+          <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-[var(--color-primary)]">tune</span>
+              <span className="material-symbols-outlined text-[var(--brand-soft)]">tune</span>
               <h3 className="text-base font-bold text-white font-headline">General Settings</h3>
             </div>
             <GeneralSettingsForm
@@ -127,7 +127,7 @@ export function SettingsTabsClient({
 
         {/* Pricing */}
         {activeTab === "Pricing & Fees" && (
-          <div className="bg-[#1a1919] rounded-xl p-6">
+          <div className="bg-[var(--brand-panel)] rounded-xl p-6">
             <div className="flex items-center gap-2 mb-6">
               <span className="material-symbols-outlined text-[var(--color-secondary)]">payments</span>
               <h3 className="text-base font-bold text-white font-headline">Pricing &amp; Fees</h3>
@@ -135,7 +135,7 @@ export function SettingsTabsClient({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {PRICING_FIELDS.map(({ key, label, placeholder }) => (
                 <div key={key}>
-                  <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">
+                  <label className="block text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">
                     {label}
                   </label>
                   <input
@@ -143,7 +143,7 @@ export function SettingsTabsClient({
                     placeholder={placeholder}
                     value={pricing[key] ?? ""}
                     onChange={(e) => setPricing((p) => ({ ...p, [key]: e.target.value }))}
-                    className="w-full bg-[#201f1f] border border-[#494847]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[var(--color-secondary)]/40 transition-colors"
+                    className="w-full bg-[var(--color-surface-container-high)] border border-[var(--color-outline-variant)]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[var(--color-outline-variant)] outline-none focus:border-[var(--color-secondary)]/40 transition-colors"
                   />
                 </div>
               ))}
@@ -168,25 +168,25 @@ export function SettingsTabsClient({
 
         {/* Buy for Me */}
         {activeTab === "Buy for Me" && (
-          <div className="bg-[#1a1919] rounded-xl p-6 space-y-6">
+          <div className="bg-[var(--brand-panel)] rounded-xl p-6 space-y-6">
             <div className="flex items-center gap-2 mb-2">
               <span className="material-symbols-outlined text-[var(--color-secondary)]">shopping_bag</span>
               <h3 className="text-base font-bold text-white font-headline">Buy for Me Settings</h3>
             </div>
-            <p className="text-sm text-[#adaaaa]">
+            <p className="text-sm text-[var(--color-on-surface-variant)]">
               Configure the personal shopping service. Drivers purchase items on behalf of customers.
             </p>
 
             {/* Enable toggle */}
-            <div className="flex items-center justify-between py-4 border-t border-[#494847]/15">
+            <div className="flex items-center justify-between py-4 border-t border-[var(--color-outline-variant)]/15">
               <div>
                 <p className="text-sm font-semibold text-white">Service Enabled</p>
-                <p className="text-xs text-[#adaaaa] mt-0.5">Allow customers to create Buy for Me requests</p>
+                <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">Allow customers to create Buy for Me requests</p>
               </div>
               <button
                 type="button"
                 onClick={() => setBfmEnabled((v) => !v)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${bfmEnabled ? "bg-[var(--color-secondary)]" : "bg-[#494847]/40"}`}
+                className={`relative w-12 h-6 rounded-full transition-colors ${bfmEnabled ? "bg-[var(--color-secondary)]" : "bg-[var(--color-outline-variant)]/40"}`}
               >
                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${bfmEnabled ? "right-1" : "left-1"}`} />
               </button>
@@ -194,7 +194,7 @@ export function SettingsTabsClient({
 
             {/* Max purchase amount */}
             <div className="pt-2">
-              <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">
+              <label className="block text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">
                 Max Purchase Amount (£)
               </label>
               <input
@@ -204,9 +204,9 @@ export function SettingsTabsClient({
                 placeholder="50.00"
                 value={bfmMaxSpend}
                 onChange={(e) => setBfmMaxSpend(e.target.value)}
-                className="w-full sm:w-64 bg-[#201f1f] border border-[#494847]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[var(--color-secondary)]/40 transition-colors"
+                className="w-full sm:w-64 bg-[var(--color-surface-container-high)] border border-[var(--color-outline-variant)]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[var(--color-outline-variant)] outline-none focus:border-[var(--color-secondary)]/40 transition-colors"
               />
-              <p className="mt-1.5 text-[11px] text-[#adaaaa]">
+              <p className="mt-1.5 text-[11px] text-[var(--color-on-surface-variant)]">
                 The maximum amount a driver can spend on a single shopping trip. Customers approve this limit at booking.
               </p>
             </div>
@@ -231,7 +231,7 @@ export function SettingsTabsClient({
 
         {/* Notifications */}
         {activeTab === "Notifications" && (
-          <div className="bg-[#1a1919] rounded-xl p-6">
+          <div className="bg-[var(--brand-panel)] rounded-xl p-6">
             <div className="flex items-center gap-2 mb-6">
               <span className="material-symbols-outlined text-[var(--color-tertiary)]">notifications</span>
               <h3 className="text-base font-bold text-white font-headline">Notification Templates</h3>
@@ -240,7 +240,7 @@ export function SettingsTabsClient({
               {NOTIFICATION_TEMPLATES.map((template) => (
                 <div
                   key={template}
-                  className="group flex items-center justify-between px-4 py-4 rounded-xl hover:bg-[#201f1f] transition-colors"
+                  className="group flex items-center justify-between px-4 py-4 rounded-xl hover:bg-[var(--color-surface-container-high)] transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[var(--color-tertiary)]/10 flex items-center justify-center">
@@ -248,16 +248,16 @@ export function SettingsTabsClient({
                     </div>
                     <div>
                       <p className="text-white text-sm font-semibold">{template}</p>
-                      <p className="text-[#adaaaa] text-[10px]">SMS + Push + Email</p>
+                      <p className="text-[var(--color-on-surface-variant)] text-[10px]">SMS + Push + Email</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-4 rounded-full bg-[var(--color-primary)]/80 relative cursor-pointer">
+                    <div className="w-8 h-4 rounded-full bg-[var(--brand-strong)]/80 relative cursor-pointer">
                       <div className="absolute right-0.5 top-0.5 w-3 h-3 rounded-full bg-white" />
                     </div>
                     <button
                       type="button"
-                      className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-[#adaaaa] hover:text-white transition-all"
+                      className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-[var(--color-on-surface-variant)] hover:text-white transition-all"
                       onClick={() => {}}
                     >
                       Edit

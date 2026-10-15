@@ -49,22 +49,22 @@ export default async function AdminOrdersPage() {
       : "99.8"
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-white">
             Deliveries Management
           </h2>
-          <p className="text-[#adaaaa] mt-1 text-sm">
+          <p className="text-[var(--color-on-surface-variant)] mt-1 text-sm">
             Live oversight of active logistical threads within the go drop.
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-container-high)] text-white rounded-lg text-sm border border-[var(--color-outline-variant)]/10 hover:bg-[var(--color-surface-container-highest)] transition-all">
             <span className="material-symbols-outlined text-sm">filter_list</span>
             <span className="hidden sm:inline">Filters</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[var(--color-surface-container-high)] text-white rounded-lg text-sm border border-[var(--color-outline-variant)]/10 hover:bg-[var(--color-surface-container-highest)] transition-all">
             <span className="material-symbols-outlined text-sm">calendar_month</span>
             <span className="hidden sm:inline">Date Range</span>
           </button>
@@ -72,26 +72,26 @@ export default async function AdminOrdersPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6 md:mb-8">
-        <div className="col-span-1 lg:col-span-8 bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 p-5 md:p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="col-span-1 lg:col-span-8 bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 p-5 md:p-6 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex flex-wrap gap-6 sm:gap-12">
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Active Shipments</p>
+              <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">Active Shipments</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl md:text-4xl font-extrabold font-headline text-[var(--color-primary)]">
+                <span className="text-2xl md:text-4xl font-extrabold font-headline text-[var(--brand-soft)]">
                   {activeCount.toLocaleString()}
                 </span>
                 <span className="text-[var(--color-secondary)] text-xs font-semibold">Live</span>
               </div>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Average Speed</p>
+              <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">Average Speed</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl md:text-4xl font-extrabold font-headline text-white">14.2</span>
-                <span className="text-[#adaaaa] text-xs font-semibold">min/km</span>
+                <span className="text-[var(--color-on-surface-variant)] text-xs font-semibold">min/km</span>
               </div>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">Success Rate</p>
+              <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">Success Rate</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl md:text-4xl font-extrabold font-headline text-white">{successRate}%</span>
               </div>
@@ -110,7 +110,7 @@ export default async function AdminOrdersPage() {
             ))}
           </div>
         </div>
-        <div className="col-span-1 lg:col-span-4 bg-[var(--color-primary)] text-[var(--color-on-primary)] p-6 rounded-xl relative overflow-hidden group">
+        <div className="col-span-1 lg:col-span-4 bg-[var(--brand-strong)] text-[var(--brand-ink)] p-6 rounded-xl relative overflow-hidden group">
           <div className="relative z-10">
             <p className="text-[10px] uppercase tracking-widest font-bold mb-2 opacity-80">Premium Logistics</p>
             <h3 className="text-2xl font-bold font-headline leading-tight">

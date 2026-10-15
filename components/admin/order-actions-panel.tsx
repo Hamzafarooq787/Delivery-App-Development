@@ -84,9 +84,9 @@ export function OrderActionsPanel({
       )}
 
       {/* Assign Driver */}
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[#201f1f] rounded-lg border border-[#494847]/10">
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[var(--color-surface-container-high)] rounded-lg border border-[var(--color-outline-variant)]/10">
         <div className="flex items-center gap-2 text-sm text-white">
-          <span className="material-symbols-outlined text-sm text-[var(--color-primary)]">person_add</span>
+          <span className="material-symbols-outlined text-sm text-[var(--brand-soft)]">person_add</span>
           Assign Driver
         </div>
         <AssignDriverDropdown
@@ -116,7 +116,7 @@ export function OrderActionsPanel({
                   type="button"
                   disabled={cancelPending}
                   onClick={() => setShowCancelConfirm(false)}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#201f1f] text-[#adaaaa] rounded-lg text-xs font-semibold border border-[#494847]/10 hover:bg-[#262626] transition-all"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)] rounded-lg text-xs font-semibold border border-[var(--color-outline-variant)]/10 hover:bg-[var(--color-surface-container-highest)] transition-all"
                 >
                   <span className="material-symbols-outlined text-xs">close</span>
                   Back
@@ -127,7 +127,7 @@ export function OrderActionsPanel({
             <button
               type="button"
               onClick={() => setShowCancelConfirm(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--color-surface-container-high)] text-white rounded-lg text-sm border border-[var(--color-outline-variant)]/10 hover:bg-[var(--color-surface-container-highest)] transition-all"
             >
               <span className="material-symbols-outlined text-sm text-red-400">cancel</span>
               Cancel Order
@@ -147,7 +147,7 @@ export function OrderActionsPanel({
             placeholder="0.00"
             value={refundAmount}
             onChange={(e) => setRefundAmount(e.target.value)}
-            className="w-full px-3 py-1.5 bg-[#131313] border border-[#494847]/20 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500/40"
+            className="w-full px-3 py-1.5 bg-[var(--brand-bg)] border border-[var(--color-outline-variant)]/20 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500/40"
           />
           <div className="flex gap-2">
             <button
@@ -163,7 +163,7 @@ export function OrderActionsPanel({
               type="button"
               disabled={refundPending}
               onClick={() => { setShowRefundInput(false); setRefundAmount("") }}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#201f1f] text-[#adaaaa] rounded-lg text-xs font-semibold border border-[#494847]/10 hover:bg-[#262626] transition-all"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)] rounded-lg text-xs font-semibold border border-[var(--color-outline-variant)]/10 hover:bg-[var(--color-surface-container-highest)] transition-all"
             >
               <span className="material-symbols-outlined text-xs">close</span>
               Back
@@ -174,7 +174,7 @@ export function OrderActionsPanel({
         <button
           type="button"
           onClick={() => setShowRefundInput(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#201f1f] text-white rounded-lg text-sm border border-[#494847]/10 hover:bg-[#262626] transition-all"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--color-surface-container-high)] text-white rounded-lg text-sm border border-[var(--color-outline-variant)]/10 hover:bg-[var(--color-surface-container-highest)] transition-all"
         >
           <span className="material-symbols-outlined text-sm text-emerald-400">payments</span>
           Issue Refund

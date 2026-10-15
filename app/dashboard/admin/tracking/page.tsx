@@ -44,10 +44,10 @@ export default async function AdminLiveTrackingPage() {
   }))
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
       <div className="mb-6 md:mb-8">
         <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-white">Live Tracking</h2>
-        <p className="text-[#adaaaa] mt-1 text-sm">
+        <p className="text-[var(--color-on-surface-variant)] mt-1 text-sm">
           Every delivery that is on the road right now, with the driver&apos;s live position.
         </p>
       </div>

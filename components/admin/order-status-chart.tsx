@@ -9,19 +9,19 @@ interface StatusEntry {
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "var(--color-secondary)",
-  assigned: "var(--color-primary)",
+  assigned: "var(--brand-strong)",
   in_transit: "var(--color-tertiary)",
-  delivered: "var(--color-primary)",
+  delivered: "var(--brand-strong)",
   cancelled: "#ff6e84",
-  completed: "var(--color-primary)",
+  completed: "var(--brand-strong)",
 }
 
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-[#201f1f] border border-[#494847]/20 rounded-xl px-4 py-3 shadow-2xl">
+    <div className="bg-[var(--color-surface-container-high)] border border-[var(--color-outline-variant)]/20 rounded-xl px-4 py-3 shadow-2xl">
       <p className="text-white font-bold text-sm capitalize">{payload[0]?.name}</p>
-      <p className="text-[#adaaaa] text-xs">{payload[0]?.value} deliveries</p>
+      <p className="text-[var(--color-on-surface-variant)] text-xs">{payload[0]?.value} deliveries</p>
     </div>
   )
 }
@@ -29,7 +29,7 @@ function CustomTooltip({ active, payload }: any) {
 export function OrderStatusChart({ data }: { data: StatusEntry[] }) {
   if (!data.length) {
     return (
-      <div className="flex items-center justify-center h-48 text-[#adaaaa] text-sm">
+      <div className="flex items-center justify-center h-48 text-[var(--color-on-surface-variant)] text-sm">
         No status data yet
       </div>
     )
@@ -38,7 +38,7 @@ export function OrderStatusChart({ data }: { data: StatusEntry[] }) {
   const chartData = data.map((d) => ({
     name: d.status.replace(/_/g, " "),
     value: d.count,
-    color: STATUS_COLORS[d.status] ?? "#494847",
+    color: STATUS_COLORS[d.status] ?? "var(--color-outline-variant)",
   }))
 
   return (
@@ -67,7 +67,7 @@ export function OrderStatusChart({ data }: { data: StatusEntry[] }) {
           <div key={entry.name} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-[#adaaaa] text-[10px] capitalize">{entry.name}</span>
+              <span className="text-[var(--color-on-surface-variant)] text-[10px] capitalize">{entry.name}</span>
             </div>
             <span className="text-white text-[10px] font-bold">{entry.value}</span>
           </div>

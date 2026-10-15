@@ -28,11 +28,11 @@ export default async function AdminSettingsPage() {
     : { service_enabled: true, max_purchase_amount: 50 }
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
       {/* Header */}
       <div className="mb-6 md:mb-8">
         <h1 className="text-3xl md:text-4xl font-headline font-black tracking-tight text-white">Platform Config</h1>
-        <p className="text-[#adaaaa] mt-2 text-sm">
+        <p className="text-[var(--color-on-surface-variant)] mt-2 text-sm">
           Global controls — pricing, operations, integrations, and notifications.
         </p>
       </div>

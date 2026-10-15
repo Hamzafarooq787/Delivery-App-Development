@@ -7,10 +7,10 @@ import { DocumentPreviewModal } from "@/components/admin/document-preview-modal"
 import { VEHICLE_INFO } from "@/lib/vehicles"
 
 const DOC_TYPES = [
-  { type: "identity",            label: "Identity",       icon: "badge",   color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10", border: "border-[var(--color-primary)]/20" },
+  { type: "identity",            label: "Identity",       icon: "badge",   color: "text-[var(--brand-soft)]", bg: "bg-[var(--brand-strong)]/10", border: "border-[var(--brand-strong)]/20" },
   { type: "selfie",              label: "Selfie",         icon: "face",    color: "text-[#6ee7b7]", bg: "bg-[#6ee7b7]/10", border: "border-[#6ee7b7]/20" },
   { type: "insurance",           label: "Insurance",      icon: "shield",  color: "text-[var(--color-secondary)]", bg: "bg-[var(--color-secondary)]/10", border: "border-[var(--color-secondary)]/20" },
-  { type: "vehicle_registration",label: "Vehicle Reg.",   icon: "commute", color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10", border: "border-[var(--color-primary)]/20" },
+  { type: "vehicle_registration",label: "Vehicle Reg.",   icon: "commute", color: "text-[var(--brand-soft)]", bg: "bg-[var(--brand-strong)]/10", border: "border-[var(--brand-strong)]/20" },
 ]
 
 function fmtDate(v: string) {
@@ -42,12 +42,12 @@ function DocumentCard({
   const borderClass =
     status === "approved" ? "border-green-500/40" :
     status === "rejected" ? "border-[#ff6e84]/40" :
-    uploaded ? "border-[#494847]/15" : "border-dashed border-[#494847]/20"
+    uploaded ? "border-[var(--color-outline-variant)]/15" : "border-dashed border-[var(--color-outline-variant)]/20"
 
   return (
-    <div className={`rounded-xl border ${borderClass} bg-[#131313] overflow-hidden flex flex-col`}>
+    <div className={`rounded-xl border ${borderClass} bg-[var(--brand-bg)] overflow-hidden flex flex-col`}>
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#494847]/10">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--color-outline-variant)]/10">
         <div className={`w-6 h-6 rounded-md ${bg} border ${border} flex items-center justify-center shrink-0`}>
           <span className={`material-symbols-outlined text-xs ${color}`}>{icon}</span>
         </div>
@@ -59,26 +59,26 @@ function DocumentCard({
           <span className="text-[9px] font-black text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 px-1.5 py-0.5 rounded-full uppercase tracking-wider">Rejected</span>
         )}
         {status === "pending" && !uploaded && (
-          <span className="text-[9px] font-bold text-[#494847] bg-[#1a1919] border border-[#494847]/20 px-1.5 py-0.5 rounded-full">Missing</span>
+          <span className="text-[9px] font-bold text-[var(--color-outline-variant)] bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 px-1.5 py-0.5 rounded-full">Missing</span>
         )}
       </div>
 
       {/* Preview */}
-      <div className="relative bg-[#0e0e0e] h-[110px] flex items-center justify-center overflow-hidden">
+      <div className="relative bg-[var(--brand-bg)] h-[110px] flex items-center justify-center overflow-hidden">
         {uploaded ? (
           img ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={doc!.file_url} alt={label} className="w-full h-full object-cover" />
           ) : (
             <div className="flex flex-col items-center gap-1.5 text-center px-2">
-              <span className="material-symbols-outlined text-3xl text-[#494847]">picture_as_pdf</span>
-              <p className="text-[10px] text-[#494847]">PDF — click Preview</p>
+              <span className="material-symbols-outlined text-3xl text-[var(--color-outline-variant)]">picture_as_pdf</span>
+              <p className="text-[10px] text-[var(--color-outline-variant)]">PDF — click Preview</p>
             </div>
           )
         ) : (
           <div className="flex flex-col items-center gap-1.5 text-center px-2">
             <span className={`material-symbols-outlined text-3xl ${color} opacity-15`}>{icon}</span>
-            <p className="text-[10px] text-[#494847]">Not uploaded</p>
+            <p className="text-[10px] text-[var(--color-outline-variant)]">Not uploaded</p>
           </div>
         )}
 
@@ -98,12 +98,12 @@ function DocumentCard({
 
       {/* Actions */}
       {uploaded && (
-        <div className="px-2 py-2 border-t border-[#494847]/10 flex flex-col gap-1.5">
+        <div className="px-2 py-2 border-t border-[var(--color-outline-variant)]/10 flex flex-col gap-1.5">
           {/* Preview + Download row */}
           <div className="flex gap-1.5">
             <button
               onClick={() => onPreview(doc!)}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-white rounded-lg text-[10px] font-semibold transition-all"
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)] hover:text-white rounded-lg text-[10px] font-semibold transition-all"
             >
               <span className="material-symbols-outlined text-xs">visibility</span>Preview
             </button>
@@ -120,7 +120,7 @@ function DocumentCard({
                   URL.revokeObjectURL(url)
                 } catch { window.open(doc!.file_url, "_blank") }
               }}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 rounded-lg text-[10px] font-semibold transition-all"
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 text-[var(--brand-soft)] hover:bg-[var(--brand-strong)]/20 rounded-lg text-[10px] font-semibold transition-all"
             >
               <span className="material-symbols-outlined text-xs">download</span>Download
             </a>
@@ -194,23 +194,23 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
     <>
       {previewDoc && <DocumentPreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
 
-      <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl overflow-hidden">
+      <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#494847]/10">
-          <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-[var(--color-primary)]">{initials}</span>
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[var(--color-outline-variant)]/10">
+          <div className="w-9 h-9 rounded-full bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 flex items-center justify-center shrink-0">
+            <span className="text-xs font-bold text-[var(--brand-soft)]">{initials}</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white truncate">{driver.full_name}</p>
-            <p className="text-xs text-[#adaaaa] truncate">{driver.email}</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)] truncate">{driver.email}</p>
           </div>
           <div className="hidden sm:grid grid-cols-3 gap-3 text-right shrink-0">
             <div>
-              <p className="text-[9px] text-[#adaaaa] uppercase font-bold">Phone</p>
+              <p className="text-[9px] text-[var(--color-on-surface-variant)] uppercase font-bold">Phone</p>
               <p className="text-xs text-white">{driver.phone || "—"}</p>
             </div>
             <div>
-              <p className="text-[9px] text-[#adaaaa] uppercase font-bold">Vehicles</p>
+              <p className="text-[9px] text-[var(--color-on-surface-variant)] uppercase font-bold">Vehicles</p>
               <p className="text-xs text-white">
                 {driver.vehicles.length > 0
                   ? driver.vehicles.map((v) => VEHICLE_INFO[v.vehicle_type].label).join(", ")
@@ -218,7 +218,7 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
               </p>
             </div>
             <div>
-              <p className="text-[9px] text-[#adaaaa] uppercase font-bold">Submitted</p>
+              <p className="text-[9px] text-[var(--color-on-surface-variant)] uppercase font-bold">Submitted</p>
               <p className="text-xs text-white">{fmtDate(driver.submitted_at)}</p>
             </div>
           </div>
@@ -226,24 +226,24 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
 
         {/* Vehicles */}
         <div className="px-4 pt-3.5 pb-1">
-          <p className="text-[10px] text-[#adaaaa] uppercase font-bold tracking-widest mb-3">Vehicles</p>
+          <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold tracking-widest mb-3">Vehicles</p>
           {driver.vehicles.length === 0 ? (
-            <p className="text-xs text-[#adaaaa] pb-2">No vehicles registered.</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)] pb-2">No vehicles registered.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-1">
               {driver.vehicles.map((v) => (
-                <div key={v.id} className="flex items-start gap-2.5 bg-[#131313] border border-[#494847]/15 rounded-lg px-3 py-2.5">
+                <div key={v.id} className="flex items-start gap-2.5 bg-[var(--brand-bg)] border border-[var(--color-outline-variant)]/15 rounded-lg px-3 py-2.5">
                   <span className="text-base shrink-0">{VEHICLE_INFO[v.vehicle_type].emoji}</span>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-white truncate">
                       {VEHICLE_INFO[v.vehicle_type].label}
-                      {(v.make || v.model) && <span className="text-[#adaaaa] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
+                      {(v.make || v.model) && <span className="text-[var(--color-on-surface-variant)] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
                     </p>
-                    <p className="text-[10px] text-[#adaaaa] truncate">
+                    <p className="text-[10px] text-[var(--color-on-surface-variant)] truncate">
                       {[v.colour, v.registration_number].filter(Boolean).join(" · ") || "No details"}
                     </p>
                     {(v.driving_licence_details || v.insurance_details) && (
-                      <p className="text-[10px] text-[#adaaaa]/70 truncate mt-0.5">
+                      <p className="text-[10px] text-[var(--color-on-surface-variant)]/70 truncate mt-0.5">
                         {v.driving_licence_details && `Licence: ${v.driving_licence_details}`}
                         {v.driving_licence_details && v.insurance_details && " · "}
                         {v.insurance_details && `Insurance: ${v.insurance_details}`}
@@ -259,7 +259,7 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
         {/* Document cards */}
         <div className="px-4 pt-3.5 pb-2">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] text-[#adaaaa] uppercase font-bold tracking-widest">Documents</p>
+            <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold tracking-widest">Documents</p>
             {uploadedTypes.length > 0 && (
               <button
                 onClick={approveAllDocs}
@@ -292,9 +292,9 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
         </div>
 
         {/* Driver-level approve / reject */}
-        <div className="px-4 py-3 flex items-center justify-between gap-3 border-t border-[#494847]/10 mt-2">
+        <div className="px-4 py-3 flex items-center justify-between gap-3 border-t border-[var(--color-outline-variant)]/10 mt-2">
           {error && <p className="text-xs text-[#ff6e84]">{error}</p>}
-          <p className="text-[10px] text-[#adaaaa] hidden sm:block">
+          <p className="text-[10px] text-[var(--color-on-surface-variant)] hidden sm:block">
             {allApproved ? "All documents approved — ready to approve driver." : "Review each document above, then approve or reject the driver."}
           </p>
           <div className="flex gap-2 ml-auto">
@@ -337,21 +337,21 @@ export function VerificationRequestsPanel({ initialDrivers }: { initialDrivers: 
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">Verification Requests</h1>
-          <p className="text-[#adaaaa] mt-1">Review and approve driver verification submissions.</p>
+          <p className="text-[var(--color-on-surface-variant)] mt-1">Review and approve driver verification submissions.</p>
         </div>
         {drivers.length > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse" />
-            <span className="text-xs font-bold text-[var(--color-primary)]">{drivers.length} pending</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-[var(--brand-strong)] animate-pulse" />
+            <span className="text-xs font-bold text-[var(--brand-soft)]">{drivers.length} pending</span>
           </div>
         )}
       </div>
 
       {drivers.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#494847]/30 bg-[#1a1919] px-6 py-20 text-center">
-          <span className="material-symbols-outlined text-4xl text-[#494847] mb-3 block">verified_user</span>
+        <div className="rounded-xl border border-dashed border-[var(--color-outline-variant)]/30 bg-[var(--brand-panel)] px-6 py-20 text-center">
+          <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)] mb-3 block">verified_user</span>
           <p className="text-base font-semibold text-white">No pending requests</p>
-          <p className="mt-1 text-sm text-[#adaaaa]">All driver submissions have been reviewed.</p>
+          <p className="mt-1 text-sm text-[var(--color-on-surface-variant)]">All driver submissions have been reviewed.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">

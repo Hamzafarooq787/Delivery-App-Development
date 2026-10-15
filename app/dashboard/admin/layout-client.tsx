@@ -20,7 +20,7 @@ export function AdminLayoutClient({ children, user, pendingVerifications, pendin
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#131313]">
+    <div className="flex h-screen overflow-hidden bg-[var(--brand-bg)]">
       <div className="hidden lg:flex lg:shrink-0 h-full">
         <AdminSidebar user={user} pendingVerifications={pendingVerifications} pendingReviews={pendingReviews} />
       </div>
@@ -35,24 +35,24 @@ export function AdminLayoutClient({ children, user, pendingVerifications, pendin
       )}
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-[#0e0e0e]/60 backdrop-blur-xl flex justify-between items-center px-4 md:px-8 z-40 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
+        <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-[var(--brand-panel)] backdrop-blur-xl flex justify-between items-center px-4 md:px-8 z-40 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex lg:hidden shrink-0 items-center justify-center h-8 w-8 text-[#adaaaa] hover:text-white" aria-label="Toggle menu">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex lg:hidden shrink-0 items-center justify-center h-8 w-8 text-[var(--color-on-surface-variant)] hover:text-white" aria-label="Toggle menu">
               <span className="material-symbols-outlined text-xl">menu</span>
             </button>
             <div className="relative w-full max-w-md hidden sm:block">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-sm">search</span>
-              <input className="w-full bg-[#262626]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[var(--color-primary)]/30 text-white placeholder-[#adaaaa] outline-none" placeholder="Search transactions, users, or IDs..." type="text" />
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-on-surface-variant)] text-sm">search</span>
+              <input className="w-full bg-[var(--color-surface-container-highest)]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[var(--brand-strong)]/30 text-white placeholder-[var(--color-on-surface-variant)] outline-none" placeholder="Search transactions, users, or IDs..." type="text" />
             </div>
           </div>
           <div className="flex items-center gap-3 md:gap-5 shrink-0">
             <InstallButton />
-            <button className="sm:hidden text-[#adaaaa] hover:text-[var(--color-primary)] transition-colors" aria-label="Search">
+            <button className="sm:hidden text-[var(--color-on-surface-variant)] hover:text-[var(--brand-soft)] transition-colors" aria-label="Search">
               <span className="material-symbols-outlined">search</span>
             </button>
             {userId && <AdminChatPanel userId={userId} />}
             {userId && <RealtimeNotifications role="admin" userId={userId} />}
-            <button className="hidden md:block text-[#adaaaa] hover:text-[var(--color-primary)] transition-colors" aria-label="Help">
+            <button className="hidden md:block text-[var(--color-on-surface-variant)] hover:text-[var(--brand-soft)] transition-colors" aria-label="Help">
               <span className="material-symbols-outlined">help_outline</span>
             </button>
             <ProfileDropdown
@@ -66,7 +66,7 @@ export function AdminLayoutClient({ children, user, pendingVerifications, pendin
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto pt-16 pb-24 lg:pb-6 bg-[#131313]">
+        <main className="flex-1 overflow-y-auto pt-16 pb-24 lg:pb-6 bg-[var(--brand-bg)]">
           {children}
         </main>
         <AdminBottomNav pendingVerifications={pendingVerifications} />
