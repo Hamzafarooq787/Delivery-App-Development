@@ -32,6 +32,8 @@ export async function requestDriverPayout() {
 
   const admin = createAdminClient()
 
+  const {data:launchReady}=await admin.rpc('godrop_launch_ready')
+  if(launchReady===true)return {error:'Driver earnings are paid weekly. Use payment account setup to complete onboarding.'}
   // ── 1. Find completed deliveries with no driver_earnings row yet ─────────
   //    (synthetic earnings — jobs done before the auto-earnings feature).
   //    Idempotent upsert (onConflict: delivery_id) — safe to run every time,
@@ -105,6 +107,8 @@ export async function requestDriverPayout() {
 export async function markPayoutPaid(payoutId: string) {
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
+  const {data:launchReady}=await admin.rpc('godrop_launch_ready')
+  if(launchReady===true)return {error:'Use Launch Operations weekly Stripe payouts. Manual status changes are disabled to prevent duplicate payments.'}
   const { error } = await admin
     .from("payouts")
     .update({ status: "paid" })
@@ -120,6 +124,8 @@ export async function markPayoutPaid(payoutId: string) {
 export async function markAllPayoutsPaid() {
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
+  const {data:launchReady}=await admin.rpc('godrop_launch_ready')
+  if(launchReady===true)return {error:'Use Launch Operations weekly Stripe payouts. Manual status changes are disabled to prevent duplicate payments.'}
   const { error } = await admin
     .from("payouts")
     .update({ status: "paid" })
@@ -135,6 +141,8 @@ export async function markAllPayoutsPaid() {
 export async function approveDriverPayout(payoutId: string) {
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
+  const {data:launchReady}=await admin.rpc('godrop_launch_ready')
+  if(launchReady===true)return {error:'Use Launch Operations weekly Stripe payouts. Manual status changes are disabled to prevent duplicate payments.'}
   const { error } = await admin
     .from("payouts")
     .update({ status: "approved" })
@@ -153,6 +161,8 @@ export async function approveDriverPayout(payoutId: string) {
 export async function rejectDriverPayout(payoutId: string) {
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
+  const {data:launchReady}=await admin.rpc('godrop_launch_ready')
+  if(launchReady===true)return {error:'Use Launch Operations weekly Stripe payouts. Manual status changes are disabled to prevent duplicate payments.'}
   const { data: payout, error: fetchErr } = await admin
     .from("payouts")
     .select("id, driver_id, status")
@@ -181,6 +191,8 @@ export async function rejectDriverPayout(payoutId: string) {
 export async function completeDriverPayout(payoutId: string) {
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
+  const {data:launchReady}=await admin.rpc('godrop_launch_ready')
+  if(launchReady===true)return {error:'Use Launch Operations weekly Stripe payouts. Manual status changes are disabled to prevent duplicate payments.'}
   const { error } = await admin
     .from("payouts")
     .update({ status: "paid" })
@@ -236,6 +248,8 @@ export async function getDriverPayoutDetails(driverId: string) {
 export async function adminProcessDriverPayout(driverId: string) {
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
+  const {data:launchReady}=await admin.rpc('godrop_launch_ready')
+  if(launchReady===true)return {error:'Use Launch Operations weekly Stripe payouts. Manual status changes are disabled to prevent duplicate payments.'}
 
   // Existing pending driver_earnings
   const { data: pending, error: fetchErr } = await admin

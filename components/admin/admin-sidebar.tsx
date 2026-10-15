@@ -13,6 +13,7 @@ const navItems = [
   { label: "Drivers", href: "/dashboard/admin/drivers", icon: "badge" },
   { label: "Customers", href: "/dashboard/admin/customers", icon: "group" },
   { label: "Verification Requests", href: "/dashboard/admin/verification", icon: "verified_user", badgeKey: "pendingVerifications" },
+  { label: "Launch Operations", href: "/dashboard/admin/launch", icon: "payments" },
   { label: "Payments", href: "/dashboard/admin/payments", icon: "payments" },
   { label: "Payouts",  href: "/dashboard/admin/payouts",  icon: "account_balance_wallet" },
   { label: "Promotions & Pricing", href: "/dashboard/admin/promotions", icon: "sell" },

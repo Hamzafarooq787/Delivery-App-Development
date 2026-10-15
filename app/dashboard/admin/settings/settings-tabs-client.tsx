@@ -1,5 +1,6 @@
 "use client"
 
+import { LaunchPricingPanel } from "@/components/admin/launch-pricing-panel"
 import { BrandThemePanel } from "@/components/admin/brand-theme-panel"
 import { useState, useTransition } from "react"
 import { GeneralSettingsForm } from "@/components/admin/general-settings-form"
@@ -21,13 +22,6 @@ const NOTIFICATION_TEMPLATES = [
   "Order Cancelled",
 ]
 
-const PRICING_FIELDS = [
-  { key: "baseFare",      label: "Base Fare (£)",         placeholder: "5.00" },
-  { key: "perMile",       label: "Per Mile Rate (£)",      placeholder: "1.20" },
-  { key: "commission",    label: "Platform Commission (%)", placeholder: "15" },
-  { key: "payoutShare",   label: "Driver Payout Share (%)", placeholder: "80" },
-]
-
 export function SettingsTabsClient({
   adminProfile,
   initialBfmSettings,
@@ -36,10 +30,6 @@ export function SettingsTabsClient({
   initialBfmSettings?: { service_enabled?: boolean; max_purchase_amount: number }
 }) {
   const [activeTab, setActiveTab] = useState("General")
-  const [pricing, setPricing] = useState<Record<string, string>>({})
-  const [pricingMsg, setPricingMsg] = useState<{ text: string; ok: boolean } | null>(null)
-  const [isPending, startTransition] = useTransition()
-
   const [bfmEnabled, setBfmEnabled] = useState(initialBfmSettings?.service_enabled !== false)
   const [bfmMaxSpend, setBfmMaxSpend] = useState(String(initialBfmSettings?.max_purchase_amount ?? 50))
   const [bfmMsg, setBfmMsg] = useState<{ text: string; ok: boolean } | null>(null)
@@ -60,24 +50,6 @@ export function SettingsTabsClient({
         setBfmMsg({ text: "Buy for Me settings saved.", ok: true })
       }
       setTimeout(() => setBfmMsg(null), 3000)
-    })
-  }
-
-  function handleSavePricing() {
-    startTransition(async () => {
-      // Validate all fields are positive numbers
-      for (const f of PRICING_FIELDS) {
-        const v = parseFloat(pricing[f.key] ?? "")
-        if (pricing[f.key] !== undefined && pricing[f.key] !== "" && (isNaN(v) || v < 0)) {
-          setPricingMsg({ text: `Invalid value for ${f.label}`, ok: false })
-          setTimeout(() => setPricingMsg(null), 3000)
-          return
-        }
-      }
-      // Placeholder: pricing config table not yet provisioned
-      await new Promise((r) => setTimeout(r, 600))
-      setPricingMsg({ text: "Pricing settings saved.", ok: true })
-      setTimeout(() => setPricingMsg(null), 3000)
     })
   }
 
@@ -126,45 +98,7 @@ export function SettingsTabsClient({
         )}
 
         {/* Pricing */}
-        {activeTab === "Pricing & Fees" && (
-          <div className="bg-[#1a1919] rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-[var(--color-secondary)]">payments</span>
-              <h3 className="text-base font-bold text-white font-headline">Pricing &amp; Fees</h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {PRICING_FIELDS.map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-2">
-                    {label}
-                  </label>
-                  <input
-                    type="number"
-                    placeholder={placeholder}
-                    value={pricing[key] ?? ""}
-                    onChange={(e) => setPricing((p) => ({ ...p, [key]: e.target.value }))}
-                    className="w-full bg-[#201f1f] border border-[#494847]/10 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[var(--color-secondary)]/40 transition-colors"
-                  />
-                </div>
-              ))}
-            </div>
-            {pricingMsg && (
-              <p className={`mt-4 text-xs font-medium ${pricingMsg.ok ? "text-emerald-400" : "text-red-400"}`}>
-                {pricingMsg.text}
-              </p>
-            )}
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={handleSavePricing}
-                className="bg-[var(--color-secondary)]/15 text-[var(--color-secondary)] border border-[var(--color-secondary)]/20 font-bold text-sm px-6 py-2.5 rounded-xl hover:bg-[var(--color-secondary)]/25 transition-colors disabled:opacity-50"
-              >
-                {isPending ? "Saving…" : "Save Pricing"}
-              </button>
-            </div>
-          </div>
-        )}
+        {activeTab === "Pricing & Fees" && <LaunchPricingPanel />}
 
         {/* Buy for Me */}
         {activeTab === "Buy for Me" && (

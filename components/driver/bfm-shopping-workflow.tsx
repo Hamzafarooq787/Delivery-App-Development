@@ -1,5 +1,6 @@
 "use client"
 
+import {ShoppingPurchaseControls} from "./shopping-purchase-controls"
 import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -17,6 +18,7 @@ import {
 import { DeliveryOtpModal } from "./delivery-otp-modal"
 
 type BfmJob = {
+  launch_quote?: unknown
   id: string
   status: string
   bfm_stage: string | null
@@ -188,6 +190,8 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
   return (
     <div className="space-y-4">
+{!!job.launch_quote && <ShoppingPurchaseControls deliveryId={job.id}/>}
+
       {/* BFM Badge */}
       <div className="flex items-center gap-2 px-4 py-3 bg-[var(--color-secondary)]/10 border border-[var(--color-secondary)]/20 rounded-xl">
         <span className="text-xl">🛍️</span>

@@ -6,12 +6,8 @@
  * together with live data (Google Directions, driver counts, DB config).
  */
 
-export function getBasePrice(miles: number): number {
-  if (miles <= 3) return 10
-  if (miles <= 7) return 15
-  if (miles <= 12) return 20
-  return Math.round((20 + (miles - 12) * 1.5) * 100) / 100
-}
+import {deliveryFare,DEFAULT_LAUNCH_SETTINGS,type LaunchSettings} from './launch-pricing'
+export function getBasePrice(miles:number,settings:LaunchSettings=DEFAULT_LAUNCH_SETTINGS):number {return deliveryFare(miles,settings)}
 
 // £10 stays "£10", £21.5 becomes "£21.50"
 export function formatPrice(price: number): string {

@@ -1,5 +1,9 @@
 "use server"
 
+import {refundUnusedShopping} from "@/lib/shopping-refunds"
+import {getStripe} from "@/lib/stripe/server"
+import { readLaunchSettings,writeLaunchSettings } from "@/lib/launch-settings"
+import { validateShoppingItems,validateLaunchSettings } from "@/lib/launch-pricing"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -46,7 +50,8 @@ export type BfmSettings = {
 export async function getBfmSettings(): Promise<BfmSettings> {
   const admin = createAdminClient()
   const { data } = await admin.from("bfm_settings").select("*").single()
-  return data ?? { enabled: true, max_purchase_amount: 50, service_fee_percentage: 10 }
+  const launch=await readLaunchSettings()
+  return {...(data ?? {enabled:true,service_fee_percentage:0}),max_purchase_amount:launch.maxShoppingValue}
 }
 
 export async function updateBfmSettings(settings: Partial<BfmSettings>): Promise<{ error?: string }> {
@@ -63,6 +68,7 @@ export async function updateBfmSettings(settings: Partial<BfmSettings>): Promise
     .eq("id", 1)
 
   if (error) return { error: error.message }
+  if(settings.max_purchase_amount !== undefined) await writeLaunchSettings(validateLaunchSettings({...await readLaunchSettings(),maxShoppingValue:settings.max_purchase_amount}),user.id)
   revalidatePath("/dashboard/admin/settings")
   return {}
 }
@@ -86,6 +92,9 @@ export async function createShoppingRequest(
   if (!params.shopping_items || params.shopping_items.length === 0) {
     return { error: "Please add at least one item to your shopping list." }
   }
+
+  const launch=await readLaunchSettings()
+  try{validateShoppingItems(params.shopping_items,launch)}catch(e){return {error:e instanceof Error?e.message:"Invalid shopping items"}}
 
   // Compute estimated items total
   const estimatedTotal = params.shopping_items.reduce(
@@ -115,11 +124,11 @@ export async function createShoppingRequest(
   const quote = quoteResult.data
 
   // Service fee on top of delivery fee
-  const serviceFee = parseFloat((quote.finalPrice * (bfm.service_fee_percentage / 100)).toFixed(2))
+  const serviceFee = (await readLaunchSettings()).shoppingFee
   const deliveryFee = parseFloat((quote.finalPrice + serviceFee).toFixed(2))
 
   // max_spend is the lower of the configured limit or the customer's estimate (if provided)
-  const maxSpend = bfm.max_purchase_amount
+  const maxSpend = estimatedTotal
 
   // Total wallet deduction at booking: delivery fee + items hold
   const totalCharge = parseFloat((deliveryFee + maxSpend).toFixed(2))
@@ -274,7 +283,7 @@ export async function updateBfmStage(
   const admin = createAdminClient()
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("id, driver_id, service_type, status, bfm_stage, customer_id, tracking_number, shop_name")
+    .select("id, driver_id, service_type, status, bfm_stage, customer_id, tracking_number, shop_name, launch_quote, purchase_confirmed_at")
     .eq("id", deliveryId)
     .single()
 
@@ -282,6 +291,11 @@ export async function updateBfmStage(
   if (delivery.driver_id !== user.id) return { error: "Not your job" }
   if (delivery.service_type !== "buy_for_me") return { error: "Not a Buy for Me order" }
 
+  if(delivery.launch_quote && ['shopping','purchase_completed','heading_to_customer'].includes(newStage)){
+    const {data:paid}=await admin.from('payments').select('funding_reference,status').eq('delivery_id',deliveryId).single()
+    if(!paid?.funding_reference||paid.status!=='paid')return {error:'GoDrop must fund the purchase card before shopping. Do not use your own money.'}
+    if(['purchase_completed','heading_to_customer'].includes(newStage)&&!delivery.purchase_confirmed_at)return {error:'Upload and confirm the purchase receipt first.'}
+  }
   const currentStage = delivery.bfm_stage ?? delivery.status
   const allowed = VALID_BFM_TRANSITIONS[currentStage] ?? []
   if (!allowed.includes(newStage)) {
@@ -290,6 +304,7 @@ export async function updateBfmStage(
 
   // When starting journey to customer, update main status to in_transit
   const updates: Record<string, unknown> = { bfm_stage: newStage }
+  if(newStage==='shopping'&&delivery.launch_quote)updates.shopping_started_at=new Date().toISOString()
   if (newStage === "heading_to_customer") {
     updates.status = "in_transit"
   }
@@ -349,12 +364,21 @@ export async function markItemFound(itemId: string): Promise<{ error?: string }>
   const admin = createAdminClient()
   const { data: item } = await admin
     .from("shopping_items")
-    .select("id, delivery_id")
+    .select("id, delivery_id, found_unit_price, estimated_price")
     .eq("id", itemId)
     .single()
 
   if (!item) return { error: "Item not found" }
 
+  const {data:owner}=await admin.from('delivery_requests').select('driver_id,launch_quote').eq('id',item.delivery_id).single()
+  if(owner?.driver_id!==user.id)return {error:'Not your shopping item'}
+  if(owner.launch_quote&&item.found_unit_price==null)return {error:'Record the shelf price before buying this item'}
+  if(owner.launch_quote&&Number(item.found_unit_price)>Number(item.estimated_price??0)){
+    const {data:approved}=await admin.from('shopping_substitutions').select('id').eq('shopping_item_id',itemId).eq('customer_approved',true).eq('suggested_price',item.found_unit_price)
+    if(!approved?.length)return {error:'Wait for customer approval of the higher price'}
+  }
+  const {data:pending}=await admin.from('shopping_substitutions').select('id').eq('shopping_item_id',itemId).or('customer_approved.is.null,customer_approved.eq.false')
+  if(pending?.length)return {error:'Customer approval is required before purchasing this item'}
   await admin.from("shopping_items").update({ status: "purchased" }).eq("id", itemId)
   revalidatePath(`/dashboard/driver`)
   return {}
@@ -366,6 +390,10 @@ export async function markItemUnavailable(itemId: string): Promise<{ error?: str
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
+  const {data:item}=await admin.from('shopping_items').select('delivery_id').eq('id',itemId).single()
+  if(!item)return {error:'Item not found'}
+  const {data:owner}=await admin.from('delivery_requests').select('driver_id').eq('id',item.delivery_id).single()
+  if(owner?.driver_id!==user.id)return {error:'Not your shopping item'}
   await admin.from("shopping_items").update({ status: "unavailable" }).eq("id", itemId)
   revalidatePath(`/dashboard/driver`)
   return {}
@@ -394,6 +422,9 @@ export async function requestSubstitution(params: {
 
   if (!delivery || delivery.driver_id !== user.id) return { error: "Not your job" }
 
+  const {data:item}=await admin.from('shopping_items').select('delivery_id').eq('id',params.shopping_item_id).single()
+  if(item?.delivery_id!==params.delivery_id)return {error:'Item does not belong to this order'}
+  if(params.suggested_price!=null&&(!Number.isFinite(params.suggested_price)||params.suggested_price<0))return {error:'Invalid replacement price'}
   const { data: sub, error } = await admin
     .from("shopping_substitutions")
     .insert({
@@ -440,7 +471,7 @@ export async function respondToSubstitution(
   const admin = createAdminClient()
   const { data: sub } = await admin
     .from("shopping_substitutions")
-    .select("id, shopping_item_id, delivery_id, driver_id, suggested_name")
+    .select("id, shopping_item_id, delivery_id, driver_id, suggested_name, customer_approved")
     .eq("id", substitutionId)
     .single()
 
@@ -449,20 +480,26 @@ export async function respondToSubstitution(
   // Verify it's the customer's order
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("customer_id, tracking_number")
+    .select("customer_id, tracking_number, launch_quote, status")
     .eq("id", sub.delivery_id)
     .single()
 
   if (!delivery || delivery.customer_id !== user.id) return { error: "Not your order" }
 
-  await admin
-    .from("shopping_substitutions")
-    .update({ customer_approved: approved, customer_responded_at: new Date().toISOString() })
-    .eq("id", substitutionId)
-
-  // Update item status
-  const itemStatus = approved ? "substituted" : "unavailable"
-  await admin.from("shopping_items").update({ status: itemStatus }).eq("id", sub.shopping_item_id)
+  if (sub.customer_approved != null) return { error: "This request has already been answered" }
+  if (delivery.launch_quote) {
+    const { error } = await admin.rpc('respond_launch_substitution', {
+      p_substitution: substitutionId, p_customer: user.id, p_approved: approved,
+    })
+    if (error) return { error: "Approval could not be saved. Check that the order is active and any extra purchase funds have been paid." }
+  } else {
+    const { data: changed, error } = await admin.from("shopping_substitutions")
+      .update({ customer_approved: approved, customer_responded_at: new Date().toISOString() })
+      .eq("id", substitutionId).is("customer_approved", null).select("id").maybeSingle()
+    if (error || !changed) return { error: "This request has already been answered" }
+    const itemStatus = approved ? "substituted" : "unavailable"
+    await admin.from("shopping_items").update({ status: itemStatus }).eq("id", sub.shopping_item_id)
+  }
 
   // Notify driver
   notifyUser({
@@ -493,13 +530,30 @@ export async function submitPurchaseReceipt(params: {
   const admin = createAdminClient()
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("id, driver_id, customer_id, max_spend_approved, tracking_number, shop_name")
+    .select("id, driver_id, customer_id, max_spend_approved, tracking_number, shop_name, launch_quote")
     .eq("id", params.deliveryId)
     .single()
 
   if (!delivery) return { error: "Order not found" }
   if (delivery.driver_id !== user.id) return { error: "Not your job" }
 
+  if(delivery.launch_quote){
+    try{
+      if(!Number.isFinite(params.actual_items_total)||params.actual_items_total<0)throw new Error('Enter a valid receipt total')
+      const url=new URL(params.receipt_url),base=new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!)
+      if(url.origin!==base.origin||!url.pathname.startsWith(`/storage/v1/object/public/delivery-item-photos/receipts/${params.deliveryId}/`))throw new Error('Upload the receipt for this order')
+      const {data:refund,error}=await admin.rpc('claim_launch_receipt',{p_delivery:params.deliveryId,p_driver:user.id,p_url:params.receipt_url,p_actual:params.actual_items_total})
+      if(error)throw new Error('Receipt requires funded purchase and approved substitutions, within the customer budget')
+      const {data:payment}=await admin.from('payments').select('stripe_payment_intent,receipt_refund_status,additional_payments').eq('delivery_id',params.deliveryId).single()
+      if(Number(refund)>0&&payment?.receipt_refund_status!=='complete'){
+        if(!payment?.stripe_payment_intent)throw new Error('Original card payment is unavailable')
+        await refundUnusedShopping(params.deliveryId,Number(refund),payment)
+        const {error:updateError}=await admin.from('payments').update({receipt_refund_status:'complete',refunded_amount:Number(refund)}).eq('delivery_id',params.deliveryId)
+        if(updateError)throw new Error('Refund started; reconciliation needs retry')
+      }
+      revalidatePath(`/dashboard/driver/jobs/${params.deliveryId}`);revalidatePath('/dashboard/customer/active-deliveries');return {}
+    }catch(e){return {error:e instanceof Error?e.message:'Receipt reconciliation failed'}}
+  }
   const maxSpend = delivery.max_spend_approved ?? 50
   if (params.actual_items_total > maxSpend) {
     return {
@@ -650,10 +704,11 @@ export async function getShoppingQuote(
   if ("error" in quoteResult) return { error: quoteResult.error }
   const quote = quoteResult.data
 
-  const serviceFee = parseFloat((quote.finalPrice * (bfm.service_fee_percentage / 100)).toFixed(2))
+  const serviceFee = (await readLaunchSettings()).shoppingFee
   const deliveryFee = parseFloat((quote.finalPrice + serviceFee).toFixed(2))
   const estimatedItems = params.estimated_items_total ?? 0
-  const itemsHold = bfm.max_purchase_amount
+  const itemsHold = estimatedItems
+  if(!Number.isFinite(itemsHold)||itemsHold<=0||itemsHold>bfm.max_purchase_amount)return {error:`Enter shopping estimates up to £${bfm.max_purchase_amount}`}
 
   return {
     data: {

@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { googlePlacesAutocomplete, googlePlaceCoords, googleReverseGeocode, type PlaceSuggestion } from '@/lib/google'
-import { createShoppingRequest, getShoppingQuote, type ShoppingItem, type ShoppingQuote } from '@/app/actions/shopping'
-import { getWalletBalance } from '@/app/actions/wallet'
+import { getShoppingQuote, type ShoppingItem, type ShoppingQuote } from '@/app/actions/shopping'
+import {startBookingCheckout} from '@/app/actions/booking-checkout'
+import {getLaunchSettings} from '@/app/actions/launch-settings'
+import {DEFAULT_LAUNCH_SETTINGS,validateShoppingItems} from '@/lib/launch-pricing'
 import styles from './ShoppingSteps.module.css'
 
 type Item = ShoppingItem & { id: string }
@@ -57,6 +59,8 @@ function AddressField({ label, value, onChange, onSelect }: { label: string; val
 
 export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
+  const [limits,setLimits]=useState(DEFAULT_LAUNCH_SETTINGS)
+  const [shoppingSafe,setShoppingSafe]=useState(false)
   const frame = useRef<HTMLDivElement>(null)
   const lock = useRef(false)
   const [step, setStep] = useState(1)
@@ -77,7 +81,6 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [delivery, setDelivery] = useState<Place | null>(null)
   const [shopInstructions, setShopInstructions] = useState('')
   const [quote, setQuote] = useState<ShoppingQuote | null>(null)
-  const [wallet, setWallet] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [locating, setLocating] = useState(false)
@@ -100,7 +103,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     document.body.style.overflow = 'hidden'; measure()
     frame.current?.querySelector<HTMLElement>('[aria-label="Close shopping form"]')?.focus()
     viewport?.addEventListener('resize', measure); viewport?.addEventListener('scroll', measure); window.addEventListener('resize', measure)
-    void getWalletBalance().then(r => setWallet(r.balance)).catch(() => setWallet(null))
+    void getLaunchSettings().then(setLimits).catch(()=>{})
     return () => { document.body.style.overflow = overflow; previous?.focus(); viewport?.removeEventListener('resize', measure); viewport?.removeEventListener('scroll', measure); window.removeEventListener('resize', measure) }
   }, [])
   function update(field: keyof ShoppingItem, value: unknown) { setItems(prev => prev.map((i, n) => n === index ? { ...i, [field]: value } : i)); setQuote(null); setError('') }
@@ -112,7 +115,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   }
   async function next() {
     if (lock.current || uploading) return
-    if (step === 1) { if (!savedItems.length) { setError('Add and save at least one item.'); return }; if (validItems()) go(2); return }
+    if (step === 1) { try{validateShoppingItems(savedItems,limits)}catch(e){setError(e instanceof Error?e.message:'Check items');return}; if(!shoppingSafe){setError('Confirm the shopping size and weight limits.');return}; if (!savedItems.length) { setError('Add and save at least one item.'); return }; if (validItems()) go(2); return }
     if (step === 2) { if (!shopName.trim() || !shop || !delivery) { setError('Enter the shop name and select both addresses from suggestions.'); return }; go(3); return }
     if (step === 3) {
       if (!validItems() || !shop || !delivery) return
@@ -126,8 +129,8 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (lock.current || success || !quote || !shop || !delivery || uploading || !validItems()) return
     lock.current = true; setLoading(true); setError('')
     try {
-      const result = await createShoppingRequest({ shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng, shop_instructions: shopInstructions.trim() || null, delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng, shopping_items: items.map(i => ({ name: i.name.trim(), quantity: i.quantity, estimated_price: i.estimated_price, brand_size_variant: i.brand_size_variant, notes: i.notes, photo_url: i.photo_url, substitution_preference: i.substitution_preference })) })
-      if ('error' in result) setError(result.error); else setSuccess(result.data)
+      const result = await startBookingCheckout({service:'shopping',details:{ shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng, shop_instructions: shopInstructions.trim() || null, delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng, shopping_items: items.map(i => ({ name: i.name.trim(), quantity: i.quantity, estimated_price: i.estimated_price, brand_size_variant: i.brand_size_variant, notes: i.notes, photo_url: i.photo_url, substitution_preference: i.substitution_preference })) }})
+      if ('error' in result) setError(result.error); else window.location.assign(result.url)
     } catch { setError('We could not confirm the result. Check My Deliveries before trying again.') }
     finally { lock.current = false; setLoading(false) }
   }
@@ -145,6 +148,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     navigator.geolocation.getCurrentPosition(async pos => { try { const p = { lat: pos.coords.latitude, lng: pos.coords.longitude }; const address = await googleReverseGeocode(p.lat, p.lng); if (!address) throw new Error(); setDelivery({ ...p, address }); setDeliveryInput(address); setQuote(null) } catch { setError('Could not find your address. Please type it instead.') } finally { setLocating(false) } }, () => { setError('Location permission is unavailable. Please enter your address.'); setLocating(false) }, { timeout: 10000 })
   }
   function saveItem() {
+    if(item.quantity>limits.maxQuantityPerProduct){setError(`Maximum ${limits.maxQuantityPerProduct} units per product.`);return}
     if (!item.name.trim()) { setError('Enter an item name before saving.'); return }
     if (!Number.isInteger(item.quantity) || item.quantity < 1 || (item.estimated_price != null && (!Number.isFinite(item.estimated_price) || item.estimated_price < 0))) { setError('Check the quantity and estimated price.'); return }
     if (!savedIds.includes(item.id)) setSavedIds([...savedIds, item.id])
@@ -152,6 +156,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     setListPage(Math.floor((savedIds.includes(item.id) ? savedIds.indexOf(item.id) : savedIds.length) / 3) * 3)
   }
   function addItem() {
+    if(savedItems.length>=limits.maxProducts){setError(`Maximum ${limits.maxProducts} different products per order.`);return}
     if (items.some(i => !savedIds.includes(i.id))) { setIndex(items.findIndex(i => !savedIds.includes(i.id))) }
     else { setItems([...items, freshItem()]); setIndex(items.length) }
     setEditing(true); setListPage(0); setDetails(false); setError(''); setQuote(null)
@@ -199,11 +204,12 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
                 <img src={item.photo_url} alt="Shopping item" /><button onClick={() => update('photo_url',null)}>Remove photo</button></div>}
             </> : <>
               <label>Item name<input value={item.name} onChange={e => update('name',e.target.value)} placeholder="e.g. Whole milk 2L" /></label>
-              <div className={styles.columns}><label>Quantity<div className={styles.quantity}><button aria-label="Reduce quantity" disabled={item.quantity <= 1} onClick={() => update('quantity',item.quantity - 1)}>−</button><strong>{item.quantity}</strong><button aria-label="Increase quantity" onClick={() => update('quantity',item.quantity + 1)}>+</button></div></label><label>Est. price per item (£)<input type="number" min="0" step="0.01" value={item.estimated_price ?? ''} onChange={e => update('estimated_price',e.target.value === '' ? null : Number(e.target.value))} placeholder="Optional" /></label></div>
+              <div className={styles.columns}><label>Quantity<div className={styles.quantity}><button aria-label="Reduce quantity" disabled={item.quantity <= 1} onClick={() => update('quantity',item.quantity - 1)}>−</button><strong>{item.quantity}</strong><button aria-label="Increase quantity" onClick={() => update('quantity',item.quantity + 1)}>+</button></div></label><label>Est. price per item (£)<input type="number" min="0" step="0.01" value={item.estimated_price ?? ''} onChange={e => update('estimated_price',e.target.value === '' ? null : Number(e.target.value))} placeholder="Required estimate" /></label></div>
               <button className={styles.cardButton} onClick={() => setDetails(true)}>More details (optional) <span>Brand, size, notes and photo →</span></button>
             </>}
 
             </section> : <button className={styles.outline} onClick={addItem}>+ Add another item</button>}
+            {!editing && savedItems.length > 0 && <label className={styles.hint}><input type="checkbox" checked={shoppingSafe} onChange={e=>setShoppingSafe(e.target.checked)}/> I confirm the shopping is at most {limits.maxShoppingWeightKg} kg and each item fits within {limits.maxShoppingDimensionCm} cm.</label>}
             {!editing && savedItems.length === 0 && <p className={styles.hint}>Add your first item to start your shopping list.</p>}
           </div>}
           {step === 2 && <div className={styles.stack}>
@@ -226,7 +232,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
             <div className={styles.card}><button className={styles.edit} onClick={() => go(1)}>Edit items</button><small>Shopping list · {items.length} items</small>{items.slice(reviewIndex,reviewIndex + 2).map(i => <p key={i.id}>{i.name} ×{i.quantity}<span>{i.estimated_price == null ? '—' : money(i.estimated_price * i.quantity)}</span></p>)}{items.length > 2 && <div className={styles.itemNav}><button disabled={reviewIndex === 0} onClick={() => setReviewIndex(reviewIndex - 2)}>Previous</button><span>{reviewIndex + 1}–{Math.min(reviewIndex + 2,items.length)}</span><button disabled={reviewIndex + 2 >= items.length} onClick={() => setReviewIndex(reviewIndex + 2)}>Next</button></div>}</div>
             <button className={styles.link} onClick={() => go(3)}>Replacement: {items.every(i => i.substitution_preference === items[0].substitution_preference) ? choices.find(c => c.value === items[0].substitution_preference)?.label : 'Per item'} · Edit</button>
             <div className={styles.card}>{loading ? <p>Calculating price…</p> : quote ? <><p>Shopping funds (held)<span>{money(quote.itemsHold)}</span></p><p>Delivery fee<span>{money(quote.deliveryFee)}</span></p>{quote.serviceFee > 0 && <p>Service fee<span>{money(quote.serviceFee)}</span></p>}<p><strong>Total charged now</strong><strong>{money(quote.totalCharge)}</strong></p><small>Shopping funds up to {money(quote.maxSpendLimit)} are held. Unused funds return to your wallet.</small></> : <p>Price unavailable. Go back and retry.</p>}</div>
-            <p className={styles.hint}>Wallet balance: {wallet == null ? 'Loading…' : money(wallet)}</p>
+            <p className={styles.hint}>Pay by card through Stripe. No wallet required.</p>
           </div>}
         </>}
       </main>

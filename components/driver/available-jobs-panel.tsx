@@ -5,6 +5,7 @@ import { AcceptJobButton } from "@/components/driver/accept-job-button"
 import { PACKAGE_SIZE_INFO, isPackageSize } from "@/lib/vehicles"
 
 type Job = {
+  launch_quote?: {driverAmount:number;distanceMiles:number;durationMin:number}
   id: string
   tracking_number: string | null
   pickup_address: string | null
@@ -27,7 +28,7 @@ type SortKey = "newest" | "oldest" | "payout_high" | "payout_low"
 
 function fmt(v: number | null) {
   if (v == null) return null
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(v)
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "GBP" }).format(v)
 }
 
 function fmtDate(v: string | null) {
@@ -46,6 +47,7 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number):
 }
 
 export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
+  const [declined,setDeclined]=useState<string[]>([])
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<SortKey>("newest")
   const [driverGps, setDriverGps] = useState<{ lat: number; lng: number } | null>(null)
@@ -60,7 +62,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    let list = jobs.filter(
+    let list = jobs.filter(j=>!declined.includes(j.id)).filter(
       (j) =>
         !q ||
         j.pickup_address?.toLowerCase().includes(q) ||
@@ -76,7 +78,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
       return 0
     })
     return list
-  }, [jobs, search, sort])
+  }, [jobs, search, sort, declined])
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -139,7 +141,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filtered.map((job) => {
-            const price = fmt(job.price)
+            const price = fmt(job.launch_quote?.driverAmount ?? (job.price == null ? null : Math.round(job.price * .75 * 100)/100))
             const distanceMiles =
               driverGps && job.pickup_lat != null && job.pickup_lng != null
                 ? haversineMiles(driverGps.lat, driverGps.lng, Number(job.pickup_lat), Number(job.pickup_lng))
@@ -234,7 +236,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                       <span className="text-[var(--color-primary)] font-bold uppercase">{job.status}</span>
                     </div>
                   </div>
-                  <AcceptJobButton deliveryId={job.id} />
+                  <AcceptJobButton deliveryId={job.id} /><button className="border border-gray-400 rounded-lg px-4 py-2 text-white" onClick={()=>setDeclined([...declined,job.id])}>Decline</button>
                 </div>
               </div>
             )

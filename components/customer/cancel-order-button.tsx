@@ -18,6 +18,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
     distanceMiles: number
     status: string
     canCancel: boolean
+    directPayment?: boolean
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
@@ -42,7 +43,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
           success: true,
           message: res.freeCancel
             ? res.refundAmount > 0
-              ? `Order cancelled. £${res.refundAmount.toFixed(2)} refunded to your wallet.`
+              ? res.refundDestination === "card" ? "Order cancelled. The refund was requested to your original payment card." : `Order cancelled. £${res.refundAmount.toFixed(2)} refunded to your wallet.`
               : "Order cancelled successfully. No charge applied."
             : `Order cancelled. £${res.cancellationFee} cancellation fee deducted from your wallet.`,
         })
@@ -109,7 +110,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
                       <div>
                         <p className="text-sm font-bold text-white">Free Cancellation</p>
                         <p className="text-xs text-[#adaaaa] mt-1 leading-relaxed">
-                          The driver hasn&apos;t started the journey yet. You can cancel this order at no charge.
+                          {preview.directPayment ? "Before driver acceptance you can cancel for free. Any refund returns to the original payment card." : "The driver has not started the journey yet. You can cancel this order at no charge."}
                         </p>
                       </div>
                     </div>
@@ -142,7 +143,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
                   )}
 
                   <p className="text-xs text-[#adaaaa] bg-[#262626] rounded-xl px-4 py-3 leading-relaxed">
-                    Are you sure you want to cancel this order? This action cannot be undone.
+                    {preview.canCancel ? "Are you sure you want to cancel this order?" : "The driver has accepted this job. Contact support for cancellation and refund review."}
                   </p>
 
                   <div className="flex gap-3 pt-1">
@@ -155,7 +156,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
                     </button>
                     <button
                       onClick={handleConfirm}
-                      disabled={confirming}
+                      disabled={confirming || !preview.canCancel}
                       className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
                         preview.freeCancel
                           ? "bg-[#6ee7b7] text-[#052e16] hover:brightness-110"
@@ -178,3 +179,4 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
     </>
   )
 }
+

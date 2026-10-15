@@ -53,7 +53,7 @@ export default async function DriverDashboard() {
   const [jobsRes, earningsRes, fallbackEarningsRes, payoutsRes] = await Promise.all([
     supabase
       .from("delivery_requests")
-      .select("id, tracking_number, status, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, price, created_at")
+      .select("id, tracking_number, status, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, price, launch_quote, created_at")
       .eq("driver_id", user?.id ?? "")
       .order("created_at", { ascending: false }),
 
@@ -67,7 +67,7 @@ export default async function DriverDashboard() {
     // (same pattern used in driver/earnings and driver/payouts pages)
     supabase
       .from("delivery_requests")
-      .select("id, price, created_at")
+      .select("id, price, launch_quote, created_at")
       .eq("driver_id", user?.id ?? "")
       .eq("status", "delivered")
       .not("price", "is", null),
@@ -95,8 +95,8 @@ export default async function DriverDashboard() {
   const syntheticEarnings = (fallbackEarningsRes.data ?? [])
     .filter(d => !coveredIds.has(d.id))
     .map(d => ({
-      amount:            d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null,
-      commission_amount: d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null,
+      amount:            d.launch_quote?.driverAmount ?? (d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null),
+      commission_amount: d.launch_quote?.commissionAmount ?? (d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null),
       status:            "pending" as const,
       created_at:        d.created_at,
       delivery_id:       d.id,
@@ -184,7 +184,7 @@ export default async function DriverDashboard() {
             </h3>
             <p className="text-xs text-[#adaaaa]">
               All time: <span className="text-[var(--color-primary)] font-bold">£{totalEarnings.toFixed(2)}</span>
-              &nbsp;·&nbsp;your 75% share
+              &nbsp;·&nbsp;your recorded earnings
             </p>
             {pendingPayoutAmount > 0 && (
               <p className="text-xs text-[var(--color-secondary)] mt-1 font-bold">
@@ -322,7 +322,7 @@ export default async function DriverDashboard() {
               recentActivity.map((job) => {
                 const cfg = STATUS_ICON[job.status] ?? { icon: "local_shipping", color: "text-[#adaaaa]" }
                 const isCompleted = job.status === "delivered"
-                const earning = isCompleted && job.price ? `+£${(job.price * 0.75).toFixed(2)}` : null
+                const earning = isCompleted && job.price ? `+£${(job.launch_quote?.driverAmount ?? job.price * 0.75).toFixed(2)}` : null
                 const statusLabel = job.status.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
                 return (
                   <Link

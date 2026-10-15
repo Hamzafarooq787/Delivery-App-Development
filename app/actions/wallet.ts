@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { cancelDirectBooking } from "./booking-checkout"
 
 export type WalletTransaction = {
   id: string
@@ -58,6 +59,7 @@ export type CancelOrderResult = {
   cancellationFee: number
   distanceMiles: number
   refundAmount: number
+  refundDestination?: "card" | "wallet"
   error?: string
 }
 
@@ -65,6 +67,15 @@ export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Not authenticated" }
+
+  const admin = createAdminClient()
+  const { data: order, error: orderError } = await admin.from('delivery_requests')
+    .select('customer_id,launch_quote').eq('id', deliveryId).single()
+  if (orderError || !order || order.customer_id !== user.id) return {success:false,freeCancel:false,cancellationFee:0,distanceMiles:0,refundAmount:0,error:'Order not found'}
+  if (order.launch_quote) {
+    const response = await cancelDirectBooking(deliveryId)
+    return {success:!response.error,freeCancel:true,cancellationFee:0,distanceMiles:0,refundAmount:Number(order.launch_quote.totalCharge??0),refundDestination:'card',error:response.error}
+  }
 
   // Atomic RPC — locks the delivery row before doing anything, so concurrent
   // cancel calls on the same order can't both read "still cancellable" and
@@ -96,6 +107,7 @@ export async function previewCancellationFee(deliveryId: string): Promise<{
   distanceMiles: number
   status: string
   canCancel: boolean
+  directPayment?: boolean
   error?: string
 }> {
   const supabase = await createClient()
@@ -105,7 +117,7 @@ export async function previewCancellationFee(deliveryId: string): Promise<{
   const admin = createAdminClient()
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("id, status, customer_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng")
+    .select("id, status, customer_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng, launch_quote, driver_id")
     .eq("id", deliveryId)
     .single()
 
@@ -117,6 +129,8 @@ export async function previewCancellationFee(deliveryId: string): Promise<{
   if (status === "delivered" || status === "cancelled") {
     return { freeCancel: false, cancellationFee: 0, distanceMiles: 0, status, canCancel: false }
   }
+
+  if (delivery.launch_quote) return {freeCancel:true,cancellationFee:0,distanceMiles:0,status,canCancel:status==='requested'&&!delivery.driver_id,directPayment:true}
 
   const freeCancel = ["requested", "accepted"].includes(status)
   let cancellationFee = 0
@@ -152,11 +166,12 @@ export async function adminCancelOrder(deliveryId: string): Promise<{
 
   const { data: delivery, error: fetchErr } = await admin
     .from("delivery_requests")
-    .select("id, status, customer_id, price")
+    .select("id, status, customer_id, price, launch_quote")
     .eq("id", deliveryId)
     .single()
 
   if (fetchErr || !delivery) return { error: "Order not found" }
+  if (delivery.launch_quote) return {error:"Direct-card orders require Stripe cancellation and refund reconciliation through support."}
   if (["delivered", "cancelled"].includes(delivery.status))
     return { error: "This order cannot be cancelled" }
 

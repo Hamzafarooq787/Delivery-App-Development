@@ -190,7 +190,7 @@ export async function getAvailableDeliveries() {
   // all. This is defense-in-depth alongside the client-side onboarding
   // gate in DriverLayoutClient, which only hides the UI.
   if (user) {
-    const { data: profile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
+    const { data: profile } = await admin.from("driver_profiles").select("status,launch_agreement").eq("id", user.id).maybeSingle()
     if (profile?.status !== "approved") {
       return { error: "Your account must be verified before you can view available jobs.", data: [] }
     }
@@ -212,8 +212,9 @@ export async function getAvailableDeliveries() {
 
   let query = admin
     .from("delivery_requests")
-    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total")
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total, launch_quote, payments!inner(status)")
     .eq("status", "requested")
+    .in("payments.status", ["paid","released"])
     .is("driver_id", null)
     .order("created_at", { ascending: false })
 
@@ -237,7 +238,7 @@ export async function acceptDelivery(deliveryId: string) {
   const admin = createAdminClient()
 
   // Driver Identity Verification — only approved drivers can accept jobs.
-  const { data: driverProfile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
+  const { data: driverProfile } = await admin.from("driver_profiles").select("status,launch_agreement").eq("id", user.id).maybeSingle()
   if (driverProfile?.status !== "approved") {
     return { error: "Your account must be verified before you can accept jobs." }
   }
@@ -245,12 +246,13 @@ export async function acceptDelivery(deliveryId: string) {
   // Verify the delivery is still available
   const { data: delivery, error: fetchError } = await admin
     .from("delivery_requests")
-    .select("id, status, driver_id")
+    .select("id, status, driver_id,launch_quote")
     .eq("id", deliveryId)
     .single()
 
   if (fetchError) return { error: fetchError.message }
 
+  if(delivery.launch_quote && driverProfile?.launch_agreement?.commissionPercent!==delivery.launch_quote.commissionPercent)return {error:'Review the driver fee agreement and set up weekly payments before accepting launch jobs.'}
   if (delivery.status !== "requested" || delivery.driver_id) {
     return { error: "This job is no longer available to accept." }
   }
@@ -479,7 +481,7 @@ export async function verifyDeliveryOtpAndComplete(
 
   const { data: delivery, error: deliveryError } = await admin
     .from("delivery_requests")
-    .select("id, status, driver_id, price, tracking_number, customer_id")
+    .select("id, status, driver_id, price, tracking_number, customer_id, launch_quote")
     .eq("id", deliveryId)
     .single()
 
@@ -541,14 +543,15 @@ export async function verifyDeliveryOtpAndComplete(
   // Record earnings with 75/25 commission split
   const price = Number(delivery.price ?? 0)
   if (price > 0) {
-    const driverCut = Math.round(price * 0.75 * 100) / 100
-    const commission = Math.round(price * 0.25 * 100) / 100
+    const driverCut = delivery.launch_quote?.driverAmount ?? Math.round(price * 0.75 * 100) / 100
+    const commission = delivery.launch_quote?.commissionAmount ?? Math.round(price * 0.25 * 100) / 100
     await admin.from("driver_earnings").upsert(
       {
         driver_id: user.id,
         delivery_id: deliveryId,
         amount: driverCut,
         commission_amount: commission,
+        ...(delivery.launch_quote ? {subsidy_amount:delivery.launch_quote.subsidyAmount} : {}),
         status: "pending",
       },
       { onConflict: "delivery_id" }
