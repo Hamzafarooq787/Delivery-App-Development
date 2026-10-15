@@ -48,7 +48,7 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
     <div className="pt-2 pb-12 px-2">
       <div className="mb-8 md:mb-10">
         <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">Support Tickets</h2>
-        <p className="text-[#adaaaa] mt-1">
+        <p className="text-[var(--color-on-surface-variant)] mt-1">
           {openCount} open · {tickets.length} total
         </p>
       </div>
@@ -57,17 +57,17 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
         <p className="mb-4 text-xs text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 rounded-xl px-4 py-3">{error}</p>
       )}
 
-      <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl overflow-hidden">
+      <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl overflow-hidden">
         {tickets.length === 0 ? (
           <div className="py-16 text-center px-8">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#262626] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[var(--color-primary)]">support_agent</span>
+            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[var(--color-surface-container-highest)] flex items-center justify-center">
+              <span className="material-symbols-outlined text-[var(--brand-soft)]">support_agent</span>
             </div>
             <p className="text-sm font-bold text-white mb-1">No support tickets</p>
-            <p className="text-xs text-[#adaaaa]">Tickets submitted by customers and drivers appear here.</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)]">Tickets submitted by customers and drivers appear here.</p>
           </div>
         ) : (
-          <div className="divide-y divide-[#494847]/5">
+          <div className="divide-y divide-[var(--color-outline-variant)]/5">
             {tickets.map((t) => {
               const expanded = expandedId === t.id
               const isOpen = t.status === "open"
@@ -75,12 +75,12 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
                 <div key={t.id}>
                   <button
                     onClick={() => setExpandedId(expanded ? null : t.id)}
-                    className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-[#201f1f]/40 transition-colors"
+                    className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-[var(--color-surface-container-high)]/40 transition-colors"
                   >
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${isOpen ? "bg-[var(--color-primary)] animate-pulse" : "bg-[#6ee7b7]"}`} />
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${isOpen ? "bg-[var(--brand-strong)] animate-pulse" : "bg-[#6ee7b7]"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white truncate">{t.subject}</p>
-                      <p className="text-xs text-[#adaaaa] mt-0.5 flex items-center gap-2">
+                      <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5 flex items-center gap-2">
                         <span>{t.user_name}</span>
                         <RoleBadge role={t.user_role} />
                         <span>· {fmtDate(t.created_at)}</span>
@@ -88,20 +88,20 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
                     </div>
                     <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
                       isOpen
-                        ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20"
+                        ? "bg-[var(--brand-strong)]/10 text-[var(--brand-soft)] border border-[var(--brand-strong)]/20"
                         : "bg-green-500/10 text-green-400 border border-green-500/20"
                     }`}>
                       {isOpen ? "Open" : "Resolved"}
                     </span>
-                    <span className={`material-symbols-outlined text-[#adaaaa] text-lg transition-transform ${expanded ? "rotate-180" : ""}`}>
+                    <span className={`material-symbols-outlined text-[var(--color-on-surface-variant)] text-lg transition-transform ${expanded ? "rotate-180" : ""}`}>
                       expand_more
                     </span>
                   </button>
 
                   {expanded && (
                     <div className="px-5 pb-5 pl-11">
-                      <div className="bg-[#262626] rounded-xl px-4 py-3 mb-3">
-                        <p className="text-sm text-[#e5e5e5] whitespace-pre-wrap leading-relaxed">{t.message}</p>
+                      <div className="bg-[var(--color-surface-container-highest)] rounded-xl px-4 py-3 mb-3">
+                        <p className="text-sm text-[var(--color-on-surface)] whitespace-pre-wrap leading-relaxed">{t.message}</p>
                       </div>
                       <button
                         onClick={() => toggleStatus(t)}
@@ -109,7 +109,7 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
                         className={`px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 disabled:opacity-50 ${
                           isOpen
                             ? "bg-[#6ee7b7] text-[#052e16] hover:brightness-110"
-                            : "bg-[#262626] text-[#adaaaa] hover:text-white border border-[#494847]/30"
+                            : "bg-[var(--color-surface-container-highest)] text-[var(--color-on-surface-variant)] hover:text-white border border-[var(--color-outline-variant)]/30"
                         }`}
                       >
                         {isPending ? "Updating…" : isOpen ? "Mark Resolved" : "Reopen Ticket"}

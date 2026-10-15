@@ -88,11 +88,11 @@ export function DeliveriesLedger({
   })
 
   return (
-    <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl overflow-hidden">
-      <div className="p-6 bg-[#1a1919]/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#494847]/10">
+    <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 rounded-xl overflow-hidden">
+      <div className="p-6 bg-[var(--brand-panel)]/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[var(--color-outline-variant)]/10">
         <h3 className="font-headline font-bold text-lg text-white">Active Ledger</h3>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg overflow-hidden border border-[#494847]/20">
+          <div className="flex rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20">
             {(["all", "collect_and_deliver", "buy_for_me"] as ServiceFilter[]).map((f) => (
               <button
                 key={f}
@@ -100,19 +100,19 @@ export function DeliveriesLedger({
                 className={`px-3 py-1.5 text-[11px] font-bold uppercase transition-colors ${
                   serviceFilter === f
                     ? f === "buy_for_me"
-                      ? "bg-[var(--color-secondary)] text-[#0e0e0e]"
-                      : "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
-                    : "bg-[#1a1919] text-[#adaaaa] hover:text-white"
+                      ? "bg-[var(--color-secondary)] text-[var(--brand-bg)]"
+                      : "bg-[var(--brand-strong)] text-[var(--brand-ink)]"
+                    : "bg-[var(--brand-panel)] text-[var(--color-on-surface-variant)] hover:text-white"
                 }`}
               >
                 {f === "all" ? "All" : f === "buy_for_me" ? "Buy for Me" : "C&D"}
               </button>
             ))}
           </div>
-          <button className="p-2 text-[#adaaaa] hover:text-white transition-colors">
+          <button className="p-2 text-[var(--color-on-surface-variant)] hover:text-white transition-colors">
             <span className="material-symbols-outlined">download</span>
           </button>
-          <button className="p-2 text-[#adaaaa] hover:text-white transition-colors">
+          <button className="p-2 text-[var(--color-on-surface-variant)] hover:text-white transition-colors">
             <span className="material-symbols-outlined">refresh</span>
           </button>
         </div>
@@ -120,12 +120,12 @@ export function DeliveriesLedger({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] text-left border-collapse">
           <thead>
-            <tr className="bg-[#131313]">
+            <tr className="bg-[var(--brand-bg)]">
               {["Tracking #", "Pickup", "Delivery", "Item", "Status", "Assigned Driver", "Date", "Track"].map(
                 (h, i) => (
                   <th
                     key={h}
-                    className={`px-5 py-4 text-[11px] uppercase tracking-widest font-bold text-[#adaaaa] ${
+                    className={`px-5 py-4 text-[11px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)] ${
                       i >= 6 ? "text-right" : ""
                     }`}
                   >
@@ -135,17 +135,17 @@ export function DeliveriesLedger({
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#494847]/5">
+          <tbody className="divide-y divide-[var(--color-outline-variant)]/5">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center text-[#adaaaa] text-sm">
+                <td colSpan={8} className="py-16 text-center text-[var(--color-on-surface-variant)] text-sm">
                   No deliveries found
                 </td>
               </tr>
             ) : (
               filtered.map((delivery) => (
-                <tr key={delivery.id} className="hover:bg-[#201f1f]/40 transition-colors group">
-                  <td className="px-5 py-4 font-mono text-xs text-[var(--color-primary)] whitespace-nowrap">
+                <tr key={delivery.id} className="hover:bg-[var(--color-surface-container-high)]/40 transition-colors group">
+                  <td className="px-5 py-4 font-mono text-xs text-[var(--brand-soft)] whitespace-nowrap">
                     <Link href={`/dashboard/admin/orders/${delivery.id}`} className="hover:underline">
                       {delivery.tracking_number ?? `KV-${delivery.id.slice(0, 8).toUpperCase()}`}
                     </Link>
@@ -160,7 +160,7 @@ export function DeliveriesLedger({
                       {delivery.delivery_address ?? "—"}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-sm text-[#adaaaa] max-w-[160px]">
+                  <td className="px-5 py-4 text-sm text-[var(--color-on-surface-variant)] max-w-[160px]">
                     {delivery.service_type === "buy_for_me" ? (
                       <div className="flex flex-col gap-0.5">
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border border-[var(--color-secondary)]/20 w-fit">
@@ -187,7 +187,7 @@ export function DeliveriesLedger({
                       disabled={FINAL_STATUSES.has(delivery.status)}
                     />
                   </td>
-                  <td className="px-5 py-4 text-xs text-[#adaaaa] text-right whitespace-nowrap">
+                  <td className="px-5 py-4 text-xs text-[var(--color-on-surface-variant)] text-right whitespace-nowrap">
                     {new Date(delivery.created_at).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
@@ -198,7 +198,7 @@ export function DeliveriesLedger({
                   <td className="px-5 py-4 text-right whitespace-nowrap">
                     <Link
                       href={`/dashboard/admin/orders/${delivery.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[var(--color-primary)] hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[var(--brand-soft)] hover:underline"
                     >
                       <span className="material-symbols-outlined text-base">
                         {FINAL_STATUSES.has(delivery.status) ? "visibility" : "my_location"}
@@ -212,14 +212,14 @@ export function DeliveriesLedger({
           </tbody>
         </table>
       </div>
-      <div className="px-6 py-4 bg-[#1a1919]/30 flex justify-between items-center">
-        <span className="text-xs text-[#adaaaa]">Showing {filtered.length} of {deliveries.length} entries</span>
+      <div className="px-6 py-4 bg-[var(--brand-panel)]/30 flex justify-between items-center">
+        <span className="text-xs text-[var(--color-on-surface-variant)]">Showing {filtered.length} of {deliveries.length} entries</span>
         <div className="flex gap-1">
-          <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">
+          <button className="px-3 py-1 text-xs bg-[var(--color-surface-container-highest)] rounded text-[var(--color-on-surface-variant)] hover:text-white transition-colors">
             Prev
           </button>
-          <button className="px-3 py-1 text-xs bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded font-bold">1</button>
-          <button className="px-3 py-1 text-xs bg-[#262626] rounded text-[#adaaaa] hover:text-white transition-colors">
+          <button className="px-3 py-1 text-xs bg-[var(--brand-strong)] text-[var(--brand-ink)] rounded font-bold">1</button>
+          <button className="px-3 py-1 text-xs bg-[var(--color-surface-container-highest)] rounded text-[var(--color-on-surface-variant)] hover:text-white transition-colors">
             Next
           </button>
         </div>
@@ -231,15 +231,15 @@ export function DeliveriesLedger({
 function DeliveryStatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
     requested: { label: "Requested", className: "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border-[var(--color-secondary)]/20" },
-    accepted: { label: "Accepted", className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20" },
-    collected: { label: "Collected", className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20" },
-    in_transit: { label: "In Transit", className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)] border-[var(--color-primary)]/20" },
+    accepted: { label: "Accepted", className: "bg-[var(--brand-strong)]/10 text-[var(--brand-soft)] border-[var(--brand-strong)]/20" },
+    collected: { label: "Collected", className: "bg-[var(--brand-strong)]/10 text-[var(--brand-soft)] border-[var(--brand-strong)]/20" },
+    in_transit: { label: "In Transit", className: "bg-[var(--brand-strong)]/10 text-[var(--brand-soft)] border-[var(--brand-strong)]/20" },
     delivered: { label: "Delivered", className: "bg-[var(--color-tertiary)]/10 text-[var(--color-tertiary)] border-[var(--color-tertiary)]/20" },
     cancelled: { label: "Cancelled", className: "bg-[#ff6e84]/10 text-[#ff6e84] border-[#ff6e84]/20" },
   }
   const config = map[status] ?? {
     label: status,
-    className: "bg-[#262626] text-[#adaaaa] border-transparent",
+    className: "bg-[var(--color-surface-container-highest)] text-[var(--color-on-surface-variant)] border-transparent",
   }
   return (
     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${config.className}`}>

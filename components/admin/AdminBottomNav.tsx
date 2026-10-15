@@ -28,17 +28,17 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
       {/* Active indicator bar */}
       {active && (
         <span
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-full bg-[var(--color-primary)]"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-full bg-[var(--brand-strong)]"
           style={{ boxShadow: "0 0 8px rgba(var(--brand-rgb),0.7)" }}
         />
       )}
       {/* Icon pill */}
       <div className={`w-11 h-7 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-        active ? "bg-[var(--color-primary)]/15" : "group-active:bg-[#262626]"
+        active ? "bg-[var(--brand-strong)]/15" : "group-active:bg-[var(--color-surface-container-highest)]"
       }`}>
         <span
           className={`material-symbols-outlined text-xl transition-all duration-200 ${
-            active ? "text-[var(--color-primary)]" : "text-[#adaaaa]"
+            active ? "text-[var(--brand-soft)]" : "text-[var(--color-on-surface-variant)]"
           }`}
           style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
         >
@@ -46,7 +46,7 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
         </span>
       </div>
       <span className={`text-[9px] font-bold uppercase tracking-widest transition-colors ${
-        active ? "text-[var(--color-primary)]" : "text-[#adaaaa]"
+        active ? "text-[var(--brand-soft)]" : "text-[var(--color-on-surface-variant)]"
       }`}>
         {label}
       </span>
@@ -70,7 +70,7 @@ export function AdminBottomNav({ pendingVerifications = 0 }: AdminBottomNavProps
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50">
-      <div className="bg-[#0a0a0a]/97 backdrop-blur-2xl border-t border-[#494847]/20 shadow-[0_-12px_40px_rgba(0,0,0,0.7)]">
+      <div className="bg-[var(--brand-panel)] backdrop-blur-2xl border-t border-[var(--color-outline-variant)]/20 shadow-[0_-12px_40px_rgba(0,0,0,0.7)]">
         <div className="flex items-end justify-around h-16 px-1">
 
           {/* Left items */}
@@ -84,12 +84,12 @@ export function AdminBottomNav({ pendingVerifications = 0 }: AdminBottomNavProps
               href={FAB_HREF}
               aria-label="Verification Requests"
               className={`relative w-14 h-14 rounded-full flex items-center justify-center active:scale-90 transition-transform duration-150 ${
-                fabActive ? "bg-[var(--color-secondary)]" : "bg-[var(--color-primary)]"
+                fabActive ? "bg-[var(--color-secondary)]" : "bg-[var(--brand-strong)]"
               }`}
               style={{ boxShadow: "0 0 24px rgba(var(--brand-rgb),0.5), 0 4px 16px rgba(0,0,0,0.4)" }}
             >
               <span
-                className="material-symbols-outlined text-[var(--color-on-primary)] text-2xl"
+                className="material-symbols-outlined text-[var(--brand-ink)] text-2xl"
                 style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}
               >
                 verified_user
@@ -101,7 +101,7 @@ export function AdminBottomNav({ pendingVerifications = 0 }: AdminBottomNavProps
                 </span>
               )}
             </Link>
-            <span className="text-[8px] font-bold uppercase tracking-widest text-[#adaaaa] mt-1 mb-1">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)] mt-1 mb-1">
               Verify
             </span>
           </div>

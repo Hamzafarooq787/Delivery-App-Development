@@ -47,7 +47,7 @@ export function ProcessPayoutButton({
     <button
       onClick={handle}
       disabled={isPending}
-      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/20 transition-all disabled:opacity-50 whitespace-nowrap"
+      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--brand-strong)]/10 text-[var(--brand-soft)] hover:bg-[var(--brand-strong)]/20 border border-[var(--brand-strong)]/20 transition-all disabled:opacity-50 whitespace-nowrap"
     >
       {isPending ? "Processing…" : "Process"}
     </button>
@@ -72,7 +72,7 @@ export function ProcessAllButton({ count }: { count: number }) {
     <button
       onClick={handle}
       disabled={isPending}
-      className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+      className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-[var(--brand-strong)] text-[var(--brand-ink)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
       style={{ boxShadow: "0px 0px 16px rgba(var(--brand-rgb),0.25)" }}
     >
       <span className="material-symbols-outlined text-lg">

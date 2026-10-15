@@ -155,8 +155,8 @@ export default async function AdminDashboardPage() {
       delta: "All completed fares",
       deltaUp: true,
       icon: "payments",
-      iconColor: "text-[var(--color-primary)]",
-      iconBg: "bg-[var(--color-primary)]/10",
+      iconColor: "text-[var(--brand-soft)]",
+      iconBg: "bg-[var(--brand-strong)]/10",
     },
     {
       label: "Platform Commission",
@@ -216,9 +216,9 @@ export default async function AdminDashboardPage() {
 
   const STATUS_CFG: Record<string, { mkTitle: (tn: string) => string; mkBody: (tn: string) => string; dot: string; dotBg: string; pulse: boolean }> = {
     requested:  { mkTitle: () => "New delivery requested",    mkBody: tn => `Order ${tn} added to queue`,              dot: "bg-[var(--color-secondary)]", dotBg: "bg-[var(--color-secondary)]/20", pulse: true  },
-    accepted:   { mkTitle: () => "Driver accepted job",       mkBody: tn => `Order ${tn} — heading to pickup`,         dot: "bg-[var(--color-primary)]", dotBg: "bg-[var(--color-primary)]/20", pulse: false },
-    collected:  { mkTitle: () => "Parcel collected",          mkBody: tn => `Order ${tn} — parcel authenticated`,      dot: "bg-[var(--color-primary)]", dotBg: "bg-[var(--color-primary)]/20", pulse: false },
-    in_transit: { mkTitle: () => "En route to delivery",      mkBody: tn => `Order ${tn} is in transit`,               dot: "bg-[var(--color-primary)]", dotBg: "bg-[var(--color-primary)]/20", pulse: true  },
+    accepted:   { mkTitle: () => "Driver accepted job",       mkBody: tn => `Order ${tn} — heading to pickup`,         dot: "bg-[var(--brand-strong)]", dotBg: "bg-[var(--brand-strong)]/20", pulse: false },
+    collected:  { mkTitle: () => "Parcel collected",          mkBody: tn => `Order ${tn} — parcel authenticated`,      dot: "bg-[var(--brand-strong)]", dotBg: "bg-[var(--brand-strong)]/20", pulse: false },
+    in_transit: { mkTitle: () => "En route to delivery",      mkBody: tn => `Order ${tn} is in transit`,               dot: "bg-[var(--brand-strong)]", dotBg: "bg-[var(--brand-strong)]/20", pulse: true  },
     delivered:  { mkTitle: () => "Delivery completed ✓",      mkBody: tn => `Order ${tn} successfully delivered`,      dot: "bg-[#6ee7b7]", dotBg: "bg-[#6ee7b7]/20", pulse: false },
     cancelled:  { mkTitle: () => "Delivery cancelled",        mkBody: tn => `Order ${tn} was cancelled`,               dot: "bg-[#ff6e84]", dotBg: "bg-[#ff6e84]/20", pulse: false },
   }
@@ -295,7 +295,7 @@ export default async function AdminDashboardPage() {
   const approvalRate   = totalDriverN > 0 ? Math.round((approvedN / totalDriverN) * 100) : 0
 
   const fleetBars = [
-    { label: "Delivery Completion", pct: completionRate, color: "bg-[var(--color-primary)]",  subtext: `${deliveredN} delivered` },
+    { label: "Delivery Completion", pct: completionRate, color: "bg-[var(--brand-strong)]",  subtext: `${deliveredN} delivered` },
     { label: "Jobs Currently Active", pct: activeJobRate,  color: "bg-[var(--color-secondary)]", subtext: `${activeN} in progress` },
     { label: "Driver Approval Rate",  pct: approvalRate,   color: "bg-[var(--color-tertiary)]", subtext: `${approvedN} approved` },
   ]
@@ -303,14 +303,14 @@ export default async function AdminDashboardPage() {
   // ──────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[#131313]">
+    <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
 
       {/* Page Header */}
       <div className="mb-6 md:mb-8">
         <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-          Overview <span className="text-[var(--color-primary)]">&amp;</span> Analytics
+          Overview <span className="text-[var(--brand-soft)]">&amp;</span> Analytics
         </h2>
-        <p className="text-[#adaaaa] mt-2 text-sm">Real-time throughput and platform performance metrics.</p>
+        <p className="text-[var(--color-on-surface-variant)] mt-2 text-sm">Real-time throughput and platform performance metrics.</p>
       </div>
 
       {/* KPI Cards */}
@@ -318,12 +318,12 @@ export default async function AdminDashboardPage() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 p-6 rounded-xl relative overflow-hidden group"
+            className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 p-6 rounded-xl relative overflow-hidden group"
           >
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-[#adaaaa] text-xs font-bold uppercase tracking-widest mb-1">{stat.label}</p>
-                <h3 className="font-headline text-2xl md:text-4xl font-bold text-[var(--color-primary)]">{stat.value}</h3>
+                <p className="text-[var(--color-on-surface-variant)] text-xs font-bold uppercase tracking-widest mb-1">{stat.label}</p>
+                <h3 className="font-headline text-2xl md:text-4xl font-bold text-[var(--brand-soft)]">{stat.value}</h3>
                 <p className={`text-xs mt-2 flex items-center font-bold ${stat.deltaUp ? "text-[var(--color-secondary)]" : "text-[#ff6e84]"}`}>
                   <span className="material-symbols-outlined text-sm mr-1">
                     {stat.deltaUp ? "trending_up" : "trending_down"}
@@ -337,7 +337,7 @@ export default async function AdminDashboardPage() {
             </div>
             <div className="absolute bottom-0 left-0 w-full h-16 opacity-20 pointer-events-none">
               <svg className="w-full h-full" viewBox="0 0 400 60" preserveAspectRatio="none">
-                <path d="M0 50 Q 50 10, 100 35 T 200 20 T 300 40 T 400 15 V 60 H 0 Z" fill="var(--color-primary)" fillOpacity="0.4" />
+                <path d="M0 50 Q 50 10, 100 35 T 200 20 T 300 40 T 400 15 V 60 H 0 Z" fill="var(--brand-strong)" fillOpacity="0.4" />
               </svg>
             </div>
           </div>
@@ -350,13 +350,13 @@ export default async function AdminDashboardPage() {
         <div className="col-span-1 lg:col-span-8 space-y-6">
 
           {/* Revenue Velocity — real 7-day bars */}
-          <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 relative overflow-hidden">
+          <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-8 relative overflow-hidden">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h4 className="text-xl font-bold font-headline text-white">Revenue Velocity</h4>
-                <p className="text-[#adaaaa] text-sm">Last 7 days — gross fare collected per day</p>
+                <p className="text-[var(--color-on-surface-variant)] text-sm">Last 7 days — gross fare collected per day</p>
               </div>
-              <div className="text-xs text-[#adaaaa] bg-[#262626] px-3 py-1.5 rounded-lg">
+              <div className="text-xs text-[var(--color-on-surface-variant)] bg-[var(--color-surface-container-highest)] px-3 py-1.5 rounded-lg">
                 {fmt(days7.reduce((s, d) => s + d.revenue, 0))} total
               </div>
             </div>
@@ -373,19 +373,19 @@ export default async function AdminDashboardPage() {
                   className={`w-full rounded-t-lg relative group transition-all hover:brightness-125 ${
                     bar.isToday
                       ? "bg-[var(--color-secondary)]/40 shadow-[0px_0px_15px_rgba(var(--brand-rgb),0.2)]"
-                      : "bg-[var(--color-primary)]/20"
+                      : "bg-[var(--brand-strong)]/20"
                   }`}
                   style={{ height: `${bar.heightPct}%` }}
                 >
-                  <div className={`absolute inset-x-0 bottom-0 h-full bg-gradient-to-t ${bar.isToday ? "from-[var(--color-secondary)]/60" : "from-[var(--color-primary)]/40"} to-transparent`} />
+                  <div className={`absolute inset-x-0 bottom-0 h-full bg-gradient-to-t ${bar.isToday ? "from-[var(--color-secondary)]/60" : "from-[var(--brand-strong)]/40"} to-transparent`} />
                   {/* Tooltip on hover */}
-                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[#262626]/95 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-white whitespace-nowrap pointer-events-none z-10">
+                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[var(--color-surface-container-highest)]/95 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-white whitespace-nowrap pointer-events-none z-10">
                     {bar.revenue > 0 ? fmt(bar.revenue) : "No data"}
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 flex justify-between text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest px-1">
+            <div className="mt-4 flex justify-between text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest px-1">
               {chartBars.map((bar, i) => (
                 <span key={i} className={bar.isToday ? "text-[var(--color-secondary)]" : ""}>{bar.label}</span>
               ))}
@@ -393,17 +393,17 @@ export default async function AdminDashboardPage() {
           </div>
 
           {/* Pending Driver Approvals */}
-          <div className="bg-[#1a1919] rounded-xl overflow-hidden">
+          <div className="bg-[var(--brand-panel)] rounded-xl overflow-hidden">
             <div className="p-6 flex justify-between items-center">
               <h4 className="font-headline text-lg font-bold text-white">Pending Driver Approvals</h4>
-              <a href="/dashboard/admin/drivers" className="text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
+              <a href="/dashboard/admin/drivers" className="text-[var(--brand-soft)] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
                 View All
               </a>
             </div>
             {/* Mobile list */}
-            <div className="md:hidden divide-y divide-[#494847]/10">
+            <div className="md:hidden divide-y divide-[var(--color-outline-variant)]/10">
               {(pendingDriversRes.data ?? []).length === 0 ? (
-                <p className="py-10 text-center text-[#adaaaa] text-sm">No pending applications</p>
+                <p className="py-10 text-center text-[var(--color-on-surface-variant)] text-sm">No pending applications</p>
               ) : (
                 (pendingDriversRes.data ?? []).map((driver: any) => {
                   const user = Array.isArray(driver.users) ? driver.users[0] : driver.users
@@ -414,19 +414,19 @@ export default async function AdminDashboardPage() {
                     ? vehicles.map((v) => isVehicleType(v.vehicle_type) ? VEHICLE_INFO[v.vehicle_type].label : v.vehicle_type).join(", ")
                     : "No vehicle registered"
                   return (
-                    <a key={driver.id} href={`/dashboard/admin/drivers/${driver.id}`} className="flex items-center gap-3 px-4 py-4 hover:bg-[#262626] transition-colors">
-                      <div className="w-9 h-9 rounded-full bg-[#262626] flex items-center justify-center font-bold text-xs text-white shrink-0">
+                    <a key={driver.id} href={`/dashboard/admin/drivers/${driver.id}`} className="flex items-center gap-3 px-4 py-4 hover:bg-[var(--color-surface-container-highest)] transition-colors">
+                      <div className="w-9 h-9 rounded-full bg-[var(--color-surface-container-highest)] flex items-center justify-center font-bold text-xs text-white shrink-0">
                         {name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white truncate">{name}</p>
-                        <p className="text-xs text-[#adaaaa]">
+                        <p className="text-xs text-[var(--color-on-surface-variant)]">
                           {vehicleSummary}{phone ? ` · ${phone}` : ""}
                         </p>
-                        <p className="text-xs text-[#494847]">{new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
+                        <p className="text-xs text-[var(--color-outline-variant)]">{new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}</p>
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]">Pending</span>
-                      <span className="material-symbols-outlined text-[var(--color-primary)] text-lg shrink-0">chevron_right</span>
+                      <span className="material-symbols-outlined text-[var(--brand-soft)] text-lg shrink-0">chevron_right</span>
                     </a>
                   )
                 })
@@ -435,7 +435,7 @@ export default async function AdminDashboardPage() {
             {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-[#201f1f]/50 text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
+                <thead className="bg-[var(--color-surface-container-high)]/50 text-[var(--color-on-surface-variant)] text-[10px] uppercase tracking-widest font-bold">
                   <tr>
                     <th className="px-6 py-4">Driver</th>
                     <th className="px-6 py-4">Phone</th>
@@ -445,10 +445,10 @@ export default async function AdminDashboardPage() {
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#494847]/10">
+                <tbody className="divide-y divide-[var(--color-outline-variant)]/10">
                   {(pendingDriversRes.data ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-[#adaaaa] text-sm">
+                      <td colSpan={6} className="py-10 text-center text-[var(--color-on-surface-variant)] text-sm">
                         No pending applications
                       </td>
                     </tr>
@@ -459,28 +459,28 @@ export default async function AdminDashboardPage() {
                       const phone = user?.phone ?? "—"
                       const vehicles = (driver.driver_vehicles ?? []) as { vehicle_type: string }[]
                       return (
-                        <tr key={driver.id} className="hover:bg-[#201f1f] transition-colors group">
+                        <tr key={driver.id} className="hover:bg-[var(--color-surface-container-high)] transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-[#262626] flex items-center justify-center font-bold text-xs text-white shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-[var(--color-surface-container-highest)] flex items-center justify-center font-bold text-xs text-white shrink-0">
                                 {name.slice(0, 2).toUpperCase()}
                               </div>
                               <span className="text-sm font-medium text-white">{name}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-sm text-[#adaaaa]">{phone}</td>
-                          <td className="px-6 py-4 text-sm text-[#adaaaa]">
+                          <td className="px-6 py-4 text-sm text-[var(--color-on-surface-variant)]">{phone}</td>
+                          <td className="px-6 py-4 text-sm text-[var(--color-on-surface-variant)]">
                             {vehicles.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {vehicles.map((v, i) => (
-                                  <span key={i} className="px-2 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-bold uppercase">
+                                  <span key={i} className="px-2 py-0.5 rounded bg-[var(--brand-strong)]/10 text-[var(--brand-soft)] text-[10px] font-bold uppercase">
                                     {isVehicleType(v.vehicle_type) ? VEHICLE_INFO[v.vehicle_type].label : v.vehicle_type}
                                   </span>
                                 ))}
                               </div>
-                            ) : <span className="text-[#494847]">—</span>}
+                            ) : <span className="text-[var(--color-outline-variant)]">—</span>}
                           </td>
-                          <td className="px-6 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
+                          <td className="px-6 py-4 text-sm text-[var(--color-on-surface-variant)] whitespace-nowrap">
                             {new Date(driver.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
                           </td>
                           <td className="px-6 py-4">
@@ -492,7 +492,7 @@ export default async function AdminDashboardPage() {
                           <td className="px-6 py-4 text-right">
                             <a
                               href={`/dashboard/admin/drivers/${driver.id}`}
-                              className="p-2 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-lg transition-colors inline-flex"
+                              className="p-2 text-[var(--brand-soft)] hover:bg-[var(--brand-strong)]/10 rounded-lg transition-colors inline-flex"
                               title="Review driver"
                             >
                               <span className="material-symbols-outlined text-lg">arrow_forward</span>
@@ -508,17 +508,17 @@ export default async function AdminDashboardPage() {
           </div>
 
           {/* Recent Orders */}
-          <div className="bg-[#1a1919] rounded-xl overflow-hidden">
+          <div className="bg-[var(--brand-panel)] rounded-xl overflow-hidden">
             <div className="p-6 flex justify-between items-center">
               <h4 className="font-headline text-lg font-bold text-white">Recent Orders</h4>
-              <a href="/dashboard/admin/orders" className="text-[var(--color-primary)] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
+              <a href="/dashboard/admin/orders" className="text-[var(--brand-soft)] text-xs font-bold uppercase tracking-widest hover:underline transition-all">
                 View All
               </a>
             </div>
             {/* Mobile list */}
-            <div className="md:hidden divide-y divide-[#494847]/10">
+            <div className="md:hidden divide-y divide-[var(--color-outline-variant)]/10">
               {recentOrders.length === 0 ? (
-                <p className="py-10 text-center text-[#adaaaa] text-sm">No orders yet</p>
+                <p className="py-10 text-center text-[var(--color-on-surface-variant)] text-sm">No orders yet</p>
               ) : (
                 recentOrders.map((order) => {
                   const customerName = order.customer_id ? (userNameMap[order.customer_id] ?? "Unknown Customer") : "—"
@@ -526,27 +526,27 @@ export default async function AdminDashboardPage() {
                   return (
                     <div key={order.id} className="px-4 py-4 space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-mono text-[var(--color-primary)] truncate">{order.tracking_number ?? "—"}</p>
+                        <p className="text-sm font-mono text-[var(--brand-soft)] truncate">{order.tracking_number ?? "—"}</p>
                         <StatusPill status={order.status} />
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs text-[#adaaaa] truncate">
+                        <p className="text-xs text-[var(--color-on-surface-variant)] truncate">
                           <span className="text-white font-semibold">{customerName}</span>
                           {order.item_description ? ` · ${order.item_description}` : ""}
                         </p>
                         <p className="text-sm font-bold text-white shrink-0">{order.price != null ? fmt(order.price) : "—"}</p>
                       </div>
                       {(order.pickup_address || order.delivery_address) && (
-                        <div className="text-xs text-[#494847] space-y-0.5">
+                        <div className="text-xs text-[var(--color-outline-variant)] space-y-0.5">
                           {order.pickup_address && (
-                            <p className="truncate"><span className="text-[#adaaaa]/60">From:</span> {order.pickup_address}</p>
+                            <p className="truncate"><span className="text-[var(--color-on-surface-variant)]/60">From:</span> {order.pickup_address}</p>
                           )}
                           {order.delivery_address && (
-                            <p className="truncate"><span className="text-[#adaaaa]/60">To:</span> {order.delivery_address}</p>
+                            <p className="truncate"><span className="text-[var(--color-on-surface-variant)]/60">To:</span> {order.delivery_address}</p>
                           )}
                         </div>
                       )}
-                      <p className="text-[10px] text-[#494847]">
+                      <p className="text-[10px] text-[var(--color-outline-variant)]">
                         {new Date(order.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}
                         {order.driver_id ? ` · Driver: ${driverName}` : " · Unassigned"}
                       </p>
@@ -558,7 +558,7 @@ export default async function AdminDashboardPage() {
             {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-[#201f1f]/50 text-[#adaaaa] text-[10px] uppercase tracking-widest font-bold">
+                <thead className="bg-[var(--color-surface-container-high)]/50 text-[var(--color-on-surface-variant)] text-[10px] uppercase tracking-widest font-bold">
                   <tr>
                     <th className="px-5 py-4">Tracking #</th>
                     <th className="px-5 py-4">Customer</th>
@@ -570,10 +570,10 @@ export default async function AdminDashboardPage() {
                     <th className="px-5 py-4">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#494847]/10">
+                <tbody className="divide-y divide-[var(--color-outline-variant)]/10">
                   {recentOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-10 text-center text-[#adaaaa] text-sm">No orders yet</td>
+                      <td colSpan={8} className="py-10 text-center text-[var(--color-on-surface-variant)] text-sm">No orders yet</td>
                     </tr>
                   ) : (
                     recentOrders.map((order) => {
@@ -582,32 +582,32 @@ export default async function AdminDashboardPage() {
                       const pickup   = order.pickup_address   ?? "—"
                       const delivery = order.delivery_address ?? "—"
                       return (
-                        <tr key={order.id} className="hover:bg-[#201f1f] transition-colors">
-                          <td className="px-5 py-4 font-mono text-sm text-[var(--color-primary)] whitespace-nowrap">{order.tracking_number ?? "—"}</td>
+                        <tr key={order.id} className="hover:bg-[var(--color-surface-container-high)] transition-colors">
+                          <td className="px-5 py-4 font-mono text-sm text-[var(--brand-soft)] whitespace-nowrap">{order.tracking_number ?? "—"}</td>
                           <td className="px-5 py-4 text-sm text-white font-medium whitespace-nowrap">{customerName}</td>
-                          <td className="px-5 py-4 text-sm text-[#adaaaa] max-w-[120px]">
-                            <span className="truncate block" title={order.item_description ?? ""}>{order.item_description ?? <span className="text-[#494847]">—</span>}</span>
+                          <td className="px-5 py-4 text-sm text-[var(--color-on-surface-variant)] max-w-[120px]">
+                            <span className="truncate block" title={order.item_description ?? ""}>{order.item_description ?? <span className="text-[var(--color-outline-variant)]">—</span>}</span>
                           </td>
                           <td className="px-5 py-4 max-w-[180px]">
                             <div className="space-y-0.5">
-                              <p className="text-xs text-[#adaaaa] truncate" title={pickup}>
+                              <p className="text-xs text-[var(--color-on-surface-variant)] truncate" title={pickup}>
                                 <span className="text-[#6ee7b7] font-bold text-[10px]">FROM </span>{pickup}
                               </p>
-                              <p className="text-xs text-[#adaaaa] truncate" title={delivery}>
-                                <span className="text-[var(--color-primary)] font-bold text-[10px]">TO </span>{delivery}
+                              <p className="text-xs text-[var(--color-on-surface-variant)] truncate" title={delivery}>
+                                <span className="text-[var(--brand-soft)] font-bold text-[10px]">TO </span>{delivery}
                               </p>
                             </div>
                           </td>
-                          <td className="px-5 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
-                            {order.driver_id ? driverName : <span className="text-[#494847] text-xs">Unassigned</span>}
+                          <td className="px-5 py-4 text-sm text-[var(--color-on-surface-variant)] whitespace-nowrap">
+                            {order.driver_id ? driverName : <span className="text-[var(--color-outline-variant)] text-xs">Unassigned</span>}
                           </td>
                           <td className="px-5 py-4">
                             <StatusPill status={order.status} />
                           </td>
                           <td className="px-5 py-4 text-sm font-bold text-white whitespace-nowrap">
-                            {order.price != null ? fmt(order.price) : <span className="text-[#494847]">—</span>}
+                            {order.price != null ? fmt(order.price) : <span className="text-[var(--color-outline-variant)]">—</span>}
                           </td>
-                          <td className="px-5 py-4 text-sm text-[#adaaaa] whitespace-nowrap">
+                          <td className="px-5 py-4 text-sm text-[var(--color-on-surface-variant)] whitespace-nowrap">
                             {new Date(order.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric", year: "numeric" })}
                           </td>
                         </tr>
@@ -622,36 +622,36 @@ export default async function AdminDashboardPage() {
 
         {/* ── Right column: Activity Feed + Fleet Stats ── */}
         <div className="col-span-1 lg:col-span-4">
-          <div className="bg-[#1a1919]/60 backdrop-blur-xl border border-[#494847]/15 rounded-xl h-full flex flex-col">
-            <div className="p-6 border-b border-[#494847]/10">
+          <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 rounded-xl h-full flex flex-col">
+            <div className="p-6 border-b border-[var(--color-outline-variant)]/10">
               <h4 className="font-headline text-lg font-bold text-white">Activity Feed</h4>
-              <p className="text-[#adaaaa] text-[11px] uppercase tracking-widest mt-1">Live Platform Events</p>
+              <p className="text-[var(--color-on-surface-variant)] text-[11px] uppercase tracking-widest mt-1">Live Platform Events</p>
             </div>
 
             <div className="p-6 flex-1 overflow-y-auto space-y-6">
               {feed.length === 0 ? (
                 <div className="py-10 text-center">
-                  <span className="material-symbols-outlined text-[#494847] text-3xl mb-3 block">notifications_none</span>
+                  <span className="material-symbols-outlined text-[var(--color-outline-variant)] text-3xl mb-3 block">notifications_none</span>
                   <p className="text-sm font-bold text-white mb-1">No activity yet</p>
-                  <p className="text-xs text-[#adaaaa]">Platform events will appear here as deliveries are processed.</p>
+                  <p className="text-xs text-[var(--color-on-surface-variant)]">Platform events will appear here as deliveries are processed.</p>
                 </div>
               ) : (
                 feed.map((item, i) => (
                   <div key={item.id} className="flex gap-4 relative">
                     {i < feed.length - 1 && (
-                      <div className="absolute left-[11px] top-6 bottom-[-24px] w-[1px] border-l border-dashed border-[#494847]" />
+                      <div className="absolute left-[11px] top-6 bottom-[-24px] w-[1px] border-l border-dashed border-[var(--color-outline-variant)]" />
                     )}
                     <div className={`w-6 h-6 rounded-full ${item.dotBg} flex items-center justify-center relative z-10 shrink-0 mt-0.5`}>
                       {item.dot ? (
                         <div className={`w-2 h-2 ${item.dot} rounded-full ${item.pulse ? "animate-pulse shadow-[0_0_8px_rgba(var(--brand-rgb),0.8)]" : ""}`} />
                       ) : (
-                        <span className="material-symbols-outlined text-[14px] text-[#adaaaa]">{item.icon}</span>
+                        <span className="material-symbols-outlined text-[14px] text-[var(--color-on-surface-variant)]">{item.icon}</span>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-white leading-tight">{item.title}</p>
-                      <p className="text-xs text-[#adaaaa] mt-0.5 leading-relaxed">{item.body}</p>
-                      <span className="text-[10px] text-[#adaaaa]/60 font-bold mt-1 inline-block uppercase">{item.time}</span>
+                      <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5 leading-relaxed">{item.body}</p>
+                      <span className="text-[10px] text-[var(--color-on-surface-variant)]/60 font-bold mt-1 inline-block uppercase">{item.time}</span>
                     </div>
                   </div>
                 ))
@@ -659,16 +659,16 @@ export default async function AdminDashboardPage() {
             </div>
 
             {/* Fleet Stats — real data */}
-            <div className="p-6 border-t border-[#494847]/10">
+            <div className="p-6 border-t border-[var(--color-outline-variant)]/10">
               <h5 className="text-xs font-bold font-headline text-white mb-4 uppercase tracking-widest">Fleet Stats</h5>
               <div className="space-y-4">
                 {fleetBars.map((bar) => (
                   <div key={bar.label} className="space-y-1.5">
                     <div className="flex justify-between text-xs">
                       <span className="font-bold text-white">{bar.label}</span>
-                      <span className="text-[#adaaaa]">{bar.pct}% <span className="text-[#494847]">· {bar.subtext}</span></span>
+                      <span className="text-[var(--color-on-surface-variant)]">{bar.pct}% <span className="text-[var(--color-outline-variant)]">· {bar.subtext}</span></span>
                     </div>
-                    <div className="h-1 w-full bg-[#262626] rounded-full overflow-hidden">
+                    <div className="h-1 w-full bg-[var(--color-surface-container-highest)] rounded-full overflow-hidden">
                       <div
                         className={`h-full ${bar.color} rounded-full transition-all`}
                         style={{ width: `${bar.pct}%` }}
@@ -688,13 +688,13 @@ export default async function AdminDashboardPage() {
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
     delivered:  { label: "Delivered",  className: "bg-[#6ee7b7]/10 text-[#6ee7b7]"  },
-    requested:  { label: "Requested",  className: "bg-[#adaaaa]/10 text-[#adaaaa]"  },
+    requested:  { label: "Requested",  className: "bg-[var(--color-on-surface-variant)]/10 text-[var(--color-on-surface-variant)]"  },
     accepted:   { label: "Accepted",   className: "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]"  },
-    collected:  { label: "Collected",  className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"  },
-    in_transit: { label: "In Transit", className: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"  },
+    collected:  { label: "Collected",  className: "bg-[var(--brand-strong)]/10 text-[var(--brand-soft)]"  },
+    in_transit: { label: "In Transit", className: "bg-[var(--brand-strong)]/10 text-[var(--brand-soft)]"  },
     cancelled:  { label: "Cancelled",  className: "bg-[#ff6e84]/10 text-[#ff6e84]"  },
   }
-  const cfg = map[status] ?? { label: status, className: "bg-[#262626] text-[#adaaaa]" }
+  const cfg = map[status] ?? { label: status, className: "bg-[var(--color-surface-container-highest)] text-[var(--color-on-surface-variant)]" }
   return (
     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${cfg.className}`}>
       {cfg.label}

@@ -20,20 +20,20 @@ import {
 } from "@/app/actions/marketing"
 import type { PromoCode } from "@/app/actions/promotions"
 
-const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-const LABEL = "text-xs font-semibold text-[#adaaaa] uppercase tracking-wider"
+const INPUT = "w-full bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:border-[var(--brand-strong)]/40 focus:ring-1 focus:ring-[var(--brand-strong)]/20 transition-all"
+const LABEL = "text-xs font-semibold text-[var(--color-on-surface-variant)] uppercase tracking-wider"
 
 function Toggle({ checked, onChange, label, description }: { checked: boolean; onChange: (v: boolean) => void; label: string; description?: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
         <p className="text-sm font-bold text-white">{label}</p>
-        {description && <p className="text-xs text-[#adaaaa] mt-0.5">{description}</p>}
+        {description && <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">{description}</p>}
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${checked ? "bg-[#6ee7b7]" : "bg-[#494847]/40"}`}
+        className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${checked ? "bg-[#6ee7b7]" : "bg-[var(--color-outline-variant)]/40"}`}
       >
         <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`} />
       </button>
@@ -53,13 +53,13 @@ function SegmentPicker({
   return (
     <div className="space-y-3">
       <label className={LABEL}>Audience</label>
-      <div className="flex rounded-xl bg-[#262626] border border-[#494847]/20 p-1">
+      <div className="flex rounded-xl bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 p-1">
         {([
           { key: "all" as const, label: "All Customers" },
           { key: "inactive" as const, label: "Inactive Customers" },
         ]).map((s) => (
           <button key={s.key} type="button" onClick={() => setSegment(s.key)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${segment === s.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${segment === s.key ? "bg-[var(--brand-strong)] text-[var(--brand-ink)]" : "text-[var(--color-on-surface-variant)]"}`}>
             {s.label}
           </button>
         ))}
@@ -136,7 +136,7 @@ function ComposeSection({ promoCodes, onSent }: { promoCodes: PromoCode[]; onSen
 
   return (
     <div className="max-w-2xl space-y-5">
-      <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4">
+      <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5 space-y-4">
         <div className="space-y-1.5">
           <label className={LABEL}>Campaign Title (internal)</label>
           <input className={INPUT} placeholder="Spring sale announcement" value={form.title} onChange={(e) => set("title", e.target.value)} />
@@ -158,17 +158,17 @@ function ComposeSection({ promoCodes, onSent }: { promoCodes: PromoCode[]; onSen
         </div>
       </div>
 
-      <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4">
+      <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5 space-y-4">
         <div className="space-y-1.5">
           <label className={LABEL}>Channel</label>
-          <div className="flex rounded-xl bg-[#262626] border border-[#494847]/20 p-1">
+          <div className="flex rounded-xl bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 p-1">
             {([
               { key: "push" as const, label: "Push Only" },
               { key: "email" as const, label: "Email Only" },
               { key: "both" as const, label: "Push + Email" },
             ]).map((c) => (
               <button key={c.key} type="button" onClick={() => set("channel", c.key)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.channel === c.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.channel === c.key ? "bg-[var(--brand-strong)] text-[var(--brand-ink)]" : "text-[var(--color-on-surface-variant)]"}`}>
                 {c.label}
               </button>
             ))}
@@ -178,7 +178,7 @@ function ComposeSection({ promoCodes, onSent }: { promoCodes: PromoCode[]; onSen
         <SegmentPicker channel={form.channel} segment={form.segment} setSegment={(s) => set("segment", s)} inactiveDays={form.inactiveDays ?? 30} setInactiveDays={(n) => set("inactiveDays", n)} />
 
         {preview && (
-          <div className="rounded-xl bg-[#262626] border border-[#494847]/20 px-4 py-3 text-xs text-[#adaaaa] space-y-0.5">
+          <div className="rounded-xl bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 px-4 py-3 text-xs text-[var(--color-on-surface-variant)] space-y-0.5">
             <p><span className="text-white font-bold">{preview.willReceive}</span> of {preview.total} customer{preview.total !== 1 ? "s" : ""} in this segment will actually receive this.</p>
             {preview.skippedOptedOut > 0 && <p>{preview.skippedOptedOut} skipped — not opted in to marketing.</p>}
             {preview.skippedNoContact > 0 && <p>{preview.skippedNoContact} skipped — opted in but no email on file.</p>}
@@ -192,7 +192,7 @@ function ComposeSection({ promoCodes, onSent }: { promoCodes: PromoCode[]; onSen
       <button
         onClick={handleSend}
         disabled={isPending || !form.title.trim() || !form.subject.trim() || !form.message.trim()}
-        className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
+        className="px-5 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
       >
         {isPending ? "Sending…" : "Send Campaign"}
       </button>
@@ -207,18 +207,18 @@ function ComposeSection({ promoCodes, onSent }: { promoCodes: PromoCode[]; onSen
 function CampaignHistorySection({ campaigns }: { campaigns: MarketingCampaign[] }) {
   if (campaigns.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-[#494847]/30 bg-[#1a1919] px-6 py-16 text-center">
-        <span className="material-symbols-outlined text-4xl text-[#494847] mb-3 block">campaign</span>
+      <div className="rounded-xl border border-dashed border-[var(--color-outline-variant)]/30 bg-[var(--brand-panel)] px-6 py-16 text-center">
+        <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)] mb-3 block">campaign</span>
         <p className="text-sm font-semibold text-white">No campaigns sent yet</p>
-        <p className="mt-1 text-xs text-[#adaaaa]">Compose your first broadcast to see it here.</p>
+        <p className="mt-1 text-xs text-[var(--color-on-surface-variant)]">Compose your first broadcast to see it here.</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl overflow-hidden overflow-x-auto">
+    <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl overflow-hidden overflow-x-auto">
       <table className="w-full text-left min-w-[760px]">
-        <thead className="bg-[#131313] text-[10px] uppercase tracking-widest font-bold text-[#adaaaa]">
+        <thead className="bg-[var(--brand-bg)] text-[10px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">
           <tr>
             <th className="px-4 py-3">Campaign</th>
             <th className="px-4 py-3">Type</th>
@@ -231,27 +231,27 @@ function CampaignHistorySection({ campaigns }: { campaigns: MarketingCampaign[] 
             <th className="px-4 py-3">Date</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#494847]/10">
+        <tbody className="divide-y divide-[var(--color-outline-variant)]/10">
           {campaigns.map((c) => (
-            <tr key={c.id} className="hover:bg-[#201f1f]/40">
+            <tr key={c.id} className="hover:bg-[var(--color-surface-container-high)]/40">
               <td className="px-4 py-3">
                 <p className="text-sm font-bold text-white">{c.title}</p>
-                <p className="text-[10px] text-[#adaaaa] truncate max-w-[220px]">{c.subject}</p>
+                <p className="text-[10px] text-[var(--color-on-surface-variant)] truncate max-w-[220px]">{c.subject}</p>
               </td>
-              <td className="px-4 py-3 text-xs text-[#adaaaa]">{c.type === "auto_reengagement" ? "Automatic" : "Manual"}</td>
-              <td className="px-4 py-3 text-xs text-[#adaaaa] capitalize">{c.channel === "both" ? "Push + Email" : c.channel}</td>
-              <td className="px-4 py-3 text-xs text-[#adaaaa]">{c.segment === "inactive" ? `Inactive ${c.inactive_days}d+` : "All"}</td>
+              <td className="px-4 py-3 text-xs text-[var(--color-on-surface-variant)]">{c.type === "auto_reengagement" ? "Automatic" : "Manual"}</td>
+              <td className="px-4 py-3 text-xs text-[var(--color-on-surface-variant)] capitalize">{c.channel === "both" ? "Push + Email" : c.channel}</td>
+              <td className="px-4 py-3 text-xs text-[var(--color-on-surface-variant)]">{c.segment === "inactive" ? `Inactive ${c.inactive_days}d+` : "All"}</td>
               <td className="px-4 py-3 text-sm text-green-400 font-bold">{c.sent_count}</td>
               <td className="px-4 py-3 text-sm text-[#ff6e84] font-bold">{c.failed_count}</td>
-              <td className="px-4 py-3 text-sm text-[#adaaaa]">{c.skipped_count}</td>
+              <td className="px-4 py-3 text-sm text-[var(--color-on-surface-variant)]">{c.skipped_count}</td>
               <td className="px-4 py-3">
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                  c.status === "sent" ? "bg-green-500/10 text-green-400" : c.status === "failed" ? "bg-[#ff6e84]/10 text-[#ff6e84]" : "bg-[#494847]/20 text-[#adaaaa]"
+                  c.status === "sent" ? "bg-green-500/10 text-green-400" : c.status === "failed" ? "bg-[#ff6e84]/10 text-[#ff6e84]" : "bg-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)]"
                 }`}>
                   {c.status}
                 </span>
               </td>
-              <td className="px-4 py-3 text-xs text-[#adaaaa]">{new Date(c.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+              <td className="px-4 py-3 text-xs text-[var(--color-on-surface-variant)]">{new Date(c.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
             </tr>
           ))}
         </tbody>
@@ -295,7 +295,7 @@ function ReengagementSection({ initial, promoCodes }: { initial: ReengagementSet
 
   return (
     <div className="max-w-2xl space-y-5">
-      <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5">
+      <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5">
         <Toggle
           checked={form.enabled}
           onChange={(v) => set("enabled", v)}
@@ -304,7 +304,7 @@ function ReengagementSection({ initial, promoCodes }: { initial: ReengagementSet
         />
       </div>
 
-      <div className={`bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5 space-y-4 transition-opacity ${!form.enabled ? "opacity-50" : ""}`}>
+      <div className={`bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5 space-y-4 transition-opacity ${!form.enabled ? "opacity-50" : ""}`}>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className={LABEL}>Inactive For (days)</label>
@@ -312,14 +312,14 @@ function ReengagementSection({ initial, promoCodes }: { initial: ReengagementSet
           </div>
           <div className="space-y-1.5">
             <label className={LABEL}>Channel</label>
-            <div className="flex rounded-xl bg-[#262626] border border-[#494847]/20 p-1">
+            <div className="flex rounded-xl bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 p-1">
               {([
                 { key: "push" as const, label: "Push" },
                 { key: "email" as const, label: "Email" },
                 { key: "both" as const, label: "Both" },
               ]).map((c) => (
                 <button key={c.key} type="button" onClick={() => set("channel", c.key)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.channel === c.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}>
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${form.channel === c.key ? "bg-[var(--brand-strong)] text-[var(--brand-ink)]" : "text-[var(--color-on-surface-variant)]"}`}>
                   {c.label}
                 </button>
               ))}
@@ -346,7 +346,7 @@ function ReengagementSection({ initial, promoCodes }: { initial: ReengagementSet
       {error && <p className="text-xs text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 rounded-xl px-4 py-3">{error}</p>}
 
       <div className="flex items-center gap-3">
-        <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60">
+        <button onClick={handleSave} disabled={isPending} className="px-5 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60">
           {isPending ? "Saving…" : "Save Settings"}
         </button>
         {saved && <span className="text-xs text-green-400 font-semibold flex items-center gap-1"><span className="material-symbols-outlined text-sm">check_circle</span>Saved</span>}
@@ -381,16 +381,16 @@ export function MarketingPanel({
     <div className="px-4 md:px-8 py-6 md:py-8">
       <div className="mb-6 md:mb-8">
         <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">Customer Marketing</h1>
-        <p className="text-[#adaaaa] mt-1">Broadcast promotions and updates, and manage automatic re-engagement reminders — always respecting each customer's opt-in.</p>
+        <p className="text-[var(--color-on-surface-variant)] mt-1">Broadcast promotions and updates, and manage automatic re-engagement reminders — always respecting each customer's opt-in.</p>
       </div>
 
-      <div className="flex rounded-xl bg-[#1a1919] border border-[#494847]/20 p-1 w-fit mb-6 overflow-x-auto">
+      <div className="flex rounded-xl bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 p-1 w-fit mb-6 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-              tab === t.key ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[#adaaaa] hover:text-white"
+              tab === t.key ? "bg-[var(--brand-strong)] text-[var(--brand-ink)]" : "text-[var(--color-on-surface-variant)] hover:text-white"
             }`}
           >
             <span className="material-symbols-outlined text-sm">{t.icon}</span>

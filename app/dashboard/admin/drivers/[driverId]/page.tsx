@@ -29,8 +29,8 @@ function StatusPill({ status }: { status: string }) {
       </span>
     )
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
-      <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />Pending Review
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[var(--brand-strong)]/10 text-[var(--brand-soft)] border border-[var(--brand-strong)]/20">
+      <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-strong)] animate-pulse" />Pending Review
     </span>
   )
 }
@@ -70,7 +70,7 @@ export default async function AdminDriverDetailPage({
       <div className="flex items-center gap-3 mb-8 md:mb-10">
         <Link
           href="/dashboard/admin/drivers"
-          className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#1a1919] border border-[#494847]/15 text-[#adaaaa] hover:text-white transition-colors"
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 text-[var(--color-on-surface-variant)] hover:text-white transition-colors"
         >
           <span className="material-symbols-outlined text-lg">arrow_back</span>
         </Link>
@@ -78,7 +78,7 @@ export default async function AdminDriverDetailPage({
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">
             {driver.full_name}
           </h1>
-          <p className="text-[#adaaaa] mt-0.5">Driver profile and submitted documents.</p>
+          <p className="text-[var(--color-on-surface-variant)] mt-0.5">Driver profile and submitted documents.</p>
         </div>
       </div>
 
@@ -86,19 +86,19 @@ export default async function AdminDriverDetailPage({
         {/* Left column */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Profile card */}
-          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
+          <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
-                <span className="text-lg font-bold text-[var(--color-primary)]">{initials}</span>
+              <div className="w-14 h-14 rounded-full bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 flex items-center justify-center shrink-0">
+                <span className="text-lg font-bold text-[var(--brand-soft)]">{initials}</span>
               </div>
               <div className="min-w-0">
                 <p className="text-base font-bold text-white">{driver.full_name}</p>
-                <p className="text-xs text-[#adaaaa] mt-0.5">{driver.email || "No email"}</p>
+                <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">{driver.email || "No email"}</p>
               </div>
               <div className="ml-auto"><StatusPill status={driver.status ?? "pending"} /></div>
             </div>
 
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Personal Info</p>
+            <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-4">Personal Info</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {[
                 { label: "Phone", value: driver.phone ?? "—" },
@@ -107,7 +107,7 @@ export default async function AdminDriverDetailPage({
                 { label: "Total Earned", value: fmt(driver.totalEarned) },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <p className="text-[10px] text-[#adaaaa] uppercase font-bold mb-1">{label}</p>
+                  <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold mb-1">{label}</p>
                   <p className="text-sm font-semibold text-white">{value}</p>
                 </div>
               ))}
@@ -115,25 +115,25 @@ export default async function AdminDriverDetailPage({
           </div>
 
           {/* Vehicles card */}
-          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
+          <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="material-symbols-outlined text-[var(--color-primary)]">directions_car</span>
+              <span className="material-symbols-outlined text-[var(--brand-soft)]">directions_car</span>
               <p className="text-sm font-bold text-white">Vehicles</p>
-              <span className="ml-auto text-xs text-[#adaaaa]">{vehicles.length} registered</span>
+              <span className="ml-auto text-xs text-[var(--color-on-surface-variant)]">{vehicles.length} registered</span>
             </div>
             {vehicles.length === 0 ? (
-              <p className="text-xs text-[#adaaaa]">No vehicles registered.</p>
+              <p className="text-xs text-[var(--color-on-surface-variant)]">No vehicles registered.</p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {vehicles.map((v) => (
-                  <div key={v.id} className="flex items-start gap-2.5 bg-[#131313] border border-[#494847]/15 rounded-lg px-3 py-2.5">
+                  <div key={v.id} className="flex items-start gap-2.5 bg-[var(--brand-bg)] border border-[var(--color-outline-variant)]/15 rounded-lg px-3 py-2.5">
                     <span className="text-base shrink-0">{VEHICLE_INFO[v.vehicle_type].emoji}</span>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-white truncate">
                         {VEHICLE_INFO[v.vehicle_type].label}
-                        {(v.make || v.model) && <span className="text-[#adaaaa] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
+                        {(v.make || v.model) && <span className="text-[var(--color-on-surface-variant)] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
                       </p>
-                      <p className="text-[10px] text-[#adaaaa] truncate">
+                      <p className="text-[10px] text-[var(--color-on-surface-variant)] truncate">
                         {[v.colour, v.registration_number].filter(Boolean).join(" · ") || "No details"}
                       </p>
                     </div>
@@ -144,11 +144,11 @@ export default async function AdminDriverDetailPage({
           </div>
 
           {/* Documents card */}
-          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
+          <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-6">
             <div className="flex items-center gap-2 mb-5">
-              <span className="material-symbols-outlined text-[var(--color-primary)]">folder_open</span>
+              <span className="material-symbols-outlined text-[var(--brand-soft)]">folder_open</span>
               <p className="text-sm font-bold text-white">Submitted Documents</p>
-              <span className="ml-auto text-xs text-[#adaaaa]">{documents.length} file{documents.length !== 1 ? "s" : ""}</span>
+              <span className="ml-auto text-xs text-[var(--color-on-surface-variant)]">{documents.length} file{documents.length !== 1 ? "s" : ""}</span>
             </div>
             <DriverDocumentsPanel documents={documents} />
           </div>
@@ -157,11 +157,11 @@ export default async function AdminDriverDetailPage({
         {/* Right column */}
         <div className="flex flex-col gap-5">
           {/* Verification actions */}
-          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5">
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Verification</p>
+          <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5">
+            <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-4">Verification</p>
             <div className="mb-4"><StatusPill status={driver.status ?? "pending"} /></div>
             {documents.length === 0 && (
-              <p className="text-xs text-[#adaaaa] bg-[#262626] rounded-xl px-4 py-3 mb-4">
+              <p className="text-xs text-[var(--color-on-surface-variant)] bg-[var(--color-surface-container-highest)] rounded-xl px-4 py-3 mb-4">
                 Driver has not uploaded any documents yet.
               </p>
             )}
@@ -190,34 +190,34 @@ export default async function AdminDriverDetailPage({
           </div>
 
           {/* Earnings summary */}
-          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5">
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Earnings Summary</p>
+          <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5">
+            <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-4">Earnings Summary</p>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-[#adaaaa]">Total Earned</span>
-                <span className="text-sm font-bold text-[var(--color-primary)]">{fmt(driver.totalEarned)}</span>
+                <span className="text-sm text-[var(--color-on-surface-variant)]">Total Earned</span>
+                <span className="text-sm font-bold text-[var(--brand-soft)]">{fmt(driver.totalEarned)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-[#adaaaa]">Jobs Completed</span>
+                <span className="text-sm text-[var(--color-on-surface-variant)]">Jobs Completed</span>
                 <span className="text-sm font-bold text-white">{driver.jobsCompleted}</span>
               </div>
             </div>
           </div>
 
           {/* Quick links */}
-          <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-5">
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Quick Links</p>
+          <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-5">
+            <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-4">Quick Links</p>
             <div className="flex flex-col gap-2">
               <Link
                 href="/dashboard/admin/verification"
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-white rounded-xl text-xs font-semibold transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)] hover:text-white rounded-xl text-xs font-semibold transition-all"
               >
                 <span className="material-symbols-outlined text-sm">verified_user</span>
                 Verification Queue
               </Link>
               <Link
                 href="/dashboard/admin/drivers"
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#262626] border border-[#494847]/20 text-[#adaaaa] hover:text-white rounded-xl text-xs font-semibold transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)] hover:text-white rounded-xl text-xs font-semibold transition-all"
               >
                 <span className="material-symbols-outlined text-sm">badge</span>
                 All Drivers

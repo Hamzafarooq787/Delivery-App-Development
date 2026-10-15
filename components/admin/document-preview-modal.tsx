@@ -50,40 +50,40 @@ export function DocumentPreviewModal({ doc, onClose }: { doc: Doc; onClose: () =
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-3xl max-h-[90vh] rounded-2xl border border-[#494847]/20 shadow-2xl overflow-hidden bg-[#1a1919] flex flex-col">
+      <div className="relative w-full max-w-3xl max-h-[90vh] rounded-2xl border border-[var(--color-outline-variant)]/20 shadow-2xl overflow-hidden bg-[var(--brand-panel)] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-outline-variant)]/15 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[var(--color-primary)]">description</span>
+            <span className="material-symbols-outlined text-[var(--brand-soft)]">description</span>
             <div>
               <p className="text-sm font-bold text-white">{label}</p>
-              <p className="text-[10px] text-[#adaaaa] uppercase font-bold tracking-wider">Document Preview</p>
+              <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold tracking-wider">Document Preview</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {/* Zoom controls (images only) */}
             {img && (
-              <div className="flex items-center gap-1 bg-[#262626] border border-[#494847]/20 rounded-lg px-1">
+              <div className="flex items-center gap-1 bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 rounded-lg px-1">
                 <button
                   onClick={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
                   disabled={zoom <= 0.25}
-                  className="p-1.5 text-[#adaaaa] hover:text-white disabled:opacity-30 transition-colors"
+                  className="p-1.5 text-[var(--color-on-surface-variant)] hover:text-white disabled:opacity-30 transition-colors"
                   title="Zoom out ( - )"
                 >
                   <span className="material-symbols-outlined text-sm">zoom_out</span>
                 </button>
-                <span className="text-[10px] font-bold text-[#adaaaa] min-w-[36px] text-center">{Math.round(zoom * 100)}%</span>
+                <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] min-w-[36px] text-center">{Math.round(zoom * 100)}%</span>
                 <button
                   onClick={() => setZoom((z) => Math.min(z + 0.25, 4))}
                   disabled={zoom >= 4}
-                  className="p-1.5 text-[#adaaaa] hover:text-white disabled:opacity-30 transition-colors"
+                  className="p-1.5 text-[var(--color-on-surface-variant)] hover:text-white disabled:opacity-30 transition-colors"
                   title="Zoom in ( + )"
                 >
                   <span className="material-symbols-outlined text-sm">zoom_in</span>
                 </button>
                 <button
                   onClick={() => setZoom(1)}
-                  className="p-1.5 text-[#adaaaa] hover:text-white transition-colors border-l border-[#494847]/20"
+                  className="p-1.5 text-[var(--color-on-surface-variant)] hover:text-white transition-colors border-l border-[var(--color-outline-variant)]/20"
                   title="Reset zoom ( 0 )"
                 >
                   <span className="material-symbols-outlined text-sm">fit_screen</span>
@@ -92,14 +92,14 @@ export function DocumentPreviewModal({ doc, onClose }: { doc: Doc; onClose: () =
             )}
             <button
               onClick={() => triggerDownload(doc.file_url, filename)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs rounded-lg hover:bg-[var(--color-primary-fixed-dim)] transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-xs rounded-lg hover:bg-[var(--color-primary-fixed-dim)] transition-all"
             >
               <span className="material-symbols-outlined text-sm">download</span>
               Download
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-[#adaaaa] hover:text-white hover:bg-[#262626] rounded-lg transition-all"
+              className="p-2 text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] rounded-lg transition-all"
             >
               <span className="material-symbols-outlined text-sm">close</span>
             </button>
@@ -107,7 +107,7 @@ export function DocumentPreviewModal({ doc, onClose }: { doc: Doc; onClose: () =
         </div>
 
         {/* Preview */}
-        <div className="flex-1 overflow-auto bg-[#131313] flex items-center justify-center min-h-[300px]">
+        <div className="flex-1 overflow-auto bg-[var(--brand-bg)] flex items-center justify-center min-h-[300px]">
           {img ? (
             <div
               className="transition-transform duration-200 origin-center cursor-zoom-in"
@@ -131,8 +131,8 @@ export function DocumentPreviewModal({ doc, onClose }: { doc: Doc; onClose: () =
         </div>
 
         {img && zoom > 1 && (
-          <div className="shrink-0 px-5 py-2 bg-[#131313] border-t border-[#494847]/10 text-center">
-            <p className="text-[10px] text-[#494847]">Click image to zoom in · Press <kbd className="px-1 bg-[#1a1919] rounded text-[#adaaaa]">-</kbd> to zoom out · <kbd className="px-1 bg-[#1a1919] rounded text-[#adaaaa]">0</kbd> to reset</p>
+          <div className="shrink-0 px-5 py-2 bg-[var(--brand-bg)] border-t border-[var(--color-outline-variant)]/10 text-center">
+            <p className="text-[10px] text-[var(--color-outline-variant)]">Click image to zoom in · Press <kbd className="px-1 bg-[var(--brand-panel)] rounded text-[var(--color-on-surface-variant)]">-</kbd> to zoom out · <kbd className="px-1 bg-[var(--brand-panel)] rounded text-[var(--color-on-surface-variant)]">0</kbd> to reset</p>
           </div>
         )}
       </div>

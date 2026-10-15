@@ -41,14 +41,14 @@ export function AdminSidebar({ onClose, user, pendingVerifications = 0, pendingR
   }
 
   return (
-    <aside className="flex h-full w-64 flex-col bg-[#0e0e0e] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
+    <aside className="flex h-full w-64 flex-col bg-[var(--brand-panel)] shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
       <div className="px-6 py-6 mb-4 flex items-start justify-between">
         <div>
           <BrandLogo />
-          <p className="text-[10px] text-[#adaaaa] tracking-[0.2em] uppercase mt-1 font-headline">Command Center</p>
+          <p className="text-[10px] text-[var(--color-on-surface-variant)] tracking-[0.2em] uppercase mt-1 font-headline">Command Center</p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="lg:hidden text-[#adaaaa] hover:text-white mt-1" aria-label="Close menu">
+          <button onClick={onClose} className="lg:hidden text-[var(--color-on-surface-variant)] hover:text-white mt-1" aria-label="Close menu">
             <span className="material-symbols-outlined">close</span>
           </button>
         )}
@@ -69,14 +69,14 @@ export function AdminSidebar({ onClose, user, pendingVerifications = 0, pendingR
               className={cn(
                 "flex items-center gap-3 px-6 py-3 text-sm font-headline tracking-tight transition-all duration-200",
                 isActive
-                  ? "text-[var(--color-primary)] bg-[#131313] border-l-4 border-[var(--color-primary)]"
-                  : "text-[#adaaaa] hover:text-white hover:bg-[#201f1f] border-l-4 border-transparent"
+                  ? "text-[var(--brand-soft)] bg-[var(--brand-panel)] border-l-4 border-[var(--brand-strong)]"
+                  : "text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-high)] border-l-4 border-transparent"
               )}
             >
               <span className="material-symbols-outlined text-lg">{item.icon}</span>
               <span className="flex-1">{item.label}</span>
               {badgeCount > 0 && (
-                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[10px] font-black">
+                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--brand-strong)] text-[var(--brand-ink)] text-[10px] font-black">
                   {badgeCount > 99 ? "99+" : badgeCount}
                 </span>
               )}
@@ -86,11 +86,11 @@ export function AdminSidebar({ onClose, user, pendingVerifications = 0, pendingR
       </nav>
 
       <div className="px-6 pt-6 pb-6 mt-auto">
-        <button className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-fixed-dim)] text-[var(--color-on-primary)] font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-[0px_0px_15px_rgba(var(--brand-rgb),0.2)]">
+        <button className="w-full bg-[var(--brand-strong)] hover:bg-[var(--color-primary-fixed-dim)] text-[var(--brand-ink)] font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-[0px_0px_15px_rgba(var(--brand-rgb),0.2)]">
           <span className="material-symbols-outlined text-base">add_circle</span>
           <span className="text-xs uppercase tracking-widest">New Shipment</span>
         </button>
-        <LogoutButton className="mt-4 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#adaaaa] hover:text-white hover:bg-[#201f1f] rounded-lg transition-colors disabled:opacity-60">
+        <LogoutButton className="mt-4 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-high)] rounded-lg transition-colors disabled:opacity-60">
           <span className="material-symbols-outlined text-base">logout</span>
           <span className="font-headline tracking-tight">Sign Out</span>
         </LogoutButton>
