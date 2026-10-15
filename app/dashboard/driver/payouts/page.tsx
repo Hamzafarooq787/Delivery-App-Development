@@ -1,3 +1,5 @@
+import {FeeAgreement} from '@/components/driver/fee-agreement'
+import {PaymentAccountButton} from "@/components/driver/payment-account-button"
 import { createClient } from "@/lib/supabase/server"
 import { RequestPayoutButton } from "@/components/driver/request-payout-button"
 import { SubTabs } from "@/components/ui/sub-tabs"
@@ -24,7 +26,7 @@ export default async function DriverPayoutsPage() {
     // (jobs done before the auto-earnings feature was introduced)
     supabase
       .from("delivery_requests")
-      .select("id, tracking_number, price, created_at")
+      .select("id, tracking_number, price, launch_quote, created_at")
       .eq("driver_id", user?.id ?? "")
       .eq("status", "delivered")
       .not("price", "is", null)
@@ -56,8 +58,8 @@ export default async function DriverPayoutsPage() {
     .filter(d => !coveredDeliveryIds.has(d.id))
     .map(d => ({
       id:                `synthetic-${d.id}`,
-      amount:            d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null,
-      commission_amount: d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null,
+      amount:            d.launch_quote?.driverAmount ?? (d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null),
+      commission_amount: d.launch_quote?.commissionAmount ?? (d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null),
       // For payouts page, synthetic = pending (driver hasn't been paid out yet)
       status:            "pending" as const,
       created_at:        d.created_at,
@@ -87,6 +89,8 @@ export default async function DriverPayoutsPage() {
 
   return (
     <div className="pt-2 pb-12 px-2">
+<PaymentAccountButton/>
+
       <SubTabs
         className="mb-6"
         tabs={[
@@ -262,24 +266,7 @@ export default async function DriverPayoutsPage() {
             )}
           </div>
 
-          {/* Commission info */}
-          <div className="mt-4 bg-[#1a1919] rounded-2xl p-5 border border-[#494847]/10">
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Commission Structure</p>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-white font-bold">Your share</span>
-                <span className="text-[#6ee7b7] font-black">75%</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-[#adaaaa]">Platform fee</span>
-                <span className="text-[var(--color-secondary)] font-bold">25%</span>
-              </div>
-            </div>
-            <div className="mt-3 h-2 rounded-full bg-[#262626] overflow-hidden flex">
-              <div className="h-full bg-[#6ee7b7] rounded-l-full" style={{ width: "75%" }} />
-              <div className="h-full bg-[var(--color-secondary)] rounded-r-full" style={{ width: "25%" }} />
-            </div>
-          </div>
+          <FeeAgreement />
         </div>
       </div>
     </div>

@@ -1,11 +1,12 @@
 "use client"
 
+import {FeeAgreement} from "./fee-agreement"
 import { useState } from "react"
 
 type EarningRow = {
   id: string
-  amount: number | null            // driver's 75%
-  commission_amount: number | null // platform's 25%
+  amount: number | null            // driver's agreed share
+  commission_amount: number | null // platform's agreed commission
   created_at: string
   delivery_requests: {
     pickup_address: string | null
@@ -60,7 +61,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">Earnings</h2>
-          <p className="text-[#adaaaa] mt-1">Your share of every completed delivery — 75% of the fare.</p>
+          <p className="text-[#adaaaa] mt-1">Your recorded earnings from completed deliveries.</p>
         </div>
         <div className="flex bg-[#1a1919] p-1 rounded-xl">
           {(["Daily", "Weekly", "Monthly"] as Tab[]).map((tab) => (
@@ -81,8 +82,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
       <div className="flex items-center gap-3 bg-[#1a1919] border border-[#494847]/20 rounded-xl px-5 py-4 mb-8">
         <span className="material-symbols-outlined text-[var(--color-primary)]">info</span>
         <p className="text-sm text-[#adaaaa]">
-          Your earnings are <span className="text-white font-bold">75%</span> of each delivery fare.
-          The remaining <span className="text-[var(--color-secondary)] font-bold">25%</span> is the platform commission.
+          <FeeAgreement/>
           Taxes will be introduced in a future update.
         </p>
       </div>
@@ -166,14 +166,14 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                           <div className="col-span-3 text-right">
                             <p className="text-sm font-semibold text-[#adaaaa]">{fmt(fare)}</p>
                           </div>
-                          {/* Commission 25% */}
+                          {/* Commission agreed commission */}
                           <div className="col-span-2 text-right">
                             <p className="text-xs font-semibold text-[var(--color-secondary)]">-{fmt(commission)}</p>
                           </div>
-                          {/* Driver cut 75% */}
+                          {/* Driver cut agreed share */}
                           <div className="col-span-2 text-right">
                             <p className="text-sm font-black text-white">{fmt(driverCut)}</p>
-                            <p className="text-[10px] text-[#6ee7b7] font-bold">75%</p>
+                            <p className="text-[10px] text-[#6ee7b7] font-bold">{fare>0?`${Math.round(driverCut/fare*100)}%`:"—"}</p>
                           </div>
                         </div>
                       )
@@ -251,13 +251,13 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-[var(--color-secondary)]">Platform commission (25%)</span>
+                  <span className="text-[var(--color-secondary)]">Recorded platform commission</span>
                   <span className="text-[var(--color-secondary)] font-bold">
                     -{fmt(earnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0))}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs border-t border-[#494847]/20 pt-2 mt-1">
-                  <span className="text-[#6ee7b7] font-bold">Your earnings (75%)</span>
+                  <span className="text-[#6ee7b7] font-bold">Your recorded earnings</span>
                   <span className="text-[#6ee7b7] font-black">{fmt(allTimeTotal)}</span>
                 </div>
               </div>

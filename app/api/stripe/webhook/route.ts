@@ -17,6 +17,8 @@
  * before verifying.
  */
 
+import {fulfillShoppingBudget} from "@/lib/shopping-budget-fulfillment"
+import {fulfillBooking} from "@/lib/booking-fulfillment"
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getStripe, isStripeConfigured } from "@/lib/stripe/server"
@@ -56,15 +58,19 @@ export async function POST(request: NextRequest) {
         const session = event.data.object
         const metadataType = session.metadata?.type
 
+        if(metadataType === "shopping_budget") {await fulfillShoppingBudget(session.id);break}
+        if(metadataType === "booking") { await fulfillBooking(session.id); break }
+
         if (metadataType !== "wallet_topup") {
           console.warn("[Stripe Webhook] checkout.session.completed with unexpected metadata.type:", metadataType)
           break
         }
 
+        if(session.payment_status !== "paid" || session.currency !== "gbp") break
         const userId = session.metadata?.user_id
         const amount = Number(session.metadata?.amount ?? 0)
 
-        if (!userId || !amount || amount <= 0) {
+        if (!userId || !amount || amount <= 0 || session.amount_total !== Math.round(amount * 100)) {
           console.error("[Stripe Webhook] wallet_topup missing/invalid metadata:", session.metadata)
           break
         }

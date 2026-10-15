@@ -17,6 +17,8 @@
  */
 "use server"
 
+import { readLaunchSettings } from "@/lib/launch-settings"
+import { inServiceArea } from "@/lib/launch-pricing"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -26,6 +28,7 @@ import { resolveDiscount } from "@/app/actions/promotions"
 import { isPackageSize, type PackageSize } from "@/lib/vehicles"
 
 export type DeliveryQuote = {
+  extraCharges?: {label:string;amount:number}[]
   distanceMiles: number
   durationMin: number
   basePrice: number
@@ -57,13 +60,18 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
 
   if (!isPackageSize(params.packageSize)) return { error: "Select a package size." }
 
+  const launch = await readLaunchSettings()
+  if (!inServiceArea(params.pickupLat,params.pickupLng,launch) || !inServiceArea(params.deliveryLat,params.deliveryLng,launch)) return {error:`Both addresses must be within the ${launch.areaName} service area.`}
   const route = await fetchRouteServer(
     { lat: params.pickupLat, lng: params.pickupLng },
     { lat: params.deliveryLat, lng: params.deliveryLng }
   )
   if (!route) return { error: "Could not calculate a route for this pickup/delivery pair. Please check the addresses." }
 
-  const basePrice = getBasePrice(route.distance_miles)
+  const extraCharges: {label:string;amount:number}[]=[]
+  if(params.packageSize==='bulky'&&launch.vanCharge>0)extraCharges.push({label:'Van delivery',amount:launch.vanCharge})
+  if(params.packageSize==='large'&&launch.heavyCharge>0)extraCharges.push({label:'Large/heavy item',amount:launch.heavyCharge})
+  const basePrice = getBasePrice(route.distance_miles, launch) + extraCharges.reduce((sum,c)=>sum+c.amount,0)
 
   const admin = createAdminClient()
   const [surgeSettingsRes, busyRulesRes, onlineDriversRes, pendingOrdersRes] = await Promise.all([
@@ -75,6 +83,8 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
 
   const surgeSettings = surgeSettingsRes.data
   const surgeFactorsRaw: SurgeFactor[] = []
+  if (launch.weatherMultiplier > 1) surgeFactorsRaw.push({label:"Weather surcharge",multiplier:launch.weatherMultiplier})
+  if (launch.busyMultiplier > 1) surgeFactorsRaw.push({label:"Busy-period surcharge",multiplier:launch.busyMultiplier})
 
   if (surgeSettings?.master_enabled) {
     const busyMatches = matchingBusyPeriodRules((busyRulesRes.data ?? []) as BusyPeriodRule[], new Date())
@@ -104,8 +114,8 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
     }
   }
 
-  const maxTotalMultiplier = surgeSettings ? Number(surgeSettings.max_total_multiplier) : 1
-  const { multiplier: surgeMultiplier, factors: surgeFactors } = surgeSettings?.master_enabled
+  const maxTotalMultiplier = Math.max(surgeSettings ? Number(surgeSettings.max_total_multiplier) : 1,launch.busyMultiplier,launch.weatherMultiplier)
+  const { multiplier: surgeMultiplier, factors: surgeFactors } = (surgeSettings?.master_enabled || launch.weatherMultiplier > 1 || launch.busyMultiplier > 1)
     ? combineSurgeFactors(surgeFactorsRaw, maxTotalMultiplier)
     : { multiplier: 1, factors: [] }
 
@@ -120,6 +130,7 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
 
   return {
     data: {
+      extraCharges,
       distanceMiles: route.distance_miles,
       durationMin: route.duration_min,
       basePrice,

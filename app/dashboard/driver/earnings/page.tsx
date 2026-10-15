@@ -12,7 +12,7 @@ export default async function EarningsPage() {
     // Primary: driver_earnings joined with delivery info
     supabase
       .from("driver_earnings")
-      .select("id, amount, commission_amount, status, created_at, delivery_requests(pickup_address, delivery_address, created_at, price, tracking_number)")
+      .select("id, amount, commission_amount, status, created_at, delivery_requests(pickup_address, delivery_address, created_at, price, launch_quote, tracking_number)")
       .eq("driver_id", user?.id ?? "")
       .order("created_at", { ascending: false }),
 
@@ -20,7 +20,7 @@ export default async function EarningsPage() {
     // (for jobs completed before the auto-earnings feature was added)
     supabase
       .from("delivery_requests")
-      .select("id, tracking_number, pickup_address, delivery_address, price, created_at")
+      .select("id, tracking_number, pickup_address, delivery_address, price, launch_quote, created_at")
       .eq("driver_id", user?.id ?? "")
       .eq("status", "delivered")
       .order("created_at", { ascending: false }),
@@ -41,8 +41,8 @@ export default async function EarningsPage() {
     .filter(d => !earningsDeliveryIds.has(d.id))
     .map(d => ({
       id: `synthetic-${d.id}`,
-      amount: d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null,
-      commission_amount: d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null,
+      amount: d.launch_quote?.driverAmount ?? (d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null),
+      commission_amount: d.launch_quote?.commissionAmount ?? (d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null),
       status: "paid" as const,  // completed jobs are treated as paid
       created_at: d.created_at,
       delivery_requests: {

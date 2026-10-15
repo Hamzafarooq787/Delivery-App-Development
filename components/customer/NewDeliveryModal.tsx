@@ -2,12 +2,9 @@
 
 import styles from './DeliverySteps.module.css'
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tracking'
-import { createDeliveryRequest } from '@/app/actions/delivery'
-import { createWalletTopUpSession } from '@/app/actions/payments'
-import { getWalletBalance } from '@/app/actions/wallet'
+import { startBookingCheckout } from '@/app/actions/booking-checkout'
 import { getDeliveryQuote, type DeliveryQuote } from '@/app/actions/pricing'
 import { createClient } from '@/lib/supabase/client'
 import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
@@ -19,7 +16,7 @@ import {
   googleDetectCountryCode,
   type PlaceSuggestion,
 } from '@/lib/google'
-import { clearDeliveryDraft, saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
+import { type DeliveryDraft } from '@/lib/delivery-draft'
 
 interface NewDeliveryModalProps {
   onClose: () => void
@@ -171,9 +168,8 @@ function AddressInput({
 }
 
 export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }: NewDeliveryModalProps) {
-  const router = useRouter()
+  const checkoutLock=useRef(false)
   const [step, setStep] = useState(1)
-  const [success, setSuccess] = useState<{ id: string; tracking_number: string } | null>(null)
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     frameRef.current?.querySelector<HTMLElement>('[aria-label="Close booking"]')?.focus()
@@ -236,16 +232,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   const [packageSize, setPackageSize] = useState<PackageSize | null>(initialDraft?.packageSize ?? null)
   const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-
-  // Wallet balance — must cover the delivery price before an order can be
-  // placed. This is a UX gate only; the server re-checks and deducts
-  // atomically, so a stale/bypassed client value can't create a free order.
-  const [walletBalance, setWalletBalance] = useState<number | null>(null)
-  const [addingFunds, setAddingFunds] = useState(false)
-
-  useEffect(() => {
-    getWalletBalance().then((res) => setWalletBalance(res.balance)).catch(() => setWalletBalance(null))
-  }, [])
 
   // Authoritative price quote — computed server-side from distance, live
   // surge factors, and any discount. This is what actually gets charged;
@@ -458,7 +444,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   }
 
   const price = quote?.finalPrice ?? null
-  const insufficientFunds = price !== null && walletBalance !== null && walletBalance < price
 
   // Explains exactly why the submit button is disabled, so it never just
   // silently does nothing.
@@ -472,18 +457,19 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     : null
 
   async function handleSubmit() {
-    if (submitting || success) return
+    if (submitting || checkoutLock.current) return
     if (!pickupValue || !pickupCoords) { toast.error('Select a pickup address from the suggestions list.'); return }
     if ((!deliveryValue || !deliveryCoords) && !liveLocationActive) { toast.error('Select a delivery address from the suggestions list, or use live location.'); return }
     if (!packageSize) { toast.error('Select a package size.'); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
     if (quoteError) { toast.error(quoteError); return }
     if (!quote) { toast.error('Still calculating the price — please wait a moment.'); return }
-    if (insufficientFunds) { handleAddFunds(); return }
 
+
+    checkoutLock.current=true
     setSubmitting(true)
     try {
-      const result = await createDeliveryRequest({
+      const result = await startBookingCheckout({service: 'delivery', details:{
         pickup_address: pickupValue,
         delivery_address: deliveryValue,
         pickup_lat: pickupCoords.lat,
@@ -494,88 +480,20 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         item_photo_urls: itemPhotos,
         package_size: packageSize,
         promo_code: quote.promoCodeText,
-      })
+      }})
 
-      if ('error' in result) {
-        if (result.code === 'insufficient_funds') {
-          // Balance changed since we last checked (e.g. another tab spent it) — refresh and re-gate.
-          const fresh = await getWalletBalance()
-          setWalletBalance(fresh.balance)
-          toast.error(result.error)
-        } else {
-          toast.error(result.error)
-        }
-        setSubmitting(false)
-        return
-      }
-
-      // Keep the receipt visible until the customer chooses where to go next.
-      setSuccess(result.data)
-      clearDeliveryDraft()
-      setSubmitting(false)
-      if (liveLocationActive) {
-        void stopLiveLocation().catch(() => { /* Cleanup failure must not repeat a paid booking. */ })
-      }
+      if ('error' in result) { toast.error(result.error); checkoutLock.current=false; setSubmitting(false); return }
+      window.location.assign(result.url)
     } catch (err) {
+      checkoutLock.current=false
       toast.error(err instanceof Error ? err.message : 'Unexpected error.')
       setSubmitting(false)
     }
   }
 
-  // Save the in-progress form, then send the customer to Stripe to top up
-  // exactly enough to cover this delivery. They land back with the modal
-  // reopened and pre-filled (see the dashboard layout's resume handling).
-  async function handleAddFunds() {
-    if (addingFunds || price === null) return
-    setAddingFunds(true)
-    try {
-      const needed = Math.max(1, Math.ceil((price - (walletBalance ?? 0)) * 100) / 100)
-      saveDeliveryDraft({
-        pickupValue,
-        deliveryValue,
-        pickupCoords,
-        deliveryCoords,
-        itemDescription,
-        itemPhotos,
-        packageSize,
-        promoCode,
-      })
-      const result = await createWalletTopUpSession(Math.min(500, needed), 'new-delivery')
-      if ('url' in result) {
-        window.location.href = result.url
-      } else {
-        toast.error(result.error)
-        setAddingFunds(false)
-      }
-    } catch {
-      toast.error('Could not start the payment. Please try again.')
-      setAddingFunds(false)
-    }
-  }
-
-  if (success) return (
-    <div ref={frameRef} className={styles.overlay}>
-      <div className={styles.backdrop} />
-      <section role="dialog" aria-modal="true" aria-labelledby="delivery-success-title" className={styles.dialog}>
-        <header className={styles.header}><p>Collect &amp; Deliver</p><button autoFocus aria-label="Close confirmation" onClick={onClose}>×</button></header>
-        <div className={styles.success} role="status">
-          <span className={styles.successMark} aria-hidden="true">✓</span>
-          <h2 id="delivery-success-title">Thank you!</h2>
-          <p>Your delivery has been booked.</p>
-          <div className={styles.receipt}><span>Tracking code</span><strong>{success.tracking_number}</strong></div>
-          <p>We’ll let you know when a driver accepts your delivery.</p>
-        </div>
-        <footer className={styles.footer}><div className={styles.actions}>
-          <button onClick={onClose}>Done</button>
-          <button className={styles.continue} onClick={() => { onClose(); router.push(`/dashboard/customer/tracking?id=${encodeURIComponent(success.id)}`) }}>Track delivery</button>
-        </div></footer>
-      </section>
-    </div>
-  )
-
   return (
     <div ref={frameRef} className={styles.overlay} onKeyDown={(event) => {
-      if (event.key === 'Escape' && !submitting && !addingFunds) onClose()
+      if (event.key === 'Escape' && !submitting) onClose()
       if (event.key === 'Tab') {
         const controls = Array.from(frameRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled)') ?? []).filter(el => el.getClientRects().length > 0)
         const first = controls[0], last = controls[controls.length - 1]
@@ -775,11 +693,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             <div><span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
           </div>
           <div className={styles.price}>
-            <div><span>Base fare</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
+            <div><span>Base fare</span><strong>{quote ? `£${formatPrice(quote.basePrice-(quote.extraCharges??[]).reduce((sum,c)=>sum+c.amount,0))}` : '—'}</strong></div>
+            {quote?.extraCharges?.map(c=><div key={c.label}><span>{c.label}</span><strong>£{formatPrice(c.amount)}</strong></div>)}
             {quote && quote.surgeMultiplier > 1 && <div><span>Surge ({quote.surgeMultiplier}×)</span><strong>+£{formatPrice(quote.surgedPrice - quote.basePrice)}</strong></div>}
             {quote && quote.discountAmount > 0 && <div><span>{quote.discountLabel}</span><strong>−£{formatPrice(quote.discountAmount)}</strong></div>}
             <div><span>Total</span><strong>{quoteLoading ? 'Calculating…' : price !== null ? `£${formatPrice(price)}` : '—'}</strong></div>
-            <div><span>Wallet balance</span><strong>{walletBalance !== null ? `£${walletBalance.toFixed(2)}` : 'Loading…'}</strong></div>
+            <div><span>Payment</span><strong>Stripe card checkout</strong></div>
           </div>
 
                       {/* Promo code */}
@@ -852,18 +771,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           {stepError && <p role="alert">{stepError}</p>}
           {step === 3 && missingReason && <p role="status">{missingReason}</p>}
           <div className={styles.actions}>
-            <button disabled={submitting || addingFunds} onClick={() => step === 1 ? onClose() : goTo(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button>
-            {step < 3 ? <button className={styles.continue} onClick={continueStep}>Continue</button> : <>          {insufficientFunds ? (
-            <button
-              onClick={handleAddFunds}
-              disabled={addingFunds}
-              className="flex-1 py-2.5 rounded-xl bg-[#6ee7b7] text-[#052e16] font-bold text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-base">add_circle</span>
-              {addingFunds ? 'Redirecting…' : `Add Funds — £${formatPrice(Math.max(1, Math.ceil(((price ?? 0) - (walletBalance ?? 0)) * 100) / 100))} needed`}
-            </button>
-          ) : (
-            <button
+            <button disabled={submitting} onClick={() => step === 1 ? onClose() : goTo(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button>
+            {step < 3 ? <button className={styles.continue} onClick={continueStep}>Continue</button> : <>                      <button
               onClick={handleSubmit}
               disabled={submitting || !!missingReason || quoteLoading || uploadingPhotos}
               className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -872,7 +781,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
               <span className="material-symbols-outlined text-base">bolt</span>
               {submitting ? 'Requesting…' : price !== null ? `Confirm & Pay — £${formatPrice(price)}` : 'Request Delivery'}
             </button>
-          )}
+
 </>}
           </div>
         </footer>

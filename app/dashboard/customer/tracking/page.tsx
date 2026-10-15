@@ -1,5 +1,6 @@
 'use client'
 
+import {ShoppingApprovalsPanel} from '@/components/customer/shopping-approvals-panel'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -215,6 +216,7 @@ function TrackingPageInner() {
             </div>
           )}
 
+          {shipment?.id && <ShoppingApprovalsPanel deliveryId={shipment.id}/>}
           {/* ── Header: tracking number + status ── */}
           <div className="px-5 pt-3 pb-4 border-b border-[#494847]/20 shrink-0">
             <div className="flex items-center justify-between mb-2">
