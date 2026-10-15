@@ -82,20 +82,20 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md bg-[#1a1919] rounded-2xl border border-[#494847]/20 shadow-2xl flex flex-col" style={{ maxHeight: "92dvh" }}>
+      <div className="relative z-10 w-full max-w-md bg-[var(--brand-panel)] rounded-2xl border border-[var(--color-outline-variant)]/20 shadow-2xl flex flex-col" style={{ maxHeight: "92dvh" }}>
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#494847]/15 shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[var(--color-primary)]">verified_user</span>
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-outline-variant)]/15 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-[var(--brand-strong)]/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-[var(--brand-soft)]">verified_user</span>
           </div>
           <div>
             <p className="text-sm font-bold text-white">Parcel Authentication</p>
-            <p className="text-[10px] text-[#adaaaa] uppercase tracking-wider">
+            <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase tracking-wider">
               {step === "warning" ? "Step 1 of 3 — Safety Check" : step === "camera" ? "Step 2 of 3 — Capture Photo" : "Step 3 of 3 — Confirm"}
             </p>
           </div>
-          <button onClick={onClose} className="ml-auto p-1.5 rounded-lg text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
+          <button onClick={onClose} className="ml-auto p-1.5 rounded-lg text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors">
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
@@ -114,12 +114,12 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
                   {PROHIBITED.map((item) => (
                     <div key={item.label} className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-red-400/70 text-sm">{item.icon}</span>
-                      <span className="text-xs text-[#adaaaa]">{item.label}</span>
+                      <span className="text-xs text-[var(--color-on-surface-variant)]">{item.label}</span>
                     </div>
                   ))}
                 </div>
                 <div className="px-4 pb-4">
-                  <p className="text-[11px] text-[#adaaaa] leading-relaxed">
+                  <p className="text-[11px] text-[var(--color-on-surface-variant)] leading-relaxed">
                     Transporting prohibited items is a criminal offence. You are personally responsible for items in your possession. Violations will result in immediate account termination and may lead to legal prosecution.
                   </p>
                 </div>
@@ -128,18 +128,18 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
                 <div className="flex items-start gap-2">
                   <span className="material-symbols-outlined text-amber-400 text-base mt-0.5 shrink-0">info</span>
-                  <p className="text-[12px] text-[#adaaaa] leading-relaxed">
+                  <p className="text-[12px] text-[var(--color-on-surface-variant)] leading-relaxed">
                     You must photograph the parcel <span className="text-white font-semibold">before accepting custody</span>. This image is timestamped and securely stored as proof of condition at collection.
                   </p>
                 </div>
               </div>
 
-              <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${agreed ? "border-[#6ee7b7]/40 bg-[#6ee7b7]/5" : "border-[#494847]/20 bg-[#262626] hover:border-[#494847]/40"}`}>
-                <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${agreed ? "bg-[#6ee7b7] border-[#6ee7b7]" : "border-[#494847]/60"}`}>
-                  {agreed && <span className="material-symbols-outlined text-[#0e0e0e] text-[12px]">check</span>}
+              <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${agreed ? "border-[#6ee7b7]/40 bg-[#6ee7b7]/5" : "border-[var(--color-outline-variant)]/20 bg-[var(--color-surface-container-highest)] hover:border-[var(--color-outline-variant)]/40"}`}>
+                <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${agreed ? "bg-[#6ee7b7] border-[#6ee7b7]" : "border-[var(--color-outline-variant)]/60"}`}>
+                  {agreed && <span className="material-symbols-outlined text-[var(--brand-bg)] text-[12px]">check</span>}
                 </div>
                 <input type="checkbox" className="sr-only" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                <p className="text-[12px] text-[#adaaaa] leading-relaxed">
+                <p className="text-[12px] text-[var(--color-on-surface-variant)] leading-relaxed">
                   I confirm this parcel does <span className="text-white font-bold">not</span> contain any prohibited, illegal, or dangerous items. I accept full legal responsibility for this delivery.
                 </p>
               </label>
@@ -149,13 +149,13 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
           {/* STEP 2 — Camera */}
           {step === "camera" && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-[#494847]/20 bg-[#262626] p-8 flex flex-col items-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[var(--color-primary)] text-4xl">photo_camera</span>
+              <div className="rounded-xl border border-[var(--color-outline-variant)]/20 bg-[var(--color-surface-container-highest)] p-8 flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[var(--brand-soft)] text-4xl">photo_camera</span>
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-bold text-white">Take a Photo of the Parcel</p>
-                  <p className="text-[11px] text-[#adaaaa] mt-1">Ensure the parcel and its label are clearly visible</p>
+                  <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-1">Ensure the parcel and its label are clearly visible</p>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -167,29 +167,29 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:brightness-110 transition-all active:scale-95"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm hover:brightness-110 transition-all active:scale-95"
                 >
                   <span className="material-symbols-outlined text-base">camera_alt</span>
                   Open Camera
                 </button>
               </div>
-              <p className="text-[10px] text-[#494847] text-center">Image is automatically compressed for faster upload</p>
+              <p className="text-[10px] text-[var(--color-outline-variant)] text-center">Image is automatically compressed for faster upload</p>
             </div>
           )}
 
           {/* STEP 3 — Preview */}
           {step === "preview" && previewUrl && (
             <div className="space-y-4">
-              <div className="rounded-xl overflow-hidden border border-[#494847]/20">
+              <div className="rounded-xl overflow-hidden border border-[var(--color-outline-variant)]/20">
                 <img src={previewUrl} alt="Parcel" className="w-full object-cover" style={{ maxHeight: 280 }} />
               </div>
               <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#6ee7b7]/5 border border-[#6ee7b7]/20">
                 <span className="material-symbols-outlined text-[#6ee7b7] text-base">check_circle</span>
-                <p className="text-[12px] text-[#adaaaa]">Photo captured. Compressed for efficient upload.</p>
+                <p className="text-[12px] text-[var(--color-on-surface-variant)]">Photo captured. Compressed for efficient upload.</p>
               </div>
               <button
                 onClick={() => { setStep("camera"); setPreviewUrl(null); setCompressedBlob(null) }}
-                className="w-full py-2 rounded-xl border border-[#494847]/30 text-[#adaaaa] text-sm font-bold hover:text-white hover:bg-[#262626] transition-colors"
+                className="w-full py-2 rounded-xl border border-[var(--color-outline-variant)]/30 text-[var(--color-on-surface-variant)] text-sm font-bold hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors"
               >
                 Retake Photo
               </button>
@@ -198,16 +198,16 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-[#494847]/15 shrink-0 flex gap-3">
+        <div className="px-5 py-4 border-t border-[var(--color-outline-variant)]/15 shrink-0 flex gap-3">
           {step === "warning" && (
             <>
-              <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
+              <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors">
                 Cancel
               </button>
               <button
                 disabled={!agreed}
                 onClick={() => setStep("camera")}
-                className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">arrow_forward</span>
                 I Understand — Continue
@@ -215,19 +215,19 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
             </>
           )}
           {step === "camera" && (
-            <button onClick={() => setStep("warning")} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
+            <button onClick={() => setStep("warning")} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors">
               ← Back
             </button>
           )}
           {step === "preview" && (
             <>
-              <button onClick={() => setStep("camera")} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#adaaaa] hover:text-white hover:bg-[#262626] transition-colors">
+              <button onClick={() => setStep("camera")} className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors">
                 ← Back
               </button>
               <button
                 onClick={handleConfirm}
                 disabled={uploading}
-                className="flex-1 py-2.5 rounded-xl bg-[#6ee7b7] text-[#0e0e0e] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl bg-[#6ee7b7] text-[var(--brand-bg)] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">verified</span>
                 {uploading ? uploadProgress : "Confirm & Mark Collected"}

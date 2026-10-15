@@ -29,38 +29,38 @@ export default async function DriverProfilePage() {
     <div className="pt-2 pb-12 px-2">
       <div className="mb-8 md:mb-10">
         <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white font-headline">My Profile</h1>
-        <p className="text-[#adaaaa] mt-1">Manage your personal information.</p>
+        <p className="text-[var(--color-on-surface-variant)] mt-1">Manage your personal information.</p>
       </div>
 
       <div className="max-w-xl flex flex-col gap-5">
         {/* Personal info card */}
-        <div className="bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6">
+        <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-6">
           <div className="flex items-center gap-4 mb-6">
-            <div className="h-16 w-16 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
-              <span className="text-lg font-bold text-[var(--color-primary)]">{initials}</span>
+            <div className="h-16 w-16 rounded-full bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 flex items-center justify-center shrink-0">
+              <span className="text-lg font-bold text-[var(--brand-soft)]">{initials}</span>
             </div>
             <div className="min-w-0">
               <p className="text-base font-bold text-white truncate">{profile.full_name || "Driver"}</p>
-              <p className="text-xs text-[#adaaaa] mt-0.5 truncate">{profile.email}</p>
+              <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5 truncate">{profile.email}</p>
             </div>
           </div>
-          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Personal Info</p>
+          <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-4">Personal Info</p>
           <ProfileForm fullName={profile.full_name} phone={profile.phone} />
         </div>
 
         {/* Vehicle management moved to Settings — supports multiple vehicles */}
         <Link
           href="/dashboard/driver/settings"
-          className="flex items-center gap-4 bg-[#1a1919] border border-[#494847]/15 rounded-xl p-6 hover:border-[var(--color-primary)]/30 transition-colors"
+          className="flex items-center gap-4 bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl p-6 hover:border-[var(--brand-strong)]/30 transition-colors"
         >
-          <div className="w-10 h-10 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[var(--color-primary)]">directions_car</span>
+          <div className="w-10 h-10 rounded-lg bg-[var(--brand-strong)]/10 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[var(--brand-soft)]">directions_car</span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white">Manage Vehicles</p>
-            <p className="text-xs text-[#adaaaa] mt-0.5">Add, edit, or remove vehicles in Settings.</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">Add, edit, or remove vehicles in Settings.</p>
           </div>
-          <span className="material-symbols-outlined text-[#adaaaa]">chevron_right</span>
+          <span className="material-symbols-outlined text-[var(--color-on-surface-variant)]">chevron_right</span>
         </Link>
       </div>
     </div>

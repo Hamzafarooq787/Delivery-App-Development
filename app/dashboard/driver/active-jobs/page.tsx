@@ -24,10 +24,10 @@ function statusLabel(status: string) {
 }
 
 function statusColor(status: string) {
-  if (status === "accepted") return "text-[var(--color-primary)]"
+  if (status === "accepted") return "text-[var(--brand-soft)]"
   if (status === "collected") return "text-[var(--color-secondary)]"
   if (status === "in_transit") return "text-[#6ee7b7]"
-  return "text-[#adaaaa]"
+  return "text-[var(--color-on-surface-variant)]"
 }
 
 export default async function ActiveJobsPage() {
@@ -43,7 +43,7 @@ export default async function ActiveJobsPage() {
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white mb-2 font-headline">
             Active Jobs
           </h1>
-          <p className="text-[#adaaaa] font-medium">
+          <p className="text-[var(--color-on-surface-variant)] font-medium">
             {jobs.length === 0
               ? "No active jobs right now."
               : `${jobs.length} active ${jobs.length === 1 ? "delivery" : "deliveries"} in progress.`}
@@ -58,14 +58,14 @@ export default async function ActiveJobsPage() {
       )}
 
       {jobs.length === 0 && !error ? (
-        <div className="rounded-xl border border-dashed border-[#494847]/30 bg-[#1a1919] px-6 py-16 text-center">
+        <div className="rounded-xl border border-dashed border-[var(--color-outline-variant)]/30 bg-[var(--brand-panel)] px-6 py-16 text-center">
           <p className="text-lg font-semibold text-white">No active jobs</p>
-          <p className="mt-2 text-sm text-[#adaaaa]">
+          <p className="mt-2 text-sm text-[var(--color-on-surface-variant)]">
             Accept an available job to see it here.
           </p>
           <Link
             href="/dashboard/driver/jobs/available"
-            className="mt-6 inline-block bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-xs px-6 py-2.5 rounded-lg"
+            className="mt-6 inline-block bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-xs px-6 py-2.5 rounded-lg"
             style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
           >
             Browse Available Jobs
@@ -76,13 +76,13 @@ export default async function ActiveJobsPage() {
           {jobs.map((job: any) => (
             <div
               key={job.id}
-              className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-6 flex flex-col md:flex-row gap-6 hover:bg-[#1a1919] transition-all duration-300"
+              className="bg-[var(--brand-panel)] backdrop-blur-xl border border-[var(--color-outline-variant)]/10 rounded-xl p-6 flex flex-col md:flex-row gap-6 hover:bg-[var(--brand-panel)] transition-all duration-300"
             >
               <div className="flex-1 space-y-6">
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[var(--color-primary)]">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--color-surface-container-highest)] flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[var(--brand-soft)]">
                         local_shipping
                       </span>
                     </div>
@@ -90,7 +90,7 @@ export default async function ActiveJobsPage() {
                       <h3 className="text-lg font-bold text-white truncate">
                         {job.item_description || "Delivery"}
                       </h3>
-                      <p className="text-xs text-[#adaaaa]">
+                      <p className="text-xs text-[var(--color-on-surface-variant)]">
                         Accepted {formatDate(job.updated_at as string | null)}
                         {` • ${job.tracking_number ?? `KV-${job.id.slice(0, 8).toUpperCase()}`}`}
                       </p>
@@ -103,13 +103,13 @@ export default async function ActiveJobsPage() {
 
                 <div className="flex items-start gap-4">
                   <div className="flex flex-col items-center pt-1">
-                    <div className="w-3 h-3 rounded-full border-2 border-[var(--color-primary)] bg-[#0e0e0e]" />
-                    <div className="w-px h-10 border-l border-dashed border-[#494847] my-1" />
+                    <div className="w-3 h-3 rounded-full border-2 border-[var(--brand-strong)] bg-[var(--brand-bg)]" />
+                    <div className="w-px h-10 border-l border-dashed border-[var(--color-outline-variant)] my-1" />
                     <div className="w-3 h-3 rounded-full bg-[var(--color-secondary)]" />
                   </div>
                   <div className="flex-1 space-y-4 min-w-0">
                     <div>
-                      <p className="text-[10px] text-[#adaaaa] uppercase font-bold leading-none">
+                      <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold leading-none">
                         Pickup
                       </p>
                       <p className="text-sm font-semibold text-white break-words">
@@ -117,7 +117,7 @@ export default async function ActiveJobsPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-[#adaaaa] uppercase font-bold leading-none">
+                      <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold leading-none">
                         Delivery
                       </p>
                       <p className="text-sm font-semibold text-white break-words">
@@ -128,20 +128,20 @@ export default async function ActiveJobsPage() {
                 </div>
               </div>
 
-              <div className="md:w-px bg-[#494847]/10" />
+              <div className="md:w-px bg-[var(--color-outline-variant)]/10" />
 
               <div className="md:w-48 flex flex-col justify-between gap-4">
                 <div className="space-y-3">
                   <div className="flex justify-between text-xs">
-                    <span className="text-[#adaaaa]">Created</span>
+                    <span className="text-[var(--color-on-surface-variant)]">Created</span>
                     <span className="text-white font-bold">
                       {formatDate(job.created_at as string | null)}
                     </span>
                   </div>
                   {job.price != null && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-[#adaaaa]">Payout</span>
-                      <span className="text-[var(--color-primary)] font-bold">
+                      <span className="text-[var(--color-on-surface-variant)]">Payout</span>
+                      <span className="text-[var(--brand-soft)] font-bold">
                         {new Intl.NumberFormat(undefined, {
                           style: "currency",
                           currency: "USD",
@@ -152,7 +152,7 @@ export default async function ActiveJobsPage() {
                 </div>
                 <Link
                   href={`/dashboard/driver/jobs/${job.id}`}
-                  className="w-full py-2.5 bg-[#1a1919] border border-[#494847]/30 text-white font-bold text-sm rounded-lg text-center hover:bg-[#262626] transition-all"
+                  className="w-full py-2.5 bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/30 text-white font-bold text-sm rounded-lg text-center hover:bg-[var(--color-surface-container-highest)] transition-all"
                 >
                   View Details
                 </Link>

@@ -184,7 +184,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
   const isDelivered = currentStage === "delivered" || job.status === "delivered"
   const isShopping = currentStage === "shopping"
 
-  const inputCls = "w-full bg-[#1a1919] border border-[#494847]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/40 transition-all"
+  const inputCls = "w-full bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-[var(--color-outline-variant)] outline-none focus:border-[var(--brand-strong)]/40 transition-all"
 
   return (
     <div className="space-y-4">
@@ -193,7 +193,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
         <span className="text-xl">🛍️</span>
         <div>
           <p className="text-sm font-bold text-[var(--color-secondary)]">Buy for Me Order</p>
-          <p className="text-xs text-[#adaaaa]">
+          <p className="text-xs text-[var(--color-on-surface-variant)]">
             Max spend: {fmt(job.max_spend_approved ?? 50)}
             {job.actual_items_total != null && ` · Spent: ${fmt(job.actual_items_total)}`}
           </p>
@@ -201,7 +201,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
       </div>
 
       {/* Stage Progress */}
-      <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4 overflow-x-auto">
+      <div className="bg-[var(--brand-panel)] backdrop-blur-xl border border-[var(--color-outline-variant)]/10 rounded-xl p-4 overflow-x-auto">
         <div className="flex items-start gap-1 min-w-max">
           {BFM_STAGES.map(({ stage, label, icon }, i) => {
             const done = i < stageIndex
@@ -209,22 +209,22 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
             return (
               <div key={stage} className="flex flex-col items-center gap-1.5 relative w-[72px]">
                 {i < BFM_STAGES.length - 1 && (
-                  <div className={`absolute top-4 left-1/2 w-full h-px z-0 ${done ? "bg-[var(--color-primary)]" : "bg-[#494847]/30"}`} />
+                  <div className={`absolute top-4 left-1/2 w-full h-px z-0 ${done ? "bg-[var(--brand-strong)]" : "bg-[var(--color-outline-variant)]/30"}`} />
                 )}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 transition-all ${
-                  done ? "bg-[var(--color-primary)] border-[var(--color-primary)]" :
-                  active ? "bg-[#1a1919] border-[var(--color-secondary)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.4)]" :
-                  "bg-[#1a1919] border-[#494847]/30"
+                  done ? "bg-[var(--brand-strong)] border-[var(--brand-strong)]" :
+                  active ? "bg-[var(--brand-panel)] border-[var(--color-secondary)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.4)]" :
+                  "bg-[var(--brand-panel)] border-[var(--color-outline-variant)]/30"
                 }`}>
                   {done ? (
                     <span className="material-symbols-outlined text-white text-sm">check</span>
                   ) : (
-                    <span className={`material-symbols-outlined text-sm ${active ? "text-[var(--color-secondary)]" : "text-[#494847]"}`}>
+                    <span className={`material-symbols-outlined text-sm ${active ? "text-[var(--color-secondary)]" : "text-[var(--color-outline-variant)]"}`}>
                       {icon}
                     </span>
                   )}
                 </div>
-                <p className={`text-[8px] font-bold text-center leading-tight ${active ? "text-[var(--color-secondary)]" : done ? "text-[#adaaaa]" : "text-[#494847]"}`}>
+                <p className={`text-[8px] font-bold text-center leading-tight ${active ? "text-[var(--color-secondary)]" : done ? "text-[var(--color-on-surface-variant)]" : "text-[var(--color-outline-variant)]"}`}>
                   {label}
                 </p>
               </div>
@@ -234,36 +234,36 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
       </div>
 
       {/* Shop & Delivery Info */}
-      <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4 space-y-3">
+      <div className="bg-[var(--brand-panel)] backdrop-blur-xl border border-[var(--color-outline-variant)]/10 rounded-xl p-4 space-y-3">
         <div className="flex gap-3 items-start">
           <span className="material-symbols-outlined text-[var(--color-secondary)] text-base mt-0.5">storefront</span>
           <div>
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest">Shop</p>
+            <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest">Shop</p>
             <p className="text-sm font-semibold text-white">{job.shop_name ?? "—"}</p>
-            <p className="text-xs text-[#adaaaa]">{job.shop_address ?? "—"}</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)]">{job.shop_address ?? "—"}</p>
           </div>
         </div>
         <div className="flex gap-3 items-start">
-          <span className="material-symbols-outlined text-[var(--color-primary)] text-base mt-0.5">location_on</span>
+          <span className="material-symbols-outlined text-[var(--brand-soft)] text-base mt-0.5">location_on</span>
           <div>
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest">Deliver to</p>
-            <p className="text-xs text-[#adaaaa]">{job.delivery_address ?? "—"}</p>
+            <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest">Deliver to</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)]">{job.delivery_address ?? "—"}</p>
           </div>
         </div>
       </div>
 
       {/* Shopping List */}
-      <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
+      <div className="bg-[var(--brand-panel)] backdrop-blur-xl border border-[var(--color-outline-variant)]/10 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest">Shopping List</p>
-          <span className="text-[10px] font-bold text-[#adaaaa]">
+          <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest">Shopping List</p>
+          <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)]">
             {items.filter((i) => i.status === "purchased" || i.status === "substituted").length}/{items.length} found
           </span>
         </div>
         {loadingItems ? (
-          <p className="text-xs text-[#adaaaa]">Loading items…</p>
+          <p className="text-xs text-[var(--color-on-surface-variant)]">Loading items…</p>
         ) : items.length === 0 ? (
-          <p className="text-xs text-[#adaaaa]">No items on this order.</p>
+          <p className="text-xs text-[var(--color-on-surface-variant)]">No items on this order.</p>
         ) : (
           <div className="space-y-3">
             {items.map((item) => {
@@ -271,24 +271,24 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                 item.status === "purchased" ? "text-emerald-400" :
                 item.status === "substituted" ? "text-[var(--color-secondary)]" :
                 item.status === "unavailable" ? "text-red-400" :
-                item.status === "skipped" ? "text-[#494847]" :
+                item.status === "skipped" ? "text-[var(--color-outline-variant)]" :
                 "text-amber-400"
 
               return (
-                <div key={item.id} className="bg-[#1a1919] rounded-xl p-3 space-y-2">
+                <div key={item.id} className="bg-[var(--brand-panel)] rounded-xl p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-white">
                         {item.quantity}× {item.name}
                       </p>
                       {item.brand_size_variant && (
-                        <p className="text-xs text-[#adaaaa]">{item.brand_size_variant}</p>
+                        <p className="text-xs text-[var(--color-on-surface-variant)]">{item.brand_size_variant}</p>
                       )}
                       {item.notes && (
-                        <p className="text-xs text-[#adaaaa] italic">"{item.notes}"</p>
+                        <p className="text-xs text-[var(--color-on-surface-variant)] italic">"{item.notes}"</p>
                       )}
                       {item.estimated_price && (
-                        <p className="text-xs text-[#adaaaa]">Est. {fmt(item.estimated_price)}</p>
+                        <p className="text-xs text-[var(--color-on-surface-variant)]">Est. {fmt(item.estimated_price)}</p>
                       )}
                     </div>
                     <span className={`text-[10px] font-bold uppercase ${statusColor}`}>
@@ -333,7 +333,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
                   {/* Substitution form */}
                   {showSubForm === item.id && (
-                    <div className="bg-[#0e0e0e] rounded-xl p-3 space-y-2 border border-[var(--color-secondary)]/20">
+                    <div className="bg-[var(--brand-bg)] rounded-xl p-3 space-y-2 border border-[var(--color-secondary)]/20">
                       <p className="text-[10px] font-bold text-[var(--color-secondary)] uppercase tracking-widest">Suggest replacement</p>
                       <input
                         type="text"
@@ -362,7 +362,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                         <button
                           type="button"
                           onClick={() => setShowSubForm(null)}
-                          className="flex-1 py-2 text-xs font-bold text-[#adaaaa] bg-[#1a1919] rounded-lg border border-[#494847]/20"
+                          className="flex-1 py-2 text-xs font-bold text-[var(--color-on-surface-variant)] bg-[var(--brand-panel)] rounded-lg border border-[var(--color-outline-variant)]/20"
                         >
                           Cancel
                         </button>
@@ -386,8 +386,8 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
       {/* Receipt section */}
       {(job.receipt_url || currentStage === "purchase_completed" || currentStage === "heading_to_customer") && (
-        <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl border border-[#494847]/10 rounded-xl p-4">
-          <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-widest mb-3">Purchase Receipt</p>
+        <div className="bg-[var(--brand-panel)] backdrop-blur-xl border border-[var(--color-outline-variant)]/10 rounded-xl p-4">
+          <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-3">Purchase Receipt</p>
           {job.receipt_url ? (
             <div className="space-y-2">
               <img src={job.receipt_url} alt="Receipt" className="w-full rounded-xl object-cover max-h-48" />
@@ -396,17 +396,17 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
               )}
             </div>
           ) : (
-            <p className="text-xs text-[#adaaaa]">No receipt uploaded yet.</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)]">No receipt uploaded yet.</p>
           )}
         </div>
       )}
 
       {/* Receipt upload form */}
       {showReceiptForm && (
-        <div className="bg-[#1a1919] border border-[#494847]/20 rounded-xl p-4 space-y-4">
+        <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-xl p-4 space-y-4">
           <p className="text-sm font-bold text-white">Submit Purchase Receipt</p>
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1.5">Actual Total Spent (£)</label>
+            <label className="block text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1.5">Actual Total Spent (£)</label>
             <input
               type="number"
               step={0.01}
@@ -418,14 +418,14 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
               className={inputCls}
             />
             {job.max_spend_approved && (
-              <p className="text-[10px] text-[#adaaaa] mt-1">Max approved: {fmt(job.max_spend_approved)}</p>
+              <p className="text-[10px] text-[var(--color-on-surface-variant)] mt-1">Max approved: {fmt(job.max_spend_approved)}</p>
             )}
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold mb-1.5">Receipt Photo</label>
+            <label className="block text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1.5">Receipt Photo</label>
             <label className={`${inputCls} flex items-center gap-2 cursor-pointer`}>
-              <span className="material-symbols-outlined text-[#adaaaa] text-base">add_photo_alternate</span>
-              <span className="text-[#adaaaa]">
+              <span className="material-symbols-outlined text-[var(--color-on-surface-variant)] text-base">add_photo_alternate</span>
+              <span className="text-[var(--color-on-surface-variant)]">
                 {uploadingReceipt ? "Uploading…" : receiptUrl ? "Receipt uploaded ✓" : "Upload receipt photo"}
               </span>
               <input
@@ -438,7 +438,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
             </label>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setShowReceiptForm(false)} className="flex-1 py-3 text-sm font-bold text-[#adaaaa] bg-[#0e0e0e] rounded-xl border border-[#494847]/20">
+            <button type="button" onClick={() => setShowReceiptForm(false)} className="flex-1 py-3 text-sm font-bold text-[var(--color-on-surface-variant)] bg-[var(--brand-bg)] rounded-xl border border-[var(--color-outline-variant)]/20">
               Cancel
             </button>
             <button

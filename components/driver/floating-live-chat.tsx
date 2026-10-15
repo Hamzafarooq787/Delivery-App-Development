@@ -109,7 +109,7 @@ export function FloatingLiveChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Live chat"
-        className="fixed bottom-24 lg:bottom-8 right-4 lg:right-6 z-50 w-14 h-14 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-[0_0_24px_rgba(var(--brand-rgb),0.45)] flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
+        className="fixed bottom-24 lg:bottom-8 right-4 lg:right-6 z-50 w-14 h-14 rounded-full bg-[var(--brand-strong)] text-[var(--brand-ink)] shadow-[0_0_24px_rgba(var(--brand-rgb),0.45)] flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
       >
         <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
           {open ? "close" : "chat_bubble"}
@@ -124,12 +124,12 @@ export function FloatingLiveChat() {
       {/* Chat panel */}
       {open && (
         <div
-          className="fixed bottom-40 lg:bottom-24 right-4 lg:right-6 z-50 w-[calc(100vw-2rem)] max-w-[380px] rounded-2xl overflow-hidden shadow-2xl border border-[#494847]/20 flex flex-col"
+          className="fixed bottom-40 lg:bottom-24 right-4 lg:right-6 z-50 w-[calc(100vw-2rem)] max-w-[380px] rounded-2xl overflow-hidden shadow-2xl border border-[var(--color-outline-variant)]/20 flex flex-col"
           style={{ height: "min(500px, 70vh)", background: "#131313" }}
         >
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#494847]/20 shrink-0 bg-[#1a1919]">
-            <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] font-bold text-xs shrink-0">AD</div>
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--color-outline-variant)]/20 shrink-0 bg-[var(--brand-panel)]">
+            <div className="w-9 h-9 rounded-full bg-[var(--brand-strong)]/20 flex items-center justify-center text-[var(--brand-soft)] font-bold text-xs shrink-0">AD</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white leading-none">Support Team</p>
               <p className="text-[10px] text-[#6ee7b7] mt-0.5 flex items-center gap-1">
@@ -137,7 +137,7 @@ export function FloatingLiveChat() {
                 Online
               </p>
             </div>
-            <button onClick={() => setOpen(false)} className="text-[#adaaaa] hover:text-white transition-colors">
+            <button onClick={() => setOpen(false)} className="text-[var(--color-on-surface-variant)] hover:text-white transition-colors">
               <span className="material-symbols-outlined text-lg">close</span>
             </button>
           </div>
@@ -146,33 +146,33 @@ export function FloatingLiveChat() {
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
             {loading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-[var(--brand-strong)] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-[#1a1919] border border-[#494847]/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>support_agent</span>
+                <div className="w-14 h-14 rounded-2xl bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[var(--brand-soft)] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>support_agent</span>
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">Hi there! 👋</p>
-                  <p className="text-xs text-[#adaaaa] mt-1 max-w-[220px]">Send a message to start chatting with our support team.</p>
+                  <p className="text-xs text-[var(--color-on-surface-variant)] mt-1 max-w-[220px]">Send a message to start chatting with our support team.</p>
                 </div>
               </div>
             ) : (
               messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender_role === "driver" ? "justify-end" : "justify-start"}`}>
                   {msg.sender_role === "admin" && (
-                    <div className="w-6 h-6 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] text-[9px] font-bold shrink-0 mr-2 mt-auto mb-0.5">AD</div>
+                    <div className="w-6 h-6 rounded-full bg-[var(--brand-strong)]/20 flex items-center justify-center text-[var(--brand-soft)] text-[9px] font-bold shrink-0 mr-2 mt-auto mb-0.5">AD</div>
                   )}
                   <div
                     className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                       msg.sender_role === "driver"
-                        ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-br-sm font-medium"
-                        : "bg-[#262626] text-white rounded-bl-sm"
+                        ? "bg-[var(--brand-strong)] text-[var(--brand-ink)] rounded-br-sm font-medium"
+                        : "bg-[var(--color-surface-container-highest)] text-white rounded-bl-sm"
                     }`}
                   >
                     {msg.content}
-                    <p className={`text-[9px] mt-1 ${msg.sender_role === "driver" ? "text-[var(--color-on-primary)]/60 text-right" : "text-[#adaaaa]"}`}>
+                    <p className={`text-[9px] mt-1 ${msg.sender_role === "driver" ? "text-[var(--brand-ink)]/60 text-right" : "text-[var(--color-on-surface-variant)]"}`}>
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
@@ -183,7 +183,7 @@ export function FloatingLiveChat() {
           </div>
 
           {/* Input */}
-          <div className="px-4 py-3 border-t border-[#494847]/20 bg-[#1a1919] shrink-0">
+          <div className="px-4 py-3 border-t border-[var(--color-outline-variant)]/20 bg-[var(--brand-panel)] shrink-0">
             <div className="flex items-end gap-2">
               <textarea
                 ref={inputRef}
@@ -193,22 +193,22 @@ export function FloatingLiveChat() {
                 placeholder="Type a message…"
                 rows={1}
                 disabled={sending || !sessionId}
-                className="flex-1 resize-none bg-[#262626] border border-[#494847]/20 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 transition-all min-h-[38px] max-h-[100px]"
+                className="flex-1 resize-none bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:border-[var(--brand-strong)]/40 transition-all min-h-[38px] max-h-[100px]"
                 style={{ fieldSizing: "content" } as React.CSSProperties}
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || sending || !sessionId}
-                className="w-9 h-9 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] flex items-center justify-center disabled:opacity-40 hover:brightness-110 active:scale-95 transition-all shrink-0"
+                className="w-9 h-9 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] flex items-center justify-center disabled:opacity-40 hover:brightness-110 active:scale-95 transition-all shrink-0"
               >
                 {sending ? (
-                  <div className="w-4 h-4 border-2 border-[var(--color-on-primary)] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-[var(--brand-ink)] border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>
                 )}
               </button>
             </div>
-            <p className="text-[10px] text-[#494847] text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
+            <p className="text-[10px] text-[var(--color-outline-variant)] text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
           </div>
         </div>
       )}

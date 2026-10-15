@@ -24,8 +24,8 @@ import { LogoutButton }              from "@/components/auth/logout-button"
 
 // ─────────── Shared primitives ─────────────────────────────────────────────
 
-const INPUT = "w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/40 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-all"
-const LABEL = "text-xs font-semibold text-[#adaaaa] uppercase tracking-wider"
+const INPUT = "w-full bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[var(--color-on-surface-variant)] focus:outline-none focus:border-[var(--brand-strong)]/40 focus:ring-1 focus:ring-[var(--brand-strong)]/20 transition-all"
+const LABEL = "text-xs font-semibold text-[var(--color-on-surface-variant)] uppercase tracking-wider"
 
 function Feedback({ saved, error }: { saved: boolean; error: string | null }) {
   if (error)
@@ -55,7 +55,7 @@ function SaveBtn({
     <button
       type="submit"
       disabled={isPending}
-      className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
+      className="px-5 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] disabled:opacity-60 flex items-center gap-2 transition-all"
     >
       {isPending ? (
         <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -101,10 +101,10 @@ function ProfileSection({
   }
 
   return (
-    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+    <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-8 border border-[var(--color-outline-variant)]/5">
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
-          <span className="material-symbols-outlined text-[var(--color-primary)]">person</span>
+        <div className="w-10 h-10 bg-[var(--brand-strong)]/10 rounded-lg flex items-center justify-center">
+          <span className="material-symbols-outlined text-[var(--brand-soft)]">person</span>
         </div>
         <h3 className="text-lg font-bold font-headline text-white">Profile Information</h3>
       </div>
@@ -127,7 +127,7 @@ function ProfileSection({
               className={`${INPUT} opacity-50 cursor-not-allowed`}
               title="Email cannot be changed here"
             />
-            <p className="text-[10px] text-[#adaaaa] mt-1">Contact support to change your email address.</p>
+            <p className="text-[10px] text-[var(--color-on-surface-variant)] mt-1">Contact support to change your email address.</p>
           </div>
         </div>
         <Feedback saved={saved} error={error} />
@@ -145,14 +145,14 @@ function VehicleSection({ vehicles }: { vehicles: DriverVehicle[] }) {
   const [list, setList] = useState<DriverVehicle[]>(vehicles)
 
   return (
-    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+    <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-8 border border-[var(--color-outline-variant)]/5">
       <div className="flex items-center gap-4 mb-6">
         <div className="w-10 h-10 bg-[var(--color-secondary)]/10 rounded-lg flex items-center justify-center">
           <span className="material-symbols-outlined text-[var(--color-secondary)]">directions_car</span>
         </div>
         <div>
           <h3 className="text-lg font-bold font-headline text-white">My Vehicles</h3>
-          <p className="text-xs text-[#adaaaa] mt-0.5">You'll only be matched to jobs your registered vehicles can carry.</p>
+          <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">You'll only be matched to jobs your registered vehicles can carry.</p>
         </div>
       </div>
       <VehicleManager vehicles={list} onChange={setList} />
@@ -181,7 +181,7 @@ function Toggle({
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
         <p className="text-sm font-semibold text-white">{label}</p>
-        <p className="text-xs text-[#adaaaa] mt-0.5">{description}</p>
+        <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">{description}</p>
       </div>
       <button
         type="button"
@@ -190,7 +190,7 @@ function Toggle({
         id={id}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-          checked ? "bg-[var(--color-primary)]" : "bg-[#494847]"
+          checked ? "bg-[var(--brand-strong)]" : "bg-[var(--color-outline-variant)]"
         }`}
       >
         <span
@@ -231,7 +231,7 @@ function NotificationsSection({
   }
 
   return (
-    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+    <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-8 border border-[var(--color-outline-variant)]/5">
       <div className="flex items-center gap-4 mb-6">
         <div className="w-10 h-10 bg-[#6ee7b7]/10 rounded-lg flex items-center justify-center">
           <span className="material-symbols-outlined text-[#6ee7b7]">notifications</span>
@@ -247,7 +247,7 @@ function NotificationsSection({
           label="Push Notifications"
           description="Receive push notifications for job assignments and platform alerts."
         />
-        <div className="h-px bg-[#494847]/10" />
+        <div className="h-px bg-[var(--color-outline-variant)]/10" />
         <Toggle
           id="delivery_alerts"
           name="delivery_alerts"
@@ -317,12 +317,12 @@ function SoundSettingsSection() {
       case "granted":     return { color: "bg-[#6ee7b7]", text: "Active",      pulse: true  }
       case "denied":      return { color: "bg-[#ff6e84]", text: "Blocked",     pulse: false }
       case "default":     return { color: "bg-amber-400", text: "Not enabled", pulse: false }
-      case "unsupported": return { color: "bg-[#494847]", text: "Unsupported", pulse: false }
+      case "unsupported": return { color: "bg-[var(--color-outline-variant)]", text: "Unsupported", pulse: false }
     }
   })()
 
   return (
-    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+    <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-8 border border-[var(--color-outline-variant)]/5">
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-7">
@@ -333,22 +333,22 @@ function SoundSettingsSection() {
         </div>
         <div>
           <h3 className="text-lg font-bold font-headline text-white">Notification Sound</h3>
-          <p className="text-xs text-[#adaaaa] mt-0.5">System alert + in-app sound for every job notification</p>
+          <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5">System alert + in-app sound for every job notification</p>
         </div>
       </div>
 
       {/* ── System (OS) notification sound ─────────────────────────────────── */}
       <div className="mb-7">
-        <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest mb-3">System Sound</p>
-        <div className="bg-[#262626] rounded-xl border border-[#494847]/20 p-4">
+        <p className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-3">System Sound</p>
+        <div className="bg-[var(--color-surface-container-highest)] rounded-xl border border-[var(--color-outline-variant)]/20 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                notifPerm === "granted" ? "bg-[#6ee7b7]/15" : "bg-[#494847]/20"
+                notifPerm === "granted" ? "bg-[#6ee7b7]/15" : "bg-[var(--color-outline-variant)]/20"
               }`}>
                 <span
                   className={`material-symbols-outlined text-[18px] ${
-                    notifPerm === "granted" ? "text-[#6ee7b7]" : "text-[#adaaaa]"
+                    notifPerm === "granted" ? "text-[#6ee7b7]" : "text-[var(--color-on-surface-variant)]"
                   }`}
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
@@ -364,14 +364,14 @@ function SoundSettingsSection() {
                       : notifPerm === "denied"
                       ? "bg-[#ff6e84]/15 text-[#ff6e84]"
                       : notifPerm === "unsupported"
-                      ? "bg-[#494847]/30 text-[#adaaaa]"
+                      ? "bg-[var(--color-outline-variant)]/30 text-[var(--color-on-surface-variant)]"
                       : "bg-amber-400/15 text-amber-400"
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${systemBadge.color} ${systemBadge.pulse ? "animate-pulse" : ""}`} />
                     {systemBadge.text}
                   </span>
                 </div>
-                <p className="text-[11px] text-[#adaaaa] mt-1 leading-relaxed">
+                <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-1 leading-relaxed">
                   {notifPerm === "granted"
                     ? "Your device plays its own notification ringtone for every alert. Works on Android, Windows & macOS."
                     : notifPerm === "denied"
@@ -406,9 +406,9 @@ function SoundSettingsSection() {
 
           {/* iOS note */}
           {notifPerm === "unsupported" && (
-            <div className="mt-3 flex items-start gap-2 bg-[var(--color-primary)]/8 border border-[var(--color-primary)]/15 rounded-lg px-3 py-2.5">
-              <span className="material-symbols-outlined text-[var(--color-primary)] text-[14px] shrink-0 mt-0.5">info</span>
-              <p className="text-[11px] text-[#adaaaa] leading-relaxed">
+            <div className="mt-3 flex items-start gap-2 bg-[var(--brand-strong)]/8 border border-[var(--brand-strong)]/15 rounded-lg px-3 py-2.5">
+              <span className="material-symbols-outlined text-[var(--brand-soft)] text-[14px] shrink-0 mt-0.5">info</span>
+              <p className="text-[11px] text-[var(--color-on-surface-variant)] leading-relaxed">
                 On <span className="text-white font-semibold">iOS</span>, add this app to your Home Screen (Share → Add to Home Screen) to enable push notifications with system sounds.
               </p>
             </div>
@@ -419,18 +419,18 @@ function SoundSettingsSection() {
       {/* ── In-app sound (Web Audio) ───────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest">In-App Sound</p>
-          <span className="text-[10px] text-[#494847]">Plays while the app is open</span>
+          <p className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest">In-App Sound</p>
+          <span className="text-[10px] text-[var(--color-outline-variant)]">Plays while the app is open</span>
         </div>
 
         {/* Volume */}
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2.5">
             <label className={LABEL}>Volume</label>
-            <span className="text-xs font-bold text-[var(--color-primary)] tabular-nums">{volume}%</span>
+            <span className="text-xs font-bold text-[var(--brand-soft)] tabular-nums">{volume}%</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_mute</span>
+            <span className="material-symbols-outlined text-[var(--color-on-surface-variant)] text-[18px]">volume_mute</span>
             <input
               type="range"
               min={0}
@@ -440,11 +440,11 @@ function SoundSettingsSection() {
               onChange={(e) => setVolume(Number(e.target.value))}
               className="flex-1 h-2 rounded-full cursor-pointer appearance-none"
               style={{
-                background: `linear-gradient(to right, var(--color-primary) ${volume}%, #2a2a2a ${volume}%)`,
-                accentColor: "var(--color-primary)",
+                background: `linear-gradient(to right, var(--brand-strong) ${volume}%, #2a2a2a ${volume}%)`,
+                accentColor: "var(--brand-strong)",
               }}
             />
-            <span className="material-symbols-outlined text-[#adaaaa] text-[18px]">volume_up</span>
+            <span className="material-symbols-outlined text-[var(--color-on-surface-variant)] text-[18px]">volume_up</span>
           </div>
           {volume === 0 && (
             <p className="text-[11px] text-amber-400 mt-2 flex items-center gap-1">
@@ -468,18 +468,18 @@ function SoundSettingsSection() {
                 className={`
                   relative flex items-center gap-3 p-4 rounded-xl border text-left transition-all
                   ${isSelected
-                    ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]/50 shadow-[0_0_12px_rgba(var(--brand-rgb),0.12)]"
-                    : "bg-[#262626] border-[#494847]/20 hover:border-[#494847]/50 hover:bg-[#2a2a2a]"
+                    ? "bg-[var(--brand-strong)]/10 border-[var(--brand-strong)]/50 shadow-[0_0_12px_rgba(var(--brand-rgb),0.12)]"
+                    : "bg-[var(--color-surface-container-highest)] border-[var(--color-outline-variant)]/20 hover:border-[var(--color-outline-variant)]/50 hover:bg-[var(--color-surface-container-highest)]"
                   }
                 `}
               >
                 {/* Icon */}
                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                  isSelected ? "bg-[var(--color-primary)]/20" : "bg-[#1a1919]"
+                  isSelected ? "bg-[var(--brand-strong)]/20" : "bg-[var(--brand-panel)]"
                 }`}>
                   <span
                     className={`material-symbols-outlined text-[18px] transition-colors ${
-                      isSelected ? "text-[var(--color-primary)]" : "text-[#adaaaa]"
+                      isSelected ? "text-[var(--brand-soft)]" : "text-[var(--color-on-surface-variant)]"
                     }`}
                     style={{ fontVariationSettings: "'FILL' 1" }}
                   >
@@ -489,10 +489,10 @@ function SoundSettingsSection() {
 
                 {/* Label + description */}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-bold transition-colors ${isSelected ? "text-[var(--color-primary)]" : "text-white"}`}>
+                  <p className={`text-sm font-bold transition-colors ${isSelected ? "text-[var(--brand-soft)]" : "text-white"}`}>
                     {opt.label}
                   </p>
-                  <p className="text-[11px] text-[#adaaaa] mt-0.5 leading-relaxed">{opt.description}</p>
+                  <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5 leading-relaxed">{opt.description}</p>
                 </div>
 
                 {/* ▶ Preview button */}
@@ -503,13 +503,13 @@ function SoundSettingsSection() {
                   className={`
                     w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all
                     ${isPreviewing
-                      ? "bg-[var(--color-primary)] scale-110"
-                      : "bg-[#1a1919] hover:bg-[var(--color-primary)]/20 hover:scale-105"
+                      ? "bg-[var(--brand-strong)] scale-110"
+                      : "bg-[var(--brand-panel)] hover:bg-[var(--brand-strong)]/20 hover:scale-105"
                     }
                   `}
                 >
                   <span
-                    className={`material-symbols-outlined text-[15px] ${isPreviewing ? "text-[var(--color-on-primary)]" : "text-[#adaaaa]"}`}
+                    className={`material-symbols-outlined text-[15px] ${isPreviewing ? "text-[var(--brand-ink)]" : "text-[var(--color-on-surface-variant)]"}`}
                     style={{ fontVariationSettings: isPreviewing ? "'FILL' 1" : "'FILL' 0" }}
                   >
                     {isPreviewing ? "graphic_eq" : "play_arrow"}
@@ -518,8 +518,8 @@ function SoundSettingsSection() {
 
                 {/* Selected tick */}
                 {isSelected && (
-                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[var(--color-on-primary)]" style={{ fontSize: 11 }}>check</span>
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[var(--brand-strong)] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[var(--brand-ink)]" style={{ fontSize: 11 }}>check</span>
                   </span>
                 )}
               </button>
@@ -532,7 +532,7 @@ function SoundSettingsSection() {
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] flex items-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(var(--brand-rgb),0.35)]"
+            className="px-5 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] flex items-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(var(--brand-rgb),0.35)]"
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
             Save Sound Settings
@@ -571,7 +571,7 @@ function SecuritySection() {
   }
 
   return (
-    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+    <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-8 border border-[var(--color-outline-variant)]/5">
       <div className="flex items-center gap-4 mb-6">
         <div className="w-10 h-10 bg-[#ff6e84]/10 rounded-lg flex items-center justify-center">
           <span className="material-symbols-outlined text-[#ff6e84]">lock</span>
@@ -580,7 +580,7 @@ function SecuritySection() {
       </div>
 
       {/* Change password */}
-      <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Change Password</p>
+      <p className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-4">Change Password</p>
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <label className={LABEL}>New Password</label>
@@ -609,19 +609,19 @@ function SecuritySection() {
       </form>
 
       {/* Divider */}
-      <div className="h-px bg-[#494847]/10 my-6" />
+      <div className="h-px bg-[var(--color-outline-variant)]/10 my-6" />
 
       {/* Session info */}
-      <p className="text-xs font-bold text-[#adaaaa] uppercase tracking-widest mb-4">Session</p>
+      <p className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-4">Session</p>
       <LogoutButton
-        className="flex items-center gap-3 w-full p-4 bg-[#262626] hover:bg-[#ff6e84]/10 border border-[#494847]/10 hover:border-[#ff6e84]/20 rounded-xl transition-all group"
+        className="flex items-center gap-3 w-full p-4 bg-[var(--color-surface-container-highest)] hover:bg-[#ff6e84]/10 border border-[var(--color-outline-variant)]/10 hover:border-[#ff6e84]/20 rounded-xl transition-all group"
       >
         <span className="material-symbols-outlined text-[#ff6e84] group-hover:scale-110 transition-transform">logout</span>
         <div>
           <p className="text-sm font-semibold text-white">Sign Out</p>
-          <p className="text-xs text-[#adaaaa]">Sign out of this device</p>
+          <p className="text-xs text-[var(--color-on-surface-variant)]">Sign out of this device</p>
         </div>
-        <span className="material-symbols-outlined text-[#adaaaa] text-sm ml-auto">chevron_right</span>
+        <span className="material-symbols-outlined text-[var(--color-on-surface-variant)] text-sm ml-auto">chevron_right</span>
       </LogoutButton>
     </div>
   )
@@ -644,24 +644,24 @@ function AvailabilityCard({ isOnline: initial }: { isOnline: boolean }) {
   }
 
   return (
-    <div className="bg-[rgba(38,38,38,0.6)] backdrop-blur-xl rounded-2xl p-5 md:p-8 flex flex-col items-center text-center border border-[#494847]/15">
+    <div className="bg-[var(--brand-panel)] backdrop-blur-xl rounded-2xl p-5 md:p-8 flex flex-col items-center text-center border border-[var(--color-outline-variant)]/15">
       <div className="mb-5 relative">
         <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-colors ${
-          online ? "border-[#6ee7b7]/40 bg-[#6ee7b7]/10" : "border-[#494847]/40 bg-[#262626]"
+          online ? "border-[#6ee7b7]/40 bg-[#6ee7b7]/10" : "border-[var(--color-outline-variant)]/40 bg-[var(--color-surface-container-highest)]"
         }`}>
-          <span className={`material-symbols-outlined text-3xl transition-colors ${online ? "text-[#6ee7b7]" : "text-[#adaaaa]"}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+          <span className={`material-symbols-outlined text-3xl transition-colors ${online ? "text-[#6ee7b7]" : "text-[var(--color-on-surface-variant)]"}`} style={{ fontVariationSettings: "'FILL' 1" }}>
             sensors
           </span>
         </div>
-        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#0e0e0e] transition-colors ${
-          online ? "bg-[#6ee7b7]" : "bg-[#494847]"
+        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[var(--brand-bg)] transition-colors ${
+          online ? "bg-[#6ee7b7]" : "bg-[var(--color-outline-variant)]"
         }`} style={{ boxShadow: online ? "0 0 10px rgba(110,231,183,0.4)" : undefined }} />
       </div>
       <h3 className="text-xl font-black font-headline text-white mb-1">Driver Status</h3>
-      <p className="text-xs text-[#adaaaa] mb-6 leading-relaxed px-2">Toggle your visibility to the dispatch network.</p>
+      <p className="text-xs text-[var(--color-on-surface-variant)] mb-6 leading-relaxed px-2">Toggle your visibility to the dispatch network.</p>
 
       {/* Online / Offline pill toggle */}
-      <div className="w-full bg-[#0e0e0e] rounded-full p-1.5 flex items-center">
+      <div className="w-full bg-[var(--brand-bg)] rounded-full p-1.5 flex items-center">
         <button
           type="button"
           onClick={() => toggle(true)}
@@ -669,7 +669,7 @@ function AvailabilityCard({ isOnline: initial }: { isOnline: boolean }) {
           className={`w-1/2 py-2.5 rounded-full text-sm font-bold transition-all ${
             online
               ? "bg-[#6ee7b7] text-[#0f3d2c] shadow-[0_0_10px_rgba(110,231,183,0.3)]"
-              : "text-[#adaaaa] hover:text-white"
+              : "text-[var(--color-on-surface-variant)] hover:text-white"
           }`}
         >
           Online
@@ -680,18 +680,18 @@ function AvailabilityCard({ isOnline: initial }: { isOnline: boolean }) {
           disabled={isPending}
           className={`w-1/2 py-2.5 rounded-full text-sm font-bold transition-all ${
             !online
-              ? "bg-[#494847] text-white"
-              : "text-[#adaaaa] hover:text-white"
+              ? "bg-[var(--color-outline-variant)] text-white"
+              : "text-[var(--color-on-surface-variant)] hover:text-white"
           }`}
         >
           Offline
         </button>
       </div>
 
-      <p className={`mt-3 text-[11px] font-semibold tracking-wider uppercase ${online ? "text-[#6ee7b7]/80" : "text-[#adaaaa]/60"}`}>
+      <p className={`mt-3 text-[11px] font-semibold tracking-wider uppercase ${online ? "text-[#6ee7b7]/80" : "text-[var(--color-on-surface-variant)]/60"}`}>
         {online ? "Receiving Jobs" : "Not Accepting Jobs"}
       </p>
-      {isPending && <p className="text-[10px] text-[#adaaaa] mt-1">Updating…</p>}
+      {isPending && <p className="text-[10px] text-[var(--color-on-surface-variant)] mt-1">Updating…</p>}
       {error    && <p className="text-[10px] text-[#ff6e84] mt-1">{error}</p>}
     </div>
   )
@@ -703,23 +703,23 @@ function SafetyCard() {
   const links = [
     { icon: "cancel",          label: "Cancel Active Job",  color: "text-[#ff6e84]", hover: "hover:bg-[#ff6e84]/10", href: "/dashboard/driver/active-jobs" },
     { icon: "report",          label: "Report Incident",    color: "text-[var(--color-secondary)]", hover: "hover:bg-[var(--color-secondary)]/10", href: "/dashboard/driver/support" },
-    { icon: "contact_support", label: "Live Dispatch Chat", color: "text-[var(--color-primary)]", hover: "hover:bg-[var(--color-primary)]/10", href: "/dashboard/driver/support" },
+    { icon: "contact_support", label: "Live Dispatch Chat", color: "text-[var(--brand-soft)]", hover: "hover:bg-[var(--brand-strong)]/10", href: "/dashboard/driver/support" },
   ]
   return (
-    <div className="bg-[#1a1919] rounded-xl p-5 md:p-8 border border-[#494847]/5">
+    <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-8 border border-[var(--color-outline-variant)]/5">
       <h3 className="text-base font-bold font-headline text-white mb-5">Safety &amp; Support</h3>
       <div className="space-y-3">
         {links.map(item => (
           <a
             key={item.label}
             href={item.href}
-            className={`flex items-center justify-between p-4 bg-[#262626] ${item.hover} rounded-xl border border-[#494847]/10 transition-all group`}
+            className={`flex items-center justify-between p-4 bg-[var(--color-surface-container-highest)] ${item.hover} rounded-xl border border-[var(--color-outline-variant)]/10 transition-all group`}
           >
             <div className="flex items-center gap-3">
               <span className={`material-symbols-outlined ${item.color} group-hover:scale-110 transition-transform text-lg`}>{item.icon}</span>
               <span className="text-sm font-semibold text-white">{item.label}</span>
             </div>
-            <span className="material-symbols-outlined text-[#adaaaa] text-sm">chevron_right</span>
+            <span className="material-symbols-outlined text-[var(--color-on-surface-variant)] text-sm">chevron_right</span>
           </a>
         ))}
       </div>
@@ -731,15 +731,15 @@ function SafetyCard() {
 
 function AccountCard({ email, role }: { email: string; role: string }) {
   return (
-    <div className="rounded-xl border border-[var(--color-primary)]/10 p-5" style={{ background: "linear-gradient(to bottom right, rgba(var(--brand-rgb),0.08), transparent)" }}>
-      <p className="text-[10px] font-bold text-[var(--color-primary)] tracking-widest uppercase mb-3">Account</p>
+    <div className="rounded-xl border border-[var(--brand-strong)]/10 p-5" style={{ background: "linear-gradient(to bottom right, rgba(var(--brand-rgb),0.08), transparent)" }}>
+      <p className="text-[10px] font-bold text-[var(--brand-soft)] tracking-widest uppercase mb-3">Account</p>
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
-          <span className="material-symbols-outlined text-[var(--color-primary)] text-lg">account_circle</span>
+        <div className="w-9 h-9 rounded-full bg-[var(--brand-strong)]/10 flex items-center justify-center">
+          <span className="material-symbols-outlined text-[var(--brand-soft)] text-lg">account_circle</span>
         </div>
         <div className="min-w-0">
           <p className="text-xs text-white font-semibold truncate">{email || "—"}</p>
-          <p className="text-[10px] text-[#adaaaa] capitalize mt-0.5">{role}</p>
+          <p className="text-[10px] text-[var(--color-on-surface-variant)] capitalize mt-0.5">{role}</p>
         </div>
       </div>
     </div>

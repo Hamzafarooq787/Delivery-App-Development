@@ -58,14 +58,14 @@ export default async function DriverSettingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 md:mb-10">
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
-            <span className="text-base font-bold text-[var(--color-primary)]">{initials}</span>
+          <div className="h-14 w-14 rounded-full bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 flex items-center justify-center shrink-0">
+            <span className="text-base font-bold text-[var(--brand-soft)]">{initials}</span>
           </div>
           <div>
             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tighter font-headline text-white">
               Account Settings
             </h2>
-            <p className="text-[#adaaaa] text-sm mt-0.5">
+            <p className="text-[var(--color-on-surface-variant)] text-sm mt-0.5">
               {props.fullName || "Driver"} · {props.email}
             </p>
           </div>

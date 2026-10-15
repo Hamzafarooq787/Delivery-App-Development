@@ -27,7 +27,7 @@ export function RequestPayoutButton({ pendingBalance }: { pendingBalance: number
       onClick={handleRequest}
       disabled={isPending || pendingBalance <= 0}
       className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all
-        bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:brightness-110 active:scale-95
+        bg-[var(--brand-strong)] text-[var(--brand-ink)] hover:brightness-110 active:scale-95
         disabled:opacity-40 disabled:cursor-not-allowed"
       style={{ boxShadow: pendingBalance > 0 ? "0px 0px 16px rgba(var(--brand-rgb),0.35)" : undefined }}
     >
