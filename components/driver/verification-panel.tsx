@@ -243,29 +243,7 @@ export function VerificationPanel({
               })}
             </div>
 
-            {canSubmit && (
-              <button
-                onClick={handleSubmit}
-                disabled={submitPending}
-                className="w-full mt-2 py-3 bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
-              >
-                {submitPending ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                    </svg>
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-sm">send</span>
-                    Submit for Review
-                  </>
-                )}
-              </button>
-            )}
+
           </div>
         </div>
 
@@ -372,6 +350,29 @@ export function VerificationPanel({
               </div>
             )
           })}
+            {canSubmit && (
+              <button
+                onClick={handleSubmit}
+                disabled={submitPending}
+                className="w-full mt-2 py-3 bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-sm rounded-xl active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
+              >
+                {submitPending ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-sm">send</span>
+                    Submit for Review
+                  </>
+                )}
+              </button>
+            )}
         </div>
 
         {/* Support Banner */}

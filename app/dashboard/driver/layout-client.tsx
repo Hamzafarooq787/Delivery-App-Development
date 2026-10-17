@@ -1,5 +1,6 @@
 "use client"
 
+import { BrandLogo } from "@/components/shared/brand-logo"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import { DriverSidebar } from "@/components/driver/driver-sidebar"
@@ -52,8 +53,8 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-[var(--brand-panel)] backdrop-blur-xl flex justify-between items-center px-4 md:px-8 z-40 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+        <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-[var(--brand-panel)] backdrop-blur-xl flex justify-between items-center px-2 sm:px-4 md:px-8 z-40 shadow-[0_1px_0_0_rgba(255,255,255,0.05)]">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="flex lg:hidden shrink-0 items-center justify-center h-8 w-8 text-[var(--color-on-surface-variant)] hover:text-white"
@@ -61,8 +62,11 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
             >
               <span className="material-symbols-outlined text-xl">menu</span>
             </button>
+            <a href="/dashboard/driver" aria-label="GoDrop driver home" className="lg:hidden shrink-0 w-20 min-[380px]:w-24 sm:w-32 [&_.brand-logo]:w-full [&_.brand-logo]:h-9">
+              <BrandLogo />
+            </a>
             {!isLocked && (
-              <div className="relative w-full max-w-md hidden sm:block">
+              <div className="relative w-full max-w-md hidden lg:block">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-on-surface-variant)] text-sm">search</span>
                 <input
                   className="w-full bg-[var(--color-surface-container-highest)]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[var(--brand-strong)]/30 text-white placeholder-[var(--color-on-surface-variant)] outline-none"
@@ -72,11 +76,11 @@ export function DriverLayoutClient({ children, user, isOnline, driverStatus, has
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3 md:gap-5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-3 md:gap-5 shrink-0">
             <TestPushButton />
             <InstallButton />
             {!isLocked && (
-              <button className="sm:hidden text-[var(--color-on-surface-variant)] hover:text-[var(--brand-soft)] transition-colors" aria-label="Search">
+              <button className="lg:hidden text-[var(--color-on-surface-variant)] hover:text-[var(--brand-soft)] transition-colors" aria-label="Search">
                 <span className="material-symbols-outlined">search</span>
               </button>
             )}
