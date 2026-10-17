@@ -32,7 +32,7 @@ html[data-brand="orange"] .brand-logo-orange {display:block}
 .brand-preview[data-preview-brand="orange"] .brand-logo-purple {display:none}
 .brand-preview[data-preview-brand="orange"] .brand-logo-orange {display:block}
 .brand-preview[aria-pressed="true"] {border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary)}
-[data-theme="light"] .brand-logo {background:#101214;border-radius:6px}
+.brand-logo {background:transparent}
 html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#1a1a1a]"] {background-color:#1b1d20!important}
 html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#2a2a2a]"],html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#262626]"] {background-color:#2a2d31!important}
 html[data-brand="orange"]:not([data-theme="light"]) [class*="bg-[#0a0a0a]"] {background-color:#0d0f11!important}
