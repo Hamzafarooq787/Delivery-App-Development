@@ -1,99 +1,71 @@
 'use client'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Home, BriefcaseBusiness, Truck, Wallet, Ellipsis } from 'lucide-react'
+import styles from './MapFirstDashboard.module.css'
 
-const LEFT_ITEMS = [
-  { href: '/dashboard/driver', icon: 'dashboard', label: 'Home' },
-  { href: '/dashboard/driver/jobs/available', icon: 'work', label: 'Jobs' },
+const tabs = [
+  { href: '/dashboard/driver', label: 'Home', Icon: Home },
+  {
+    href: '/dashboard/driver/jobs/available',
+    label: 'Jobs',
+    Icon: BriefcaseBusiness,
+  },
+  { href: '/dashboard/driver/active-jobs', label: 'Active', Icon: Truck },
+  { href: '/dashboard/driver/earnings', label: 'Earnings', Icon: Wallet },
 ]
-const RIGHT_ITEMS = [
-  { href: '/dashboard/driver/earnings', icon: 'payments', label: 'Earnings' },
-  { href: '/dashboard/driver/profile', icon: 'person', label: 'Profile' },
-]
 
-function NavItem({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
-  return (
-    <Link href={href} className="flex flex-col items-center gap-1 flex-1 pt-2 pb-1 relative group">
-      {active && (
-        <span
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-full bg-[var(--brand-strong)]"
-          style={{ boxShadow: '0 0 8px rgba(var(--brand-rgb),0.7)' }}
-        />
-      )}
-      <div className={`w-11 h-7 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-        active ? 'bg-[var(--brand-strong)]/15' : 'group-active:bg-[var(--color-surface-container-highest)]'
-      }`}>
-        <span
-          className={`material-symbols-outlined text-xl transition-all duration-200 ${
-            active ? 'text-[var(--brand-soft)]' : 'text-[var(--color-on-surface-variant)]'
-          }`}
-          style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
-        >
-          {icon}
-        </span>
-      </div>
-      <span className={`text-[9px] font-bold uppercase tracking-widest transition-colors ${
-        active ? 'text-[var(--brand-soft)]' : 'text-[var(--color-on-surface-variant)]'
-      }`}>
-        {label}
-      </span>
-    </Link>
-  )
-}
-
-interface DriverBottomNavProps {
+export function DriverBottomNav({
+  isLocked = false,
+  onMore,
+}: {
   isLocked?: boolean
-}
-
-export function DriverBottomNav({ isLocked = false }: DriverBottomNavProps) {
+  onMore?: () => void
+}) {
   const pathname = usePathname()
-
-  function isActive(href: string) {
-    if (href === '/dashboard/driver') return pathname === href
-    return pathname.startsWith(href)
-  }
-
   if (isLocked) return null
-
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50">
-      <div className="bg-[var(--brand-panel)] backdrop-blur-2xl border-t border-[var(--color-outline-variant)]/20 shadow-[0_-12px_40px_rgba(0,0,0,0.7)]">
-        <div className="flex items-end justify-around h-16 px-1">
-          {LEFT_ITEMS.map(item => (
-            <NavItem key={item.href} {...item} active={isActive(item.href)} />
-          ))}
-
-          {/* Centre FAB — Active Jobs */}
-          <div className="flex flex-col items-center flex-1 -mt-4">
-            <Link
-              href="/dashboard/driver/active-jobs"
-              aria-label="Active Jobs"
-              className={`w-14 h-14 rounded-full flex items-center justify-center active:scale-90 transition-transform duration-150 ${
-                isActive('/dashboard/driver/active-jobs')
-                  ? 'bg-[var(--brand-strong)]'
-                  : 'bg-[var(--brand-strong)]'
-              }`}
-              style={{ boxShadow: '0 0 24px rgba(var(--brand-rgb),0.5), 0 4px 16px rgba(0,0,0,0.4)' }}
-            >
-              <span className="material-symbols-outlined text-[var(--brand-ink)] text-2xl" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>
-                local_shipping
-              </span>
-            </Link>
-            <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)] mt-1 mb-1">
-              Active
-            </span>
-          </div>
-
-          {RIGHT_ITEMS.map(item => (
-            <NavItem key={item.href} {...item} active={isActive(item.href)} />
-          ))}
-        </div>
-
-        {/* iOS safe-area spacer */}
-        <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
-      </div>
+    <nav className={styles.bottomNav} aria-label="Driver navigation">
+      {tabs.map(({ href, label, Icon }) => {
+        const active =
+          href === '/dashboard/driver'
+            ? pathname === href
+            : pathname.startsWith(href) ||
+              (label === 'Earnings' &&
+                pathname.startsWith('/dashboard/driver/payouts')) ||
+              (label === 'Active' &&
+                pathname.startsWith('/dashboard/driver/jobs/') &&
+                !pathname.endsWith('/available') &&
+                !pathname.endsWith('/completed'))
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? 'page' : undefined}
+            className={styles.bottomItem}
+            data-active={active}
+          >
+            <Icon aria-hidden="true" />
+            <span>{label}</span>
+          </Link>
+        )
+      })}
+      <button
+        type="button"
+        className={styles.bottomItem}
+        data-active={[
+          '/profile',
+          '/settings',
+          '/support',
+          '/verification',
+          '/jobs/completed',
+        ].some((s) => pathname.startsWith('/dashboard/driver' + s))}
+        onClick={onMore}
+        aria-label="More driver pages"
+      >
+        <Ellipsis aria-hidden="true" />
+        <span>More</span>
+      </button>
     </nav>
   )
 }
-
