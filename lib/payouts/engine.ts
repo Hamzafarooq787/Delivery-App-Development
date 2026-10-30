@@ -9,6 +9,8 @@ export type BankOperation = {
   transfer_id?: string;
   payout_id?: string;
   error?: string;
+  attempt?: number;
+  history?: Array<Record<string, unknown>>;
 };
 type Dependencies = {
   stripe: Stripe;
@@ -36,13 +38,15 @@ export async function executeBankPayout(
   const amount = Math.round(pounds * 100);
   if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error("invalid_payout_amount");
   const options = { stripeAccount: op.account };
+  const attempt = op.attempt ?? 0;
+  if (!Number.isInteger(attempt) || attempt < 0) throw new Error("invalid_payout_attempt");
   const store = async (patch: Partial<BankOperation>) => {
     const next = { ...op, ...patch };
     await save(next);
     op = next;
   };
   const confirm = async (payout: Stripe.Payout) => {
-    if (payout.amount !== amount || payout.currency !== "gbp" || payout.metadata?.godrop_payout !== id)
+    if (payout.amount !== amount || payout.currency !== "gbp" || payout.metadata?.godrop_payout !== id || Number(payout.metadata?.godrop_attempt ?? 0) !== attempt)
       throw new Error("bank_payout_mismatch");
     await store({ payout_id: payout.id, state: payout.status, error: payout.failure_code ?? undefined });
     return op;
@@ -88,10 +92,14 @@ export async function executeBankPayout(
     await store({ transfer_id: transfer.id, state: "awaiting_bank_payout", error: undefined });
   }
 
+  const funded = await stripe.transfers.retrieve(op.transfer_id!);
+  if (funded.amount !== amount || funded.currency !== "gbp" || funded.destination !== op.account || funded.reversed || funded.amount_reversed > 0)
+    throw new Error("transfer_reversed_requires_reconciliation");
+
   let payout: Stripe.Payout | undefined;
   if (op.payout_started_at) {
     for await (const candidate of stripe.payouts.list({ created: { gte: Math.floor(Date.parse(op.payout_started_at) / 1000) - 60 }, limit: 100 }, options)) {
-      if (candidate.metadata?.godrop_payout === id) {
+      if (candidate.metadata?.godrop_payout === id && Number(candidate.metadata?.godrop_attempt ?? 0) === attempt) {
         if (payout) throw new Error("multiple_bank_payouts_require_reconciliation");
         payout = candidate;
       }
@@ -104,8 +112,8 @@ export async function executeBankPayout(
     if ((balance.available.find(b => b.currency === "gbp")?.amount ?? 0) < amount)
       throw new Error("waiting_for_connected_balance");
     if (!op.payout_started_at) await store({ payout_started_at: new Date(now()).toISOString() });
-    payout = await stripe.payouts.create({ amount, currency: "gbp", method: "standard", metadata: { godrop_payout: id } }, {
-      ...options, idempotencyKey: `godrop:bank:${id}`,
+    payout = await stripe.payouts.create({ amount, currency: "gbp", method: "standard", metadata: { godrop_payout: id, godrop_attempt: String(attempt) } }, {
+      ...options, idempotencyKey: attempt === 0 ? `godrop:bank:${id}` : `godrop:bank:${id}:${attempt}`,
     });
   }
   return confirm(payout);

@@ -23,3 +23,10 @@ Purchased items are not driver earnings. A conservative reserve excludes all pai
 Failed/uncertain bank operations keep their earning claims and provider references. They are surfaced for reconciliation, never automatically released for a second transfer. Correct the bank account and reconcile returned funds in Stripe before any replacement payout workflow. Automated replacement of failed bank payouts and complete goods-funding/chargeback reconciliation remain open.
 
 Other acceptance remains open: authenticated customer/driver/admin flows on the requested phones and desktop, real Checkout/refund/Issuing flows, approved waiting-charge consent, service area policy and launch-approved driver/legal terms. Do not describe this release as all bugs fixed or launch acceptance complete.
+
+
+## Failed-bank-payout recovery update
+
+Admin → Payouts now provides “Verify returned funds and retry bank payout” for failed/canceled operations. The server retrieves the prior bank payout under the stored connected account, verifies its amount/currency/order metadata and available return balance transaction, and checks that bank payouts are active. A locked service-only RPC records the prior payout, return transaction, admin and time; keeps the original transfer; and increments the bank attempt. Replays and concurrent worker updates are rejected. Each attempt has its own stable key and metadata. Three replacements are allowed before manual support is required. Reversed/partially reversed platform transfers block new bank attempts.
+
+This supersedes the earlier statement that failed-bank replacement is not implemented. Actual Stripe acceptance, KYC, webhook connection, goods funding, chargeback reconciliation and signed-in device testing still need verification. Keep automatic payments paused until acceptance is complete.

@@ -62,3 +62,30 @@ export async function setAutomaticPayouts(enabled: boolean) {
     return { success: true };
   } catch { return { error: "Unable to save payout setting. Check Stripe configuration and retry." }; }
 }
+
+/** Queue a new BANK attempt only after Stripe proves the old payout returned. */
+export async function retryFailedBankPayout(id: string) {
+  const session = await createClient();
+  const { data: { user } } = await session.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+  const role = await session.from("users").select("role").eq("id", user.id).single();
+  if (role.data?.role !== "admin") return { error: "Not authorized." };
+  const db = createAdminClient();
+  const row = await db.from("payouts").select("amount,provider").eq("id", id).single();
+  if (row.error || !row.data?.provider?.payout_id) return { error: "No bank payout to reconcile." };
+  const op = row.data.provider;
+  try {
+    const stripe = getStripe();
+    const payout = await stripe.payouts.retrieve(op.payout_id, { expand: ["failure_balance_transaction"] }, { stripeAccount: op.account });
+    const returned = payout.failure_balance_transaction;
+    if (!["failed", "canceled"].includes(payout.status) || payout.amount !== Math.round(Number(row.data.amount)*100) || payout.currency !== "gbp" || payout.metadata?.godrop_payout !== id || !returned || typeof returned === "string" || returned.amount < payout.amount || returned.currency !== "gbp" || returned.status !== "available")
+      return { error: "Stripe has not confirmed the failed payout funds are available again. No retry was created." };
+    const account = await stripe.v2.core.accounts.retrieve(op.account, { include: ["configuration.recipient"] });
+    if (account.configuration?.recipient?.capabilities?.stripe_balance?.payouts?.status !== "active")
+      return { error: "The driver must fix their bank details with Stripe first." };
+    const queued = await db.rpc("queue_bank_payout_retry", { p_id: id, p_actor: user.id, p_previous: payout.id, p_return: returned.id });
+    if (queued.error) return { error: queued.error.message };
+    revalidatePath("/dashboard/admin/payouts");
+    return { success: true };
+  } catch { return { error: "Could not verify returned bank funds. No retry was created." }; }
+}
