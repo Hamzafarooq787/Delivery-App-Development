@@ -10,7 +10,7 @@
     "check:icons": "node scripts/check-icon-names.mjs",
     "generate-icons": "node scripts/generate-icons-fallback.mjs",
     "typecheck": "tsc --noEmit",
-    "test:repairs": "node --test tests/repairs.test.mjs"
+    "test:repairs": "node --test tests/repairs.test.mjs tests/batches-11-14.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.93.0",

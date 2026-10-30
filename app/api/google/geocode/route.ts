@@ -1,17 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-const KEY = process.env.GOOGLE_MAPS_KEY!
-
-// Deliberately NOT auth-gated, unlike the other /api/google/* routes —
-// app/signup/page.tsx reverse-geocodes the user's GPS location to prefill
-// an address before they have a session. Everything else that touches the
-// Google Maps API requires login; this is the one necessary exception.
+import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
 export async function GET(req: NextRequest) {
-  const latlng = req.nextUrl.searchParams.get('latlng')
-  const resultType = req.nextUrl.searchParams.get('result_type') ?? ''
-  if (!latlng) return NextResponse.json({ error: 'missing latlng' }, { status: 400 })
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlng}${resultType ? `&result_type=${resultType}` : ''}&key=${KEY}`
-  const res = await fetch(url)
-  const data = await res.json()
-  return NextResponse.json(data)
+  const raw = req.nextUrl.searchParams.get("latlng") ?? "";
+  if (!/^-?\d{1,3}(\.\d{1,12})?,-?\d{1,3}(\.\d{1,12})?$/.test(raw))
+    return NextResponse.json({ error: "Invalid coordinates" }, { status: 400 });
+  const [lat, lng] = raw.split(",").map(Number);
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180)
+    return NextResponse.json({ error: "Invalid coordinates" }, { status: 400 });
+  const key = process.env.GOOGLE_MAPS_KEY;
+  if (!key)
+    return NextResponse.json(
+      { error: "Location service unavailable" },
+      { status: 503 },
+    );
+  const ip = req.headers.get("x-real-ip") ?? "unknown";
+  const hash = createHash("sha256")
+    .update(key + ":" + ip)
+    .digest("hex");
+  const { data, error } = await createAdminClient().rpc(
+    "claim_public_geocode",
+    { p_key: hash },
+  );
+  if (error)
+    return NextResponse.json(
+      { error: "Location service unavailable" },
+      { status: 503 },
+    );
+  if (!data)
+    return NextResponse.json(
+      { error: "Please wait before trying again" },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  const type = req.nextUrl.searchParams.get("result_type");
+  if (
+    type &&
+    !["street_address", "postal_code", "premise", "route", "country"].includes(
+      type,
+    )
+  )
+    return NextResponse.json({ error: "Invalid result type" }, { status: 400 });
+  const params = new URLSearchParams({ latlng: raw, key });
+  if (type) params.set("result_type", type);
+  try {
+    const r = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?${params}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!r.ok) throw new Error();
+    return NextResponse.json(await r.json());
+  } catch {
+    return NextResponse.json(
+      { error: "Location lookup failed. Please retry." },
+      { status: 502 },
+    );
+  }
 }

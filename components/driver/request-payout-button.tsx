@@ -14,8 +14,8 @@ export function RequestPayoutButton({ pendingBalance }: { pendingBalance: number
     }
     startTransition(async () => {
       const res = await requestDriverPayout()
-      if (res.error) {
-        toast.error(res.error)
+      if ("error" in res) {
+        toast.error(res.error || "Unable to request payout")
       } else {
         toast.success(`Payout of £${(res.amount ?? 0).toFixed(2)} requested successfully!`)
       }

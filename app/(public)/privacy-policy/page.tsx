@@ -25,7 +25,7 @@ const sections = [
   },
   {
     title: "Your Rights",
-    content: "Depending on your location, you may have rights to access, correct, delete, or restrict processing of your personal data. To exercise these rights, please contact us at privacy@swiftdeliver.com.",
+    content: "Depending on your location, you may have rights to access, correct, delete, or restrict processing of your personal data. To exercise these rights, please contact us at privacy@godrop.uk.",
   },
   {
     title: "Data Retention",
@@ -45,7 +45,7 @@ const sections = [
   },
   {
     title: "Contact Us",
-    content: "If you have questions about this Privacy Policy or our data practices, please contact our Data Protection team at privacy@swiftdeliver.com or write to us at our registered business address.",
+    content: "If you have questions about this Privacy Policy or our data practices, please contact our Data Protection team at privacy@godrop.uk or write to us at our registered business address.",
   },
 ]
 

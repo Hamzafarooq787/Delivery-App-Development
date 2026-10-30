@@ -1,11 +1,11 @@
 const sections = [
   {
     title: "Acceptance of Terms",
-    content: "By accessing or using SwiftDeliver, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our platform. We reserve the right to update these terms at any time with notice provided via email or in-app notification.",
+    content: "By accessing or using GoDrop, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our platform. We reserve the right to update these terms at any time with notice provided via email or in-app notification.",
   },
   {
     title: "Description of Services",
-    content: "SwiftDeliver provides an on-demand delivery platform connecting customers who need items delivered with independent drivers. We are a technology platform and are not a logistics company. Drivers are independent contractors, not employees of SwiftDeliver.",
+    content: "GoDrop provides an on-demand delivery platform connecting customers who need items delivered with independent drivers. We are a technology platform and are not a logistics company. Drivers are independent contractors, not employees of GoDrop.",
   },
   {
     title: "User Accounts and Registration",
@@ -13,7 +13,7 @@ const sections = [
   },
   {
     title: "Prohibited Activities",
-    content: "You may not use SwiftDeliver to transport prohibited or illegal items. This includes but is not limited to: controlled substances, weapons, hazardous materials, counterfeit goods, and live animals. Violation of this policy may result in immediate account suspension and legal action.",
+    content: "You may not use GoDrop to transport prohibited or illegal items. This includes but is not limited to: controlled substances, weapons, hazardous materials, counterfeit goods, and live animals. Violation of this policy may result in immediate account suspension and legal action.",
   },
   {
     title: "Payment Terms",
@@ -25,23 +25,23 @@ const sections = [
   },
   {
     title: "Limitation of Liability",
-    content: "To the maximum extent permitted by law, SwiftDeliver shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform. Our total liability shall not exceed the amount paid for the delivery in question.",
+    content: "To the maximum extent permitted by law, GoDrop shall not be liable for any indirect, incidental, or consequential damages arising from your use of the platform. Our total liability shall not exceed the amount paid for the delivery in question.",
   },
   {
     title: "Privacy and Data Protection",
-    content: "Your use of SwiftDeliver is also governed by our Privacy Policy, which is incorporated into these Terms by reference. We are committed to protecting your personal data in accordance with applicable data protection laws.",
+    content: "Your use of GoDrop is also governed by our Privacy Policy, which is incorporated into these Terms by reference. We are committed to protecting your personal data in accordance with applicable data protection laws.",
   },
   {
     title: "Changes to Terms",
-    content: "We reserve the right to modify these Terms at any time. We will provide reasonable notice of material changes. Your continued use of SwiftDeliver after such changes constitutes your acceptance of the new Terms.",
+    content: "We reserve the right to modify these Terms at any time. We will provide reasonable notice of material changes. Your continued use of GoDrop after such changes constitutes your acceptance of the new Terms.",
   },
   {
     title: "Governing Law",
-    content: "These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which SwiftDeliver operates, without regard to its conflict of law provisions.",
+    content: "These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which GoDrop operates, without regard to its conflict of law provisions.",
   },
   {
     title: "Contact Information",
-    content: "If you have any questions about these Terms of Service, please contact us at legal@swiftdeliver.com or write to us at our registered business address.",
+    content: "If you have any questions about these Terms of Service, please contact us at the support contact shown in the app or write to us at our registered business address.",
   },
 ]
 

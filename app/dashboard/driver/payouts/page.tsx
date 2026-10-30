@@ -34,11 +34,12 @@ export default async function DriverPayoutsPage() {
     // Driver payout history
     supabase
       .from("payouts")
-      .select("id, amount, status, created_at")
+      .select("id, amount, status, created_at, payment_reference, processed_at")
       .eq("driver_id", user?.id ?? "")
       .order("created_at", { ascending: false }),
   ])
 
+  if(earningsRes.error||fallbackRes.error||payoutsRes.error)throw new Error("Payout information could not load. Please retry.")
   const realEarnings = earningsRes.data ?? []
   const payouts      = payoutsRes.data  ?? []
 
@@ -192,7 +193,7 @@ export default async function DriverPayoutsPage() {
                                 : "bg-[var(--color-secondary)]/10 text-[var(--color-secondary)]"
                             }`}>
                               <span className={`w-1 h-1 rounded-full ${isPaid ? "bg-[#6ee7b7]" : "bg-[var(--color-secondary)] animate-pulse"}`} />
-                              {isPaid ? "Paid" : "Pending"}
+                              {isPaid ? "Paid" : e.status === "reserved" ? "Reserved for payout" : "Pending"}
                             </span>
                           </div>
                         </div>
@@ -249,6 +250,7 @@ export default async function DriverPayoutsPage() {
                         </div>
                       </div>
                       <div className="text-right">
+                        {p.payment_reference && <p className="text-xs break-all">Payment reference: {p.payment_reference}</p>}
                         <p className={`text-sm font-black ${p.status === "rejected" ? "text-[#ff6e84] line-through opacity-60" : "text-white"}`}>
                           {fmt(p.amount ?? 0)}
                         </p>

@@ -939,13 +939,11 @@ export async function adminSaveSettings(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const { error } = await supabase
-    .from("users")
-    .update({
-      full_name: formData.get("full_name") as string,
-      phone: formData.get("phone") as string,
-    })
-    .eq("id", user.id)
+  const {data:actor}=await supabase.from("users").select("role").eq("id",user.id).single()
+  if(actor?.role!=="admin")return {error:"Not authorized"}
+  const name=String(formData.get("full_name")??"").trim(),email=String(formData.get("email")??"").trim(),phone=String(formData.get("phone")??"").trim()
+  if(!name||name.length>80||phone.length>40||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))return {error:"Check platform name and support contact details"}
+  const {error}=await createAdminClient().from("surge_pricing_settings").update({platform_settings:{name,email,phone,updated_by:user.id,updated_at:new Date().toISOString()}}).eq("id",1).select("id").single()
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/settings")

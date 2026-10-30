@@ -166,56 +166,14 @@ export async function adminCancelOrder(deliveryId: string): Promise<{
     const result = await cancelCardBooking(deliveryId)
     return result.error ? { error: result.error } : { success: true, refunded: false, refundAmount: result.amount }
   }
-  const { data: delivery, error: fetchErr } = await admin
-    .from("delivery_requests")
-    .select("id, status, customer_id, price")
-    .eq("id", deliveryId)
-    .single()
-
-  if (fetchErr || !delivery) return { error: "Order not found" }
-  if (["delivered", "cancelled"].includes(delivery.status))
-    return { error: "This order cannot be cancelled" }
-
-  const { error: cancelErr } = await admin
-    .from("delivery_requests")
-    .update({ status: "cancelled", driver_id: null })
-    .eq("id", deliveryId)
-
-  if (cancelErr) return { error: cancelErr.message }
-
-  // Refund full price to customer wallet if there's a price and a customer
-  let refunded = false
-  const refundAmount = Number(delivery.price ?? 0)
-  if (refundAmount > 0 && delivery.customer_id) {
-    const { data: wallet } = await admin
-      .from("wallet_balances")
-      .select("balance")
-      .eq("user_id", delivery.customer_id)
-      .maybeSingle()
-
-    const currentBalance = Number(wallet?.balance ?? 0)
-    await admin
-      .from("wallet_balances")
-      .upsert({ user_id: delivery.customer_id, balance: currentBalance + refundAmount }, { onConflict: "user_id" })
-
-    await admin.from("wallet_transactions").insert({
-      user_id:     delivery.customer_id,
-      type:        "cashback",
-      amount:      refundAmount,
-      description: "Admin cancellation refund",
-      delivery_id: deliveryId,
-    })
-    refunded = true
-  }
-
-  const { revalidatePath } = await import("next/cache")
-  revalidatePath("/dashboard/admin/orders")
-  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
-  return { success: true, refunded, refundAmount }
+  const {data,error}=await admin.rpc("admin_wallet_refund",{p_order:deliveryId,p_actor:user.id,p_amount:0,p_key:crypto.randomUUID(),p_cancel:true})
+  if(error)return {error:error.message}
+  const {revalidatePath}=await import("next/cache");revalidatePath("/dashboard/admin/orders");
+  return {success:true,refunded:Number(data)>0,refundAmount:Number(data)}
 }
 
 // ── Admin: issue a manual refund to the customer's wallet ─────────────────
-export async function adminIssueRefund(deliveryId: string, amount: number): Promise<{
+export async function adminIssueRefund(deliveryId: string, amount: number, requestKey: string): Promise<{
   success?: boolean
   error?: string
 }> {
@@ -229,36 +187,9 @@ export async function adminIssueRefund(deliveryId: string, amount: number): Prom
 
   const admin = createAdminClient()
 
-  const { data: delivery, error: fetchErr } = await admin
-    .from("delivery_requests")
-    .select("id, customer_id")
-    .eq("id", deliveryId)
-    .single()
-
-  if (fetchErr || !delivery || !delivery.customer_id) return { error: "Order not found" }
-
-  const { data: cardPayment } = await admin.from("payments").select("id").eq("delivery_id", deliveryId).eq("payment_method", "stripe").maybeSingle()
-  if (cardPayment) return { error: "Card refunds must use the original-payment refund workflow; wallet refunds are not allowed." }
-  const { data: wallet } = await admin
-    .from("wallet_balances")
-    .select("balance")
-    .eq("user_id", delivery.customer_id)
-    .maybeSingle()
-
-  const currentBalance = Number(wallet?.balance ?? 0)
-  await admin
-    .from("wallet_balances")
-    .upsert({ user_id: delivery.customer_id, balance: currentBalance + amount }, { onConflict: "user_id" })
-
-  await admin.from("wallet_transactions").insert({
-    user_id:     delivery.customer_id,
-    type:        "cashback",
-    amount,
-    description: "Admin manual refund",
-    delivery_id: deliveryId,
-  })
-
-  const { revalidatePath } = await import("next/cache")
-  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
-  return { success: true }
+  if(!Number.isFinite(amount)||!requestKey)return {error:"Invalid refund request"}
+  const {error}=await admin.rpc("admin_wallet_refund",{p_order:deliveryId,p_actor:user.id,p_amount:amount,p_key:requestKey,p_cancel:false})
+  if(error)return {error:error.message}
+  const {revalidatePath}=await import("next/cache");revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
+  return {success:true}
 }

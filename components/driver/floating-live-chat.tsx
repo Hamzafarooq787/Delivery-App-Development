@@ -19,6 +19,9 @@ export function FloatingLiveChat() {
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
   const [driverUnread, setDriverUnread] = useState(0)
+  const [chatError,setChatError]=useState("")
+  const [olderLoading,setOlderLoading]=useState(false)
+  const [hasOlder,setHasOlder]=useState(true)
   const [loading, setLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -92,7 +95,8 @@ export function FloatingLiveChat() {
     if (!text || !sessionId || sending) return
     setInput("")
     setSending(true)
-    await sendChatMessage(sessionId, text, "driver")
+    const result=await sendChatMessage(sessionId, text, "driver")
+    if(result.error){setChatError(result.error);setInput(text)}else{setChatError("");if(result.data)setMessages(prev=>prev.some(m=>m.id===result.data!.id)?prev:[...prev,result.data!])}
     setSending(false)
   }
 
@@ -134,7 +138,7 @@ export function FloatingLiveChat() {
               <p className="text-sm font-bold text-white leading-none">Support Team</p>
               <p className="text-[10px] text-[#6ee7b7] mt-0.5 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#6ee7b7] inline-block animate-pulse" />
-                Online
+                Support messages
               </p>
             </div>
             <button onClick={() => setOpen(false)} className="text-[var(--color-on-surface-variant)] hover:text-white transition-colors">
@@ -144,6 +148,13 @@ export function FloatingLiveChat() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            {chatError && <p role="alert" className="text-red-300 text-sm">{chatError}</p>}
+            {messages.length>0 && hasOlder && <button disabled={olderLoading} className="text-sm text-white underline" onClick={async()=>{
+              if(!sessionId)return;setOlderLoading(true);
+              const r=await getChatMessages(sessionId,messages[0]);setOlderLoading(false);
+              if(r.error){setChatError(r.error);return}setHasOlder(r.data.length===100);
+              setMessages(prev=>[...r.data.filter(m=>!prev.some(p=>p.id===m.id)),...prev]);
+            }}>{olderLoading?"Loading…":"Load earlier messages"}</button>}
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="w-6 h-6 border-2 border-[var(--brand-strong)] border-t-transparent rounded-full animate-spin" />

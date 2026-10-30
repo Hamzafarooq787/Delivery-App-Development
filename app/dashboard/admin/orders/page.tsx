@@ -1,3 +1,4 @@
+import {NeedsAttention} from "@/components/admin/needs-attention"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { DeliveriesLedger } from "@/components/admin/deliveries-ledger"
 
@@ -50,6 +51,7 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
+      <NeedsAttention />
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-white">

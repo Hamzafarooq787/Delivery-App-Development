@@ -149,7 +149,7 @@ function PayoutActionButtons({
       <div className="flex items-center gap-2">
         <button
           disabled={isPending}
-          onClick={() => run(() => completeDriverPayout(payout.id), fmt(payout.amount) + " disbursed")}
+          onClick={() => run(() => completeDriverPayout(payout.id, window.prompt("Enter the verified bank payment reference. Only confirm after the transfer is complete.") ?? undefined), fmt(payout.amount) + " disbursed")}
           className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[#6ee7b7]/10 text-[#6ee7b7] hover:bg-[#6ee7b7]/20 border border-[#6ee7b7]/20 transition-all disabled:opacity-50 whitespace-nowrap"
         >
           {isPending ? "…" : "Mark Paid"}
