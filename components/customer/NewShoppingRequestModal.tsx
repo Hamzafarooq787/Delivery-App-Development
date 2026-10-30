@@ -59,6 +59,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   const frame = useRef<HTMLDivElement>(null)
   const lock = useRef(false)
+  const requestKey = useRef<string | null>(null)
   const [step, setStep] = useState(1)
   const [items, setItems] = useState<Item[]>([freshItem()])
   const [index, setIndex] = useState(0)
@@ -106,8 +107,9 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   function update(field: keyof ShoppingItem, value: unknown) { setItems(prev => prev.map((i, n) => n === index ? { ...i, [field]: value } : i)); setQuote(null); setError('') }
   function go(next: number) { setError(''); setDetails(false); setInstructions(false); setStep(next) }
   function validItems() {
+    if (items.length > 5) { setError('You can order up to 5 different products.'); return false }
     if (items.some(i => !i.name.trim())) { setError('Name each item, or remove the empty item.'); return false }
-    if (items.some(i => !Number.isInteger(i.quantity) || i.quantity < 1 || (i.estimated_price != null && (!Number.isFinite(i.estimated_price) || i.estimated_price < 0)))) { setError('Check item quantities and estimated prices.'); return false }
+    if (items.some(i => !Number.isInteger(i.quantity) || i.quantity < 1 || i.quantity > 99 || (i.estimated_price != null && (!Number.isFinite(i.estimated_price) || i.estimated_price < 0)))) { setError('Check item quantities and estimated prices.'); return false }
     return true
   }
   async function next() {
@@ -126,7 +128,8 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (lock.current || success || !quote || !shop || !delivery || uploading || !validItems()) return
     lock.current = true; setLoading(true); setError('')
     try {
-      const result = await createShoppingRequest({ shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng, shop_instructions: shopInstructions.trim() || null, delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng, shopping_items: items.map(i => ({ name: i.name.trim(), quantity: i.quantity, estimated_price: i.estimated_price, brand_size_variant: i.brand_size_variant, notes: i.notes, photo_url: i.photo_url, substitution_preference: i.substitution_preference })) })
+      requestKey.current ??= crypto.randomUUID()
+      const result = await createShoppingRequest({ request_key: requestKey.current, shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng, shop_instructions: shopInstructions.trim() || null, delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng, shopping_items: items.map(i => ({ name: i.name.trim(), quantity: i.quantity, estimated_price: i.estimated_price, brand_size_variant: i.brand_size_variant, notes: i.notes, photo_url: i.photo_url, substitution_preference: i.substitution_preference })) })
       if ('error' in result) setError(result.error); else setSuccess(result.data)
     } catch { setError('We could not confirm the result. Check My Deliveries before trying again.') }
     finally { lock.current = false; setLoading(false) }
@@ -135,7 +138,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (uploading) return
     if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) { setError('Choose an image smaller than 10 MB.'); return }
     const id = item.id; setUploading(true); setError('')
-    try { const client = createClient(); const path = `bfm-items/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`; const result = await client.storage.from('delivery-item-photos').upload(path, file); if (result.error) throw result.error; const { data } = client.storage.from('delivery-item-photos').getPublicUrl(path); setItems(prev => prev.map(i => i.id === id ? { ...i, photo_url: data.publicUrl } : i)) }
+    try { const client = createClient(); const { data: { user } } = await client.auth.getUser(); if (!user) throw new Error("Session expired"); const path = `${user.id}/bfm-items/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`; const result = await client.storage.from('delivery-item-photos').upload(path, file); if (result.error) throw result.error; const { data } = client.storage.from('delivery-item-photos').getPublicUrl(path); setItems(prev => prev.map(i => i.id === id ? { ...i, photo_url: data.publicUrl } : i)) }
     catch { setError('Photo upload failed. Try again.') }
     finally { setUploading(false) }
   }
@@ -146,12 +149,13 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   }
   function saveItem() {
     if (!item.name.trim()) { setError('Enter an item name before saving.'); return }
-    if (!Number.isInteger(item.quantity) || item.quantity < 1 || (item.estimated_price != null && (!Number.isFinite(item.estimated_price) || item.estimated_price < 0))) { setError('Check the quantity and estimated price.'); return }
+    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99 || (item.estimated_price != null && (!Number.isFinite(item.estimated_price) || item.estimated_price < 0))) { setError('Check the quantity and estimated price.'); return }
     if (!savedIds.includes(item.id)) setSavedIds([...savedIds, item.id])
     setEditing(false); setDetails(false); setError('')
     setListPage(Math.floor((savedIds.includes(item.id) ? savedIds.indexOf(item.id) : savedIds.length) / 3) * 3)
   }
   function addItem() {
+    if (savedItems.length >= 5) { setError("You can add up to 5 different products."); return }
     if (items.some(i => !savedIds.includes(i.id))) { setIndex(items.findIndex(i => !savedIds.includes(i.id))) }
     else { setItems([...items, freshItem()]); setIndex(items.length) }
     setEditing(true); setListPage(0); setDetails(false); setError(''); setQuote(null)

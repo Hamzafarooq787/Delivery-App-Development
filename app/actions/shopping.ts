@@ -3,8 +3,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
-import { notifyUser, notifyMultipleUsers } from "@/app/actions/notifications"
+import { notifyUser, notifyMultipleUsers } from "@/lib/notifications/internal"
 import { getDeliveryQuote } from "@/app/actions/pricing"
+import { validateShoppingItems, normalizeBfmSettings } from "@/lib/shopping-validation"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ export type ShoppingItem = {
 }
 
 export type CreateShoppingRequestParams = {
+  request_key: string
   shop_name: string
   shop_address: string
   shop_lat: number
@@ -46,7 +48,8 @@ export type BfmSettings = {
 export async function getBfmSettings(): Promise<BfmSettings> {
   const admin = createAdminClient()
   const { data } = await admin.from("bfm_settings").select("*").single()
-  return data ?? { enabled: true, max_purchase_amount: 50, service_fee_percentage: 10 }
+  if (!data) throw new Error("Shopping settings could not be loaded. Please try again.")
+  return normalizeBfmSettings(data)
 }
 
 export async function updateBfmSettings(settings: Partial<BfmSettings>): Promise<{ error?: string }> {
@@ -56,6 +59,8 @@ export async function updateBfmSettings(settings: Partial<BfmSettings>): Promise
   const { data: profile } = await createAdminClient().from("users").select("role").eq("id", user.id).single()
   if (profile?.role !== "admin") return { error: "Unauthorised" }
 
+  if (settings.enabled !== undefined && typeof settings.enabled !== "boolean") return { error: "Invalid service setting" }
+  if (settings.max_purchase_amount !== undefined && (!Number.isFinite(settings.max_purchase_amount) || settings.max_purchase_amount <= 0 || settings.max_purchase_amount > 100)) return { error: "Shopping limit must be between £0.01 and £100" }
   const admin = createAdminClient()
   const { error } = await admin
     .from("bfm_settings")
@@ -79,9 +84,15 @@ export async function createShoppingRequest(
   const admin = createAdminClient()
 
   // Check BFM is enabled and get settings
-  const bfm = await getBfmSettings()
+  let bfm: BfmSettings
+  try { bfm = await getBfmSettings() } catch { return { error: "Shopping settings are unavailable. Please try again." } }
   if (!bfm.enabled) return { error: "Buy for Me is currently unavailable.", code: "bfm_disabled" }
 
+  if (!params.request_key || !/^[0-9a-f-]{36}$/i.test(params.request_key)) return { error: "Please reopen the shopping form and retry." }
+  const validationError = validateShoppingItems(params.shopping_items)
+  if (validationError) return { error: validationError }
+  if (!params.shop_name?.trim() || !params.shop_address?.trim() || !params.delivery_address?.trim()) return { error: "Enter the shop and delivery details." }
+  if (![params.shop_lat, params.shop_lng, params.delivery_lat, params.delivery_lng].every(Number.isFinite) || Math.abs(params.shop_lat) > 90 || Math.abs(params.delivery_lat) > 90 || Math.abs(params.shop_lng) > 180 || Math.abs(params.delivery_lng) > 180) return { error: "Select valid shop and delivery locations." }
   // Validate items
   if (!params.shopping_items || params.shopping_items.length === 0) {
     return { error: "Please add at least one item to your shopping list." }
@@ -141,75 +152,27 @@ export async function createShoppingRequest(
 
   const tracking_number = `BFM-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
-  // Create request via service-role RPC
-  const { data: deliveryId, error: rpcError } = await admin.rpc(
-    "create_shopping_request_with_wallet_payment",
-    {
-      p_customer_id: user.id,
-      p_tracking_number: tracking_number,
-      p_delivery_address: params.delivery_address,
-      p_delivery_lat: params.delivery_lat,
-      p_delivery_lng: params.delivery_lng,
-      p_shop_name: params.shop_name,
-      p_shop_address: params.shop_address,
-      p_shop_lat: params.shop_lat,
-      p_shop_lng: params.shop_lng,
-      p_shop_instructions: params.shop_instructions || null,
-      p_price: deliveryFee,
-      p_base_price: quote.basePrice,
-      p_service_fee: serviceFee,
-      p_estimated_items_total: estimatedTotal || null,
-      p_max_spend_approved: maxSpend,
-      p_promo_code: quote.promoCodeText || null,
-      p_discount_amount: quote.discountAmount,
-      p_surge_multiplier: quote.surgeMultiplier,
-    }
-  )
-
-  if (rpcError) {
-    if (rpcError.message?.includes("Insufficient wallet balance")) {
-      return { error: "Insufficient wallet balance.", code: "insufficient_funds" }
-    }
-    console.error("[Shopping] createShoppingRequest RPC failed:", rpcError)
-    return { error: "Could not create the shopping request. Please try again." }
-  }
-
-  const deliveryIdStr = deliveryId as string
-
-  // Deduct the shopping hold separately (delivery fee was charged in RPC)
-  // Insert shopping items
-  const itemRows = params.shopping_items.map((item) => ({
-    delivery_id: deliveryIdStr,
-    name: item.name,
-    quantity: item.quantity,
-    estimated_price: item.estimated_price || null,
-    brand_size_variant: item.brand_size_variant || null,
-    notes: item.notes || null,
-    photo_url: item.photo_url || null,
-    substitution_preference: item.substitution_preference,
-    status: "pending",
-  }))
-
-  await admin.from("shopping_items").insert(itemRows)
-
-  // Charge the shopping funds hold from wallet
-  await admin.rpc("increment_wallet_balance", { p_user_id: user.id, p_amount: -maxSpend })
-  await admin.from("wallet_transactions").insert({
-    user_id: user.id,
-    type: "deduction",
-    amount: maxSpend,
-    description: `Buy for Me shopping funds hold - ${tracking_number}`,
-    delivery_id: deliveryIdStr,
+  const { data: booking, error: rpcError } = await admin.rpc("book_shopping_order_atomic", {
+    p_customer_id: user.id,
+    p_request_key: params.request_key,
+    p_order: { ...params, tracking_number, price: deliveryFee, base_price: quote.basePrice,
+      service_fee: serviceFee, estimated_items_total: estimatedTotal, max_spend_approved: maxSpend,
+      discount_amount: quote.discountAmount, surge_multiplier: quote.surgeMultiplier },
   })
-
+  if (rpcError || !booking?.id) {
+    console.error("[Shopping booking]", rpcError?.code, rpcError?.message)
+    const insufficient = rpcError?.message?.includes("insufficient_funds")
+    return { error: insufficient ? "Insufficient wallet funds. Add funds, then retry this saved request." : "Shopping could not be booked. Please retry. If this continues, contact support.", ...(insufficient ? { code: "insufficient_funds" as const } : {}) }
+  }
+  const deliveryIdStr = booking.id as string
   revalidatePath("/dashboard/customer")
   revalidatePath("/dashboard/customer/active-deliveries")
   revalidatePath("/dashboard/customer/wallet")
 
   // Notify online approved drivers
-  notifyDriversOfNewShoppingJob(deliveryIdStr, params.shop_name, params.shop_address).catch(console.error)
+  if (!booking.replayed) notifyDriversOfNewShoppingJob(deliveryIdStr, params.shop_name, params.shop_address).catch(console.error)
 
-  return { data: { id: deliveryIdStr, tracking_number } }
+  return { data: { id: deliveryIdStr, tracking_number: booking.tracking_number } }
 }
 
 async function notifyDriversOfNewShoppingJob(
@@ -280,6 +243,7 @@ export async function updateBfmStage(
 
   if (!delivery) return { error: "Order not found" }
   if (delivery.driver_id !== user.id) return { error: "Not your job" }
+  if (["cancelled", "delivered"].includes(delivery.status)) return { error: "Order is closed" }
   if (delivery.service_type !== "buy_for_me") return { error: "Not a Buy for Me order" }
 
   const currentStage = delivery.bfm_stage ?? delivery.status
@@ -288,6 +252,7 @@ export async function updateBfmStage(
     return { error: `Cannot move from ${currentStage} to ${newStage}` }
   }
 
+  if (newStage === "purchase_completed") return { error: "Submit the purchase receipt to complete shopping." }
   // When starting journey to customer, update main status to in_transit
   const updates: Record<string, unknown> = { bfm_stage: newStage }
   if (newStage === "heading_to_customer") {
@@ -297,10 +262,13 @@ export async function updateBfmStage(
     updates.status = "collected" // reuse collected to indicate "at shop / shopping"
   }
 
-  await admin
+  const { data: changed, error: stageError } = await admin
     .from("delivery_requests")
     .update(updates)
     .eq("id", deliveryId)
+    .eq("status", delivery.status)
+    .select("id")
+  if (stageError || !changed?.length) return { error: "Order changed. Refresh before trying again." }
 
   // Notify customer
   const stageMessages: Record<BfmStage, { title: string; body: string }> = {
@@ -341,35 +309,22 @@ export async function updateBfmStage(
 
 // ── Driver: Item management ───────────────────────────────────────────────────
 
-export async function markItemFound(itemId: string): Promise<{ error?: string }> {
+async function changeItemStatus(itemId: string, status: "purchased" | "unavailable") {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
-
   const admin = createAdminClient()
-  const { data: item } = await admin
-    .from("shopping_items")
-    .select("id, delivery_id")
-    .eq("id", itemId)
-    .single()
-
+  const { data: item } = await admin.from("shopping_items").select("delivery_id").eq("id", itemId).single()
   if (!item) return { error: "Item not found" }
-
-  await admin.from("shopping_items").update({ status: "purchased" }).eq("id", itemId)
-  revalidatePath(`/dashboard/driver`)
+  const { data: order } = await admin.from("delivery_requests").select("driver_id,status,bfm_stage").eq("id", item.delivery_id).single()
+  if (order?.driver_id !== user.id || order.status !== "collected" || order.bfm_stage !== "shopping") return { error: "Not your active shopping job" }
+  const { error } = await admin.from("shopping_items").update({ status }).eq("id", itemId).eq("delivery_id", item.delivery_id)
+  if (error) return { error: "Item could not be updated" }
+  revalidatePath("/dashboard/driver")
   return {}
 }
-
-export async function markItemUnavailable(itemId: string): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Not authenticated" }
-
-  const admin = createAdminClient()
-  await admin.from("shopping_items").update({ status: "unavailable" }).eq("id", itemId)
-  revalidatePath(`/dashboard/driver`)
-  return {}
-}
+export async function markItemFound(itemId: string): Promise<{ error?: string }> { return changeItemStatus(itemId, "purchased") }
+export async function markItemUnavailable(itemId: string): Promise<{ error?: string }> { return changeItemStatus(itemId, "unavailable") }
 
 export async function requestSubstitution(params: {
   shopping_item_id: string
@@ -388,11 +343,14 @@ export async function requestSubstitution(params: {
   // Verify driver is assigned
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("customer_id, tracking_number, shop_name, driver_id")
+    .select("customer_id, tracking_number, shop_name, driver_id, status, bfm_stage")
     .eq("id", params.delivery_id)
     .single()
 
-  if (!delivery || delivery.driver_id !== user.id) return { error: "Not your job" }
+  if (!delivery || delivery.driver_id !== user.id || delivery.status !== "collected" || delivery.bfm_stage !== "shopping") return { error: "Not your active shopping job" }
+  const { data: relatedItem } = await admin.from("shopping_items").select("id").eq("id", params.shopping_item_id).eq("delivery_id", params.delivery_id).maybeSingle()
+  if (!relatedItem) return { error: "Item does not belong to this order" }
+  if (params.suggested_price != null && (!Number.isFinite(params.suggested_price) || params.suggested_price < 0)) return { error: "Invalid replacement price" }
 
   const { data: sub, error } = await admin
     .from("shopping_substitutions")
@@ -500,36 +458,15 @@ export async function submitPurchaseReceipt(params: {
   if (!delivery) return { error: "Order not found" }
   if (delivery.driver_id !== user.id) return { error: "Not your job" }
 
-  const maxSpend = delivery.max_spend_approved ?? 50
-  if (params.actual_items_total > maxSpend) {
-    return {
-      error: `Actual total £${params.actual_items_total.toFixed(2)} exceeds approved limit £${maxSpend.toFixed(2)}. You need customer approval first.`,
-    }
-  }
-
-  await admin
-    .from("delivery_requests")
-    .update({
-      receipt_url: params.receipt_url,
-      actual_items_total: params.actual_items_total,
-      purchase_confirmed_at: new Date().toISOString(),
-      bfm_stage: "purchase_completed",
-    })
-    .eq("id", params.deliveryId)
-
-  // Reconcile wallet: held max_spend - actual = refund to customer
-  const refund = parseFloat((maxSpend - params.actual_items_total).toFixed(2))
-  if (refund > 0) {
-    await admin.rpc("increment_wallet_balance", { p_user_id: delivery.customer_id, p_amount: refund })
-    await admin.from("wallet_transactions").insert({
-      user_id: delivery.customer_id,
-      type: "cashback",
-      amount: refund,
-      description: `Buy for Me shopping refund (unspent) - ${delivery.tracking_number}`,
-      delivery_id: params.deliveryId,
-    })
-  }
-
+  if (!Number.isFinite(params.actual_items_total) || params.actual_items_total < 0 || params.actual_items_total > Number(delivery.max_spend_approved)) return { error: "Enter a valid total within the approved shopping budget." }
+  const receiptPath = receiptObjectPath(params.receipt_url)
+  if (!receiptPath || !receiptPath.startsWith(`${user.id}/receipts/${params.deliveryId}/`)) return { error: "Upload a receipt for this order first." }
+  const { data: objects, error: storageError } = await admin.storage.from("delivery-item-photos").list(`${user.id}/receipts/${params.deliveryId}`)
+  if (storageError || !objects?.some(o => o.name === receiptPath.split("/").at(-1))) return { error: "Receipt upload could not be verified." }
+  const { data: settlement, error } = await admin.rpc("settle_shopping_receipt_atomic", { p_delivery_id: params.deliveryId, p_driver_id: user.id, p_receipt_url: params.receipt_url, p_actual_total: params.actual_items_total })
+  if (error) return { error: "Purchase could not be settled. Check approvals and the receipt, then retry." }
+  if (settlement?.replayed) return {}
+  const refund = Number(settlement?.refund ?? 0)
   // Notify customer
   notifyUser({
     userId: delivery.customer_id,
@@ -594,6 +531,8 @@ export type ShoppingItemRow = {
 // ── Admin: Get BFM order details ──────────────────────────────────────────────
 
 export async function getShoppingSubstitutions(deliveryId: string) {
+  const access = await getShoppingItems(deliveryId)
+  if (access.error) return { data: [], error: access.error }
   const admin = createAdminClient()
   const { data, error } = await admin
     .from("shopping_substitutions")
@@ -635,7 +574,8 @@ export async function getShoppingQuote(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const bfm = await getBfmSettings()
+  let bfm: BfmSettings
+  try { bfm = await getBfmSettings() } catch { return { error: "Shopping settings are unavailable. Please try again." } }
   if (!bfm.enabled) return { error: "Buy for Me is currently unavailable." }
 
   const quoteResult = await getDeliveryQuote({
@@ -669,4 +609,13 @@ export async function getShoppingQuote(
       promoCodeError: quote.promoCodeError,
     },
   }
+}
+
+function receiptObjectPath(url: string): string | null {
+  try {
+    const parsed = new URL(url)
+    const origin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin
+    const prefix = "/storage/v1/object/public/delivery-item-photos/"
+    return parsed.origin === origin && parsed.pathname.startsWith(prefix) ? decodeURIComponent(parsed.pathname.slice(prefix.length)) : null
+  } catch { return null }
 }

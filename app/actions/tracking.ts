@@ -63,7 +63,7 @@ export async function getDriverLocationForDelivery(deliveryId: string) {
     if (me?.role !== "admin") return { data: null, error: "Forbidden" }
   }
 
-  if (!delivery.driver_id) {
+  if (!delivery.driver_id || !["accepted", "collected", "picked_up", "in_transit"].includes(delivery.status)) {
     return { data: { delivery, location: null }, error: null }
   }
 
@@ -71,6 +71,7 @@ export async function getDriverLocationForDelivery(deliveryId: string) {
     .from("driver_locations")
     .select("*")
     .eq("driver_id", delivery.driver_id)
+    .eq("delivery_id", deliveryId)
     .maybeSingle()
 
   return { data: { delivery, location: location as DriverLocation | null }, error: null }

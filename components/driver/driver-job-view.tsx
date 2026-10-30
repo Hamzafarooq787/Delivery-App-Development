@@ -269,7 +269,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               <span className="material-symbols-outlined text-[#6ee7b7] text-base">verified</span>
               <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Parcel Authenticated</p>
             </div>
-            <img src={job.parcel_image_url} alt="Parcel" className="w-full object-cover" style={{ maxHeight: 200 }} />
+            <img src={`/api/delivery-proof?id=${encodeURIComponent(job.id)}&kind=pickup`} alt="Parcel" className="w-full object-cover" style={{ maxHeight: 200 }} />
           </div>
         )}
 
@@ -280,7 +280,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               <span className="material-symbols-outlined text-[#6ee7b7] text-base">verified</span>
               <p className="text-[11px] font-bold text-[#6ee7b7] uppercase tracking-wider">Proof of Delivery</p>
             </div>
-            <img src={job.delivered_image_url} alt="Delivered package" className="w-full object-cover" style={{ maxHeight: 200 }} />
+            <img src={`/api/delivery-proof?id=${encodeURIComponent(job.id)}&kind=delivery`} alt="Delivered package" className="w-full object-cover" style={{ maxHeight: 200 }} />
           </div>
         )}
 

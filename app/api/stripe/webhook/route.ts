@@ -20,7 +20,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getStripe, isStripeConfigured } from "@/lib/stripe/server"
-import { notifyUser } from "@/app/actions/notifications"
+import { notifyUser } from "@/lib/notifications/internal"
 
 export const dynamic = "force-dynamic"
 

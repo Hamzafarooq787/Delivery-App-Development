@@ -24,7 +24,7 @@ export async function getMyDocuments(): Promise<{ data: DriverDocument[]; error?
     .order("created_at", { ascending: false })
 
   if (error) return { data: [], error: error.message }
-  return { data: (data ?? []) as DriverDocument[] }
+  return { data: ((data ?? []) as DriverDocument[]).map(d => ({ ...d, file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` })) }
 }
 
 export async function recordDriverDocument(documentType: string, fileUrl: string) {
@@ -33,6 +33,13 @@ export async function recordDriverDocument(documentType: string, fileUrl: string
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
+
+  if (!["identity", "insurance", "vehicle_registration", "selfie"].includes(documentType)) return { error: "Invalid document type" }
+  try {
+    const url = new URL(fileUrl)
+    const prefix = `/storage/v1/object/public/driver-documents/${user.id}/`
+    if (url.origin !== new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin || !url.pathname.startsWith(prefix)) return { error: "Invalid document owner" }
+  } catch { return { error: "Invalid document URL" } }
 
   // Replace any existing doc of the same type
   await admin.from("driver_documents").delete().eq("driver_id", user.id).eq("document_type", documentType)
@@ -64,11 +71,18 @@ export async function submitForReview() {
 }
 
 export async function getDriverDocumentsById(driverId: string): Promise<DriverDocument[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
   const admin = createAdminClient()
+  if (user.id !== driverId) {
+    const { data: caller } = await admin.from("users").select("role").eq("id", user.id).maybeSingle()
+    if (caller?.role !== "admin") return []
+  }
   const { data } = await admin
     .from("driver_documents")
     .select("id, document_type, file_url, created_at")
     .eq("driver_id", driverId)
     .order("created_at", { ascending: false })
-  return (data ?? []) as DriverDocument[]
+  return ((data ?? []) as DriverDocument[]).map(d => ({ ...d, file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` }))
 }

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
-import { notifyUser, notifyDriversOfNewDelivery } from "@/app/actions/notifications"
+import { notifyUser, notifyDriversOfNewDelivery } from "@/lib/notifications/internal"
 import { NotificationTag } from "@/lib/notifications/types"
 import { isPackageSize, unionCapabilities, type PackageSize, type VehicleType } from "@/lib/vehicles"
 import type { DriverVehicle } from "@/app/actions/vehicles"
@@ -182,6 +182,7 @@ export async function submitSupportTicket(formData: FormData) {
 export async function getAvailableDeliveries() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated", data: [] }
 
   // Use admin client: RLS has no policy allowing drivers to read unassigned delivery_requests
   const admin = createAdminClient()
@@ -1091,7 +1092,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
 
   const [usersRes, docsRes, vehiclesRes, authRes] = await Promise.all([
     admin.from("users").select("id, full_name, phone, email").in("id", ids),
-    admin.from("driver_documents").select("driver_id, document_type, file_url").in("driver_id", ids),
+    admin.from("driver_documents").select("id, driver_id, document_type, file_url").in("driver_id", ids),
     admin.from("driver_vehicles").select(
       "id, driver_id, vehicle_type, make, model, colour, registration_number, driving_licence_details, insurance_details, created_at"
     ).in("driver_id", ids),
@@ -1105,7 +1106,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
   const docsMap = new Map<string, { document_type: string; file_url: string }[]>()
   for (const doc of docsRes.data ?? []) {
     const arr = docsMap.get(doc.driver_id) ?? []
-    arr.push({ document_type: doc.document_type, file_url: doc.file_url })
+    arr.push({ document_type: doc.document_type, file_url: `/api/driver-document?id=${encodeURIComponent(doc.id)}` })
     docsMap.set(doc.driver_id, arr)
   }
   const vehiclesMap = new Map<string, DriverVehicle[]>()

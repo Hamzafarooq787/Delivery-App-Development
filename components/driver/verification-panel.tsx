@@ -135,7 +135,7 @@ export function VerificationPanel({
         const filtered = prev.filter((d) => d.document_type !== docType)
         return [
           ...filtered,
-          { id: Date.now().toString(), document_type: docType, file_url: publicUrl, created_at: new Date().toISOString() },
+          { id: Date.now().toString(), document_type: docType, file_url: URL.createObjectURL(file), created_at: new Date().toISOString() },
         ]
       })
     } finally {
