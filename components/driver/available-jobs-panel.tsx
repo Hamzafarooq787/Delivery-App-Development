@@ -27,7 +27,7 @@ type SortKey = "newest" | "oldest" | "payout_high" | "payout_low"
 
 function fmt(v: number | null) {
   if (v == null) return null
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(v)
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "GBP" }).format(v)
 }
 
 function fmtDate(v: string | null) {
@@ -139,7 +139,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filtered.map((job) => {
-            const price = fmt(job.price)
+            const price = fmt(job.price == null ? null : Math.round(job.price * 0.75 * 100) / 100)
             const distanceMiles =
               driverGps && job.pickup_lat != null && job.pickup_lng != null
                 ? haversineMiles(driverGps.lat, driverGps.lng, Number(job.pickup_lat), Number(job.pickup_lng))

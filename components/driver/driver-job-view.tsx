@@ -16,10 +16,7 @@ const LiveTrackingPanel = dynamic(
   () => import("@/components/tracking/live-tracking-panel").then((m) => m.LiveTrackingPanel),
   { ssr: false }
 )
-const DriverLocationBroadcaster = dynamic(
-  () => import("@/components/tracking/driver-location-broadcaster").then((m) => m.DriverLocationBroadcaster),
-  { ssr: false }
-)
+
 
 const STATUS_STEPS = ["accepted", "collected", "in_transit", "delivered"]
 const STATUS_LABELS: Record<string, string> = {
@@ -202,9 +199,9 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                 <p className="text-[11px] font-bold text-white uppercase tracking-wider">Live Navigation</p>
               </div>
-              <DriverLocationBroadcaster deliveryId={job.id} />
+              <span className="text-xs">Location sharing stays active while you browse your driver panel.</span>
             </div>
-            <LiveTrackingPanel
+            <LiveTrackingPanel status={job.status} bfmStage={job.bfm_stage}
               driverId={userId}
               pickup={pickup}
               destination={destination}

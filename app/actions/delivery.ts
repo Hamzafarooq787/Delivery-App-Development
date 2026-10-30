@@ -1,5 +1,6 @@
 "use server"
 
+import { checkQuoteConsent, deliveryScope } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -12,6 +13,7 @@ import { getDeliveryQuote } from "@/app/actions/pricing"
 // ── Customer actions ──────────────────────────────────────────────────────────
 
 export type CreateDeliveryParams = {
+  consent_token?: string
   pickup_address: string
   delivery_address: string
   pickup_lat: number
@@ -64,6 +66,7 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     return { error: quoteResult.error, code: "invalid_price" }
   }
   const quote = quoteResult.data
+  if (!checkQuoteConsent(params.consent_token, user.id, deliveryScope({ pickupLat: params.pickup_lat, pickupLng: params.pickup_lng, deliveryLat: params.delivery_lat, deliveryLng: params.delivery_lng, packageSize: params.package_size }), quote.finalPrice)) return { error: "Your quote changed or expired. Go back and review the current price before confirming.", code: "invalid_price" }
 
   const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
@@ -213,7 +216,8 @@ export async function getAvailableDeliveries() {
 
   let query = admin
     .from("delivery_requests")
-    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total")
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total, payments!inner(status)")
+    .eq("payments.status", "paid")
     .eq("status", "requested")
     .is("driver_id", null)
     .order("created_at", { ascending: false })
@@ -246,7 +250,7 @@ export async function acceptDelivery(deliveryId: string) {
   // Verify the delivery is still available
   const { data: delivery, error: fetchError } = await admin
     .from("delivery_requests")
-    .select("id, status, driver_id")
+    .select("id, status, driver_id, package_size")
     .eq("id", deliveryId)
     .single()
 
@@ -254,6 +258,12 @@ export async function acceptDelivery(deliveryId: string) {
 
   if (delivery.status !== "requested" || delivery.driver_id) {
     return { error: "This job is no longer available to accept." }
+  }
+
+  const { data: vehicles, error: vehicleError } = await admin.from("driver_vehicles").select("vehicle_type").eq("driver_id", user.id)
+  const capabilities = unionCapabilities((vehicles ?? []).map(v => v.vehicle_type as VehicleType))
+  if (vehicleError || capabilities.length === 0 || (delivery.package_size && !capabilities.includes(delivery.package_size))) {
+    return { error: "Register a suitable vehicle before accepting this job." }
   }
 
   // Payment before dispatch — defense-in-depth. Every delivery created
@@ -327,6 +337,8 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
     return { error: "Enter the customer's delivery code to confirm delivery." }
   }
 
+  const transitions: Record<string, string[]> = { in_transit: ["collected"], cancelled: ["accepted"] }
+  if (!transitions[status]) return { error: "Invalid delivery transition" }
   const updatePayload: Record<string, string> = { status }
   if (status === "cancelled") {
     updatePayload.cancelled_by = "driver"
@@ -343,6 +355,8 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
     .update(updatePayload)
     .eq("id", deliveryId)
     .eq("driver_id", user.id)
+    .in("status", transitions[status])
+    .eq("service_type", "delivery")
 
   // Forward-only transition guard — a driver can't jump straight to
   // in_transit without having collected the parcel first. Cancellation is
@@ -354,7 +368,7 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
   const { data: updatedRows, error } = await query.select("id")
 
   if (error) return { error: error.message }
-  if (status === "in_transit" && (!updatedRows || updatedRows.length === 0)) {
+  if (!updatedRows || updatedRows.length === 0) {
     return { error: "This delivery must be collected before it can start." }
   }
 
@@ -615,13 +629,16 @@ export async function safetyReleaseJob(deliveryId: string, reason: string) {
   if (!user) return { error: "Not authenticated" }
 
   // Release job back to the pool so another driver can accept it
-  const { error } = await admin
+  const { data: released, error } = await admin
     .from("delivery_requests")
     .update({ status: "requested", driver_id: null })
     .eq("id", deliveryId)
     .eq("driver_id", user.id)
+    .eq("status", "accepted")
+    .select("id").maybeSingle()
 
   if (error) return { error: error.message }
+  if (!released) return { error: "Only jobs awaiting collection can be released. Contact support for an active collection." }
 
   // Log the safety cancellation with reason
   await admin.from("delivery_status_logs").insert({
@@ -897,6 +914,16 @@ export async function adminAssignDriver(deliveryId: string, driverId: string | n
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
+  const { data: job } = await admin.from("delivery_requests").select("status, package_size").eq("id", deliveryId).maybeSingle()
+  if (!job || !["requested", "accepted"].includes(job.status)) return { error: "Only uncollected active jobs can be reassigned." }
+  if (driverId) {
+    const [{ data: profile }, { data: vehicles }] = await Promise.all([
+      admin.from("driver_profiles").select("status").eq("id", driverId).maybeSingle(),
+      admin.from("driver_vehicles").select("vehicle_type").eq("driver_id", driverId),
+    ])
+    const sizes = unionCapabilities((vehicles ?? []).map(v => v.vehicle_type as VehicleType))
+    if (profile?.status !== "approved" || !sizes.length || (job.package_size && !sizes.includes(job.package_size))) return { error: "Choose an approved driver with a suitable vehicle." }
+  }
   // Payment before dispatch — an admin can unassign freely, but assigning a
   // driver requires the same payment guarantee as the normal accept flow.
   if (driverId) {
@@ -916,12 +943,8 @@ export async function adminAssignDriver(deliveryId: string, driverId: string | n
       ? { driver_id: driverId, status: "accepted" }
       : { driver_id: null, status: "requested" }
 
-  const { error } = await admin
-    .from("delivery_requests")
-    .update(update)
-    .eq("id", deliveryId)
-
-  if (error) return { error: error.message }
+  const { data: changed, error } = await admin.from("delivery_requests").update(update).eq("id", deliveryId).eq("status", job.status).select("id").maybeSingle()
+  if (error || !changed) return { error: error?.message ?? "Order changed. Refresh before reassigning." }
   revalidatePath("/dashboard/admin/orders")
   revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
   return { success: true }
@@ -1162,6 +1185,10 @@ export async function markParcelCollected(deliveryId: string, photoUrl: string) 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
+  try {
+    const url = new URL(photoUrl)
+    if (url.origin !== new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin || !url.pathname.startsWith(`/storage/v1/object/public/driver-documents/${user.id}/parcel-${deliveryId}-`)) return { error: 'Upload a collection photo for this job.' }
+  } catch { return { error: 'Upload a valid collection photo.' } }
   // Admin client — see updateDeliveryStatus() for why.
   const admin = createAdminClient()
   const { data: updated, error } = await admin
@@ -1169,6 +1196,8 @@ export async function markParcelCollected(deliveryId: string, photoUrl: string) 
     .update({ status: 'collected', parcel_image_url: photoUrl })
     .eq('id', deliveryId)
     .eq('driver_id', user.id)
+    .eq('status', 'accepted')
+    .eq('service_type', 'delivery')
     .select('customer_id, tracking_number')
     .single()
 

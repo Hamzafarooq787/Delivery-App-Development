@@ -57,6 +57,8 @@ export async function toggleDriverOnline(isOnline: boolean) {
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
+  const { data: profile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
+  if (!profile || (isOnline && profile.status !== "approved")) return { error: "Your driver account must be approved before going online." }
   const { error } = await admin
     .from("driver_profiles")
     .upsert({ id: user.id, is_online: isOnline }, { onConflict: "id" })

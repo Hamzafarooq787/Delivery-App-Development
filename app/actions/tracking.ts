@@ -21,12 +21,21 @@ export async function updateMyLocation(input: {
   speed?: number | null
   accuracy?: number | null
   delivery_id?: string | null
+  measured_at?: string
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
+  if (!Number.isFinite(input.lat) || !Number.isFinite(input.lng) || Math.abs(input.lat) > 90 || Math.abs(input.lng) > 180) return { error: "Invalid coordinates" }
+  const { data: profile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
+  if (profile?.status !== "approved") return { error: "Approved driver required" }
+  if (!input.delivery_id) return { error: "Active job required" }
+  const { data: job } = await admin.from("delivery_requests").select("id").eq("id", input.delivery_id).eq("driver_id", user.id).in("status", ["accepted", "collected", "picked_up", "in_transit"]).maybeSingle()
+  if (!job) return { error: "Active assigned job required" }
+  const measured = input.measured_at ? Date.parse(input.measured_at) : Date.now()
+  if (!Number.isFinite(measured) || measured > Date.now() + 5000 || Date.now() - measured > 45000) return { error: "Waiting for a fresh GPS position" }
   const { error } = await admin.from("driver_locations").upsert(
     {
       driver_id: user.id,
@@ -36,7 +45,7 @@ export async function updateMyLocation(input: {
       heading: input.heading ?? null,
       speed: input.speed ?? null,
       accuracy: input.accuracy ?? null,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date(measured).toISOString(),
     },
     { onConflict: "driver_id" }
   )

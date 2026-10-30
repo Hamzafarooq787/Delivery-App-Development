@@ -26,3 +26,53 @@ test('anonymous users cannot read private document/substitution data',async()=>{
 test('unrelated user cannot mark a shopping item purchased',async()=>{const s=actions('app/actions/shopping.ts',['markItemFound'],{user:{id:'customer'},rows:{shopping_items:{delivery_id:'job'},delivery_requests:{driver_id:'other-driver',status:'collected',bfm_stage:'shopping'}}});assert.ok((await s.api.markItemFound('item')).error);assert.equal(s.calls.some(c=>c.method==='update'),false)});
 test('purchase-completed action cannot bypass receipt settlement',async()=>{const s=actions('app/actions/shopping.ts',['updateBfmStage'],{user:{id:'driver'},rows:{delivery_requests:{driver_id:'driver',service_type:'buy_for_me',status:'collected',bfm_stage:'shopping'}}});assert.ok((await s.api.updateBfmStage('job','purchase_completed')).error);assert.equal(s.calls.some(c=>c.method==='update'),false)});
 test('completed order does not reveal current driver location',async()=>{const s=actions('app/actions/tracking.ts',['getDriverLocationForDelivery'],{user:{id:'customer'},rows:{delivery_requests:{customer_id:'customer',driver_id:'driver',status:'delivered'}}});assert.equal((await s.api.getDriverLocationForDelivery('job')).data.location,null);assert.equal(s.calls.some(c=>c.table==='driver_locations'),false)});
+
+const pricingChecks=vm.runInNewContext(stripTypeScriptTypes(fs.readFileSync('lib/booking-pricing.ts','utf8')).replace(/export /g,'')+';({DEFAULT_BOOKING_PRICING,calculateDeliveryFare,inServiceArea,validateBookingPricing})');
+test('Manchester introduction fares preserve fractional mileage and surcharges',()=>{
+ const config=pricingChecks.DEFAULT_BOOKING_PRICING;
+ for(const [miles,price] of [[0,4.49],[2,4.49],[3,5.69],[4,6.89],[5,8.09],[6,9.29],[8,11.69],[10,14.09],[2.25,4.79],[2.004,4.49],[2.006,4.50]]) assert.equal(pricingChecks.calculateDeliveryFare(miles,config),price);
+ assert.equal(pricingChecks.calculateDeliveryFare(3,{...config,vanFee:5},'bulky'),10.69);
+ assert.throws(()=>pricingChecks.calculateDeliveryFare(NaN,config));
+ assert.equal(pricingChecks.validateBookingPricing({...config,baseFare:-1}),false);
+ assert.equal(pricingChecks.inServiceArea(53.4808,-2.2426,10),true);
+ assert.equal(pricingChecks.inServiceArea(51.5074,-0.1278,10),false);
+ assert.equal(pricingChecks.inServiceArea(NaN,0,0),false);
+});
+const trackingChecks=vm.runInNewContext(stripTypeScriptTypes(fs.readFileSync('lib/tracking-utils.ts','utf8')).replace(/export /g,'')+';({isFreshLocation,goesToDestination})');
+test('GPS freshness uses measurement time; shopping stays routed to shop until purchase',()=>{
+ const now=Date.now();assert.equal(trackingChecks.isFreshLocation(now-46000,now),false);assert.equal(trackingChecks.isFreshLocation(now-1000,now),true);assert.equal(trackingChecks.isFreshLocation('bad',now),false);
+ assert.equal(trackingChecks.goesToDestination('collected','shopping'),false);assert.equal(trackingChecks.goesToDestination('collected','purchase_completed'),true);assert.equal(trackingChecks.goesToDestination('accepted'),false);assert.equal(trackingChecks.goesToDestination('in_transit'),true);
+});
+test('address errors distinguish session, quota, denial and zero results',async()=>{
+ const code=stripTypeScriptTypes(fs.readFileSync('lib/google.ts','utf8')).replace(/export /g,'');
+ const api=vm.runInNewContext(code+';({assertGoogleResponse,googlePlacesAutocomplete})',{fetch:async()=>({ok:false,status:401,json:async()=>({error:'Not authenticated'})}),console});
+ assert.throws(()=>api.assertGoogleResponse({status:401,ok:false},{}),/session expired/);
+ assert.throws(()=>api.assertGoogleResponse({status:429,ok:false},{}),/busy/);
+ assert.throws(()=>api.assertGoogleResponse({status:200,ok:true},{status:'REQUEST_DENIED'}),/unavailable/);
+ assert.doesNotThrow(()=>api.assertGoogleResponse({status:200,ok:true},{status:'ZERO_RESULTS'}));
+ await assert.rejects(()=>api.googlePlacesAutocomplete('Manchester',{}),/session expired/);
+});
+test('unapproved drivers cannot broadcast arbitrary GPS',async()=>{
+ const s=actions('app/actions/tracking.ts',['updateMyLocation'],{user:{id:'customer'},rows:{driver_profiles:{status:'pending'}}});
+ assert.ok((await s.api.updateMyLocation({lat:53.4,lng:-2.2,delivery_id:'job'})).error);assert.equal(s.calls.some(c=>c.method==='upsert'),false);
+});
+test('driver actions reject terminal state mutations and unsuitable vehicles',async()=>{
+ const d=actions('app/actions/delivery.ts',['updateDeliveryStatus'],{user:{id:'driver'}});
+ for(const status of ['requested','accepted','collected','delivered','anything']) assert.ok((await d.api.updateDeliveryStatus('job',status)).error);
+ assert.equal(d.calls.some(c=>c.method==='update'),false);
+ const a=actions('app/actions/documents.ts',['submitForReview'],{user:{id:'driver'},rows:{users:{role:'driver'},driver_profiles:{status:'pending'},driver_documents:[],driver_vehicles:[]}});
+ assert.ok((await a.api.submitForReview()).error);assert.equal(a.calls.some(c=>c.method==='upsert'),false);
+});
+test('PostgreSQL: pricing migration, immutable approval decision, monotonic GPS',async()=>{
+ const db=new PGlite();await db.exec(fixture);await db.exec(fs.readFileSync('supabase/migrations/20261030195527_batches_1_4_shopping_safety.sql','utf8'));
+ await db.exec("create table surge_pricing_settings(id boolean primary key); insert into surge_pricing_settings values(true); create table driver_locations(driver_id uuid primary key,updated_at timestamptz); alter table shopping_substitutions add column customer_responded_at timestamptz");
+ await db.exec(fs.readFileSync('supabase/migrations/20261030205108_configurable_booking_prices.sql','utf8'));
+ assert.equal((await db.query('select booking_pricing from surge_pricing_settings')).rows[0].booking_pricing.baseFare,4.49);
+ await db.query('insert into wallet_balances values($1,100,now())',[customer]);const booking=(await db.query('select book_shopping_order_atomic($1,$2,$3) as r',[customer,'00000000-0000-4000-8000-000000000021',JSON.stringify(order)])).rows[0].r;
+ await db.query("update delivery_requests set driver_id=$2,status='collected',bfm_stage='shopping' where id=$1",[booking.id,driver]);
+ const sub=(await db.query('insert into shopping_substitutions select gen_random_uuid(),$1,null,id,null from shopping_items where delivery_id=$1 returning id',[booking.id])).rows[0].id;
+ await assert.rejects(()=>db.query('select decide_shopping_substitution($1,$2,true)',[sub,driver]));
+ await db.query('select decide_shopping_substitution($1,$2,true)',[sub,customer]);await db.query('select decide_shopping_substitution($1,$2,true)',[sub,customer]);await assert.rejects(()=>db.query('select decide_shopping_substitution($1,$2,false)',[sub,customer]));
+ await db.query("insert into driver_locations values($1,'2026-10-30T20:00:00Z')",[driver]);await db.query("update driver_locations set updated_at='2026-10-30T19:00:00Z' where driver_id=$1",[driver]);assert.equal(new Date((await db.query('select updated_at from driver_locations')).rows[0].updated_at).toISOString(),'2026-10-30T20:00:00.000Z');
+ assert.equal((await db.query("select has_function_privilege('authenticated','decide_shopping_substitution(uuid,uuid,boolean)','execute') as allowed")).rows[0].allowed,false);await db.close();
+});

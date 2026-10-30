@@ -1,9 +1,11 @@
 "use server"
 
+import { issueQuoteConsent, checkQuoteConsent } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { notifyUser, notifyMultipleUsers } from "@/lib/notifications/internal"
+import { getBookingPricing } from "@/app/actions/booking-settings"
 import { getDeliveryQuote } from "@/app/actions/pricing"
 import { validateShoppingItems, normalizeBfmSettings } from "@/lib/shopping-validation"
 
@@ -20,6 +22,7 @@ export type ShoppingItem = {
 }
 
 export type CreateShoppingRequestParams = {
+  consent_token?: string
   request_key: string
   shop_name: string
   shop_address: string
@@ -126,7 +129,7 @@ export async function createShoppingRequest(
   const quote = quoteResult.data
 
   // Service fee on top of delivery fee
-  const serviceFee = parseFloat((quote.finalPrice * (bfm.service_fee_percentage / 100)).toFixed(2))
+  const serviceFee = (await getBookingPricing()).shoppingFee
   const deliveryFee = parseFloat((quote.finalPrice + serviceFee).toFixed(2))
 
   // max_spend is the lower of the configured limit or the customer's estimate (if provided)
@@ -134,6 +137,8 @@ export async function createShoppingRequest(
 
   // Total wallet deduction at booking: delivery fee + items hold
   const totalCharge = parseFloat((deliveryFee + maxSpend).toFixed(2))
+
+  if (!checkQuoteConsent(params.consent_token, user.id, [params.shop_lat, params.shop_lng, params.delivery_lat, params.delivery_lng, estimatedTotal], totalCharge)) return { error: "Your quote changed or expired. Go back and review the new price before confirming." }
 
   // Check wallet balance
   const { data: walletRow } = await admin
@@ -299,7 +304,7 @@ export async function updateBfmStage(
     userId: delivery.customer_id,
     title: msg.title,
     body: msg.body,
-    url: `/dashboard/customer/tracking/${delivery.tracking_number}`,
+    url: `/dashboard/customer/tracking?id=${deliveryId}`,
     tag: `bfm-stage-${deliveryId}`,
   }).catch(console.error)
 
@@ -407,20 +412,15 @@ export async function respondToSubstitution(
   // Verify it's the customer's order
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("customer_id, tracking_number")
+    .select("customer_id, tracking_number, status, bfm_stage")
     .eq("id", sub.delivery_id)
     .single()
 
   if (!delivery || delivery.customer_id !== user.id) return { error: "Not your order" }
 
-  await admin
-    .from("shopping_substitutions")
-    .update({ customer_approved: approved, customer_responded_at: new Date().toISOString() })
-    .eq("id", substitutionId)
-
-  // Update item status
-  const itemStatus = approved ? "substituted" : "unavailable"
-  await admin.from("shopping_items").update({ status: itemStatus }).eq("id", sub.shopping_item_id)
+  if (delivery.status !== "collected" || delivery.bfm_stage !== "shopping" || typeof approved !== "boolean") return { error: "This order is no longer awaiting a shopping decision." }
+  const { error: decisionError } = await admin.rpc("decide_shopping_substitution", { p_id: substitutionId, p_customer_id: user.id, p_approved: approved })
+  if (decisionError) return { error: "This decision could not be saved. Refresh the order and retry." }
 
   // Notify driver
   notifyUser({
@@ -555,6 +555,7 @@ export type ShoppingQuoteParams = {
 }
 
 export type ShoppingQuote = {
+  consentToken: string
   deliveryFee: number
   serviceFee: number
   totalFee: number
@@ -590,13 +591,14 @@ export async function getShoppingQuote(
   if ("error" in quoteResult) return { error: quoteResult.error }
   const quote = quoteResult.data
 
-  const serviceFee = parseFloat((quote.finalPrice * (bfm.service_fee_percentage / 100)).toFixed(2))
+  const serviceFee = (await getBookingPricing()).shoppingFee
   const deliveryFee = parseFloat((quote.finalPrice + serviceFee).toFixed(2))
   const estimatedItems = params.estimated_items_total ?? 0
   const itemsHold = bfm.max_purchase_amount
 
   return {
     data: {
+      consentToken: issueQuoteConsent(user.id, [params.shop_lat, params.shop_lng, params.delivery_lat, params.delivery_lng, estimatedItems], parseFloat((deliveryFee + itemsHold).toFixed(2))),
       deliveryFee: quote.finalPrice,
       serviceFee,
       totalFee: deliveryFee,

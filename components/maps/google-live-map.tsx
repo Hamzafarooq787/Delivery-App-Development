@@ -51,6 +51,7 @@ type Driver = {
 }
 
 type Props = {
+  onPick?: (point: LngLat) => void
   drivers?: Driver[]
   pickup?: LngLat | null
   destination?: LngLat | null
@@ -126,6 +127,7 @@ function DriverPin({ driver }: { driver: Driver }) {
 }
 
 export function GoogleLiveMap({
+  onPick,
   drivers = [],
   pickup,
   destination,
@@ -215,7 +217,7 @@ export function GoogleLiveMap({
 
   return (
     <div style={{ height }} className="relative rounded-xl overflow-hidden">
-      <GoogleMap
+      <GoogleMap onClick={event => { if (onPick && event.latLng) onPick({ lat: event.latLng.lat(), lng: event.latLng.lng() }) }}
         mapContainerStyle={{ width: "100%", height: "100%" }}
         center={defaultCenter}
         zoom={11}

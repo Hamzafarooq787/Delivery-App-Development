@@ -17,15 +17,19 @@
  */
 "use server"
 
+import { issueQuoteConsent, deliveryScope } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
 import { fetchRouteServer } from "@/lib/google-server"
-import { getBasePrice, matchingBusyPeriodRules, combineSurgeFactors, type BusyPeriodRule, type SurgeFactor } from "@/lib/pricing"
+import { matchingBusyPeriodRules, combineSurgeFactors, type BusyPeriodRule, type SurgeFactor } from "@/lib/pricing"
+import { getBookingPricing } from "@/app/actions/booking-settings"
+import { calculateDeliveryFare, inServiceArea, type BookingPricing } from "@/lib/booking-pricing"
 import { resolveDiscount } from "@/app/actions/promotions"
 import { isPackageSize, type PackageSize } from "@/lib/vehicles"
 
 export type DeliveryQuote = {
+  consentToken: string
   distanceMiles: number
   durationMin: number
   basePrice: number
@@ -57,13 +61,16 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
 
   if (!isPackageSize(params.packageSize)) return { error: "Select a package size." }
 
+  let config: BookingPricing
+  try { config = await getBookingPricing() } catch { return { error: "Pricing settings unavailable. Please retry." } }
+  if (!inServiceArea(params.pickupLat, params.pickupLng, config.serviceRadiusMiles) || !inServiceArea(params.deliveryLat, params.deliveryLng, config.serviceRadiusMiles)) return { error: "Both addresses must be within our service area. Contact support for coverage." }
   const route = await fetchRouteServer(
     { lat: params.pickupLat, lng: params.pickupLng },
     { lat: params.deliveryLat, lng: params.deliveryLng }
   )
   if (!route) return { error: "Could not calculate a route for this pickup/delivery pair. Please check the addresses." }
 
-  const basePrice = getBasePrice(route.distance_miles)
+  const basePrice = calculateDeliveryFare(route.distance_miles, config, params.packageSize)
 
   const admin = createAdminClient()
   const [surgeSettingsRes, busyRulesRes, onlineDriversRes, pendingOrdersRes] = await Promise.all([
@@ -120,6 +127,7 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
 
   return {
     data: {
+      consentToken: issueQuoteConsent(user.id, deliveryScope(params), finalPrice),
       distanceMiles: route.distance_miles,
       durationMin: route.duration_min,
       basePrice,

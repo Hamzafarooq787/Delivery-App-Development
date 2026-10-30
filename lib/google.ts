@@ -31,6 +31,7 @@ export async function googlePlacesAutocomplete(
   input: string,
   opts: { proximity?: { lat: number; lng: number }; countryCode?: string | null }
 ): Promise<PlaceSuggestion[]> {
+  opts = { proximity: { lat: 53.4808, lng: -2.2426 }, countryCode: 'gb', ...opts }
   const body: Record<string, unknown> = { input, languageCode: 'en' }
   if (opts.proximity) {
     body.locationBias = {
@@ -48,9 +49,8 @@ export async function googlePlacesAutocomplete(
     body: JSON.stringify(body),
   })
   const data = await res.json()
-  if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    console.error('[autocomplete] Google API error:', data.status, data.error_message)
-  }
+  assertGoogleResponse(res, data)
+  if (!Array.isArray(data.suggestions)) throw new Error('Address search returned an invalid response. Please retry.')
   return (data.suggestions || [])
     .map((s: any) => ({
       text: s.placePredictions?.text?.text || '',
@@ -64,6 +64,7 @@ export async function googlePlaceCoords(
 ): Promise<{ lat: number; lng: number } | null> {
   const res = await fetch(`/api/google/place?placeId=${encodeURIComponent(placeId)}`)
   const data = await res.json()
+  assertGoogleResponse(res, data)
   if (!data.location) return null
   return { lat: data.location.latitude, lng: data.location.longitude }
 }
@@ -71,6 +72,7 @@ export async function googlePlaceCoords(
 export async function googleReverseGeocode(lat: number, lng: number): Promise<string | null> {
   const res = await fetch(`/api/google/geocode?latlng=${lat},${lng}`)
   const data = await res.json()
+  assertGoogleResponse(res, data)
   return data.results?.[0]?.formatted_address || null
 }
 
@@ -95,12 +97,19 @@ export async function fetchRoute(from: LngLat, to: LngLat): Promise<RouteResult 
     const distance_km = (leg?.distance?.value ?? 0) / 1000
     const coords = decodePoly(route.overview_polyline.points)
     return {
-      distance_km: Math.round(distance_km * 10) / 10,
-      distance_miles: Math.round(distance_km * 0.621371 * 10) / 10,
+      distance_km,
+      distance_miles: distance_km / 1.609344,
       duration_min: Math.round((leg?.duration?.value ?? 0) / 60),
       geometry: { type: 'LineString', coordinates: coords },
     }
   } catch {
     return null
   }
+}
+
+export function assertGoogleResponse(res: Pick<Response, 'ok' | 'status'>, data: { status?: string; error?: unknown }) {
+  if (res.status === 401) throw new Error('Your session expired. Sign in again to search addresses.')
+  if (res.status === 429 || data.status === 'OVER_QUERY_LIMIT') throw new Error('Address search is busy. Please retry shortly.')
+  if (data.status === 'REQUEST_DENIED') throw new Error('Address search is unavailable. Please contact support.')
+  if (!res.ok || data.error || (data.status && !['OK', 'ZERO_RESULTS'].includes(data.status))) throw new Error('Address search failed. Please retry.')
 }

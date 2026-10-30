@@ -1,5 +1,8 @@
 "use client"
 
+import { getBookingPricing, saveBookingPricing } from "@/app/actions/booking-settings"
+import type { BookingPricing } from "@/lib/booking-pricing"
+import { useEffect } from "react"
 import { BrandThemePanel } from "@/components/admin/brand-theme-panel"
 import { useState, useTransition } from "react"
 import { GeneralSettingsForm } from "@/components/admin/general-settings-form"
@@ -22,10 +25,14 @@ const NOTIFICATION_TEMPLATES = [
 ]
 
 const PRICING_FIELDS = [
-  { key: "baseFare",      label: "Base Fare (£)",         placeholder: "5.00" },
-  { key: "perMile",       label: "Per Mile Rate (£)",      placeholder: "1.20" },
-  { key: "commission",    label: "Platform Commission (%)", placeholder: "15" },
-  { key: "payoutShare",   label: "Driver Payout Share (%)", placeholder: "80" },
+  { key: "baseFare", label: "First miles price (£)", placeholder: "4.49" },
+  { key: "includedMiles", label: "Included driving miles", placeholder: "2" },
+  { key: "perMile", label: "Each additional mile (£)", placeholder: "1.20" },
+  { key: "shoppingFee", label: "Fixed shopping service fee (£)", placeholder: "3.99" },
+  { key: "largeFee", label: "Large item surcharge (£)", placeholder: "0" },
+  { key: "vanFee", label: "Van surcharge (£)", placeholder: "0" },
+  { key: "weatherFee", label: "Current weather surcharge (£)", placeholder: "0" },
+  { key: "serviceRadiusMiles", label: "Miles from Manchester (0 = unrestricted)", placeholder: "0" },
 ]
 
 export function SettingsTabsClient({
@@ -37,6 +44,7 @@ export function SettingsTabsClient({
 }) {
   const [activeTab, setActiveTab] = useState("General")
   const [pricing, setPricing] = useState<Record<string, string>>({})
+  useEffect(() => { getBookingPricing().then(config => setPricing(Object.fromEntries(Object.entries(config).map(([key, value]) => [key, String(value)])))).catch(() => setPricingMsg({ text: "Could not load pricing. Retry by refreshing.", ok: false })) }, [])
   const [pricingMsg, setPricingMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -74,9 +82,9 @@ export function SettingsTabsClient({
           return
         }
       }
-      // Placeholder: pricing config table not yet provisioned
-      await new Promise((r) => setTimeout(r, 600))
-      setPricingMsg({ text: "Pricing settings saved.", ok: true })
+      const config = Object.fromEntries(PRICING_FIELDS.map(f => [f.key, Number(pricing[f.key])])) as BookingPricing
+      const result = await saveBookingPricing(config)
+      setPricingMsg({ text: result.error ?? "Pricing settings saved. New quotes use these rates.", ok: !result.error })
       setTimeout(() => setPricingMsg(null), 3000)
     })
   }

@@ -147,7 +147,8 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
   function handleMarkFound(itemId: string) {
     startTransition(async () => {
-      await markItemFound(itemId)
+      const result = await markItemFound(itemId)
+      if (result.error) { toast.error(result.error); return }
       setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, status: "purchased" } : i))
       toast.success("Item marked as found.")
     })
@@ -155,7 +156,8 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
   function handleMarkUnavailable(itemId: string) {
     startTransition(async () => {
-      await markItemUnavailable(itemId)
+      const result = await markItemUnavailable(itemId)
+      if (result.error) { toast.error(result.error); return }
       setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, status: "unavailable" } : i))
       toast.success("Item marked unavailable.")
     })
