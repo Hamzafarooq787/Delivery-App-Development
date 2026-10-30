@@ -9,14 +9,15 @@ const LIVE_STATUSES = ["accepted", "collected", "in_transit", "picked_up"]
 export default async function AdminLiveTrackingPage() {
   const admin = createAdminClient()
 
-  const { data: deliveries } = await admin
+  const { data: deliveries, error } = await admin
     .from("delivery_requests")
     .select(
-      "id, tracking_number, status, driver_id, customer_id, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, created_at",
+      "id, tracking_number, status, service_type, bfm_stage, driver_id, customer_id, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, created_at",
     )
     .in("status", LIVE_STATUSES)
     .order("created_at", { ascending: false })
 
+  if(error)throw new Error("Unable to load live deliveries. Please retry.")
   const rows = deliveries ?? []
   const userIds = Array.from(
     new Set(rows.flatMap((d) => [d.driver_id, d.customer_id]).filter((id): id is string => !!id)),
@@ -32,6 +33,7 @@ export default async function AdminLiveTrackingPage() {
     id: d.id,
     tracking_number: d.tracking_number,
     status: d.status,
+    service_type:d.service_type, bfm_stage:d.bfm_stage,
     driver_id: d.driver_id,
     driver_name: d.driver_id ? names[d.driver_id] || "Driver" : null,
     customer_name: d.customer_id ? names[d.customer_id] || "Customer" : null,

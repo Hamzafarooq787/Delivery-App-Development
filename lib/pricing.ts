@@ -29,8 +29,10 @@ export type BusyPeriodRule = {
 
 /** Returns every currently-active busy-period rule that matches `now`. */
 export function matchingBusyPeriodRules(rules: BusyPeriodRule[], now: Date): BusyPeriodRule[] {
-  const day = now.getDay()
-  const minutesNow = now.getHours() * 60 + now.getMinutes()
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now)
+  const part = (key:string) => parts.find(p=>p.type===key)?.value??""
+  const day = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(part("weekday"))
+  const minutesNow = Number(part("hour"))*60+Number(part("minute"))
 
   function toMinutes(t: string): number {
     const [h, m] = t.split(":").map(Number)
@@ -39,10 +41,10 @@ export function matchingBusyPeriodRules(rules: BusyPeriodRule[], now: Date): Bus
 
   return rules.filter((r) => {
     if (!r.active) return false
-    if (r.day_of_week !== null && r.day_of_week !== day) return false
     const start = toMinutes(r.start_time)
     const end = toMinutes(r.end_time)
-    // Overnight ranges (e.g. 22:00–02:00) wrap past midnight
+    const startDay = start > end && minutesNow < end ? (day+6)%7 : day
+    if(r.day_of_week!==null && r.day_of_week!==startDay)return false
     return start <= end ? minutesNow >= start && minutesNow < end : minutesNow >= start || minutesNow < end
   })
 }

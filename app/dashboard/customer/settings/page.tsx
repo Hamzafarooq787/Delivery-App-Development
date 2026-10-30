@@ -1,5 +1,6 @@
 'use client'
 
+import {getServicePushPreference,saveServicePushPreference} from "@/app/actions/notification-preferences"
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
@@ -145,40 +146,11 @@ export default function SettingsPage() {
     setMarketingMessage({ type: 'success', text: 'Preferences saved.' })
   }
 
-  // Load saved notification prefs from localStorage
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(NOTIF_STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        setNotifPrefs({
-          email:
-            typeof parsed.email === 'boolean'
-              ? parsed.email
-              : defaultNotifPrefs.email,
-          sms:
-            typeof parsed.sms === 'boolean'
-              ? parsed.sms
-              : defaultNotifPrefs.sms,
-          push:
-            typeof parsed.push === 'boolean'
-              ? parsed.push
-              : defaultNotifPrefs.push,
-        })
-      }
-    } catch {
-      // ignore parse errors
-    }
-  }, [])
-
-  function toggleNotif(key: keyof NotifPrefs) {
-    setNotifPrefs((prev) => {
-      const next = { ...prev, [key]: !prev[key] }
-      try {
-        localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(next))
-      } catch {}
-      return next
-    })
+  useEffect(()=>{getServicePushPreference().then(r=>{if(r.error)setSaveMessage({type:'error',text:r.error});else setNotifPrefs({email:false,sms:false,push:r.enabled??true})})},[])
+  async function toggleNotif(key:keyof NotifPrefs){
+    if(key!=='push'||saving)return;setSaving(true);
+    const next=!notifPrefs.push;let r;try{r=await saveServicePushPreference(next)}catch{r={error:'Unable to save preference'}}finally{setSaving(false)}
+    if(r.error)setSaveMessage({type:'error',text:r.error});else setNotifPrefs(p=>({...p,push:next}));
   }
 
   async function handleSaveProfile() {
@@ -325,14 +297,15 @@ export default function SettingsPage() {
   const notificationForm = (
     <div className={styles.formPanel}>
       <h2>Notification preferences</h2>
+      {saveMessage && <p role="status">{saveMessage.text}</p>}
       <p className={styles.muted} style={{ fontSize: 12 }}>
-        Delivery notification preferences on this device.
+        Push preferences apply across your devices. Email and SMS delivery updates are not enabled.
       </p>
-      {(['email', 'sms', 'push'] as const).map((key) => (
+      {(['push'] as const).map((key) => (
         <div key={key} className={styles.switchRow}>
           <div>
             <strong>
-              {key === 'sms'
+              {String(key) === 'sms'
                 ? 'SMS'
                 : key === 'push'
                   ? 'Push notifications'
@@ -349,6 +322,7 @@ export default function SettingsPage() {
             role="switch"
             aria-checked={notifPrefs[key]}
             aria-label={`${key} notifications`}
+            disabled={saving}
             onClick={() => toggleNotif(key)}
           >
             <span />
@@ -493,6 +467,7 @@ export default function SettingsPage() {
         <aside className={styles.settingSide}>
           <div className={styles.panel}>
             <h2>Notification preferences</h2>
+      {saveMessage && <p role="status">{saveMessage.text}</p>}
             <div className={styles.switchRow}>
               <div>
                 <strong>Order updates</strong>

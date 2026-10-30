@@ -28,6 +28,8 @@ export function AdminChatPanel({ userId }: { userId: string }) {
   const [open, setOpen]                 = useState(false)
   const [sessions, setSessions]         = useState<ChatSession[]>([])
   const [selectedId, setSelectedId]     = useState<string | null>(null)
+  const [olderLoading,setOlderLoading]=useState(false)
+  const [hasOlder,setHasOlder]=useState(true)
   const [messages, setMessages]         = useState<ChatMessage[]>([])
   const [input, setInput]               = useState("")
   const [sending, setSending]           = useState(false)
@@ -106,6 +108,7 @@ export function AdminChatPanel({ userId }: { userId: string }) {
     setLoadingMsgs(true)
     const { data } = await getChatMessages(sess.id)
     setMessages(data)
+    setHasOlder(data.length===100)
     setLoadingMsgs(false)
     await markChatSessionRead(sess.id, "admin")
     setSessions((prev) => prev.map((s) => s.id === sess.id ? { ...s, admin_unread: 0 } : s))
@@ -234,6 +237,10 @@ export function AdminChatPanel({ userId }: { userId: string }) {
                   </div>
                 </div>
 
+                {hasOlder && messages.length>0 && <button disabled={olderLoading} className="text-white text-sm underline" onClick={async()=>{
+                  if(!selectedId)return;setOlderLoading(true);const r=await getChatMessages(selectedId,messages[0]);setOlderLoading(false);
+                  if(r.error){return}setHasOlder(r.data.length===100);setMessages(prev=>[...r.data.filter(m=>!prev.some(p=>p.id===m.id)),...prev]);
+                }}>Load earlier messages</button>}
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
                   {loadingMsgs ? (

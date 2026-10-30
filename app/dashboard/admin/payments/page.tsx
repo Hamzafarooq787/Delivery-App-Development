@@ -1,109 +1,113 @@
-import {CardPaymentsOverview} from "@/components/admin/card-payments-overview"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { createClient }      from "@/lib/supabase/server"
-import { redirect }          from "next/navigation"
-import { PaymentsPanel }     from "@/components/admin/payments-panel"
-
-export const dynamic = "force-dynamic"
-
-export default async function AdminPaymentsPage() {
-  // ── Auth guard ─────────────────────────────────────────────────────────────
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/auth/login")
-
-  const admin = createAdminClient()
-  const { data: profile } = await admin
+import { CardPaymentsOverview } from "@/components/admin/card-payments-overview";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+export default async function AdminPaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const db = await createClient();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: actor } = await db
     .from("users")
     .select("role")
     .eq("id", user.id)
-    .single()
-
-  if (profile?.role !== "admin") redirect("/dashboard")
-
-  // ── Parallel fetch — mirrors Admin Overview query pattern exactly ──────────
-  const [earningsRes, deliveredPricesRes, deliveriesRes, payoutsRes] = await Promise.all([
-    // 1. driver_earnings → commission / payout KPI totals (same as Overview)
+    .single();
+  if (actor?.role !== "admin") redirect("/dashboard");
+  const params = await searchParams;
+  const page = Math.max(
+    1,
+    Math.min(100000, Math.floor(Number(params.page) || 1)),
+  );
+  const admin = createAdminClient();
+  const [payments, payouts] = await Promise.all([
     admin
-      .from("driver_earnings")
-      .select("amount, commission_amount"),
-
-    // 2. Fallback gross revenue (same as Overview)
-    admin
-      .from("delivery_requests")
-      .select("price")
-      .eq("status", "delivered")
-      .not("price", "is", null),
-
-    // 3. delivery_requests = customer payment transactions (ALL records with a price)
-    //    These are the actual financial events — the payments table is a thin
-    //    supplementary record that only exists for recent orders.
-    admin
-      .from("delivery_requests")
-      .select("id, tracking_number, price, status, created_at, customer_id")
-      .not("price", "is", null)
-      .order("created_at", { ascending: false }),
-
-    // 4. payouts = driver payout transactions
+      .from("payments")
+      .select(
+        "id,delivery_id,amount,status,payment_method,stripe_payment_intent,created_at,refund_jobs",
+      )
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range((page - 1) * 50, page * 50 - 1),
     admin
       .from("payouts")
-      .select("id, amount, status, created_at, driver_id")
-      .order("created_at", { ascending: false }),
-  ])
-
-  const deliveries = deliveriesRes.data ?? []
-  const payouts    = payoutsRes.data    ?? []
-  const earnings   = earningsRes.data   ?? []
-
-  // ── Resolve user names in one batched query ────────────────────────────────
-  const customerIds = [...new Set(
-    deliveries.map(d => d.customer_id).filter((id): id is string => !!id),
-  )]
-  const driverIds = [...new Set(
-    payouts.map(p => p.driver_id).filter((id): id is string => !!id),
-  )]
-  const allUserIds = [...new Set([...customerIds, ...driverIds])]
-
-  const usersRes = allUserIds.length > 0
-    ? await admin
-        .from("users")
-        .select("id, full_name, email")
-        .in("id", allUserIds)
-    : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
-
-  const usersMap: Record<string, { full_name: string | null; email: string | null }> = {}
-  for (const u of (usersRes.data ?? [])) {
-    usersMap[u.id] = { full_name: u.full_name, email: u.email }
-  }
-
-  // ── Enrich rows ────────────────────────────────────────────────────────────
-  const enrichedDeliveries = deliveries.map(d => {
-    const c = d.customer_id ? usersMap[d.customer_id] : null
-    return {
-      ...d,
-      customer_name:  c?.full_name ?? null,
-      customer_email: c?.email     ?? null,
-    }
-  })
-
-  const enrichedPayouts = payouts.map(p => {
-    const dr = p.driver_id ? usersMap[p.driver_id] : null
-    return {
-      ...p,
-      driver_name:  dr?.full_name ?? null,
-      driver_email: dr?.email     ?? null,
-    }
-  })
-
+      .select("id,amount,status,payment_reference,created_at,processed_at")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range((page - 1) * 50, page * 50 - 1),
+  ]);
+  if (payments.error || payouts.error)
+    throw new Error("Payment records could not load. Please retry.");
+  const money = (v: unknown) => `£${Number(v).toFixed(2)}`;
   return (
-    <>
-    <CardPaymentsOverview />
-    <PaymentsPanel
-      deliveries={enrichedDeliveries}
-      payouts={enrichedPayouts}
-      earnings={earnings}
-      deliveredPrices={deliveredPricesRes.data ?? []}
-    />
-    </>
-  )
+    <div className="p-4 md:p-8 text-white space-y-6">
+      <h1 className="text-3xl font-bold">Payments</h1>
+      <CardPaymentsOverview />
+      <p>
+        Payment records and payout records have separate states. Order status
+        does not indicate whether money was received.
+      </p>
+      <h2 className="text-xl font-bold">Customer payments</h2>
+      <div className="space-y-3">
+        {payments.data.map((p) => (
+          <div key={p.id} className="rounded-xl bg-[var(--brand-panel)] p-4">
+            <strong>
+              {money(p.amount)} — {p.status}
+            </strong>
+            <p>
+              {p.payment_method} ·{" "}
+              {new Date(p.created_at).toLocaleString("en-GB", {
+                timeZone: "Europe/London",
+              })}
+            </p>
+            <p className="break-all text-sm">
+              {p.stripe_payment_intent ?? p.id}
+            </p>
+            {(p.refund_jobs ?? []).map(
+              (r: { key: string; amount: number; status: string }) => (
+                <p key={r.key}>
+                  Refund {money(r.amount)} — {r.status}
+                </p>
+              ),
+            )}
+            {p.delivery_id && (
+              <Link
+                className="underline"
+                href={`/dashboard/admin/orders/${p.delivery_id}`}
+              >
+                View order
+              </Link>
+            )}
+          </div>
+        ))}
+      </div>
+      <h2 className="text-xl font-bold">Driver payouts</h2>
+      {payouts.data.map((p) => (
+        <div key={p.id} className="rounded-xl bg-[var(--brand-panel)] p-4">
+          <strong>
+            {money(p.amount)} — {p.status}
+          </strong>
+          <p>{p.payment_reference ?? "No confirmed payment reference"}</p>
+          <p>
+            {p.processed_at
+              ? new Date(p.processed_at).toLocaleString("en-GB", {
+                  timeZone: "Europe/London",
+                })
+              : "Not processed"}
+          </p>
+        </div>
+      ))}
+      <nav className="flex gap-6">
+        {page > 1 && <Link href={`?page=${page - 1}`}>Previous</Link>}
+        {(payments.data.length === 50 || payouts.data.length === 50) && (
+          <Link href={`?page=${page + 1}`}>Next</Link>
+        )}
+      </nav>
+    </div>
+  );
 }

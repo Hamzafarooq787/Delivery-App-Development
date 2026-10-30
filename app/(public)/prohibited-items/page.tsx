@@ -30,7 +30,7 @@ export default function ProhibitedItemsPage() {
           <h1 className="text-3xl font-semibold text-foreground text-balance">Prohibited Items</h1>
         </div>
         <p className="text-base text-muted-foreground text-pretty leading-relaxed max-w-2xl">
-          The following items cannot be sent through SwiftDeliver. Attempting to send prohibited items may result in account suspension and legal action.
+          The following items cannot be sent through GoDrop. Attempting to send prohibited items may result in account suspension and legal action.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">

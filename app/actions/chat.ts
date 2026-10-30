@@ -57,7 +57,7 @@ export async function getOrCreateChatSession(): Promise<{ sessionId: string | nu
 }
 
 // ── Get messages for a session ───────────────────────────────────────────────
-export async function getChatMessages(sessionId: string): Promise<{ data: ChatMessage[]; error?: string }> {
+export async function getChatMessages(sessionId: string, before?: { created_at: string; id: string }): Promise<{ data: ChatMessage[]; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: [], error: "Not authenticated" }
@@ -71,15 +71,16 @@ export async function getChatMessages(sessionId: string): Promise<{ data: ChatMe
     if (!session || session.driver_id !== user.id) return { data: [], error: "Not authorized" }
   }
 
-  const { data, error } = await admin
-    .from("chat_messages")
-    .select("id, session_id, sender_id, sender_role, content, created_at")
-    .eq("session_id", sessionId)
-    .order("created_at", { ascending: true })
-    .limit(100)
+  let query = admin.from("chat_messages").select("id, session_id, sender_id, sender_role, content, created_at").eq("session_id",sessionId)
+  if(before){
+    if(!/^[0-9a-f-]{36}$/i.test(before.id)||!Number.isFinite(Date.parse(before.created_at)))return {data:[],error:"Invalid message cursor"}
+    const time=new Date(before.created_at).toISOString()
+    query=query.or(`created_at.lt.${time},and(created_at.eq.${time},id.lt.${before.id})`)
+  }
+  const {data,error}=await query.order("created_at",{ascending:false}).order("id",{ascending:false}).limit(100)
 
   if (error) return { data: [], error: error.message }
-  return { data: (data ?? []) as ChatMessage[] }
+  return { data: (data ?? []).reverse() as ChatMessage[] }
 }
 
 // ── Send a message ───────────────────────────────────────────────────────────
@@ -92,6 +93,7 @@ export async function sendChatMessage(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: null, error: "Not authenticated" }
 
+  if(!content.trim() || content.length>4000)return {data:null,error:"Write a message of 1–4000 characters"}
   const admin = createAdminClient()
 
   // Never trust the caller's claimed role or session — verify both, so a

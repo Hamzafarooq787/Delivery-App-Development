@@ -11,6 +11,7 @@ type Props = {
 
 export function GeneralSettingsForm({ fullName, email, phone }: Props) {
   const [saving, setSaving] = useState(false)
+  const [error,setError]=useState("")
   const [saved, setSaved] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -19,8 +20,10 @@ export function GeneralSettingsForm({ fullName, email, phone }: Props) {
     setSaving(true)
     setSaved(false)
     const fd = new FormData(e.currentTarget)
-    await adminSaveSettings(fd)
+    const result=await adminSaveSettings(fd)
     setSaving(false)
+    if(result.error){setError(result.error);return}
+    setError("")
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
@@ -29,9 +32,9 @@ export function GeneralSettingsForm({ fullName, email, phone }: Props) {
     <form ref={formRef} onSubmit={handleSubmit}>
       <div className="space-y-4">
         {[
-          { label: "Platform Name", name: "full_name", placeholder: "Kinetic Velocity", type: "text", defaultValue: fullName },
-          { label: "Support Email", name: "email", placeholder: "support@kinetic.io", type: "email", defaultValue: email, readOnly: true },
-          { label: "Support Phone", name: "phone", placeholder: "+1 (800) 000-0000", type: "tel", defaultValue: phone },
+          { label: "Platform Name", name: "full_name", placeholder: "GoDrop", type: "text", defaultValue: fullName },
+          { label: "Support Email", name: "email", placeholder: "Support email", type: "email", defaultValue: email, readOnly: false },
+          { label: "Support Phone", name: "phone", placeholder: "Support phone", type: "tel", defaultValue: phone },
         ].map(({ label, name, placeholder, type, defaultValue, readOnly }) => (
           <div key={name}>
             <label className="block text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">
@@ -49,6 +52,7 @@ export function GeneralSettingsForm({ fullName, email, phone }: Props) {
         ))}
       </div>
       <div className="mt-6 flex items-center justify-end gap-3">
+        {error && <span role="alert" className="text-red-300">{error}</span>}
         {saved && <span className="text-sm text-green-400">Saved!</span>}
         <button
           type="submit"

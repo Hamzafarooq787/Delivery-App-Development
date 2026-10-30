@@ -13,6 +13,8 @@ const GoogleMultiDriver = dynamic(
 export type TrackedDelivery = {
   id: string
   tracking_number: string | null
+  service_type?: string
+  bfm_stage?: string | null
   status: string
   driver_id: string | null
   driver_name: string | null
@@ -90,7 +92,7 @@ export function AdminLiveTrackingBoard({ deliveries }: { deliveries: TrackedDeli
                   {d.tracking_number ?? `KV-${d.id.slice(0, 8).toUpperCase()}`}
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-on-surface-variant)]">
-                  {STATUS_LABEL[d.status] ?? d.status}
+                  {d.service_type==="buy_for_me" && d.bfm_stage ? d.bfm_stage.replaceAll("_"," ") : STATUS_LABEL[d.status] ?? d.status}
                 </span>
               </div>
               <p className="text-sm text-white mt-1">{d.driver_name ?? "No driver assigned"}</p>

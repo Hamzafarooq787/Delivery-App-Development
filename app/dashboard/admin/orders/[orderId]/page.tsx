@@ -1,3 +1,4 @@
+import {ShoppingItemsHistory} from "@/components/admin/shopping-items-history"
 import { OrderPaymentPanel } from "@/components/admin/order-payment-panel"
 import { ShoppingFundingPanel } from "@/components/admin/shopping-funding-panel"
 import Link from "next/link"
@@ -54,7 +55,6 @@ export default async function AdminOrderDetailPage({
       .from("users")
       .select("id, full_name")
       .eq("role", "driver")
-      .eq("is_approved", true)
       .order("full_name", { ascending: true }),
   ])
 
@@ -186,6 +186,7 @@ export default async function AdminOrderDetailPage({
             </div>
           </div>
 
+          {order.service_type === "buy_for_me" && <ShoppingItemsHistory orderId={orderId} />}
           {cardPayment && <OrderPaymentPanel id={orderId} amount={cardPayment.amount} status={cardPayment.status} refunds={cardPayment.refund_jobs??[]} />}
       {order.service_type === "buy_for_me" && <ShoppingFundingPanel id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
           {/* Buy for Me Details */}

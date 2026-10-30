@@ -5,6 +5,7 @@ import type { BookingPricing } from "@/lib/booking-pricing"
 import { useEffect } from "react"
 import { BrandThemePanel } from "@/components/admin/brand-theme-panel"
 import { useState, useTransition } from "react"
+import {NotificationSettingsForm} from "@/components/admin/notification-settings-form"
 import { GeneralSettingsForm } from "@/components/admin/general-settings-form"
 import { getBfmSettings, updateBfmSettings } from "@/app/actions/shopping"
 
@@ -247,45 +248,8 @@ export function SettingsTabsClient({
           </div>
         )}
 
-        {/* Notifications */}
-        {activeTab === "Notifications" && (
-          <div className="bg-[var(--brand-panel)] rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="material-symbols-outlined text-[var(--color-tertiary)]">notifications</span>
-              <h3 className="text-base font-bold text-white font-headline">Notification Templates</h3>
-            </div>
-            <div className="space-y-2">
-              {NOTIFICATION_TEMPLATES.map((template) => (
-                <div
-                  key={template}
-                  className="group flex items-center justify-between px-4 py-4 rounded-xl hover:bg-[var(--color-surface-container-high)] transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[var(--color-tertiary)]/10 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[var(--color-tertiary)] text-sm">mail</span>
-                    </div>
-                    <div>
-                      <p className="text-white text-sm font-semibold">{template}</p>
-                      <p className="text-[var(--color-on-surface-variant)] text-[10px]">SMS + Push + Email</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-4 rounded-full bg-[var(--brand-strong)]/80 relative cursor-pointer">
-                      <div className="absolute right-0.5 top-0.5 w-3 h-3 rounded-full bg-white" />
-                    </div>
-                    <button
-                      type="button"
-                      className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-[var(--color-on-surface-variant)] hover:text-white transition-all"
-                      onClick={() => {}}
-                    >
-                      Edit
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {activeTab === "Notifications" && <NotificationSettingsForm/>}
+
       </div>
     </div>
   )

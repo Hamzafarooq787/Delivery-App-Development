@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { adminCancelOrder, adminIssueRefund } from "@/app/actions/wallet"
 import { AssignDriverDropdown, type DriverOption } from "@/components/admin/assign-driver-dropdown"
 
@@ -26,6 +26,7 @@ export function OrderActionsPanel({
 }) {
   const canCancel = !["delivered", "cancelled"].includes(orderStatus)
 
+  const refundKey=useRef<string | null>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showRefundInput, setShowRefundInput] = useState(false)
   const [refundAmount, setRefundAmount] = useState("")
@@ -63,12 +64,11 @@ export function OrderActionsPanel({
       return
     }
     startRefund(async () => {
-      const result = await adminIssueRefund(orderId, amount)
-      setShowRefundInput(false)
-      setRefundAmount("")
+      const result = await adminIssueRefund(orderId, amount, refundKey.current ?? (refundKey.current=crypto.randomUUID()))
       if (result.error) {
         flash(result.error, false)
       } else {
+        setShowRefundInput(false);refundKey.current=null;setRefundAmount("")
         flash(`£${amount.toFixed(2)} refunded to customer.`, true)
       }
     })
@@ -146,7 +146,7 @@ export function OrderActionsPanel({
             step="0.01"
             placeholder="0.00"
             value={refundAmount}
-            onChange={(e) => setRefundAmount(e.target.value)}
+            onChange={(e) => {refundKey.current=null;setRefundAmount(e.target.value)}}
             className="w-full px-3 py-1.5 bg-[var(--brand-bg)] border border-[var(--color-outline-variant)]/20 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500/40"
           />
           <div className="flex gap-2">
