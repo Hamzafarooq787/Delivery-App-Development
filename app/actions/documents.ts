@@ -61,6 +61,15 @@ export async function submitForReview() {
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
+  const [{ data: caller }, { data: docs, error: docsError }, { data: vehicles, error: vehiclesError }, { data: profile }] = await Promise.all([
+    admin.from("users").select("role").eq("id", user.id).maybeSingle(),
+    admin.from("driver_documents").select("document_type").eq("driver_id", user.id),
+    admin.from("driver_vehicles").select("id").eq("driver_id", user.id),
+    admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle(),
+  ])
+  if (caller?.role !== "driver") return { error: "Driver account required." }
+  if (profile?.status === "approved") return { error: "Your account is already approved." }
+  if (docsError || vehiclesError || !vehicles?.length || !["identity", "selfie", "insurance", "vehicle_registration"].every(type => docs?.some(d => d.document_type === type))) return { error: "Upload all required documents and add your vehicle before submitting." }
   const { error } = await admin
     .from("driver_profiles")
     .upsert({ id: user.id, status: "pending" }, { onConflict: "id" })

@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { fetchRoute } from "@/lib/google"
+import { useTrackingRoute } from "@/hooks/use-tracking-route"
+import { goesToDestination, isFreshLocation, ACTIVE_DELIVERY_STATUSES } from "@/lib/tracking-utils"
 import { GoogleLiveMap } from "./google-live-map"
 
 type Delivery = {
   id: string
   tracking_number: string | null
+  bfm_stage?: string | null
   status: string
   driver_id: string | null
   driver_name: string | null
@@ -33,29 +35,28 @@ type Props = {
 
 export function GoogleMultiDriver({ deliveries, focusedDeliveryId, height = 420, className }: Props) {
   const supabase = useMemo(() => createClient(), [])
-  const [positions, setPositions] = useState<Record<string, { lat: number; lng: number }>>({})
-  const [liveCount, setLiveCount] = useState(0)
-  const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null)
-  const [routeGeometry2, setRouteGeometry2] = useState<GeoJSON.LineString | null>(null)
+  const [positions, setPositions] = useState<Record<string, { lat: number; lng: number; updated_at: string }>>({})
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 5000); return () => clearInterval(timer) }, [])
 
   const driverIds = useMemo(
-    () => deliveries.map((d) => d.driver_id).filter(Boolean) as string[],
+    () => Array.from(new Set(deliveries.filter(d => ACTIVE_DELIVERY_STATUSES.includes(d.status)).map(d => d.driver_id).filter(Boolean))) as string[],
     [deliveries]
   )
 
   // Initial fetch of all online driver locations
   useEffect(() => {
-    if (driverIds.length === 0) return
+    if (driverIds.length === 0) { setPositions({}); return }
     supabase
       .from("driver_locations")
-      .select("driver_id, lat, lng")
+      .select("driver_id, lat, lng, updated_at")
       .in("driver_id", driverIds)
       .then(({ data }) => {
         if (!data) return
-        const map: Record<string, { lat: number; lng: number }> = {}
-        data.forEach((r) => { map[r.driver_id] = { lat: r.lat, lng: r.lng } })
+        const map: Record<string, { lat: number; lng: number; updated_at: string }> = {}
+        data.forEach((r) => { map[r.driver_id] = { lat: r.lat, lng: r.lng, updated_at: r.updated_at } })
         setPositions(map)
-        setLiveCount(data.length)
+
       })
   }, [supabase, driverIds.join(",")])
 
@@ -65,13 +66,13 @@ export function GoogleMultiDriver({ deliveries, focusedDeliveryId, height = 420,
     const channel = supabase
       .channel("google-multi-driver-locations")
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_locations" }, (payload) => {
-        const row = (payload.new ?? payload.old) as any
+        const row = (payload.eventType === "DELETE" ? payload.old : payload.new) as any
         if (!row || !driverIds.includes(row.driver_id)) return
         if (payload.eventType === "DELETE") {
           setPositions((prev) => { const n = { ...prev }; delete n[row.driver_id]; return n })
-          setLiveCount((c) => Math.max(0, c - 1))
+
         } else {
-          setPositions((prev) => ({ ...prev, [row.driver_id]: { lat: row.lat, lng: row.lng } }))
+          setPositions((prev) => ({ ...prev, [row.driver_id]: { lat: row.lat, lng: row.lng, updated_at: row.updated_at } }))
         }
       })
       .subscribe()
@@ -95,30 +96,14 @@ export function GoogleMultiDriver({ deliveries, focusedDeliveryId, height = 420,
   const focusedDriverId = focusedDelivery?.driver_id ?? null
   const focusedDriverPos = focusedDriverId ? positions[focusedDriverId] ?? null : null
 
-  // Fetch pickup→destination route when focused delivery changes
-  useEffect(() => {
-    if (!pickup || !destination) { setRouteGeometry(null); return }
-    fetchRoute(pickup, destination)
-      .then((r) => setRouteGeometry(r?.geometry ?? null))
-      .catch(() => {})
-  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng])
-
-  // Fetch driver→pickup route when driver position is available
-  useEffect(() => {
-    if (!focusedDriverPos || !pickup) { setRouteGeometry2(null); return }
-    fetchRoute(focusedDriverPos, pickup)
-      .then((r) => setRouteGeometry2(r?.geometry ?? null))
-      .catch(() => {})
-  }, [focusedDriverPos?.lat, focusedDriverPos?.lng, pickup?.lat, pickup?.lng])
-
-  const drivers: DriverPosition[] = deliveries
-    .filter((d) => d.driver_id && positions[d.driver_id])
-    .map((d) => ({
-      id: d.driver_id!,
-      label: d.driver_name || "Driver",
-      position: { lng: positions[d.driver_id!].lng, lat: positions[d.driver_id!].lat },
-      isAccepted: ["accepted", "collected", "in_transit"].includes(d.status),
-    }))
+  const routeGeometry = useTrackingRoute(pickup, destination)
+  const target = goesToDestination(focusedDelivery?.status, focusedDelivery?.bfm_stage) ? destination : pickup
+  const routeGeometry2 = useTrackingRoute(focusedDriverPos && isFreshLocation(focusedDriverPos.updated_at, now) ? focusedDriverPos : null, target, true)
+  const drivers: DriverPosition[] = driverIds.filter(id => positions[id] && isFreshLocation(positions[id].updated_at, now)).map(id => ({
+    id, label: deliveries.find(d => d.driver_id === id)?.driver_name || "Driver",
+    position: { lng: positions[id].lng, lat: positions[id].lat }, isAccepted: true,
+  }))
+  const liveCount = drivers.length
 
   return (
     <div className={className} style={{ position: "relative" }}>

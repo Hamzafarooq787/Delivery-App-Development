@@ -1,3 +1,4 @@
+import { DriverActiveTracking } from "@/components/tracking/driver-active-tracking"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { DriverLayoutClient } from "./layout-client"
@@ -26,6 +27,7 @@ export default async function DriverLayout({ children }: { children: React.React
 
   return (
     <DriverLayoutClient user={profile} isOnline={isOnline} driverStatus={driverStatus} hasDocuments={hasDocuments} userId={authUser?.id ?? ""}>
+      {driverStatus === "approved" && authUser && <DriverActiveTracking userId={authUser.id} />}
       {children}
     </DriverLayoutClient>
   )

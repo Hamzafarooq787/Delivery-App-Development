@@ -206,6 +206,7 @@ export function DriverLocationBroadcaster({
       speed:       Number.isFinite(pos.coords.speed)    ? pos.coords.speed    : null,
       accuracy:    Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
       delivery_id: deliveryId,
+      measured_at: new Date(pos.timestamp).toISOString(),
     }
 
     // Also hand position to Service Worker so it can relay independently

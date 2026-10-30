@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { googlePlacesAutocomplete, googlePlaceCoords, googleReverseGeocode, type PlaceSuggestion } from '@/lib/google'
 import { createShoppingRequest, getShoppingQuote, type ShoppingItem, type ShoppingQuote } from '@/app/actions/shopping'
 import { getWalletBalance } from '@/app/actions/wallet'
 import styles from './ShoppingSteps.module.css'
+
+const PinMap = dynamic(() => import('@/components/maps/google-live-map').then(m => m.GoogleLiveMap), { ssr: false })
 
 type Item = ShoppingItem & { id: string }
 type Place = { address: string; lat: number; lng: number }
@@ -19,6 +22,9 @@ const freshItem = (): Item => ({ id: Math.random().toString(36).slice(2), name: 
 const money = (n: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(n)
 
 function AddressField({ label, value, onChange, onSelect }: { label: string; value: string; onChange: (v: string) => void; onSelect: (p: Place) => void }) {
+  const [pinOpen, setPinOpen] = useState(false)
+  const [pin, setPin] = useState<Place | null>(null)
+  const pinSequence = useRef(0)
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -33,8 +39,8 @@ function AddressField({ label, value, onChange, onSelect }: { label: string; val
     if (timer.current) clearTimeout(timer.current)
     if (v.length < 3) return
     timer.current = setTimeout(async () => {
-      try { const list = await googlePlacesAutocomplete(v, {}); if (request === sequence.current) { setDropdownHeight(Math.max(44, (window.visualViewport?.height ?? window.innerHeight) - (input.current?.getBoundingClientRect().bottom ?? 0) - 90)); setSuggestions(list ?? []) } }
-      catch { if (request === sequence.current) setError('Address search failed. Please try again.') }
+      try { const list = await googlePlacesAutocomplete(v, {}); if (request === sequence.current) { setDropdownHeight(Math.max(44, (window.visualViewport?.height ?? window.innerHeight) - (input.current?.getBoundingClientRect().bottom ?? 0) - 90)); setSuggestions(list ?? []); setError(list.length ? '' : 'No addresses found. Try a postcode and building number.') } }
+      catch (e) { if (request === sequence.current) setError(e instanceof Error ? e.message : 'Address search failed. Please try again.') }
     }, 350)
   }
   async function choose(s: PlaceSuggestion) {
@@ -50,6 +56,21 @@ function AddressField({ label, value, onChange, onSelect }: { label: string; val
   }
   return <div className={styles.field}>
     <label>{label}<input ref={input} aria-label={label} value={value} onChange={e => change(e.target.value)} placeholder="Start typing an address…" autoComplete="off" /></label>
+    <button type="button" onClick={() => { setPinOpen(true); setError('') }}>Choose on map</button>
+    {pinOpen && <div role="dialog" aria-label={`Choose ${label} on map`} aria-modal="true" style={{ position: 'fixed', inset: 12, zIndex: 100, background: 'var(--brand-panel, #191919)', color: 'white', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <p>Tap the exact entrance, then confirm the address.</p>
+      <PinMap height="60dvh" pickup={pin ?? { lat: 53.4808, lng: -2.2426 }} showUserLocation={false} onPick={async point => {
+        const current = ++pinSequence.current
+        setPin(null); setBusy(true); setError('')
+        try { const address = await googleReverseGeocode(point.lat, point.lng); if (current !== pinSequence.current) return; if (!address) throw new Error('No address found at this pin.'); setPin({ ...point, address }) }
+        catch (e) { if (current === pinSequence.current) setError(e instanceof Error ? e.message : 'Could not verify the pin.') }
+        finally { if (current === pinSequence.current) setBusy(false) }
+      }} />
+      <p>{busy ? 'Checking address…' : pin?.address ?? 'Select a point on the map.'}</p>
+      {error && <p role="alert">{error}</p>}
+      <button type="button" disabled={!pin || busy} onClick={() => { if (pin) { onSelect(pin); setPinOpen(false) } }}>Use this address</button>
+      <button type="button" onClick={() => { pinSequence.current++; setBusy(false); setPinOpen(false) }}>Back to address search</button>
+    </div>}
     {busy && <small>Finding address…</small>}{error && <small role="alert">{error}</small>}
     {suggestions.length > 0 && <div className={styles.suggestions} style={{ maxHeight: dropdownHeight }}>{suggestions.map(s => <button key={s.placeId} type="button" onMouseDown={e => e.preventDefault()} onClick={() => choose(s)}>{s.text}</button>)}</div>}
   </div>
@@ -129,7 +150,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     lock.current = true; setLoading(true); setError('')
     try {
       requestKey.current ??= crypto.randomUUID()
-      const result = await createShoppingRequest({ request_key: requestKey.current, shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng, shop_instructions: shopInstructions.trim() || null, delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng, shopping_items: items.map(i => ({ name: i.name.trim(), quantity: i.quantity, estimated_price: i.estimated_price, brand_size_variant: i.brand_size_variant, notes: i.notes, photo_url: i.photo_url, substitution_preference: i.substitution_preference })) })
+      const result = await createShoppingRequest({ consent_token: quote.consentToken, request_key: requestKey.current, shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng, shop_instructions: shopInstructions.trim() || null, delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng, shopping_items: items.map(i => ({ name: i.name.trim(), quantity: i.quantity, estimated_price: i.estimated_price, brand_size_variant: i.brand_size_variant, notes: i.notes, photo_url: i.photo_url, substitution_preference: i.substitution_preference })) })
       if ('error' in result) setError(result.error); else setSuccess(result.data)
     } catch { setError('We could not confirm the result. Check My Deliveries before trying again.') }
     finally { lock.current = false; setLoading(false) }

@@ -35,16 +35,17 @@ export async function addSecondaryRole(newRole: "customer" | "driver") {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  if (!["customer", "driver"].includes(newRole)) return { error: "Invalid role" }
   const admin = createAdminClient()
 
   if (newRole === "driver") {
     await admin
       .from("driver_profiles")
-      .upsert({ id: user.id, status: "pending" }, { onConflict: "id" })
+      .upsert({ id: user.id, status: "pending" }, { onConflict: "id", ignoreDuplicates: true })
   } else {
     await admin
       .from("customer_profiles")
-      .upsert({ id: user.id }, { onConflict: "id" })
+      .upsert({ id: user.id }, { onConflict: "id", ignoreDuplicates: true })
   }
 
   return { success: true }

@@ -48,8 +48,8 @@ export async function fetchRouteServer(
     const distance_km = leg.distance.value / 1000
 
     return {
-      distance_km: Math.round(distance_km * 10) / 10,
-      distance_miles: Math.round(distance_km * 0.621371 * 10) / 10,
+      distance_km,
+      distance_miles: distance_km / 1.609344,
       duration_min: Math.round(leg.duration.value / 60),
       duration_in_traffic_min: leg.duration_in_traffic?.value
         ? Math.round(leg.duration_in_traffic.value / 60)

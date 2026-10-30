@@ -61,10 +61,11 @@ export async function POST(request: NextRequest) {
           break
         }
 
+        if (session.payment_status !== "paid" || session.currency !== "gbp") break
         const userId = session.metadata?.user_id
         const amount = Number(session.metadata?.amount ?? 0)
 
-        if (!userId || !amount || amount <= 0) {
+        if (!userId || !Number.isFinite(amount) || amount <= 0 || session.amount_total !== Math.round(amount * 100)) {
           console.error("[Stripe Webhook] wallet_topup missing/invalid metadata:", session.metadata)
           break
         }

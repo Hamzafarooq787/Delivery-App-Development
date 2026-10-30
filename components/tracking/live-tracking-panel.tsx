@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic"
 import { useEffect, useMemo, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { fetchRoute } from "@/lib/google"
+import { useTrackingRoute } from "@/hooks/use-tracking-route"
+import { goesToDestination } from "@/lib/tracking-utils"
 
 const GoogleLiveMap = dynamic(
   () => import("@/components/maps/google-live-map").then((m) => m.GoogleLiveMap),
@@ -11,6 +12,8 @@ const GoogleLiveMap = dynamic(
 )
 
 type Props = {
+  status?: string
+  bfmStage?: string | null
   driverId: string | null
   pickup: { lat: number; lng: number } | null
   destination: { lat: number; lng: number } | null
@@ -27,6 +30,8 @@ type Props = {
 }
 
 export function LiveTrackingPanel({
+  status,
+  bfmStage,
   driverId,
   pickup,
   destination,
@@ -44,11 +49,14 @@ export function LiveTrackingPanel({
   const [customerPos, setCustomerPos] = useState<{ lat: number; lng: number } | null>(null)
   const [lastUpdate, setLastUpdate] = useState<number | null>(null)
   const [stale, setStale] = useState(false)
-  const [route1, setRoute1] = useState<GeoJSON.LineString | null>(null)   // pickup→destination
-  const [route2, setRoute2] = useState<GeoJSON.LineString | null>(null)   // driver→pickup
+  const route1 = useTrackingRoute(pickup, destination)
+  const target = goesToDestination(status, bfmStage) ? destination : pickup
+  const route2 = useTrackingRoute(isDriverView ? driverPos : null, target, true)
 
   // Subscribe to driver location
   useEffect(() => {
+    setDriverPos(null)
+    setLastUpdate(null)
     if (!driverId) return
     supabase
       .from("driver_locations")
@@ -59,7 +67,7 @@ export function LiveTrackingPanel({
         if (!data) return
         if (matchDeliveryId && deliveryId && data.delivery_id !== deliveryId) return
         setDriverPos({ lat: data.lat, lng: data.lng })
-        setLastUpdate(Date.now())
+        setLastUpdate(Date.parse(data.updated_at))
       })
 
     const channel = supabase
@@ -78,7 +86,7 @@ export function LiveTrackingPanel({
           return
         }
         setDriverPos({ lat: row.lat, lng: row.lng })
-        setLastUpdate(Date.now())
+        setLastUpdate(Date.parse(row.updated_at))
         setStale(false)
       })
       .on("postgres_changes", {
@@ -95,7 +103,7 @@ export function LiveTrackingPanel({
           return
         }
         setDriverPos({ lat: row.lat, lng: row.lng })
-        setLastUpdate(Date.now())
+        setLastUpdate(Date.parse(row.updated_at))
         setStale(false)
       })
       .on("postgres_changes", {
@@ -143,27 +151,11 @@ export function LiveTrackingPanel({
   // Stale detection — 45 seconds before showing "Signal lost"
   useEffect(() => {
     if (!lastUpdate) return
-    const t = setTimeout(() => setStale(true), 45_000)
+    const remaining = Math.max(0, 45_000 - (Date.now() - lastUpdate))
+    setStale(remaining === 0)
+    const t = setTimeout(() => setStale(true), remaining)
     return () => clearTimeout(t)
   }, [lastUpdate])
-
-  // Fetch pickup→destination route once when both coords are available
-  useEffect(() => {
-    if (!pickup || !destination) { setRoute1(null); return }
-    fetchRoute(
-      { lat: pickup.lat, lng: pickup.lng },
-      { lat: destination.lat, lng: destination.lng }
-    ).then((r) => setRoute1(r?.geometry ?? null)).catch(() => {})
-  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng])
-
-  // When isDriverView is true and driverPos is available, fetch driver→pickup route
-  useEffect(() => {
-    if (!isDriverView || !driverPos || !pickup) { setRoute2(null); return }
-    fetchRoute(
-      { lat: driverPos.lat, lng: driverPos.lng },
-      { lat: pickup.lat, lng: pickup.lng }
-    ).then((r) => setRoute2(r?.geometry ?? null)).catch(() => {})
-  }, [isDriverView, driverPos?.lat, driverPos?.lng, pickup?.lat, pickup?.lng])
 
   const drivers = driverPos && driverId
     ? [{ id: driverId, label: driverLabel, position: { lng: driverPos.lng, lat: driverPos.lat }, isAccepted: true }]

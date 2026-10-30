@@ -484,6 +484,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     setSubmitting(true)
     try {
       const result = await createDeliveryRequest({
+        consent_token: quote.consentToken,
         pickup_address: pickupValue,
         delivery_address: deliveryValue,
         pickup_lat: pickupCoords.lat,
