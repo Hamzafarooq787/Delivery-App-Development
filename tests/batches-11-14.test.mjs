@@ -179,5 +179,31 @@ test("Payout claims, rollback, reject/retry, payment reference and aggregated re
     await db.query("select admin_payout_snapshot($1,1) r", [admin])
   ).rows[0].r;
   assert.equal(Number(snapshot.stats.totalPaidOut), 8);
+  // Exercise the provider ledger on the same actual payout claims.
+  await db.exec("alter table payments add column booking_draft jsonb,add column payment_method text,add column status text; alter table payouts add column admin_note text; alter table delivery_requests add column receipt_url text; create table driver_locations(driver_id uuid,delivery_id uuid,updated_at timestamptz);");
+  await db.exec(fs.readFileSync("supabase/pending-bank-payouts.sql", "utf8"));
+  await assert.rejects(() => db.query("select set_automatic_bank_payouts($1,true)",[driver]));
+  await db.query("select set_automatic_bank_payouts($1,true)",[admin]);
+  await db.query("update driver_profiles set stripe_connect_account_id='acct_test' where id=$1",[driver]);
+  const token="00000000-0000-4000-8000-000000000099";
+  assert.equal((await db.query("select claim_payout_worker($1) r",[token])).rows[0].r,true);
+  assert.equal((await db.query("select claim_payout_worker(gen_random_uuid()) r")).rows[0].r,false);
+  await db.query("insert into driver_earnings(driver_id,amount,status) values($1,12,'pending')",[driver]);
+  const bank=await reserve();
+  let operation=(await db.query("select start_bank_payout($1,'acct_test',$2) r",[bank.id,token])).rows[0].r;
+  await assert.rejects(()=>db.query("select review_driver_payout($1,$2,'rejected',null)",[bank.id,admin]));
+  await assert.rejects(()=>db.query("select save_bank_payout($1,$2)",[bank.id,{...operation,state:'paid'}]));
+  operation={...operation,state:'pending',transfer_id:'tr_test',payout_id:'po_test'};
+  await db.query("select save_bank_payout($1,$2)",[bank.id,operation]);
+  assert.equal((await db.query("select status from driver_earnings where payout_id=$1",[bank.id])).rows[0].status,'reserved');
+  await db.query("select save_bank_payout($1,$2)",[bank.id,{...operation,state:'paid'}]);
+  await db.query("select save_bank_payout($1,$2)",[bank.id,{...operation,state:'paid'}]);
+  assert.equal((await db.query("select status from driver_earnings where payout_id=$1",[bank.id])).rows[0].status,'paid');
+  await db.query("select save_bank_payout($1,$2)",[bank.id,{...operation,state:'failed'}]);
+  assert.equal((await db.query("select status from driver_earnings where payout_id=$1",[bank.id])).rows[0].status,'reserved');
+  await assert.rejects(()=>db.query("select save_bank_payout($1,$2)",[bank.id,{...operation,payout_id:'po_other'}]));
+  await db.exec(`insert into payments(payment_method,status,booking_draft,refund_jobs) values('stripe','paid','{"max_spend_approved":25}','[{"key":"unused-shopping","amount":5,"state":"succeeded"},{"amount":3,"state":"pending"}]');`);
+  assert.equal(Number((await db.query("select payout_protected_funds() r")).rows[0].r),23);
+  assert.equal((await db.query("select has_function_privilege('authenticated','save_bank_payout(uuid,jsonb)','execute') r")).rows[0].r,false);
   await db.close();
 });

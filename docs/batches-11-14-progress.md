@@ -1,3 +1,9 @@
+# Release checkpoint — 30 October 2026 UTC
+
+PR172 merged as f48082a53c8ebccececc46d98c81705df304d1b8. Production deployment dpl_G8YdSSE1AcvRuQZMC1fCrVZbFxe8 is READY and aliased to godrop.uk. Database migration 20261030223001 (batches_11_14_payout_reporting_safeguards) applied and service-only payout RPC permissions verified.
+
+Automatic bank payout implementation and remaining provider/operational acceptance are described in [automatic-bank-payouts.md](automatic-bank-payouts.md). This supersedes the older statement below that no payout provider integration exists. The old checkpoint is retained as historical evidence.
+
 # Batches 11–14: implementation for the combined test
 
 31 October 2026 (Pakistan time). The authoritative task file does not contain the original numbered grouping for batches 11–14. This continuation uses the stated grouping: 11 payouts/refunds; 12 admin reporting/settings; 13 notifications/chat; 14 scheduling/public-map safeguards/branding. Do not represent this inferred grouping as a recovered original plan.

@@ -1,3 +1,4 @@
+import { AutomaticPayoutsControl } from "@/components/admin/automatic-payouts-control";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
@@ -21,11 +22,13 @@ export default async function AdminPayoutsPage({
   );
   if (error || !data)
     throw new Error("Payout data could not load. Please retry.");
+  const settings = await createAdminClient().from("surge_pricing_settings").select("automatic_payouts").order("id").limit(1).single();
+  if (settings.error) throw new Error("Payout settings could not load.");
   return (
     <>
+      <AutomaticPayoutsControl enabled={settings.data.automatic_payouts} webhookConfigured={Boolean(process.env.STRIPE_CONNECT_WEBHOOK_SECRET)} />
       <p className="px-8 pt-4 text-white text-sm">
-        Weekly payout requests reserve earnings. Bank payments must be sent
-        separately and confirmed with a payment reference. Totals cover all
+        Weekly payout requests reserve earnings. Manual payments require a bank reference; Stripe payments are reconciled automatically. Totals cover all
         records; lists show up to 100 per page.
       </p>
       <AdminPayoutsPanel {...data} />

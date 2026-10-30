@@ -1,3 +1,4 @@
+import { ConnectBankButton } from "@/components/driver/connect-bank-button"
 import { driverEarning } from "@/lib/driver-earnings"
 import { createClient } from "@/lib/supabase/server"
 import { RequestPayoutButton } from "@/components/driver/request-payout-button"
@@ -34,7 +35,7 @@ export default async function DriverPayoutsPage() {
     // Driver payout history
     supabase
       .from("payouts")
-      .select("id, amount, status, created_at, payment_reference, processed_at")
+      .select("id, amount, status, created_at, payment_reference, processed_at, provider")
       .eq("driver_id", user?.id ?? "")
       .order("created_at", { ascending: false }),
   ])
@@ -105,6 +106,7 @@ export default async function DriverPayoutsPage() {
         <RequestPayoutButton pendingBalance={pendingBalance} />
       </div>
 
+      <ConnectBankButton />
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
         {/* Pending balance — highlighted */}
@@ -168,7 +170,7 @@ export default async function DriverPayoutsPage() {
                       const price = Array.isArray(dr) ? (dr[0]?.price ?? null) : (dr?.price ?? null)
                       const tracking = Array.isArray(dr) ? (dr[0]?.tracking_number ?? null) : (dr?.tracking_number ?? null)
                       // Derive fare: from joined price, or back-calculate from 75% cut
-                      const fare = price ?? (e.amount != null ? Math.round(e.amount / 0.75 * 100) / 100 : 0)
+                      const fare = price ?? (e.amount != null ? Math.round((e.amount + (e.commission_amount ?? 0)) * 100) / 100 : 0)
                       const isPaid = e.status === "paid"
                       return (
                         <div key={e.id} className="grid grid-cols-12 px-6 py-4 items-center hover:bg-[var(--color-surface-container-high)] transition-colors">
@@ -250,12 +252,13 @@ export default async function DriverPayoutsPage() {
                         </div>
                       </div>
                       <div className="text-right">
+                        {p.provider?.error && <p className="text-xs text-red-300">Bank payout needs attention. Contact support.</p>}
                         {p.payment_reference && <p className="text-xs break-all">Payment reference: {p.payment_reference}</p>}
                         <p className={`text-sm font-black ${p.status === "rejected" ? "text-[#ff6e84] line-through opacity-60" : "text-white"}`}>
                           {fmt(p.amount ?? 0)}
                         </p>
                         <span className={`text-[10px] font-bold ${statusCfg.labelColor}`}>
-                          {statusCfg.label}
+                          {p.provider?.state ?? statusCfg.label}
                         </span>
                       </div>
                     </div>
