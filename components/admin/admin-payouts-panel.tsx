@@ -1,5 +1,6 @@
 "use client"
 
+import { retryFailedBankPayout } from "@/app/actions/bank-payouts"
 import { useState, useMemo, useTransition, useEffect } from "react"
 import { toast } from "sonner"
 import {
@@ -125,7 +126,7 @@ function PayoutActionButtons({
     })
   }
 
-  if (payout.provider) return <div className="text-xs max-w-64 break-words"><p>Stripe: {payout.provider.state}</p>{payout.provider.error && <p className="text-red-300">{payout.provider.error}</p>}<p>{payout.provider.transfer_id}</p><p>{payout.provider.payout_id}</p></div>;
+  if (payout.provider) return <div className="text-xs max-w-64 break-words"><p>Stripe: {payout.provider.state}</p>{payout.provider.error && <p className="text-red-300">{payout.provider.error}</p>}<p>{payout.provider.transfer_id}</p><p>{payout.provider.payout_id}</p>{["failed", "canceled"].includes(payout.provider.state) && <button disabled={isPending} className="underline mt-2" onClick={() => run(() => retryFailedBankPayout(payout.id), "Bank retry queued. It will run when automatic payments are enabled.")}>Verify returned funds and retry bank payout</button>}</div>;
 
   if (payout.status === "pending") {
     return (

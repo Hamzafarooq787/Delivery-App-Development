@@ -205,5 +205,14 @@ test("Payout claims, rollback, reject/retry, payment reference and aggregated re
   await db.exec(`insert into payments(payment_method,status,booking_draft,refund_jobs) values('stripe','paid','{"max_spend_approved":25}','[{"key":"unused-shopping","amount":5,"state":"succeeded"},{"amount":3,"state":"pending"}]');`);
   assert.equal(Number((await db.query("select payout_protected_funds() r")).rows[0].r),23);
   assert.equal((await db.query("select has_function_privilege('authenticated','save_bank_payout(uuid,jsonb)','execute') r")).rows[0].r,false);
+  await db.exec(fs.readFileSync("supabase/pending-payout-recovery.sql", "utf8"));
+  await assert.rejects(()=>db.query("select queue_bank_payout_retry($1,$2,'po_test','txn_return')",[bank.id,admin]));
+  await db.exec("update surge_pricing_settings set payout_worker_until=null");
+  await assert.rejects(()=>db.query("select queue_bank_payout_retry($1,$2,'po_test','txn_return')",[bank.id,driver]));
+  await db.query("select queue_bank_payout_retry($1,$2,'po_test','txn_return')",[bank.id,admin]);
+  const retry=(await db.query("select provider from payouts where id=$1",[bank.id])).rows[0].provider;
+  assert.equal(retry.attempt,1);assert.equal(retry.transfer_id,'tr_test');assert.equal(retry.payout_id,undefined);
+  await assert.rejects(()=>db.query("select queue_bank_payout_retry($1,$2,'po_test','txn_return')",[bank.id,admin]));
+  await assert.rejects(()=>db.query("select save_bank_payout($1,$2)",[bank.id,{...operation,state:'paid'}]));
   await db.close();
 });

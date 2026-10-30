@@ -13,8 +13,8 @@ function fixture() {
   v2:{core:{accounts:{retrieve:async()=>({configuration:{recipient:{capabilities:{stripe_balance:{stripe_transfers:{status:active?'active':'pending'},payouts:{status:'active'}}}}}})}}},
   balanceSettings:{update:async()=>({})},
   balance:{retrieve:async(_p,opts)=>({available:[{currency:'gbp',amount:opts?connected:available}]})},
-  transfers:{list:async function*(){yield*transfers},create:async(p,k)=>{transferCreates++; assert.equal(k.idempotencyKey,'godrop:transfer:test');const r={id:'tr_1',...p,reversed:false};transfers.push(r);return r;}},
-  payouts:{list:async function*(){yield*payouts},create:async(p,k)=>{payoutCreates++;assert.equal(k.stripeAccount,'acct_driver');assert.equal(k.idempotencyKey,'godrop:bank:test');const r={id:'po_1',...p,status:'pending'};payouts.push(r);return r;},retrieve:async(id,p,opts)=>{assert.equal(opts.stripeAccount,'acct_driver');return payouts.find(p=>p.id===id);}}
+  transfers:{retrieve:async(id)=>transfers.find(t=>t.id===id)??{id,amount:800,currency:'gbp',destination:'acct_driver',reversed:false},list:async function*(){yield*transfers},create:async(p,k)=>{transferCreates++; assert.equal(k.idempotencyKey,'godrop:transfer:test');const r={id:'tr_1',...p,reversed:false};transfers.push(r);return r;}},
+  payouts:{list:async function*(){yield*payouts},create:async(p,k)=>{payoutCreates++;assert.equal(k.stripeAccount,'acct_driver');assert.equal(k.idempotencyKey,op.attempt ? `godrop:bank:test:${op.attempt}` : 'godrop:bank:test');const r={id:`po_${payoutCreates}`,...p,status:'pending'};payouts.push(r);return r;},retrieve:async(id,p,opts)=>{assert.equal(opts.stripeAccount,'acct_driver');return payouts.find(p=>p.id===id);}}
  };
  const deps={stripe,now:()=>now,protectedPence:async()=>reserve,save:async p=>{if((failSave==='transfer'&&p.transfer_id)||(failSave==='payout'&&p.payout_id)) {failSave='';throw new Error('database unavailable');}op={...p};}};
  return {run:()=>executeBankPayout('test',8,op,deps),get op(){return op;},set op(p){op=p;},get counts(){return [transferCreates,payoutCreates]},payouts,transfers,set failSave(v){failSave=v},set reserve(v){reserve=v},set available(v){available=v},set connected(v){connected=v},set active(v){active=v}};
@@ -45,4 +45,18 @@ test('Unavailable connected balance waits without transferring earnings twice',a
 });
 test('Mismatched provider amount is not accepted as paid',async()=>{
  const f=fixture();await f.run();f.payouts[0].amount=900;f.payouts[0].status='paid';await assert.rejects(()=>f.run(),/bank_payout_mismatch/);assert.equal(f.op.state,'pending');
+});
+
+test('A bank retry uses a new attempt but never creates a second platform transfer',async()=>{
+ const f=fixture();await f.run();f.payouts[0].status='failed';await f.run();
+ const {payout_id,payout_started_at,...rest}=f.op;
+ f.op={...rest,attempt:1,state:'awaiting_bank_payout'};
+ await f.run();assert.deepEqual(f.counts,[1,2]);assert.equal(f.op.payout_id,'po_2');
+ f.payouts[1].status='paid';await f.run();assert.equal(f.op.state,'paid');
+});
+
+test('A reversed platform transfer cannot fund a replacement bank payout',async()=>{
+ const f=fixture();f.connected=0;await assert.rejects(()=>f.run(),/waiting_for_connected_balance/);
+ f.transfers[0].reversed=true;f.connected=10000;
+ await assert.rejects(()=>f.run(),/transfer_reversed/);assert.deepEqual(f.counts,[1,0]);
 });
