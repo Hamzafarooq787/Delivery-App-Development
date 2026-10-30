@@ -33,6 +33,9 @@ const STATUS_ICONS: Record<string, string> = {
 }
 
 type Job = {
+  pickup_instructions?:string|null
+  delivery_instructions?:string|null
+  shop_instructions?:string|null
   id: string
   status: string
   tracking_number: string | null
@@ -116,6 +119,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
       <BfmShoppingWorkflow
         job={{
           id: job.id,
+          shop_instructions:job.shop_instructions,delivery_instructions:job.delivery_instructions,
           status: job.status,
           tracking_number: job.tracking_number,
           delivery_address: job.delivery_address,
@@ -227,7 +231,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
             <div className="flex-1 space-y-4 min-w-0">
               <div>
                 <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold mb-1">Pickup</p>
-                <p className="text-sm font-semibold text-white leading-snug">{job.pickup_address || "—"}</p>
+                <p className="text-sm font-semibold text-white leading-snug">{job.pickup_address || "—"}</p>{job.pickup_instructions&&<p className="mt-2 text-sm text-white">Access: {job.pickup_instructions}</p>}
                 {pickup && (
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${pickup.lat},${pickup.lng}`}
@@ -242,7 +246,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               </div>
               <div>
                 <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold mb-1">Destination</p>
-                <p className="text-sm font-semibold text-white leading-snug">{job.delivery_address || "—"}</p>
+                <p className="text-sm font-semibold text-white leading-snug">{job.delivery_address || "—"}</p>{job.delivery_instructions&&<p className="mt-2 text-sm text-white">Access: {job.delivery_instructions}</p>}
                 {destination && job.status !== "accepted" && (
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`}

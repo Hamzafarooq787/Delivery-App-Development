@@ -1,6 +1,6 @@
 "use client"
 
-import { getBookingPricing, saveBookingPricing } from "@/app/actions/booking-settings"
+import { getBookingPricing, saveBookingPricing, getBookingPricingHistory } from "@/app/actions/booking-settings"
 import type { BookingPricing } from "@/lib/booking-pricing"
 import { useEffect } from "react"
 import { BrandThemePanel } from "@/components/admin/brand-theme-panel"
@@ -25,6 +25,12 @@ const NOTIFICATION_TEMPLATES = [
 ]
 
 const PRICING_FIELDS = [
+  {key:"maxShoppingProducts",label:"Maximum different shopping products (1–5)",placeholder:"5"},
+  {key:"maxQuantityPerProduct",label:"Maximum quantity per product",placeholder:"10"},
+  {key:"maxShoppingWeightKg",label:"Maximum shopping weight (kg)",placeholder:"15"},
+  {key:"maxShoppingDimensionCm",label:"Maximum package dimension (cm)",placeholder:"60"},
+  { key: "commissionPercent", label: "GoDrop commission on service fees (%)", placeholder: "20" },
+  { key: "minimumDriverEarnings", label: "Minimum driver earnings per job (£)", placeholder: "4.49" },
   { key: "baseFare", label: "First miles price (£)", placeholder: "4.49" },
   { key: "includedMiles", label: "Included driving miles", placeholder: "2" },
   { key: "perMile", label: "Each additional mile (£)", placeholder: "1.20" },
@@ -43,6 +49,8 @@ export function SettingsTabsClient({
   initialBfmSettings?: { service_enabled?: boolean; max_purchase_amount: number }
 }) {
   const [activeTab, setActiveTab] = useState("General")
+  const [history,setHistory]=useState<Awaited<ReturnType<typeof getBookingPricingHistory>>>([])
+  useEffect(()=>{void getBookingPricingHistory().then(setHistory)},[])
   const [pricing, setPricing] = useState<Record<string, string>>({})
   useEffect(() => { getBookingPricing().then(config => setPricing(Object.fromEntries(Object.entries(config).map(([key, value]) => [key, String(value)])))).catch(() => setPricingMsg({ text: "Could not load pricing. Retry by refreshing.", ok: false })) }, [])
   const [pricingMsg, setPricingMsg] = useState<{ text: string; ok: boolean } | null>(null)
@@ -84,6 +92,7 @@ export function SettingsTabsClient({
       }
       const config = Object.fromEntries(PRICING_FIELDS.map(f => [f.key, Number(pricing[f.key])])) as BookingPricing
       const result = await saveBookingPricing(config)
+      if(!result.error)setHistory(await getBookingPricingHistory())
       setPricingMsg({ text: result.error ?? "Pricing settings saved. New quotes use these rates.", ok: !result.error })
       setTimeout(() => setPricingMsg(null), 3000)
     })
@@ -156,6 +165,7 @@ export function SettingsTabsClient({
                 </div>
               ))}
             </div>
+            {history.length>0&&<details className="mt-4 text-sm text-white"><summary>Recent pricing changes</summary>{history.map((row,i)=><div key={i} className="my-3 border-t border-white/10 pt-2"><p>{new Date(row.at).toLocaleString("en-GB")}</p>{PRICING_FIELDS.filter(f=>row.before[f.key]!==row.after[f.key]).map(f=><p key={f.key}>{f.label}: {row.before[f.key]??"—"} → {row.after[f.key]}</p>)}</div>)}</details>}
             {pricingMsg && (
               <p className={`mt-4 text-xs font-medium ${pricingMsg.ok ? "text-emerald-400" : "text-red-400"}`}>
                 {pricingMsg.text}

@@ -1,3 +1,4 @@
+import {CardPaymentsOverview} from "@/components/admin/card-payments-overview"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient }      from "@/lib/supabase/server"
 import { redirect }          from "next/navigation"
@@ -95,11 +96,14 @@ export default async function AdminPaymentsPage() {
   })
 
   return (
+    <>
+    <CardPaymentsOverview />
     <PaymentsPanel
       deliveries={enrichedDeliveries}
       payouts={enrichedPayouts}
       earnings={earnings}
       deliveredPrices={deliveredPricesRes.data ?? []}
     />
+    </>
   )
 }

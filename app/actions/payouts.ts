@@ -1,5 +1,6 @@
 "use server"
 
+import { driverEarning } from "@/lib/driver-earnings"
 import { createClient }      from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath }    from "next/cache"
@@ -47,7 +48,7 @@ export async function requestDriverPayout() {
 
   const { data: unclaimedDeliveries } = await supabase
     .from("delivery_requests")
-    .select("id, price")
+    .select("id, price, driver_earning_quote")
     .eq("driver_id", user.id)
     .eq("status", "delivered")
     .not("price", "is", null)
@@ -59,11 +60,11 @@ export async function requestDriverPayout() {
       unclaimed.map(d => ({
         driver_id:         user.id,
         delivery_id:       d.id,
-        amount:            Math.round((d.price ?? 0) * 0.75 * 100) / 100,
-        commission_amount: Math.round((d.price ?? 0) * 0.25 * 100) / 100,
+        amount:            driverEarning(d),
+        commission_amount: Math.round(((d.price??0)-driverEarning(d))*100)/100,
         status:            "pending",
       })),
-      { onConflict: "delivery_id" },
+      { onConflict: "delivery_id", ignoreDuplicates: true },
     )
   }
 
@@ -256,7 +257,7 @@ export async function adminProcessDriverPayout(driverId: string) {
 
   const { data: unclaimedDeliveries } = await admin
     .from("delivery_requests")
-    .select("id, price")
+    .select("id, price, driver_earning_quote")
     .eq("driver_id", driverId)
     .eq("status", "delivered")
     .not("price", "is", null)
@@ -264,7 +265,7 @@ export async function adminProcessDriverPayout(driverId: string) {
   const unclaimed = (unclaimedDeliveries ?? []).filter(d => !covered.has(d.id))
 
   const realAmount      = (pending ?? []).reduce((s, e) => s + (e.amount ?? 0), 0)
-  const syntheticAmount = unclaimed.reduce((s, d) => s + Math.round((d.price ?? 0) * 0.75 * 100) / 100, 0)
+  const syntheticAmount = unclaimed.reduce((s, d) => s + driverEarning(d), 0)
   const total           = Math.round((realAmount + syntheticAmount) * 100) / 100
 
   if (total <= 0) return { error: "No pending earnings for this driver" }
@@ -275,11 +276,11 @@ export async function adminProcessDriverPayout(driverId: string) {
       unclaimed.map(d => ({
         driver_id:         driverId,
         delivery_id:       d.id,
-        amount:            Math.round((d.price ?? 0) * 0.75 * 100) / 100,
-        commission_amount: Math.round((d.price ?? 0) * 0.25 * 100) / 100,
+        amount:            driverEarning(d),
+        commission_amount: Math.round(((d.price??0)-driverEarning(d))*100)/100,
         status:            "pending",
       })),
-      { onConflict: "delivery_id" },
+      { onConflict: "delivery_id", ignoreDuplicates: true },
     )
   }
 

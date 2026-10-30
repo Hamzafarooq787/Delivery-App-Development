@@ -24,11 +24,13 @@ import { revalidatePath } from "next/cache"
 import { fetchRouteServer } from "@/lib/google-server"
 import { matchingBusyPeriodRules, combineSurgeFactors, type BusyPeriodRule, type SurgeFactor } from "@/lib/pricing"
 import { getBookingPricing } from "@/app/actions/booking-settings"
-import { calculateDeliveryFare, inServiceArea, type BookingPricing } from "@/lib/booking-pricing"
+import { calculateDeliveryFare, fareBreakdown, inServiceArea, type BookingPricing } from "@/lib/booking-pricing"
 import { resolveDiscount } from "@/app/actions/promotions"
 import { isPackageSize, type PackageSize } from "@/lib/vehicles"
 
 export type DeliveryQuote = {
+  priceLines: {label:string;amount:number}[]
+  discountCampaign?: string | null
   consentToken: string
   distanceMiles: number
   durationMin: number
@@ -130,11 +132,13 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
       consentToken: issueQuoteConsent(user.id, deliveryScope(params), finalPrice),
       distanceMiles: route.distance_miles,
       durationMin: route.duration_min,
+      priceLines: fareBreakdown(route.distance_miles,config,params.packageSize),
       basePrice,
       surgeMultiplier,
       surgeFactors,
       surgedPrice,
       discountAmount,
+      discountCampaign: discount.campaign ?? null,
       discountLabel: discount.error ? null : discount.discountLabel,
       promoCodeError: discount.error ?? null,
       promoCodeId: discount.error ? null : discount.promoCodeId,

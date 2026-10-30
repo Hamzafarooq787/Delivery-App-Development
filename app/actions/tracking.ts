@@ -86,13 +86,15 @@ export async function getDriverLocationForDelivery(deliveryId: string) {
   return { data: { delivery, location: location as DriverLocation | null }, error: null }
 }
 
-export async function clearMyLocation() {
+export async function clearMyLocation(deliveryId?: string | null) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
-  const { error } = await admin.from("driver_locations").delete().eq("driver_id", user.id)
+  let query=admin.from("driver_locations").delete().eq("driver_id",user.id)
+  if(deliveryId)query=query.eq("delivery_id",deliveryId)
+  const {error}=await query
   if (error) return { error: error.message }
   return { ok: true }
 }

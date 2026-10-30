@@ -1,22 +1,6 @@
-/**
- * app/api/stripe/webhook/route.ts
- * ─────────────────────────────────────────────────────────────────────────────
- * Stripe webhook endpoint — the source of truth for wallet top-ups.
- *
- * Deliveries are never paid through this webhook — they're paid atomically
- * at creation time from the wallet (see create_delivery_with_wallet_payment()
- * and scripts/026_payment_before_dispatch.sql). The only event this handles
- * is a wallet top-up completing.
- *
- * Configure in Stripe Dashboard → Developers → Webhooks:
- *   URL:    https://<your-domain>/api/stripe/webhook
- *   Events: checkout.session.completed
- *   Then copy the signing secret into STRIPE_WEBHOOK_SECRET.
- *
- * Signature verification requires the RAW request body — do not parse JSON
- * before verifying.
- */
+/** Verified Stripe events finalize paid order bookings or credit legacy wallet top-ups. */
 
+import { fulfillDirectSession, reconcileStripeRefund } from "@/lib/payments/direct"
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getStripe, isStripeConfigured } from "@/lib/stripe/server"
@@ -52,10 +36,20 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
+      case "refund.created":
+      case "refund.updated":
+      case "refund.failed":
+        await reconcileStripeRefund(event.data.object)
+        break
+      case "checkout.session.async_payment_succeeded":
       case "checkout.session.completed": {
         const session = event.data.object
         const metadataType = session.metadata?.type
 
+        if (metadataType === "order_booking") {
+          if (session.payment_status === "paid") await fulfillDirectSession(session)
+          break
+        }
         if (metadataType !== "wallet_topup") {
           console.warn("[Stripe Webhook] checkout.session.completed with unexpected metadata.type:", metadataType)
           break

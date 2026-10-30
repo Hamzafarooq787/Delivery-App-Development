@@ -44,6 +44,7 @@ export type AutomaticDiscount = {
 }
 
 export type DiscountResult = {
+  campaign?: string | null
   discountAmount: number
   discountLabel: string | null
   promoCodeId: string | null
@@ -128,7 +129,7 @@ export async function resolveDiscount(
       .eq("customer_id", customerId)
     if ((count ?? 0) === 0) {
       const discountAmount = applyDiscount(firstOrder.discount_type, firstOrder.discount_value, firstOrder.max_discount_amount, subtotal)
-      if (discountAmount > 0) return { discountAmount, discountLabel: "First delivery discount", promoCodeId: null, promoCodeText: null }
+      if (discountAmount > 0) return { discountAmount, discountLabel: "First delivery discount", campaign: "first_order", promoCodeId: null, promoCodeText: null }
     }
   }
 
@@ -145,6 +146,7 @@ export async function resolveDiscount(
         return {
           discountAmount,
           discountLabel: `Loyalty reward — thanks for ${delivered} deliveries!`,
+          campaign: `loyalty:${delivered}`,
           promoCodeId: null,
           promoCodeText: null,
         }

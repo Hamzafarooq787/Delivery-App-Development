@@ -1,5 +1,6 @@
 'use client'
 
+import { driverEarning } from "@/lib/driver-earnings"
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useRef, useState, useTransition } from 'react'
@@ -30,6 +31,10 @@ export type DashboardJob = {
   pickup_address: string | null
   delivery_address: string | null
   item_description: string | null
+  driver_earning_quote?: number | null
+  distance_miles?:number|null
+  duration_min?:number|null
+  shopping_items?:{name:string;quantity:number;brand_size_variant?:string;notes?:string}[]
   price: number | null
   package_size?: string | null
   service_type?: string | null
@@ -239,9 +244,9 @@ export function MapFirstDashboard({
     job?.package_size && isPackageSize(job.package_size)
       ? PACKAGE_SIZE_INFO[job.package_size].minVehicle
       : 'Suitable vehicle'
-  // Matches the deployed completion action. This redesign does not change driver rates.
+  // Display the immutable offer amount; historical orders retain their original policy.
   const payout =
-    job?.price == null ? null : Math.round(Number(job.price) * 0.75 * 100) / 100
+    job ? driverEarning(job) : null
   return (
     <div className={styles.shell}>
       <section className={styles.mapArea} aria-label="Delivery route map">
@@ -371,14 +376,14 @@ export function MapFirstDashboard({
                 <Clock />
                 <span>
                   <strong>
-                    {route
+                    {job.distance_miles!=null ? `${Number(job.distance_miles).toFixed(1)} miles` : route
                       ? `${route.miles.toFixed(1)} miles`
                       : routeFailed
                         ? 'Route unavailable'
                         : 'Loading route…'}
                   </strong>
                   <small>
-                    {route
+                    {job.duration_min!=null ? `${Math.ceil(job.duration_min)} min driving (est.)` : route
                       ? `${route.minutes} min (est.) · ${vehicle}`
                       : 'Driving distance'}
                   </small>
@@ -474,7 +479,7 @@ export function MapFirstDashboard({
           <p>
             <strong>Items</strong>
             <br />
-            {job?.item_description || 'No further item details provided.'}
+            {job?.shopping_items?.length?job.shopping_items.map((item,i)=><span key={i} className="block">{item.quantity} × {item.name} {item.brand_size_variant??''}{item.notes?` · ${item.notes}`:''}</span>):job?.item_description || 'No further item details provided.'}
           </p>
           <p>
             <strong>Vehicle required</strong>

@@ -55,73 +55,27 @@ export function LiveTrackingPanel({
 
   // Subscribe to driver location
   useEffect(() => {
-    setDriverPos(null)
-    setLastUpdate(null)
-    if (!driverId) return
-    supabase
-      .from("driver_locations")
-      .select("lat, lng, updated_at, delivery_id")
-      .eq("driver_id", driverId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!data) return
-        if (matchDeliveryId && deliveryId && data.delivery_id !== deliveryId) return
-        setDriverPos({ lat: data.lat, lng: data.lng })
-        setLastUpdate(Date.parse(data.updated_at))
-      })
-
-    const channel = supabase
-      .channel(`live-tracking-${driverId}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "driver_locations",
-        filter: `driver_id=eq.${driverId}`,
-      }, (payload) => {
-        const row = payload.new as any
-        if (typeof row?.lat !== "number" || typeof row?.lng !== "number") return
-        if (matchDeliveryId && deliveryId && row.delivery_id !== deliveryId) {
-          // Driver is now broadcasting for a different delivery — don't show it against this route
-          setDriverPos(null)
-          return
-        }
-        setDriverPos({ lat: row.lat, lng: row.lng })
-        setLastUpdate(Date.parse(row.updated_at))
-        setStale(false)
-      })
-      .on("postgres_changes", {
-        event: "UPDATE",
-        schema: "public",
-        table: "driver_locations",
-        filter: `driver_id=eq.${driverId}`,
-      }, (payload) => {
-        const row = payload.new as any
-        if (typeof row?.lat !== "number" || typeof row?.lng !== "number") return
-        if (matchDeliveryId && deliveryId && row.delivery_id !== deliveryId) {
-          // Driver is now broadcasting for a different delivery — don't show it against this route
-          setDriverPos(null)
-          return
-        }
-        setDriverPos({ lat: row.lat, lng: row.lng })
-        setLastUpdate(Date.parse(row.updated_at))
-        setStale(false)
-      })
-      .on("postgres_changes", {
-        event: "DELETE",
-        schema: "public",
-        table: "driver_locations",
-        filter: `driver_id=eq.${driverId}`,
-      }, () => {
-        // Driver completed delivery — clear position gracefully (don't crash map)
-        setDriverPos(null)
-        setStale(false)
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [supabase, driverId, matchDeliveryId, deliveryId])
+    let alive=true,latest=0,revision=0,requestSequence=0
+    setDriverPos(null);setLastUpdate(null);setStale(false)
+    if(!driverId)return
+    const apply=(row:any)=>{
+      if(!alive)return
+      if(!row||(matchDeliveryId&&deliveryId&&row.delivery_id!==deliveryId)){setDriverPos(null);setLastUpdate(null);return}
+      const measured=Date.parse(row.updated_at),lat=Number(row.lat),lng=Number(row.lng)
+      if(!Number.isFinite(measured)||measured<latest||!Number.isFinite(lat)||!Number.isFinite(lng))return
+      latest=measured;setDriverPos({lat,lng});setLastUpdate(measured);setStale(Date.now()-measured>=45000)
+    }
+    const refresh=async()=>{const request=++requestSequence,version=revision;const {data,error}=await supabase.from('driver_locations').select('lat,lng,updated_at,delivery_id').eq('driver_id',driverId).maybeSingle();if(!error&&request===requestSequence&&version===revision)apply(data)}
+    void refresh()
+    const channel=supabase.channel(`live-tracking-${driverId}-${deliveryId}`).on('postgres_changes',{event:'*',schema:'public',table:'driver_locations',filter:`driver_id=eq.${driverId}`},payload=>{revision++;if(payload.eventType==='DELETE')apply(null);else apply(payload.new)}).subscribe(state=>{if(state==='SUBSCRIBED')void refresh()})
+    const timer=setInterval(()=>{void refresh()},15000)
+    return()=>{alive=false;clearInterval(timer);void supabase.removeChannel(channel)}
+  },[supabase,driverId,matchDeliveryId,deliveryId])
 
   // Subscribe to customer location
   useEffect(() => {
+    let alive=true
+    setCustomerPos(null)
     if (!customerId) return
     supabase
       .from("customer_locations")
@@ -129,7 +83,7 @@ export function LiveTrackingPanel({
       .eq("customer_id", customerId)
       .maybeSingle()
       .then(({ data }) => {
-        if (data && data.delivery_id === deliveryId) setCustomerPos({ lat: data.lat, lng: data.lng })
+        if (alive && data && data.delivery_id === deliveryId) setCustomerPos({ lat: data.lat, lng: data.lng })
       })
 
     const channel = supabase
@@ -140,12 +94,13 @@ export function LiveTrackingPanel({
         table: "customer_locations",
         filter: `customer_id=eq.${customerId}`,
       }, (payload) => {
+        if(!alive)return
         const row = payload.new as any
         if (row?.lat != null && row?.delivery_id === deliveryId) setCustomerPos({ lat: row.lat, lng: row.lng })
         else setCustomerPos(null)
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { alive=false;supabase.removeChannel(channel) }
   }, [supabase, customerId, deliveryId])
 
   // Stale detection — 45 seconds before showing "Signal lost"
