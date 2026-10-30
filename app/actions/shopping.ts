@@ -1,5 +1,7 @@
 "use server"
 
+import { verifyCompanyReceipt } from "@/lib/payments/company-card"
+import { processOrderRefunds } from "@/lib/payments/direct"
 import { issueQuoteConsent, checkQuoteConsent } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -22,6 +24,8 @@ export type ShoppingItem = {
 }
 
 export type CreateShoppingRequestParams = {
+  delivery_instructions?: string
+  limits_acknowledged?: boolean
   consent_token?: string
   request_key: string
   shop_name: string
@@ -92,7 +96,7 @@ export async function createShoppingRequest(
   if (!bfm.enabled) return { error: "Buy for Me is currently unavailable.", code: "bfm_disabled" }
 
   if (!params.request_key || !/^[0-9a-f-]{36}$/i.test(params.request_key)) return { error: "Please reopen the shopping form and retry." }
-  const validationError = validateShoppingItems(params.shopping_items)
+  const validationError = validateShoppingItems(params.shopping_items,await getBookingPricing())
   if (validationError) return { error: validationError }
   if (!params.shop_name?.trim() || !params.shop_address?.trim() || !params.delivery_address?.trim()) return { error: "Enter the shop and delivery details." }
   if (![params.shop_lat, params.shop_lng, params.delivery_lat, params.delivery_lng].every(Number.isFinite) || Math.abs(params.shop_lat) > 90 || Math.abs(params.delivery_lat) > 90 || Math.abs(params.shop_lng) > 180 || Math.abs(params.delivery_lng) > 180) return { error: "Select valid shop and delivery locations." }
@@ -242,7 +246,7 @@ export async function updateBfmStage(
   const admin = createAdminClient()
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("id, driver_id, service_type, status, bfm_stage, customer_id, tracking_number, shop_name")
+    .select("id, driver_id, service_type, status, bfm_stage, customer_id, tracking_number, shop_name, company_card_reference, company_card_verified_at")
     .eq("id", deliveryId)
     .single()
 
@@ -264,6 +268,8 @@ export async function updateBfmStage(
     updates.status = "in_transit"
   }
   if (newStage === "shopping") {
+    if (!delivery.company_card_reference || !delivery.company_card_verified_at) return { error: "Company purchase card has not been verified. Contact support; do not spend personal money." }
+    updates.shopping_started_at = new Date().toISOString()
     updates.status = "collected" // reuse collected to indicate "at shop / shopping"
   }
 
@@ -314,7 +320,7 @@ export async function updateBfmStage(
 
 // ── Driver: Item management ───────────────────────────────────────────────────
 
-async function changeItemStatus(itemId: string, status: "purchased" | "unavailable") {
+async function changeItemStatus(itemId: string, status: "purchased" | "unavailable", unitPrice?: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
@@ -323,12 +329,13 @@ async function changeItemStatus(itemId: string, status: "purchased" | "unavailab
   if (!item) return { error: "Item not found" }
   const { data: order } = await admin.from("delivery_requests").select("driver_id,status,bfm_stage").eq("id", item.delivery_id).single()
   if (order?.driver_id !== user.id || order.status !== "collected" || order.bfm_stage !== "shopping") return { error: "Not your active shopping job" }
-  const { error } = await admin.from("shopping_items").update({ status }).eq("id", itemId).eq("delivery_id", item.delivery_id)
+  if(status === "purchased" && (!Number.isFinite(unitPrice) || unitPrice! < 0 || unitPrice! > 100)) return { error: "Enter the shelf price per unit before marking this item found." }
+  const { error } = await admin.from("shopping_items").update({ status, confirmed_unit_price: status === "purchased" ? unitPrice : null }).eq("id", itemId).eq("delivery_id", item.delivery_id)
   if (error) return { error: "Item could not be updated" }
   revalidatePath("/dashboard/driver")
   return {}
 }
-export async function markItemFound(itemId: string): Promise<{ error?: string }> { return changeItemStatus(itemId, "purchased") }
+export async function markItemFound(itemId: string, unitPrice?: number): Promise<{ error?: string }> { return changeItemStatus(itemId, "purchased", unitPrice) }
 export async function markItemUnavailable(itemId: string): Promise<{ error?: string }> { return changeItemStatus(itemId, "unavailable") }
 
 export async function requestSubstitution(params: {
@@ -355,7 +362,7 @@ export async function requestSubstitution(params: {
   if (!delivery || delivery.driver_id !== user.id || delivery.status !== "collected" || delivery.bfm_stage !== "shopping") return { error: "Not your active shopping job" }
   const { data: relatedItem } = await admin.from("shopping_items").select("id").eq("id", params.shopping_item_id).eq("delivery_id", params.delivery_id).maybeSingle()
   if (!relatedItem) return { error: "Item does not belong to this order" }
-  if (params.suggested_price != null && (!Number.isFinite(params.suggested_price) || params.suggested_price < 0)) return { error: "Invalid replacement price" }
+  if (params.suggested_price == null || (!Number.isFinite(params.suggested_price) || params.suggested_price < 0)) return { error: "Invalid replacement price" }
 
   const { data: sub, error } = await admin
     .from("shopping_substitutions")
@@ -364,7 +371,7 @@ export async function requestSubstitution(params: {
       delivery_id: params.delivery_id,
       driver_id: user.id,
       suggested_name: params.suggested_name,
-      suggested_price: params.suggested_price || null,
+      suggested_price: params.suggested_price ?? null,
       driver_notes: params.driver_notes || null,
       photo_url: params.photo_url || null,
     })
@@ -451,7 +458,7 @@ export async function submitPurchaseReceipt(params: {
   const admin = createAdminClient()
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("id, driver_id, customer_id, max_spend_approved, tracking_number, shop_name")
+    .select("id, driver_id, customer_id, max_spend_approved, tracking_number, shop_name, payment_method, company_card_reference, purchase_authorized_total, shopping_hold_settled_at")
     .eq("id", params.deliveryId)
     .single()
 
@@ -463,15 +470,20 @@ export async function submitPurchaseReceipt(params: {
   if (!receiptPath || !receiptPath.startsWith(`${user.id}/receipts/${params.deliveryId}/`)) return { error: "Upload a receipt for this order first." }
   const { data: objects, error: storageError } = await admin.storage.from("delivery-item-photos").list(`${user.id}/receipts/${params.deliveryId}`)
   if (storageError || !objects?.some(o => o.name === receiptPath.split("/").at(-1))) return { error: "Receipt upload could not be verified." }
+  if(delivery.payment_method === "stripe" && !delivery.shopping_hold_settled_at) {
+    try { await verifyCompanyReceipt(delivery.company_card_reference,Number(delivery.purchase_authorized_total),params.actual_items_total) }
+    catch { return {error:"Company card purchase does not match the approved basket and receipt yet. Check the total or contact support; do not use personal money."} }
+  }
   const { data: settlement, error } = await admin.rpc("settle_shopping_receipt_atomic", { p_delivery_id: params.deliveryId, p_driver_id: user.id, p_receipt_url: params.receipt_url, p_actual_total: params.actual_items_total })
   if (error) return { error: "Purchase could not be settled. Check approvals and the receipt, then retry." }
+  if (delivery.payment_method === "stripe") { try { await processOrderRefunds(params.deliveryId) } catch { /* Persistent refund queue remains retryable. */ } }
   if (settlement?.replayed) return {}
   const refund = Number(settlement?.refund ?? 0)
   // Notify customer
   notifyUser({
     userId: delivery.customer_id,
     title: "Purchase completed",
-    body: `Your driver spent £${params.actual_items_total.toFixed(2)} at ${delivery.shop_name ?? "the shop"}.${refund > 0 ? ` £${refund.toFixed(2)} returned to your wallet.` : ""}`,
+    body: `Your driver spent £${params.actual_items_total.toFixed(2)} at ${delivery.shop_name ?? "the shop"}.${refund > 0 ? ` £${refund.toFixed(2)} ${delivery.payment_method === "stripe" ? "refund requested to your original payment card" : "refunded to your wallet"}.` : ""}`,
     url: `/dashboard/customer/active-deliveries`,
     tag: `bfm-purchased-${params.deliveryId}`,
   }).catch(console.error)
@@ -555,6 +567,11 @@ export type ShoppingQuoteParams = {
 }
 
 export type ShoppingQuote = {
+  priceLines: {label:string;amount:number}[]
+  discountAmount: number
+  discountCampaign?: string | null
+  promoCodeId: string | null
+  promoCodeText: string | null
   consentToken: string
   deliveryFee: number
   serviceFee: number
@@ -594,11 +611,17 @@ export async function getShoppingQuote(
   const serviceFee = (await getBookingPricing()).shoppingFee
   const deliveryFee = parseFloat((quote.finalPrice + serviceFee).toFixed(2))
   const estimatedItems = params.estimated_items_total ?? 0
+  if(!Number.isFinite(estimatedItems)||estimatedItems<0||estimatedItems>bfm.max_purchase_amount)return{error:"Shopping estimate exceeds the configured limit."}
   const itemsHold = bfm.max_purchase_amount
 
   return {
     data: {
       consentToken: issueQuoteConsent(user.id, [params.shop_lat, params.shop_lng, params.delivery_lat, params.delivery_lng, estimatedItems], parseFloat((deliveryFee + itemsHold).toFixed(2))),
+      discountAmount: quote.discountAmount,
+      discountCampaign: quote.discountCampaign,
+      promoCodeId: quote.promoCodeId,
+      promoCodeText: quote.promoCodeText,
+      priceLines: [...quote.priceLines, ...(quote.surgeMultiplier>1?[{label:"Busy period / demand surcharge",amount:Math.round((quote.surgedPrice-quote.basePrice)*100)/100}]:[]),...(quote.discountAmount>0?[{label:quote.discountLabel??"Discount",amount:-quote.discountAmount}]:[])],
       deliveryFee: quote.finalPrice,
       serviceFee,
       totalFee: deliveryFee,

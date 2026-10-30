@@ -1,3 +1,4 @@
+import { driverEarning } from "@/lib/driver-earnings"
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAvailableDeliveries } from '@/app/actions/delivery'
@@ -27,7 +28,7 @@ export default async function DriverDashboard() {
     supabase
       .from('delivery_requests')
       .select(
-        'id,status,pickup_address,delivery_address,item_description,price,package_size,service_type,shop_name,created_at',
+        'id,status,pickup_address,delivery_address,item_description,price,driver_earning_quote,package_size,service_type,shop_name,created_at',
       )
       .eq('driver_id', user.id)
       .order('created_at', { ascending: false }),
@@ -48,7 +49,7 @@ export default async function DriverDashboard() {
           j.status === 'delivered' && !covered.has(j.id) && j.price != null,
       )
       .map((j) => ({
-        amount: Math.round(Number(j.price) * 0.75 * 100) / 100,
+        amount: driverEarning(j),
         created_at: j.created_at,
         delivery_id: j.id,
       })),

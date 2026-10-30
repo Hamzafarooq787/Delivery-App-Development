@@ -1,11 +1,17 @@
 'use client'
 
+import { AddressInstructions } from "@/components/customer/address-instructions"
+import { getBookingPricing } from "@/app/actions/booking-settings"
+import { DEFAULT_BOOKING_PRICING } from "@/lib/booking-pricing"
+import { PriceBreakdown } from "@/components/customer/price-breakdown"
+import { useBookingDraft } from "@/hooks/use-booking-draft"
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { googlePlacesAutocomplete, googlePlaceCoords, googleReverseGeocode, type PlaceSuggestion } from '@/lib/google'
-import { createShoppingRequest, getShoppingQuote, type ShoppingItem, type ShoppingQuote } from '@/app/actions/shopping'
+import { startOrderCheckout } from '@/app/actions/order-checkout'
+import { getShoppingQuote, type ShoppingItem, type ShoppingQuote } from '@/app/actions/shopping'
 import { getWalletBalance } from '@/app/actions/wallet'
 import styles from './ShoppingSteps.module.css'
 
@@ -15,7 +21,7 @@ type Item = ShoppingItem & { id: string }
 type Place = { address: string; lat: number; lng: number }
 const choices = [
   { value: 'contact_me', label: 'Contact me first', description: 'Ask before buying a replacement.' },
-  { value: 'best_alternative', label: 'Choose an alternative', description: 'Buy the closest similar item.' },
+  { value: 'best_alternative', label: 'Suggest an alternative', description: 'Approve the suggested replacement before purchase.' },
   { value: 'skip_if_unavailable', label: 'Skip the item', description: 'Leave it out of my order.' },
 ] as const
 const freshItem = (): Item => ({ id: Math.random().toString(36).slice(2), name: '', quantity: 1, estimated_price: null, brand_size_variant: null, notes: null, photo_url: null, substitution_preference: 'contact_me' })
@@ -77,6 +83,9 @@ function AddressField({ label, value, onChange, onSelect }: { label: string; val
 }
 
 export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
+  const [limits,setLimits]=useState(DEFAULT_BOOKING_PRICING)
+  const [limitsAccepted,setLimitsAccepted]=useState(false)
+  useEffect(()=>{void getBookingPricing().then(setLimits).catch(()=>{})},[])
   const router = useRouter()
   const frame = useRef<HTMLDivElement>(null)
   const lock = useRef(false)
@@ -98,6 +107,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [shop, setShop] = useState<Place | null>(null)
   const [delivery, setDelivery] = useState<Place | null>(null)
   const [shopInstructions, setShopInstructions] = useState('')
+  const [deliveryInstructions,setDeliveryInstructions]=useState('')
   const [quote, setQuote] = useState<ShoppingQuote | null>(null)
   const [wallet, setWallet] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -105,6 +115,10 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [locating, setLocating] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState<{ id: string; tracking_number: string } | null>(null)
+  const persistBooking = useBookingDraft('buy_for_me',{items,savedIds,shopName,shopInput,deliveryInput,shop,delivery,shopInstructions,deliveryInstructions},draft=>{
+    if(!Array.isArray(draft.items)||!draft.items.length)return
+    setItems(draft.items);setSavedIds(draft.savedIds);setShopName(draft.shopName);setShopInput(draft.shopInput);setDeliveryInput(draft.deliveryInput);setShop(draft.shop);setDelivery(draft.delivery);setShopInstructions(draft.shopInstructions);setDeliveryInstructions(draft.deliveryInstructions??"");setIndex(0);setStep(1)
+  })
   const savedItems = items.filter(i => savedIds.includes(i.id))
   const listPageSize = editing ? 2 : 3
   const item = items[index]
@@ -126,11 +140,11 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     return () => { document.body.style.overflow = overflow; previous?.focus(); viewport?.removeEventListener('resize', measure); viewport?.removeEventListener('scroll', measure); window.removeEventListener('resize', measure) }
   }, [])
   function update(field: keyof ShoppingItem, value: unknown) { setItems(prev => prev.map((i, n) => n === index ? { ...i, [field]: value } : i)); setQuote(null); setError('') }
-  function go(next: number) { setError(''); setDetails(false); setInstructions(false); setStep(next) }
+  function go(next: number) { if(next < step) requestKey.current=null; setError(''); setDetails(false); setInstructions(false); setStep(next) }
   function validItems() {
-    if (items.length > 5) { setError('You can order up to 5 different products.'); return false }
+    if (items.length > limits.maxShoppingProducts) { setError(`You can order up to ${limits.maxShoppingProducts} different products.`); return false }
     if (items.some(i => !i.name.trim())) { setError('Name each item, or remove the empty item.'); return false }
-    if (items.some(i => !Number.isInteger(i.quantity) || i.quantity < 1 || i.quantity > 99 || (i.estimated_price != null && (!Number.isFinite(i.estimated_price) || i.estimated_price < 0)))) { setError('Check item quantities and estimated prices.'); return false }
+    if (items.some(i => !Number.isInteger(i.quantity) || i.quantity < 1 || i.quantity > limits.maxQuantityPerProduct || (i.estimated_price != null && (!Number.isFinite(i.estimated_price) || i.estimated_price < 0)))) { setError('Check item quantities and estimated prices.'); return false }
     return true
   }
   async function next() {
@@ -139,6 +153,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (step === 2) { if (!shopName.trim() || !shop || !delivery) { setError('Enter the shop name and select both addresses from suggestions.'); return }; go(3); return }
     if (step === 3) {
       if (!validItems() || !shop || !delivery) return
+      if(!limitsAccepted){setError("Confirm the shopping size and weight limits to continue.");return}
       go(4); setReviewIndex(0); setQuote(null); setLoading(true); lock.current = true
       try { const result = await getShoppingQuote({ shop_lat: shop.lat, shop_lng: shop.lng, delivery_lat: delivery.lat, delivery_lng: delivery.lng, estimated_items_total: total }); if ('error' in result) setError(result.error); else setQuote(result.data) }
       catch { setError('Could not calculate the price. Go back and try again.') }
@@ -149,9 +164,10 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (lock.current || success || !quote || !shop || !delivery || uploading || !validItems()) return
     lock.current = true; setLoading(true); setError('')
     try {
+      persistBooking()
       requestKey.current ??= crypto.randomUUID()
-      const result = await createShoppingRequest({ consent_token: quote.consentToken, request_key: requestKey.current, shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng, shop_instructions: shopInstructions.trim() || null, delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng, shopping_items: items.map(i => ({ name: i.name.trim(), quantity: i.quantity, estimated_price: i.estimated_price, brand_size_variant: i.brand_size_variant, notes: i.notes, photo_url: i.photo_url, substitution_preference: i.substitution_preference })) })
-      if ('error' in result) setError(result.error); else setSuccess(result.data)
+      const result = await startOrderCheckout({ requestKey: requestKey.current, type: "buy_for_me", order: { delivery_instructions:deliveryInstructions, limits_acknowledged:limitsAccepted, consent_token: quote.consentToken, request_key: requestKey.current, shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng, shop_instructions: shopInstructions.trim() || null, delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng, shopping_items: items.map(i => ({ name: i.name.trim(), quantity: i.quantity, estimated_price: i.estimated_price, brand_size_variant: i.brand_size_variant, notes: i.notes, photo_url: i.photo_url, substitution_preference: i.substitution_preference })) } })
+      if ('error' in result) setError(result.error); else window.location.assign(result.url)
     } catch { setError('We could not confirm the result. Check My Deliveries before trying again.') }
     finally { lock.current = false; setLoading(false) }
   }
@@ -224,7 +240,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
                 <img src={item.photo_url} alt="Shopping item" /><button onClick={() => update('photo_url',null)}>Remove photo</button></div>}
             </> : <>
               <label>Item name<input value={item.name} onChange={e => update('name',e.target.value)} placeholder="e.g. Whole milk 2L" /></label>
-              <div className={styles.columns}><label>Quantity<div className={styles.quantity}><button aria-label="Reduce quantity" disabled={item.quantity <= 1} onClick={() => update('quantity',item.quantity - 1)}>−</button><strong>{item.quantity}</strong><button aria-label="Increase quantity" onClick={() => update('quantity',item.quantity + 1)}>+</button></div></label><label>Est. price per item (£)<input type="number" min="0" step="0.01" value={item.estimated_price ?? ''} onChange={e => update('estimated_price',e.target.value === '' ? null : Number(e.target.value))} placeholder="Optional" /></label></div>
+              <div className={styles.columns}><label>Quantity<div className={styles.quantity}><button aria-label="Reduce quantity" disabled={item.quantity <= 1} onClick={() => update('quantity',item.quantity - 1)}>−</button><strong>{item.quantity}</strong><button aria-label="Increase quantity" disabled={item.quantity>=limits.maxQuantityPerProduct} onClick={() => update('quantity',item.quantity + 1)}>+</button></div></label><label>Est. price per item (£)<input type="number" min="0" step="0.01" value={item.estimated_price ?? ''} onChange={e => update('estimated_price',e.target.value === '' ? null : Number(e.target.value))} placeholder="Optional" /></label></div>
               <button className={styles.cardButton} onClick={() => setDetails(true)}>More details (optional) <span>Brand, size, notes and photo →</span></button>
             </>}
 
@@ -237,10 +253,11 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
               <AddressField label="Shop address" value={shopInput} onChange={v => { setShopInput(v); setShop(null); setQuote(null) }} onSelect={p => { setShop(p); setShopInput(p.address); setQuote(null) }} />
               <AddressField label="Delivery address" value={deliveryInput} onChange={v => { setDeliveryInput(v); setDelivery(null); setQuote(null) }} onSelect={p => { setDelivery(p); setDeliveryInput(p.address); setQuote(null) }} />
               <button className={styles.link} disabled={locating} onClick={gps}>{locating ? 'Finding your location…' : 'Use my location for delivery'}</button>
-              <button className={styles.cardButton} onClick={() => setInstructions(true)}>Shop instructions (optional) →</button>
+              <AddressInstructions pickup={shopInstructions} delivery={deliveryInstructions} onPickup={setShopInstructions} onDelivery={setDeliveryInstructions}/>
             </>}
           </div>}
           {step === 3 && <div className={styles.stack}>
+            <label className={styles.hint}><input type="checkbox" checked={limitsAccepted} onChange={e=>setLimitsAccepted(e.target.checked)}/> My shopping is within {limits.maxShoppingWeightKg} kg total; no package exceeds {limits.maxShoppingDimensionCm} cm.</label>
             {individual && <div className={styles.itemNav}><button disabled={!replacementIndex} onClick={() => setReplacementIndex(replacementIndex - 1)}>Previous</button><span>{items[replacementIndex].name}</span><button disabled={replacementIndex === items.length - 1} onClick={() => setReplacementIndex(replacementIndex + 1)}>Next</button></div>}
             {choices.map(c => <button key={c.value} className={styles.choice} aria-pressed={individual ? items[replacementIndex].substitution_preference === c.value : items.every(i => i.substitution_preference === c.value)} onClick={() => setItems(prev => prev.map((i,n) => !individual || n === replacementIndex ? {...i,substitution_preference:c.value} : i))}><strong>{c.label}</strong><span>{c.description}</span></button>)}
             <p className={styles.hint}>{individual ? 'Change the choice for this item.' : 'Selecting a choice applies it to all items.'}</p>
@@ -250,8 +267,8 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
             <div className={styles.card}><button className={styles.edit} onClick={() => go(2)}>Edit</button><small>Shop</small><p>{shopName} · {shop?.address}</p><small>Delivery</small><p>{delivery?.address}</p></div>
             <div className={styles.card}><button className={styles.edit} onClick={() => go(1)}>Edit items</button><small>Shopping list · {items.length} items</small>{items.slice(reviewIndex,reviewIndex + 2).map(i => <p key={i.id}>{i.name} ×{i.quantity}<span>{i.estimated_price == null ? '—' : money(i.estimated_price * i.quantity)}</span></p>)}{items.length > 2 && <div className={styles.itemNav}><button disabled={reviewIndex === 0} onClick={() => setReviewIndex(reviewIndex - 2)}>Previous</button><span>{reviewIndex + 1}–{Math.min(reviewIndex + 2,items.length)}</span><button disabled={reviewIndex + 2 >= items.length} onClick={() => setReviewIndex(reviewIndex + 2)}>Next</button></div>}</div>
             <button className={styles.link} onClick={() => go(3)}>Replacement: {items.every(i => i.substitution_preference === items[0].substitution_preference) ? choices.find(c => c.value === items[0].substitution_preference)?.label : 'Per item'} · Edit</button>
-            <div className={styles.card}>{loading ? <p>Calculating price…</p> : quote ? <><p>Shopping funds (held)<span>{money(quote.itemsHold)}</span></p><p>Delivery fee<span>{money(quote.deliveryFee)}</span></p>{quote.serviceFee > 0 && <p>Service fee<span>{money(quote.serviceFee)}</span></p>}<p><strong>Total charged now</strong><strong>{money(quote.totalCharge)}</strong></p><small>Shopping funds up to {money(quote.maxSpendLimit)} are held. Unused funds return to your wallet.</small></> : <p>Price unavailable. Go back and retry.</p>}</div>
-            <p className={styles.hint}>Wallet balance: {wallet == null ? 'Loading…' : money(wallet)}</p>
+            <div className={styles.card}>{loading ? <p>Calculating price…</p> : quote ? <><p>Prepaid shopping funds<span>{money(quote.itemsHold)}</span></p><p>Delivery fee<span>{money(quote.deliveryFee)}</span></p><PriceBreakdown lines={quote.priceLines}/>{quote.serviceFee > 0 && <p>Service fee<span>{money(quote.serviceFee)}</span></p>}<p><strong>Total charged now</strong><strong>{money(quote.totalCharge)}</strong></p><small>Shopping funds of {money(quote.itemsHold)} are charged now. Unused funds are refunded to your original payment card.</small></> : <p>Price unavailable. Go back and retry.</p>}</div>
+            <p className={styles.hint}>Secure card checkout — no wallet required.</p>
           </div>}
         </>}
       </main>

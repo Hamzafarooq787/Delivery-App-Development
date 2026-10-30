@@ -23,7 +23,7 @@ export function useTrackingRoute(from: LngLat | null, to: LngLat | null, moving 
       try {
         const result = await fetchRoute(points.from, points.to)
         if (active) setRoute(result?.geometry ?? null)
-      } finally { inFlight = false }
+      } catch { if(active)setRoute(null) } finally { inFlight = false }
     }
     void refresh()
     const timer = moving ? setInterval(() => { void refresh() }, 20000) : null

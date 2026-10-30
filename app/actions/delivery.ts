@@ -1,5 +1,6 @@
 "use server"
 
+import { cancelCardBooking } from "@/app/actions/order-checkout"
 import { checkQuoteConsent, deliveryScope } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -13,6 +14,8 @@ import { getDeliveryQuote } from "@/app/actions/pricing"
 // ── Customer actions ──────────────────────────────────────────────────────────
 
 export type CreateDeliveryParams = {
+  pickup_instructions?: string
+  delivery_instructions?: string
   consent_token?: string
   pickup_address: string
   delivery_address: string
@@ -216,7 +219,7 @@ export async function getAvailableDeliveries() {
 
   let query = admin
     .from("delivery_requests")
-    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total, payments!inner(status)")
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total, driver_earning_quote, distance_miles, duration_min, shopping_limits, shopping_items(name,quantity,brand_size_variant,notes), payments!inner(status)")
     .eq("payments.status", "paid")
     .eq("status", "requested")
     .is("driver_id", null)
@@ -339,6 +342,10 @@ export async function updateDeliveryStatus(deliveryId: string, status: string) {
 
   const transitions: Record<string, string[]> = { in_transit: ["collected"], cancelled: ["accepted"] }
   if (!transitions[status]) return { error: "Invalid delivery transition" }
+  if (status === "cancelled") {
+    const { data: order } = await createAdminClient().from("delivery_requests").select("payment_method").eq("id",deliveryId).eq("driver_id",user.id).maybeSingle()
+    if (order?.payment_method === "stripe") return cancelCardBooking(deliveryId)
+  }
   const updatePayload: Record<string, string> = { status }
   if (status === "cancelled") {
     updatePayload.cancelled_by = "driver"
@@ -477,126 +484,23 @@ export async function getDeliveryOtp(deliveryId: string): Promise<{ data: string
  * server-side. Attempts are capped at MAX_OTP_ATTEMPTS to resist brute force
  * (see adminResetDeliveryOtp for the support recovery path).
  */
-export async function verifyDeliveryOtpAndComplete(
-  deliveryId: string,
-  code: string,
-  photoUrl: string
-): Promise<{ success?: boolean; error?: string; attemptsRemaining?: number }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Not authenticated" }
-
-  if (!photoUrl?.trim()) {
-    return { error: "A photo of the delivered package is required." }
+export async function verifyDeliveryOtpAndComplete(deliveryId: string, code: string, photoUrl: string): Promise<{success?: boolean;error?: string;attemptsRemaining?: number}> {
+  const client=await createClient();const {data:{user}}=await client.auth.getUser();if(!user)return{error:"Not authenticated"}
+  const admin=createAdminClient()
+  try {
+    const url=new URL(photoUrl);const prefix=`/storage/v1/object/public/driver-documents/${user.id}/delivered-${deliveryId}-`
+    if(url.origin!==new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin||!url.pathname.startsWith(prefix))return{error:"Upload a delivery photo for this order."}
+    const name=decodeURIComponent(url.pathname.split('/').at(-1)!)
+    const {data:files,error}=await admin.storage.from('driver-documents').list(user.id,{search:name})
+    if(error||!files?.some(f=>f.name===name))return{error:"Delivery photo was not found."}
+  }catch{return{error:"Invalid delivery photo."}}
+  const {data,error}=await admin.rpc('complete_order_with_otp',{p_id:deliveryId,p_driver:user.id,p_code:code,p_photo:photoUrl})
+  if(error)return{error:"Completion could not be saved. Please retry."}
+  if(data?.success){
+    const {data:order}=await admin.from('delivery_requests').select('customer_id,tracking_number').eq('id',deliveryId).single()
+    if(order)await notifyUser({userId:order.customer_id,title:'Delivery completed',body:`Your order ${order.tracking_number??''} has been delivered.`,url:`/dashboard/customer/tracking?id=${deliveryId}`,tag:`delivered-${deliveryId}`}).catch(()=>{})
   }
-
-  const admin = createAdminClient()
-
-  const { data: delivery, error: deliveryError } = await admin
-    .from("delivery_requests")
-    .select("id, status, driver_id, price, tracking_number, customer_id")
-    .eq("id", deliveryId)
-    .single()
-
-  if (deliveryError || !delivery) return { error: "Delivery not found" }
-  if (delivery.driver_id !== user.id) return { error: "This job isn't assigned to you" }
-  if (delivery.status !== "in_transit") {
-    return { error: "This delivery isn't ready to be marked delivered yet." }
-  }
-
-  const { data: otpRow, error: otpError } = await admin
-    .from("delivery_otps")
-    .select("otp, attempts")
-    .eq("delivery_id", deliveryId)
-    .maybeSingle()
-
-  if (otpError || !otpRow) return { error: "Could not verify the code. Please contact support." }
-
-  if (otpRow.attempts >= MAX_OTP_ATTEMPTS) {
-    return { error: "Too many incorrect attempts. Please contact support for a new code.", attemptsRemaining: 0 }
-  }
-
-  if (code.trim() !== otpRow.otp) {
-    const nextAttempts = otpRow.attempts + 1
-    await admin.from("delivery_otps").update({ attempts: nextAttempts }).eq("delivery_id", deliveryId)
-    const remaining = Math.max(0, MAX_OTP_ATTEMPTS - nextAttempts)
-    return {
-      error:
-        remaining > 0
-          ? `Incorrect code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`
-          : "Too many incorrect attempts. Please contact support for a new code.",
-      attemptsRemaining: remaining,
-    }
-  }
-
-  // Correct code — mark delivered, but only if it's STILL in_transit and
-  // STILL assigned to this driver (atomic guard against a race).
-  const nowIso = new Date().toISOString()
-  const { data: updatedRows, error: updateError } = await admin
-    .from("delivery_requests")
-    .update({ status: "delivered", delivered_at: nowIso, delivered_image_url: photoUrl.trim() })
-    .eq("id", deliveryId)
-    .eq("driver_id", user.id)
-    .eq("status", "in_transit")
-    .select("id")
-
-  if (updateError) return { error: updateError.message }
-  if (!updatedRows || updatedRows.length === 0) {
-    return { error: "This delivery is no longer ready to be marked delivered." }
-  }
-
-  await admin.from("delivery_otps").update({ verified_at: nowIso }).eq("delivery_id", deliveryId)
-
-  await admin.from("delivery_status_logs").insert({
-    delivery_id: deliveryId,
-    status: "delivered",
-    updated_by: user.id,
-  })
-
-  // Record earnings with 75/25 commission split
-  const price = Number(delivery.price ?? 0)
-  if (price > 0) {
-    const driverCut = Math.round(price * 0.75 * 100) / 100
-    const commission = Math.round(price * 0.25 * 100) / 100
-    await admin.from("driver_earnings").upsert(
-      {
-        driver_id: user.id,
-        delivery_id: deliveryId,
-        amount: driverCut,
-        commission_amount: commission,
-        status: "pending",
-      },
-      { onConflict: "delivery_id" }
-    )
-  }
-
-  // Auto-offline if no other active jobs remain
-  const ACTIVE = ["accepted", "collected", "picked_up", "in_transit"]
-  const { count } = await admin
-    .from("delivery_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("driver_id", user.id)
-    .in("status", ACTIVE)
-  if ((count ?? 0) === 0) {
-    await admin.from("driver_profiles").upsert({ id: user.id, is_online: false }, { onConflict: "id" })
-  }
-
-  if (delivery.customer_id) {
-    notifyUser({
-      userId: delivery.customer_id,
-      title: "✅ Delivery complete!",
-      body: `Your package has been delivered successfully. (${delivery.tracking_number ?? deliveryId})`,
-      url: "/dashboard/customer",
-      tag: `${NotificationTag.DELIVERY_DELIVERED}-${deliveryId}`,
-      data: { deliveryId, status: "delivered" },
-    }).catch((err) => console.error("[Notify] Failed to send delivered push:", err))
-  }
-
-  revalidatePath("/dashboard/driver/jobs/completed")
-  revalidatePath("/dashboard/driver/active-jobs")
-  revalidatePath("/dashboard/driver/earnings")
-  revalidatePath("/dashboard/admin/orders")
-  return { success: true }
+  revalidatePath('/dashboard/driver','layout');revalidatePath('/dashboard/customer','layout');revalidatePath('/dashboard/admin/orders');return data
 }
 
 /**
@@ -1191,6 +1095,9 @@ export async function markParcelCollected(deliveryId: string, photoUrl: string) 
   } catch { return { error: 'Upload a valid collection photo.' } }
   // Admin client — see updateDeliveryStatus() for why.
   const admin = createAdminClient()
+  const photoName=decodeURIComponent(new URL(photoUrl).pathname.split('/').at(-1)!)
+  const {data:photos,error:photoError}=await admin.storage.from('driver-documents').list(user.id,{search:photoName})
+  if(photoError||!photos?.some(photo=>photo.name===photoName))return{error:'Collection photo upload was not found. Please upload it again.'}
   const { data: updated, error } = await admin
     .from('delivery_requests')
     .update({ status: 'collected', parcel_image_url: photoUrl })

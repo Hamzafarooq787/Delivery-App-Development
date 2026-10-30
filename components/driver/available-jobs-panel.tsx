@@ -1,10 +1,14 @@
 "use client"
 
+import { driverEarning } from "@/lib/driver-earnings"
 import { useState, useMemo, useEffect } from "react"
 import { AcceptJobButton } from "@/components/driver/accept-job-button"
 import { PACKAGE_SIZE_INFO, isPackageSize } from "@/lib/vehicles"
 
 type Job = {
+  driver_earning_quote?: number | null
+  distance_miles?: number | null
+  duration_min?: number | null
   id: string
   tracking_number: string | null
   pickup_address: string | null
@@ -71,8 +75,8 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
     list = [...list].sort((a, b) => {
       if (sort === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       if (sort === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      if (sort === "payout_high") return (b.price ?? 0) - (a.price ?? 0)
-      if (sort === "payout_low") return (a.price ?? 0) - (b.price ?? 0)
+      if (sort === "payout_high") return driverEarning(b) - driverEarning(a)
+      if (sort === "payout_low") return driverEarning(a) - driverEarning(b)
       return 0
     })
     return list
@@ -139,7 +143,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filtered.map((job) => {
-            const price = fmt(job.price == null ? null : Math.round(job.price * 0.75 * 100) / 100)
+            const price = fmt(driverEarning(job))
             const distanceMiles =
               driverGps && job.pickup_lat != null && job.pickup_lng != null
                 ? haversineMiles(driverGps.lat, driverGps.lng, Number(job.pickup_lat), Number(job.pickup_lng))
@@ -183,7 +187,8 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                     {price && (
                       <div className="text-right shrink-0">
                         <span className="text-2xl font-black text-[var(--brand-soft)] font-headline tracking-tighter">{price}</span>
-                        <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold">Payout</p>
+                        <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold">Your earnings</p>
+                        <p className="text-xs">{job.distance_miles != null ? `${Number(job.distance_miles).toFixed(1)} driving miles` : "Distance available in job details"}{job.duration_min != null ? ` · approx. ${Math.round(job.duration_min)} min` : ""}</p>
                       </div>
                     )}
                   </div>

@@ -10,10 +10,12 @@ export function DriverActiveTracking({ userId }: { userId: string }) {
   useEffect(() => {
     if (!userId) return
     let alive = true
+    let sequence=0
     const refresh = async () => {
+      const request=++sequence
       const { data, error } = await client.from('delivery_requests').select('id').eq('driver_id', userId).in('status', ['accepted', 'collected', 'picked_up', 'in_transit']).order('created_at').limit(20)
-      if (!alive) return
-      if (error) { setJobId(null); return }
+      if (!alive||request!==sequence) return
+      if (error) return // Keep the current watch during transient connectivity loss.
       setJobId(data?.find(job => path.includes(job.id))?.id ?? data?.[0]?.id ?? null)
     }
     void refresh()

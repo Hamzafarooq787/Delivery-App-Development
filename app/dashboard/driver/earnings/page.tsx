@@ -1,3 +1,4 @@
+import { driverEarning } from "@/lib/driver-earnings"
 import { createClient } from "@/lib/supabase/server"
 import { EarningsPanel } from "@/components/driver/earnings-panel"
 import { SubTabs } from "@/components/ui/sub-tabs"
@@ -12,7 +13,7 @@ export default async function EarningsPage() {
     // Primary: driver_earnings joined with delivery info
     supabase
       .from("driver_earnings")
-      .select("id, amount, commission_amount, status, created_at, delivery_requests(pickup_address, delivery_address, created_at, price, tracking_number)")
+      .select("id, amount, commission_amount, status, created_at, delivery_requests(id, pickup_address, delivery_address, created_at, price, tracking_number)")
       .eq("driver_id", user?.id ?? "")
       .order("created_at", { ascending: false }),
 
@@ -20,7 +21,7 @@ export default async function EarningsPage() {
     // (for jobs completed before the auto-earnings feature was added)
     supabase
       .from("delivery_requests")
-      .select("id, tracking_number, pickup_address, delivery_address, price, created_at")
+      .select("id, tracking_number, pickup_address, delivery_address, price, driver_earning_quote, created_at")
       .eq("driver_id", user?.id ?? "")
       .eq("status", "delivered")
       .order("created_at", { ascending: false }),
@@ -33,7 +34,7 @@ export default async function EarningsPage() {
   const earningsDeliveryIds = new Set(
     earnings.map((e: any) => {
       const dr = e.delivery_requests
-      return Array.isArray(dr) ? dr[0]?.id : null
+      return Array.isArray(dr) ? dr[0]?.id : dr?.id
     }).filter(Boolean)
   )
 
@@ -41,9 +42,9 @@ export default async function EarningsPage() {
     .filter(d => !earningsDeliveryIds.has(d.id))
     .map(d => ({
       id: `synthetic-${d.id}`,
-      amount: d.price != null ? Math.round(d.price * 0.75 * 100) / 100 : null,
-      commission_amount: d.price != null ? Math.round(d.price * 0.25 * 100) / 100 : null,
-      status: "paid" as const,  // completed jobs are treated as paid
+      amount: driverEarning(d),
+      commission_amount: Math.round(((d.price??0)-driverEarning(d))*100)/100,
+      status: "pending" as const,
       created_at: d.created_at,
       delivery_requests: {
         pickup_address: d.pickup_address,

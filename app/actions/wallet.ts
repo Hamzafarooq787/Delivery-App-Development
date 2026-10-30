@@ -1,5 +1,7 @@
 "use server"
 
+import { cancelCardBooking } from "@/app/actions/order-checkout"
+import { processOrderRefunds } from "@/lib/payments/direct"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -66,6 +68,11 @@ export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Not authenticated" }
 
+  const { data: cardOrder } = await createAdminClient().from("delivery_requests").select("payment_method").eq("id",deliveryId).eq("customer_id",user.id).maybeSingle()
+  if (cardOrder?.payment_method === "stripe") {
+    const result = await cancelCardBooking(deliveryId)
+    return { success: !result.error, freeCancel: true, cancellationFee: 0, distanceMiles: 0, refundAmount: result.amount ?? 0, error: result.error }
+  }
   // Atomic RPC — locks the delivery row before doing anything, so concurrent
   // cancel calls on the same order can't both read "still cancellable" and
   // both credit a refund. See scripts/030_security_hardening.sql.
@@ -105,7 +112,7 @@ export async function previewCancellationFee(deliveryId: string): Promise<{
   const admin = createAdminClient()
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("id, status, customer_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng")
+    .select("id, status, customer_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng, payment_method, bfm_stage")
     .eq("id", deliveryId)
     .single()
 
@@ -118,6 +125,10 @@ export async function previewCancellationFee(deliveryId: string): Promise<{
     return { freeCancel: false, cancellationFee: 0, distanceMiles: 0, status, canCancel: false }
   }
 
+  if (delivery.payment_method === 'stripe') {
+    const allowed=['requested','accepted'].includes(status)&&!['shopping','purchase_completed','heading_to_customer'].includes(delivery.bfm_stage)
+    return { freeCancel: allowed, cancellationFee: 0, distanceMiles: 0, status, canCancel: allowed, ...(!allowed ? { error: 'Contact support to cancel after collection or shopping starts.' } : {}) }
+  }
   const freeCancel = ["requested", "accepted"].includes(status)
   let cancellationFee = 0
   let distanceMiles = 0
@@ -150,6 +161,11 @@ export async function adminCancelOrder(deliveryId: string): Promise<{
 
   const admin = createAdminClient()
 
+  const { data: cardOrder } = await admin.from("delivery_requests").select("payment_method").eq("id",deliveryId).maybeSingle()
+  if (cardOrder?.payment_method === "stripe") {
+    const result = await cancelCardBooking(deliveryId)
+    return result.error ? { error: result.error } : { success: true, refunded: false, refundAmount: result.amount }
+  }
   const { data: delivery, error: fetchErr } = await admin
     .from("delivery_requests")
     .select("id, status, customer_id, price")
@@ -221,6 +237,8 @@ export async function adminIssueRefund(deliveryId: string, amount: number): Prom
 
   if (fetchErr || !delivery || !delivery.customer_id) return { error: "Order not found" }
 
+  const { data: cardPayment } = await admin.from("payments").select("id").eq("delivery_id", deliveryId).eq("payment_method", "stripe").maybeSingle()
+  if (cardPayment) return { error: "Card refunds must use the original-payment refund workflow; wallet refunds are not allowed." }
   const { data: wallet } = await admin
     .from("wallet_balances")
     .select("balance")

@@ -1,5 +1,6 @@
 'use client'
 
+import { PendingOrderCheckouts } from "@/components/customer/pending-order-checkouts"
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -90,6 +91,7 @@ export default function CustomerDashboardLayout({
           <BottomNav />
         </>
       )}
+      <PendingOrderCheckouts />
       {children}
       {showModal && (
         <NewDeliveryModal

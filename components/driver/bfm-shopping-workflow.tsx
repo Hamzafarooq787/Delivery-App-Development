@@ -1,5 +1,6 @@
 "use client"
 
+import { reportShoppingProblem, enableApprovedPurchase } from "@/app/actions/shopping-operations"
 import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -17,6 +18,8 @@ import {
 import { DeliveryOtpModal } from "./delivery-otp-modal"
 
 type BfmJob = {
+  shop_instructions?:string|null
+  delivery_instructions?:string|null
   id: string
   status: string
   bfm_stage: string | null
@@ -65,6 +68,8 @@ const NEXT_STAGE_LABEL: Record<string, string> = {
 }
 
 export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: string }) {
+  const [shelfPrices,setShelfPrices]=useState<Record<string,string>>({})
+  const [problem, setProblem] = useState("")
   const [items, setItems] = useState<ShoppingItemRow[]>([])
   const [loadingItems, setLoadingItems] = useState(true)
   const [isPending, startTransition] = useTransition()
@@ -147,7 +152,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
   function handleMarkFound(itemId: string) {
     startTransition(async () => {
-      const result = await markItemFound(itemId)
+      const result = await markItemFound(itemId, Number(shelfPrices[itemId] ?? items.find(i=>i.id===itemId)?.estimated_price ?? NaN))
       if (result.error) { toast.error(result.error); return }
       setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, status: "purchased" } : i))
       toast.success("Item marked as found.")
@@ -170,7 +175,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
         shopping_item_id: itemId,
         delivery_id: job.id,
         suggested_name: subSuggested.trim(),
-        suggested_price: parseFloat(subPrice) || undefined,
+        suggested_price: Number.isFinite(parseFloat(subPrice)) ? parseFloat(subPrice) : undefined,
         driver_notes: subNotes.trim() || undefined,
       })
       if (result.error) { toast.error(result.error); return }
@@ -192,6 +197,12 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
   return (
     <div className="space-y-4">
+      {job.shop_instructions&&<p className="rounded bg-[var(--brand-panel)] p-3 text-sm text-white">Shop instructions: {job.shop_instructions}</p>}{job.delivery_instructions&&<p className="rounded bg-[var(--brand-panel)] p-3 text-sm text-white">Delivery access: {job.delivery_instructions}</p>}
+      <div className="rounded-xl border border-amber-400/30 p-3 mb-4 text-white">
+        <p className="text-sm">Use only the verified company purchase card. Never pay with personal money.</p>
+        <input aria-label="Shopping problem" value={problem} onChange={e=>setProblem(e.target.value)} placeholder="Busy shop, unavailable products, or card problem" className="my-2 w-full rounded bg-black/20 p-2" />
+        <button disabled={!problem.trim()||isPending} onClick={()=>startTransition(async()=>{const r=await reportShoppingProblem(job.id,problem);if(r.error)toast.error(r.error);else{toast.success('Problem reported to admin.');setProblem('')}})}>Report to admin</button>
+      </div>
       {/* BFM Badge */}
       <div className="flex items-center gap-2 px-4 py-3 bg-[var(--color-secondary)]/10 border border-[var(--color-secondary)]/20 rounded-xl">
         <span className="text-xl">🛍️</span>
@@ -304,8 +315,9 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                     <img src={item.photo_url} alt={item.name} className="w-full h-24 object-cover rounded-lg" />
                   )}
 
-                  {isShopping && item.status === "pending" && (
-                    <div className="flex gap-2 pt-1">
+                  {isShopping && ["pending","substituted","purchased"].includes(item.status) && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <label className="w-full text-xs text-white">Shelf price per unit (£)<input type="number" min="0" step="0.01" value={shelfPrices[item.id]??String(item.estimated_price??"")} onChange={e=>setShelfPrices(prev=>({...prev,[item.id]:e.target.value}))} className="ml-2 w-24 rounded bg-black/30 p-2" /></label>
                       <button
                         type="button"
                         disabled={isPending}
@@ -326,10 +338,10 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                         <button
                           type="button"
                           disabled={isPending}
-                          onClick={() => setShowSubForm(item.id)}
+                          onClick={() => {setShowSubForm(item.id);setSubSuggested(item.name);setSubPrice(shelfPrices[item.id]??String(item.estimated_price??""))}}
                           className="flex-1 py-2 bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border border-[var(--color-secondary)]/20 rounded-lg text-xs font-bold hover:bg-[var(--color-secondary)]/20 transition-all disabled:opacity-50"
                         >
-                          Replace
+                          Request price / replacement approval
                         </button>
                       )}
                     </div>
@@ -338,7 +350,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                   {/* Substitution form */}
                   {showSubForm === item.id && (
                     <div className="bg-[var(--brand-bg)] rounded-xl p-3 space-y-2 border border-[var(--color-secondary)]/20">
-                      <p className="text-[10px] font-bold text-[var(--color-secondary)] uppercase tracking-widest">Suggest replacement</p>
+                      <p className="text-[10px] font-bold text-[var(--color-secondary)] uppercase tracking-widest">Request price / replacement approval</p>
                       <input
                         type="text"
                         placeholder="Replacement item name"
@@ -349,7 +361,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                       <div className="grid grid-cols-2 gap-2">
                         <input
                           type="number"
-                          placeholder="Price (£)"
+                          placeholder="Unit price (£)"
                           value={subPrice}
                           onChange={(e) => setSubPrice(e.target.value)}
                           className={inputCls}
@@ -408,6 +420,8 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
       {/* Receipt upload form */}
       {showReceiptForm && (
         <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-xl p-4 space-y-4">
+          <button disabled={isPending} onClick={()=>startTransition(async()=>{const r=await enableApprovedPurchase(job.id);if(r.error)toast.error(r.error);else toast.success(r.total===0?"No purchase needed. Upload evidence of unavailable items to settle the order.":`Company card enabled for £${r.total?.toFixed(2)}. You can now pay at the shop.`)})} className="w-full rounded-xl bg-[var(--brand-strong)] p-3 font-bold text-white">Enable company card for approved basket</button>
+          <p className="text-xs text-white">Confirm shelf prices and customer approvals before enabling the card. Then pay using the company card and upload the receipt.</p>
           <p className="text-sm font-bold text-white">Submit Purchase Receipt</p>
           <div>
             <label className="block text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1.5">Actual Total Spent (£)</label>

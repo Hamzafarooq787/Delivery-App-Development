@@ -76,3 +76,96 @@ test('PostgreSQL: pricing migration, immutable approval decision, monotonic GPS'
  await db.query("insert into driver_locations values($1,'2026-10-30T20:00:00Z')",[driver]);await db.query("update driver_locations set updated_at='2026-10-30T19:00:00Z' where driver_id=$1",[driver]);assert.equal(new Date((await db.query('select updated_at from driver_locations')).rows[0].updated_at).toISOString(),'2026-10-30T20:00:00.000Z');
  assert.equal((await db.query("select has_function_privilege('authenticated','decide_shopping_substitution(uuid,uuid,boolean)','execute') as allowed")).rows[0].allowed,false);await db.close();
 });
+
+
+test('PostgreSQL: card checkout, cancellation/refund idempotency, atomic OTP earnings and approved basket',async()=>{
+ const db=new PGlite();await db.exec(fixture);
+ await db.exec(fs.readFileSync('supabase/migrations/20261030195527_batches_1_4_shopping_safety.sql','utf8'));
+ await db.exec(`alter table users add primary key(id);
+ alter table payments add column id uuid primary key default gen_random_uuid(),add column stripe_session_id text,add column stripe_payment_intent text,add column paid_at timestamptz,add column created_at timestamptz default now();
+ alter table delivery_requests add column item_description text,add column item_photo_urls text[],add column surge_multiplier numeric,add column discount_amount numeric,add column delivered_at timestamptz,add column delivered_image_url text;
+ create table surge_pricing_settings(id boolean primary key,updated_at timestamptz);insert into surge_pricing_settings(id) values(true);
+ create table driver_locations(driver_id uuid primary key,updated_at timestamptz);
+ alter table shopping_substitutions add column customer_responded_at timestamptz,add column suggested_price numeric;
+ create table driver_earnings(driver_id uuid,delivery_id uuid unique,amount numeric,commission_amount numeric,status text);
+ create table delivery_otps(delivery_id uuid primary key,otp text,attempts int default 0,verified_at timestamptz);
+ create table promo_codes(id uuid primary key,active boolean,valid_from timestamptz,valid_until timestamptz,usage_limit_total int,usage_limit_per_user int);
+ create table promo_code_redemptions(promo_code_id uuid,user_id uuid,delivery_id uuid,discount_amount numeric);
+ create table driver_profiles(id uuid primary key,status text);create table driver_vehicles(driver_id uuid,vehicle_type text);
+ create function handle_driver_cancellation() returns trigger language plpgsql as $$ begin if new.status='cancelled' and old.status<>'cancelled' then update wallet_balances set balance=balance+new.price where user_id=new.customer_id; end if; return new; end $$;
+ create trigger legacy_driver_refund after update on delivery_requests for each row execute function handle_driver_cancellation();`);
+ await db.exec(fs.readFileSync('supabase/migrations/20261030205108_configurable_booking_prices.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/20261030211100_direct_checkout_and_shopping_operations.sql','utf8'));
+ await db.query("insert into users values($1,'customer'),($2,'driver')",[customer,driver]);
+ await db.query('insert into wallet_balances values($1,100,now())',[customer]);
+ await db.query("insert into driver_profiles values($1,'approved')",[driver]);await db.query("insert into driver_vehicles values($1,'car')",[driver]);
+ const draft={...order,service_type:'buy_for_me',pickup_address:order.shop_address,pickup_lat:order.shop_lat,pickup_lng:order.shop_lng,surge_multiplier:1,discount_amount:0,package_size:'medium'};
+ const book=async(n,amount=60)=>{
+  const id=(await db.query("insert into payments(customer_id,request_key,payment_method,status,amount,stripe_session_id,booking_draft) values($1,$2,'stripe','pending',$3,$4,$5) returning id",[customer,`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`,amount,`cs_${n}`,JSON.stringify({...draft,tracking_number:`CARD-${n}`})])).rows[0].id;
+  return {id,finish:async(value=amount,session=`cs_${n}`)=>(await db.query('select finalize_direct_checkout($1,$2,$3,$4) r',[id,session,`pi_${n}`,value])).rows[0].r};
+ };
+ const p=await book(31);assert.equal((await db.query('select count(*) from delivery_requests')).rows[0].count,0);
+ await assert.rejects(()=>p.finish(59));await assert.rejects(()=>p.finish(60,'cs_wrong'));
+ const first=await p.finish();assert.equal((await p.finish()).id,first.id);assert.equal((await p.finish()).replayed,true);
+ assert.equal((await db.query('select count(*) from shopping_items')).rows[0].count,1);
+ assert.equal(Number((await db.query('select driver_earning_quote from delivery_requests where id=$1',[first.id])).rows[0].driver_earning_quote),8);
+ await assert.rejects(()=>db.query('select cancel_card_order($1,$2)',[first.id,'00000000-0000-4000-8000-000000000099']));
+ await db.query('select cancel_card_order($1,$2)',[first.id,customer]);await db.query('select cancel_card_order($1,$2)',[first.id,customer]);
+ const refunds=(await db.query('select refund_jobs from payments where id=$1',[p.id])).rows[0].refund_jobs;assert.equal(refunds.length,1);assert.equal(refunds[0].amount,60);
+ assert.equal(Number((await db.query('select balance from wallet_balances')).rows[0].balance),100);
+ await assert.rejects(()=>db.query("select queue_order_refund($1,'extra',1)",[first.id]));
+ const p2=await book(32);const second=await p2.finish();
+ await db.query("update delivery_requests set driver_id=$2,status='collected',bfm_stage='shopping',company_card_reference='ic_test',company_card_verified_at=now() where id=$1",[second.id,driver]);
+ await assert.rejects(()=>db.query('select prepare_company_purchase($1,$2)',[second.id,driver]));
+ await db.query("update shopping_items set status='purchased',confirmed_unit_price=2 where delivery_id=$1",[second.id]);
+ await assert.rejects(()=>db.query('select prepare_company_purchase($1,$2)',[second.id,driver]));
+ await db.query("insert into shopping_substitutions select gen_random_uuid(),$1,true,id,now(),2 from shopping_items where delivery_id=$1",[second.id]);
+ assert.equal(Number((await db.query('select prepare_company_purchase($1,$2) total',[second.id,driver])).rows[0].total),4);
+ await assert.rejects(()=>db.query("update shopping_items set quantity=9 where delivery_id=$1",[second.id]));
+ await db.query("select settle_shopping_receipt_atomic($1,$2,'receipt',4)",[second.id,driver]);
+ assert.equal((await db.query('select refund_jobs from payments where id=$1',[p2.id])).rows[0].refund_jobs[0].amount,46);
+ assert.equal(Number((await db.query('select balance from wallet_balances')).rows[0].balance),100);
+ await db.query("update delivery_requests set status='in_transit' where id=$1",[second.id]);await db.query("insert into delivery_otps(delivery_id,otp) values($1,'123456')",[second.id]);
+ const complete=async(code)=>(await db.query("select complete_order_with_otp($1,$2,$3,'verified-photo') r",[second.id,driver,code])).rows[0].r;
+ for(let n=0;n<5;n++)assert.ok((await complete('wrong')).error);
+ assert.ok((await complete('123456')).error);assert.equal((await db.query('select count(*) from driver_earnings')).rows[0].count,0);
+ await db.query('update delivery_otps set attempts=0 where delivery_id=$1',[second.id]);
+ await db.exec("alter table driver_earnings add constraint simulate_failure check(amount<0)");await assert.rejects(()=>complete('123456'));
+ assert.equal((await db.query('select status from delivery_requests where id=$1',[second.id])).rows[0].status,'in_transit');
+ await db.exec('alter table driver_earnings drop constraint simulate_failure');assert.equal((await complete('123456')).success,true);assert.ok((await complete('123456')).error);
+ assert.equal(Number((await db.query('select amount from driver_earnings')).rows[0].amount),8);
+ assert.equal((await db.query("select has_function_privilege('authenticated','finalize_direct_checkout(uuid,text,text,numeric)','execute') allowed")).rows[0].allowed,false);
+ const reserve=async(n,d=draft,funds=50)=>(await db.query('select reserve_order_checkout($1,$2,$3,$4,$5) id',[customer,`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`,Number(d.price)+Number(d.max_spend_approved??0),JSON.stringify(d),funds])).rows[0].id;
+ await assert.rejects(()=>reserve(41,draft,49));const reserved=await reserve(41);assert.equal(await reserve(41),reserved);await assert.rejects(()=>reserve(42));
+ const promo='00000000-0000-4000-8000-000000000090';await db.query("insert into promo_codes values($1,true,now()-interval '1 day',null,1,1)",[promo]);
+ const discounted={...draft,service_type:'delivery',max_spend_approved:0,price:9,discount_amount:1,promo_code_id:promo,shopping_items:[]};
+ const discountedId=await reserve(43,discounted,null);await assert.rejects(()=>reserve(44,discounted,null));
+ await db.query("update payments set stripe_session_id='cs_promo' where id=$1",[discountedId]);await db.query("select finalize_direct_checkout($1,'cs_promo','pi_promo',9)",[discountedId]);
+ assert.equal((await db.query('select count(*) from promo_code_redemptions')).rows[0].count,1);
+ await db.query('select record_order_refund($1,$2,$3,$4)',[p.id,'cancel-order','re_1','succeeded']);await db.query('select record_order_refund($1,$2,$3,$4)',[p.id,'cancel-order','re_1','pending']);
+ assert.equal((await db.query('select refund_jobs from payments where id=$1',[p.id])).rows[0].refund_jobs[0].state,'succeeded');
+ const config=(await db.query('select booking_pricing from surge_pricing_settings')).rows[0].booking_pricing;
+ await assert.rejects(()=>db.query('select save_booking_pricing($1,$2)',[customer,config]));
+ const administrator='00000000-0000-4000-8000-000000000003';await db.query("insert into users values($1,'admin')",[administrator]);await db.query('select save_booking_pricing($1,$2)',[administrator,{...config,minimumDriverEarnings:5}]);
+ assert.equal((await db.query('select booking_pricing_history from surge_pricing_settings')).rows[0].booking_pricing_history.length,1);
+ assert.equal(Number((await db.query('select driver_earning_quote from delivery_requests where id=$1',[second.id])).rows[0].driver_earning_quote),8);
+ await db.close();
+});
+
+
+test('Card receipt reconciles captured, partially captured and pending purchases before disabling card',async()=>{
+ const code=stripTypeScriptTypes(fs.readFileSync('lib/payments/company-card.ts','utf8')).replace(/^import .*$/gm,'').replace(/export /g,'');
+ let transactions=[],authorizations=[],disabled=0;
+ async function* iterate(rows){yield* rows}
+ const stripe={issuing:{transactions:{list:()=>iterate(transactions)},authorizations:{list:()=>iterate(authorizations)},cards:{update:async()=>{disabled++}}}};
+ const api=vm.runInNewContext(code+';({verifyCompanyReceipt})',{getStripe:()=>stripe,Number,Math});
+ await assert.rejects(()=>api.verifyCompanyReceipt('ic_1',4,4));assert.equal(disabled,0);
+ authorizations=[{currency:'gbp',approved:true,amount:400,transactions:[]}];await api.verifyCompanyReceipt('ic_1',4,4);assert.equal(disabled,1);
+ transactions=[{currency:'gbp',amount:-100}];authorizations[0].transactions=[{type:'capture',amount:-100}];await api.verifyCompanyReceipt('ic_1',4,4);assert.equal(disabled,2);
+ await assert.rejects(()=>api.verifyCompanyReceipt('ic_1',4,3));assert.equal(disabled,2);
+ transactions=[{currency:'gbp',amount:-400}];authorizations=[];await api.verifyCompanyReceipt('ic_1',4,4);assert.equal(disabled,3);
+});
+test('Driver earnings retain agreed snapshots and preserve historical rates',()=>{
+ const api=vm.runInNewContext(stripTypeScriptTypes(fs.readFileSync('lib/driver-earnings.ts','utf8')).replace(/export /g,'')+';({driverEarning})');
+ assert.equal(api.driverEarning({price:10,driver_earning_quote:8}),8);assert.equal(api.driverEarning({price:4.49,driver_earning_quote:4.49}),4.49);assert.equal(api.driverEarning({price:10}),7.5);
+});

@@ -21,6 +21,9 @@ import {
 } from './CustomerPage'
 import s from './CustomerPages.module.css'
 type Payment = {
+  refund_jobs?: {amount:number;state:string}[]
+  shoppingFunds?:number
+  serviceFees?:number
   id: string
   delivery_id: string | null
   amount: number
@@ -51,14 +54,15 @@ function PaymentReceipt({
           <dt>Status</dt>
           <dd>{row.status.replaceAll('_', ' ')}</dd>
         </div>
+        {!!row.shoppingFunds&&<><div><dt>Service fees</dt><dd>{money(row.serviceFees??0)}</dd></div><div><dt>Prepaid shopping funds</dt><dd>{money(row.shoppingFunds)}</dd></div></>}
+        {row.refund_jobs?.map((refund,i)=><div key={i}><dt>Card refund · {refund.state.replaceAll('_',' ')}</dt><dd>{money(Number(refund.amount))}</dd></div>)}
         <div className={s.total}>
           <dt>Recorded total</dt>
           <dd>{money(row.amount)}</dd>
         </div>
       </dl>
       <p>
-        A summary of your recorded payment. For an itemized receipt or refund
-        update, contact support.
+        Refunds are returned to the original payment method. Pending refunds remain visible until processing completes.
       </p>
       <button className={s.secondary} onClick={() => download(row)}>
         <ArrowDownToLine size={16} />
@@ -100,7 +104,7 @@ export default function CustomerPayments() {
         // Existing schema only. Do not assume the separate launch migration exists.
         const { data: deliveries, error: orderError } = await client
           .from('delivery_requests')
-          .select('id,tracking_number,service_type')
+          .select('id,tracking_number,service_type,price,max_spend_approved')
           .eq('customer_id', user.id)
         if (orderError) throw orderError
         const orders = new Map((deliveries ?? []).map((d) => [d.id, d]))
@@ -110,7 +114,7 @@ export default function CustomerPayments() {
         }
         const { data, error: paymentError } = await client
           .from('payments')
-          .select('id,amount,status,created_at,delivery_id')
+          .select('id,amount,status,created_at,delivery_id,refund_jobs,payment_method')
           .in('delivery_id', [...orders.keys()])
           .order('created_at', { ascending: false })
         if (paymentError) throw paymentError
@@ -118,6 +122,8 @@ export default function CustomerPayments() {
           setRows(
             (data ?? []).map((p) => ({
               ...p,
+              shoppingFunds:Number(orders.get(p.delivery_id)?.max_spend_approved??0),
+              serviceFees:Number(orders.get(p.delivery_id)?.price??0),
               amount: Number(p.amount ?? 0),
               status: (p.status ?? 'pending').toLowerCase(),
               tracking:
@@ -142,8 +148,8 @@ export default function CustomerPayments() {
   }, [client, revision])
   const filtered = rows.filter((r) =>
     tab === 'refunds'
-      ? ['refunded', 'partially_refunded'].includes(r.status)
-      : !['refunded', 'partially_refunded'].includes(r.status),
+      ? (r.refund_jobs?.length??0)>0 || ['refunded', 'partially_refunded'].includes(r.status)
+      : true,
   )
   const current = Math.min(
       page,
@@ -161,9 +167,7 @@ export default function CustomerPayments() {
         new Date(r.created_at).getFullYear() === now.getFullYear(),
     )
     .reduce((sum, r) => sum + r.amount, 0)
-  const refunds = rows
-    .filter((r) => r.status === 'refunded')
-    .reduce((sum, r) => sum + r.amount, 0)
+  const refunds = rows.reduce((sum,r)=>sum+(r.refund_jobs?.filter(j=>j.state==='succeeded').reduce((total,j)=>total+Number(j.amount),0)??(r.status==='refunded'?r.amount:0)),0)
   function download(row: Payment) {
     const text = `GoDrop payment summary\nOrder: ${row.tracking}\nService: ${row.service}\nDate: ${shortDate(row.created_at)}\nStatus: ${row.status}\nRecorded total: ${money(row.amount)}\nPayment reference: ${row.id}\n\nThis is a payment summary, not a VAT invoice.`
     const url = URL.createObjectURL(

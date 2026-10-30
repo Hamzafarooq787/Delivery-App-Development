@@ -1,11 +1,14 @@
 'use client'
 
+import { AddressInstructions } from "@/components/customer/address-instructions"
+import { PriceBreakdown } from "@/components/customer/price-breakdown"
+import { useBookingDraft } from "@/hooks/use-booking-draft"
 import styles from './DeliverySteps.module.css'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tracking'
-import { createDeliveryRequest } from '@/app/actions/delivery'
+import { startOrderCheckout } from '@/app/actions/order-checkout'
 import { createWalletTopUpSession } from '@/app/actions/payments'
 import { getWalletBalance } from '@/app/actions/wallet'
 import { getDeliveryQuote, type DeliveryQuote } from '@/app/actions/pricing'
@@ -172,6 +175,8 @@ function AddressInput({
 
 export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }: NewDeliveryModalProps) {
   const router = useRouter()
+  const [pickupInstructions,setPickupInstructions]=useState("")
+  const [deliveryInstructions,setDeliveryInstructions]=useState("")
   const [step, setStep] = useState(1)
   const [success, setSuccess] = useState<{ id: string; tracking_number: string } | null>(null)
   useEffect(() => {
@@ -206,6 +211,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     }
   }, [])
   function goTo(next: number) {
+    if(next < step) checkoutKey.current = null
     setStepError(null)
     setStep(next)
   }
@@ -250,6 +256,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   // Authoritative price quote — computed server-side from distance, live
   // surge factors, and any discount. This is what actually gets charged;
   // nothing about price is trusted from the client at submission time.
+  const checkoutKey = useRef<string | null>(null)
   const [quote, setQuote] = useState<DeliveryQuote | null>(null)
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState<string | null>(null)
@@ -458,7 +465,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   }
 
   const price = quote?.finalPrice ?? null
-  const insufficientFunds = price !== null && walletBalance !== null && walletBalance < price
+  const insufficientFunds = false
 
   // Explains exactly why the submit button is disabled, so it never just
   // silently does nothing.
@@ -471,6 +478,11 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     : (!quote && !submitting) ? 'Calculating price…'
     : null
 
+  const persistBooking = useBookingDraft('delivery', {pickupValue,deliveryValue,pickupCoords,deliveryCoords,itemDescription,itemPhotos,packageSize,promoCode,pickupInstructions,deliveryInstructions}, draft=>{
+    if(initialDraft)return
+    setPickupInstructions(draft.pickupInstructions??"");setDeliveryInstructions(draft.deliveryInstructions??"")
+    setPickupValue(draft.pickupValue);setDeliveryValue(draft.deliveryValue);setPickupCoords(draft.pickupCoords);setDeliveryCoords(draft.deliveryCoords);setItemDescription(draft.itemDescription);setItemPhotos(draft.itemPhotos);setPackageSize(draft.packageSize);setPromoCode(draft.promoCode)
+  })
   async function handleSubmit() {
     if (submitting || success) return
     if (!pickupValue || !pickupCoords) { toast.error('Select a pickup address from the suggestions list.'); return }
@@ -483,7 +495,10 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
 
     setSubmitting(true)
     try {
-      const result = await createDeliveryRequest({
+      persistBooking()
+      checkoutKey.current ??= crypto.randomUUID()
+      const result = await startOrderCheckout({ requestKey: checkoutKey.current, type: "delivery", order: {
+        pickup_instructions:pickupInstructions,delivery_instructions:deliveryInstructions,
         consent_token: quote.consentToken,
         pickup_address: pickupValue,
         delivery_address: deliveryValue,
@@ -495,28 +510,10 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         item_photo_urls: itemPhotos,
         package_size: packageSize,
         promo_code: quote.promoCodeText,
-      })
+      } })
 
-      if ('error' in result) {
-        if (result.code === 'insufficient_funds') {
-          // Balance changed since we last checked (e.g. another tab spent it) — refresh and re-gate.
-          const fresh = await getWalletBalance()
-          setWalletBalance(fresh.balance)
-          toast.error(result.error)
-        } else {
-          toast.error(result.error)
-        }
-        setSubmitting(false)
-        return
-      }
-
-      // Keep the receipt visible until the customer chooses where to go next.
-      setSuccess(result.data)
-      clearDeliveryDraft()
-      setSubmitting(false)
-      if (liveLocationActive) {
-        void stopLiveLocation().catch(() => { /* Cleanup failure must not repeat a paid booking. */ })
-      }
+      if ('error' in result) { toast.error(result.error); setSubmitting(false); return }
+      window.location.assign(result.url)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unexpected error.')
       setSubmitting(false)
@@ -767,6 +764,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             </div>
           )}
 
+<AddressInstructions pickup={pickupInstructions} delivery={deliveryInstructions} onPickup={setPickupInstructions} onDelivery={setDeliveryInstructions}/>
 </div>}
           {step === 3 && <div className={styles.reviewStep}>
             
@@ -776,11 +774,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             <div><span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
           </div>
           <div className={styles.price}>
-            <div><span>Base fare</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
+            <div><span>Delivery subtotal</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
+            {quote && <PriceBreakdown lines={quote.priceLines}/>}
             {quote && quote.surgeMultiplier > 1 && <div><span>Surge ({quote.surgeMultiplier}×)</span><strong>+£{formatPrice(quote.surgedPrice - quote.basePrice)}</strong></div>}
             {quote && quote.discountAmount > 0 && <div><span>{quote.discountLabel}</span><strong>−£{formatPrice(quote.discountAmount)}</strong></div>}
             <div><span>Total</span><strong>{quoteLoading ? 'Calculating…' : price !== null ? `£${formatPrice(price)}` : '—'}</strong></div>
-            <div><span>Wallet balance</span><strong>{walletBalance !== null ? `£${walletBalance.toFixed(2)}` : 'Loading…'}</strong></div>
+            <div><span>Payment</span><strong>Secure card checkout</strong></div>
           </div>
 
                       {/* Promo code */}

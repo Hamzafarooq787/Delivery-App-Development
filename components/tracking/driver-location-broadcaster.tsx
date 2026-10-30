@@ -1,113 +1,22 @@
-"use client"
-
-import { useEffect, useRef, useState } from "react"
-import { updateMyLocation, clearMyLocation } from "@/app/actions/tracking"
-
+"use client";
+import { useEffect, useState } from "react";
+import { updateMyLocation, clearMyLocation } from "@/app/actions/tracking";
 type Props = {
-  deliveryId?: string | null
-  disabled?: boolean
-  intervalMs?: number
-  showStatus?: boolean
-  className?: string
-}
-
-type Status = "idle" | "requesting" | "broadcasting" | "denied" | "unsupported" | "error"
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Keepalive technique 1: Silent Web Audio oscillator
-// Playing a near-inaudible tone keeps the browser audio session active.
-// The OS treats an active audio session as foreground and does NOT fully suspend
-// JS — same approach as NoSleep.js. Most effective on Chrome for Android.
-// ─────────────────────────────────────────────────────────────────────────────
-async function startAudioKeepalive(): Promise<() => void> {
-  try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
-    if (!AudioCtx) return () => {}
-    const ctx = new AudioCtx()
-    if (ctx.state === "suspended") await ctx.resume()
-    const osc  = ctx.createOscillator()
-    const gain = ctx.createGain()
-    gain.gain.value  = 0.001  // effectively inaudible
-    osc.type         = "sine"
-    osc.frequency.value = 1   // 1 Hz — sub-audible
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start()
-    return () => { try { osc.stop(); ctx.close() } catch {} }
-  } catch {
-    return () => {}
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Keepalive technique 2: Silent canvas video loop
-// Pipes a 2×2 canvas (1 fps) into a muted <video> element.
-// iOS Safari prioritises active video sessions and keeps the tab alive longer
-// than audio alone. Combined with audio, covers both Android and iOS.
-// ─────────────────────────────────────────────────────────────────────────────
-function startVideoKeepalive(): () => void {
-  try {
-    const canvas = document.createElement("canvas")
-    canvas.width = 2; canvas.height = 2
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return () => {}
-
-    let tick = 0
-    // Alternate micro-colors so the canvas always generates real frames
-    const frameTimer = setInterval(() => {
-      ctx.fillStyle = tick++ % 2 === 0 ? "#000001" : "#000000"
-      ctx.fillRect(0, 0, 2, 2)
-    }, 1000)
-
-    const stream = (canvas as any).captureStream?.(1)
-    if (!stream) { clearInterval(frameTimer); return () => {} }
-
-    const video = document.createElement("video")
-    video.srcObject  = stream
-    video.muted      = true
-    video.loop       = true
-    video.playsInline = true
-    video.setAttribute("playsinline", "")
-    video.play().catch(() => {})
-
-    return () => {
-      clearInterval(frameTimer)
-      video.pause()
-      video.srcObject = null
-    }
-  } catch {
-    return () => {}
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Keepalive technique 3: Service Worker relay
-// Registers /sw-location.js and starts it sending the last known position to
-// /api/sw-location every 5 s via fetch — independently of the main page thread.
-// When the main page JS is frozen (app switch), the SW keeps running for ~30 s
-// on Chrome for Android (each successful fetch resets the 30 s SW lifetime timer).
-// ─────────────────────────────────────────────────────────────────────────────
-async function registerLocationSW(): Promise<ServiceWorkerRegistration | null> {
-  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null
-  try {
-    // Scope must be narrower than "/" so the location SW does not conflict with
-    // the FCM SW (firebase-messaging-sw.js) which owns scope "/". The postMessage
-    // pattern used by this file works regardless of scope.
-    const reg = await navigator.serviceWorker.register("/sw-location.js", { scope: "/sw-location/" })
-    return reg
-  } catch {
-    return null
-  }
-}
-
-function postToSW(reg: ServiceWorkerRegistration | null, msg: object) {
-  try {
-    const sw = reg?.active ?? reg?.installing ?? reg?.waiting
-    sw?.postMessage(msg)
-  } catch {}
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
+  deliveryId?: string | null;
+  disabled?: boolean;
+  intervalMs?: number;
+  showStatus?: boolean;
+  className?: string;
+};
+type Status =
+  | "idle"
+  | "requesting"
+  | "sharing"
+  | "denied"
+  | "unsupported"
+  | "offline"
+  | "error";
+/** Foreground GPS with reconnect recovery. Browsers cannot guarantee background tracking. */
 export function DriverLocationBroadcaster({
   deliveryId = null,
   disabled = false,
@@ -115,225 +24,201 @@ export function DriverLocationBroadcaster({
   showStatus = true,
   className,
 }: Props) {
-  const [status,        setStatus]        = useState<Status>("idle")
-  const [lastPing,      setLastPing]      = useState<number | null>(null)
-  const [wakeLockDenied, setWakeLockDenied] = useState(false)
-  const [isHidden,      setIsHidden]      = useState(false)
-
-  const lastSentRef   = useRef<number>(0)
-  const watchIdRef    = useRef<number | null>(null)
-  const inFlightRef   = useRef<boolean>(false)
-  const wakeLockRef   = useRef<WakeLockSentinel | null>(null)
-  const fallbackRef   = useRef<ReturnType<typeof setInterval> | null>(null)
-  const stopAudioRef  = useRef<(() => void) | null>(null)
-  const stopVideoRef  = useRef<(() => void) | null>(null)
-  const swRegRef      = useRef<ServiceWorkerRegistration | null>(null)
-  // Last raw position — sent instantly on reconnect before fresh GPS arrives
-  const lastPosRef    = useRef<GeolocationPosition | null>(null)
-
-  // ── Wake lock ──────────────────────────────────────────────────────────────
-  async function acquireWakeLock() {
-    if (!("wakeLock" in navigator)) return
-    try {
-      const sentinel: WakeLockSentinel = await (navigator as any).wakeLock.request("screen")
-      wakeLockRef.current = sentinel
-      sentinel.addEventListener("release", () => { wakeLockRef.current = null })
-    } catch { setWakeLockDenied(true) }
-  }
-  function releaseWakeLock() {
-    wakeLockRef.current?.release().catch(() => {})
-    wakeLockRef.current = null
-  }
-
-  // ── Start all keepalives ───────────────────────────────────────────────────
-  async function startKeepalives() {
-    acquireWakeLock()
-    stopAudioRef.current = await startAudioKeepalive()
-    stopVideoRef.current = startVideoKeepalive()
-    if (!swRegRef.current) {
-      swRegRef.current = await registerLocationSW()
-    }
-    postToSW(swRegRef.current, { type: "START" })
-  }
-
-  function stopKeepalives() {
-    releaseWakeLock()
-    stopAudioRef.current?.(); stopAudioRef.current = null
-    stopVideoRef.current?.(); stopVideoRef.current = null
-    postToSW(swRegRef.current, { type: "STOP" })
-  }
-
-  // ── Geolocation watch ──────────────────────────────────────────────────────
-  function startWatch(onPos: PositionCallback, onErr: PositionErrorCallback) {
-    if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current)
-    watchIdRef.current = navigator.geolocation.watchPosition(onPos, onErr, {
-      enableHighAccuracy: true,
-      maximumAge: 500,
-      timeout: 15000,
-    })
-  }
-
-  function startFallback(onPos: PositionCallback) {
-    if (fallbackRef.current) clearInterval(fallbackRef.current)
-    fallbackRef.current = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(onPos, () => {}, {
-        enableHighAccuracy: true,
-        maximumAge: 3000,
-        timeout: 10000,
-      })
-    }, intervalMs * 2)
-  }
-
-  function stopFallback() {
-    if (fallbackRef.current) { clearInterval(fallbackRef.current); fallbackRef.current = null }
-  }
-
-  // ── Send position to server ────────────────────────────────────────────────
-  function sendPosition(pos: GeolocationPosition, force = false) {
-    const now = Date.now()
-    if (inFlightRef.current) return
-    if (!force && now - lastSentRef.current < intervalMs) return
-
-    lastSentRef.current = now
-    lastPosRef.current  = pos
-    inFlightRef.current = true
-    setStatus("broadcasting")
-
-    const payload = {
-      lat:         pos.coords.latitude,
-      lng:         pos.coords.longitude,
-      heading:     Number.isFinite(pos.coords.heading)  ? pos.coords.heading  : null,
-      speed:       Number.isFinite(pos.coords.speed)    ? pos.coords.speed    : null,
-      accuracy:    Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
-      delivery_id: deliveryId,
-      measured_at: new Date(pos.timestamp).toISOString(),
-    }
-
-    // Also hand position to Service Worker so it can relay independently
-    postToSW(swRegRef.current, { type: "LOCATION", payload })
-
-    updateMyLocation(payload)
-      .then((res) => { if (res?.error) setStatus("error"); else setLastPing(now) })
-      .catch(() => setStatus("error"))
-      .finally(() => { inFlightRef.current = false })
-  }
-
-  // ── Main effect ────────────────────────────────────────────────────────────
+  const [status, setStatus] = useState<Status>("idle"),
+    [lastPing, setLastPing] = useState<number | null>(null),
+    [retry, setRetry] = useState(0);
+  const [now, setNow] = useState(Date.now());
   useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    let alive = true,
+      watch: number | null = null,
+      inFlight = false,
+      lastSent = 0,
+      wake: WakeLockSentinel | null = null,
+      registration: ServiceWorkerRegistration | null = null;
+    const post = (message: object) =>
+      registration?.active?.postMessage(message);
     if (disabled) {
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
-        watchIdRef.current = null
-      }
-      stopFallback()
-      stopKeepalives()
-      setStatus("idle")
-      clearMyLocation().catch(() => {})
-      return
+      setStatus("idle");
+      void clearMyLocation(deliveryId);
+      return;
     }
-
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
-      setStatus("unsupported"); return
+    if (!navigator.geolocation) {
+      setStatus("unsupported");
+      return;
     }
-
-    setStatus("requesting")
-    startKeepalives()
-
-    const onPosition = (pos: GeolocationPosition) => sendPosition(pos)
-    const onError    = (err: GeolocationPositionError) => {
-      if (err.code === err.PERMISSION_DENIED) setStatus("denied")
-      else setStatus("error")
-    }
-
-    startWatch(onPosition, onError)
-    startFallback(onPosition)
-
-    // ── Foreground/reconnect events ────────────────────────────────────────
-    // Every possible event that signals "driver is back" — fires instantly
-    // so the customer never sees a gap longer than one GPS cycle.
-    function handleForeground() {
-      setIsHidden(false)
-      if (lastPosRef.current) sendPosition(lastPosRef.current, true) // flush cached pos
-      startWatch(onPosition, onError)   // browser may have paused watchPosition
-      acquireWakeLock()                 // re-acquire — released on screen lock
-      // Restart audio/video if stopped (iOS releases audio on background)
-      if (!stopAudioRef.current) {
-        startAudioKeepalive().then((s) => { stopAudioRef.current = s })
-      }
-      if (!stopVideoRef.current) {
-        stopVideoRef.current = startVideoKeepalive()
+    setStatus("requesting");
+    setLastPing(null);
+    async function keepAwake() {
+      if (
+        document.visibilityState !== "visible" ||
+        !("wakeLock" in navigator) ||
+        wake
+      )
+        return;
+      try {
+        const lock = await navigator.wakeLock.request("screen");
+        if (!alive) {
+          await lock.release();
+          return;
+        }
+        wake = lock;
+        lock.addEventListener("release", () => {
+          if (wake === lock) wake = null;
+        });
+      } catch {
+        /* UI always explains the foreground requirement. */
       }
     }
-
-    function handleHidden() { setIsHidden(true) }
-
-    function onVisibility() {
-      document.visibilityState === "visible" ? handleForeground() : handleHidden()
+    function onError(error: GeolocationPositionError) {
+      if (!alive) return;
+      setStatus(error.code === 1 ? "denied" : "error");
+      if (error.code === 1) {
+        post({ type: "STOP" });
+        if (watch !== null) navigator.geolocation.clearWatch(watch);
+        watch = null;
+      }
     }
-
-    document.addEventListener("visibilitychange", onVisibility)
-    window.addEventListener("focus",    handleForeground)
-    window.addEventListener("online",   handleForeground)
-    window.addEventListener("pageshow", handleForeground)
-    // Android Chrome "resume" (fired when app comes back from background)
-    document.addEventListener("resume", handleForeground)
-
+    async function onPosition(position: GeolocationPosition) {
+      if (!alive || inFlight || Date.now() - lastSent < intervalMs) return;
+      if (!navigator.onLine) {
+        setStatus("offline");
+        return;
+      }
+      if (Date.now() - position.timestamp > 45000) {
+        setStatus("error");
+        return;
+      }
+      lastSent = Date.now();
+      inFlight = true;
+      const payload = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        heading: position.coords.heading,
+        speed: position.coords.speed,
+        accuracy: position.coords.accuracy,
+        delivery_id: deliveryId,
+        measured_at: new Date(position.timestamp).toISOString(),
+      };
+      try {
+        const result = await updateMyLocation(payload);
+        if (!alive) return;
+        if (result.error) {
+          setStatus("error");
+          return;
+        }
+        setStatus("sharing");
+        setLastPing(position.timestamp);
+        post({ type: "LOCATION", payload });
+      } catch {
+        if (alive) setStatus(navigator.onLine ? "error" : "offline");
+      } finally {
+        inFlight = false;
+      }
+    }
+    function resume() {
+      if (!alive || document.visibilityState !== "visible") return;
+      if (!navigator.onLine) {
+        setStatus("offline");
+        return;
+      }
+      void keepAwake();
+      if (watch !== null) navigator.geolocation.clearWatch(watch);
+      watch = navigator.geolocation.watchPosition(onPosition, onError, {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 15000,
+      });
+      navigator.geolocation.getCurrentPosition(onPosition, onError, {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 15000,
+      });
+    }
+    function offline() {
+      setStatus("offline");
+      post({ type: "STOP" });
+    }
+    resume();
+    if ("serviceWorker" in navigator)
+      void navigator.serviceWorker
+        .register("/sw-location.js", { scope: "/sw-location/" })
+        .then((reg) => {
+          if (!alive) return;
+          registration = reg;
+          post({ type: "START" });
+        })
+        .catch(() => {});
+    const timer = setInterval(
+      () => {
+        if (
+          alive &&
+          navigator.onLine &&
+          document.visibilityState === "visible" &&
+          watch !== null
+        )
+          navigator.geolocation.getCurrentPosition(onPosition, onError, {
+            enableHighAccuracy: true,
+            maximumAge: 1000,
+            timeout: 15000,
+          });
+      },
+      Math.max(6000, intervalMs * 2),
+    );
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("online", resume);
+    window.addEventListener("offline", offline);
     return () => {
-      document.removeEventListener("visibilitychange", onVisibility)
-      window.removeEventListener("focus",    handleForeground)
-      window.removeEventListener("online",   handleForeground)
-      window.removeEventListener("pageshow", handleForeground)
-      document.removeEventListener("resume", handleForeground)
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
-        watchIdRef.current = null
-      }
-      stopFallback()
-      stopKeepalives()
-      clearMyLocation().catch(() => {})
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disabled, intervalMs, deliveryId])
-
-  if (!showStatus) return null
-
-  const cfg = (() => {
-    switch (status) {
-      case "broadcasting": return { color: "bg-green-400",    text: "Sharing location",          animate: true  }
-      case "requesting":   return { color: "bg-yellow-400",   text: "Requesting GPS…",            animate: true  }
-      case "denied":       return { color: "bg-[#ff6e84]",    text: "Location permission denied", animate: false }
-      case "unsupported":  return { color: "bg-[#ff6e84]",    text: "GPS not supported",          animate: false }
-      case "error":        return { color: "bg-amber-400",    text: "Location error — retrying",  animate: true  }
-      default:             return { color: "bg-[#494847]",    text: "Location off",               animate: false }
-    }
-  })()
-
-  const showScreenWarning = (wakeLockDenied || isHidden) && status === "broadcasting"
-
+      alive = false;
+      if (watch !== null) navigator.geolocation.clearWatch(watch);
+      clearInterval(timer);
+      void wake?.release().catch(() => {});
+      post({ type: "STOP" });
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("online", resume);
+      window.removeEventListener("offline", offline);
+    };
+  }, [deliveryId, disabled, intervalMs, retry]);
+  if (!showStatus) return null;
+  const fresh =
+    status === "sharing" && lastPing !== null && now - lastPing < 45000;
+  const labels: Record<Status, string> = {
+    idle: "Location off",
+    requesting: "Requesting GPS…",
+    sharing: fresh ? "Sharing location" : "GPS signal stale — retrying",
+    denied: "Allow location in your browser settings, then retry.",
+    unsupported: "GPS is unavailable on this device.",
+    offline: "Offline — reconnect to share location.",
+    error: "Location unavailable — retrying.",
+  };
   return (
-    <div className="space-y-1.5">
-      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1a1919] border border-[#494847]/30 ${className ?? ""}`}>
-        <span className={`w-2 h-2 rounded-full ${cfg.color} ${cfg.animate ? "animate-pulse" : ""}`} />
-        <span className="text-[10px] font-bold uppercase tracking-wider text-white">{cfg.text}</span>
-        {lastPing && status === "broadcasting" && (
-          <span className="text-[10px] text-[#adaaaa] normal-case font-medium tracking-normal">
-            · {new Date(lastPing).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-          </span>
-        )}
-      </div>
-
-      {showScreenWarning && (
-        <div className="flex items-start gap-2 bg-amber-400/10 border border-amber-400/30 rounded-xl px-3 py-2.5 max-w-sm">
-          <span className="material-symbols-outlined text-amber-400 text-base shrink-0 mt-0.5"
-                style={{ fontVariationSettings: "'FILL' 1" }}>
-            screen_lock_portrait
-          </span>
-          <p className="text-[11px] text-amber-300 leading-relaxed font-medium">
-            <span className="font-bold text-amber-400">Keep this screen open.</span>{" "}
-            Locking your phone or switching apps pauses location sharing.
-          </p>
-        </div>
+    <div
+      className={`max-w-[min(320px,90vw)] rounded-xl border border-white/15 bg-[var(--brand-panel)] px-3 py-2 text-white ${className ?? ""}`}
+      role="status"
+    >
+      <p className="text-xs">
+        <span
+          className={`mr-2 inline-block h-2 w-2 rounded-full ${fresh ? "bg-green-400" : "bg-amber-400"}`}
+        />
+        {labels[status]}
+      </p>
+      {status !== "idle" && (
+        <p className="mt-1 text-[10px]">
+          Keep GoDrop open during the job. Background GPS may pause.
+        </p>
+      )}
+      {["denied", "error", "unsupported"].includes(status) && (
+        <button
+          type="button"
+          onClick={() => setRetry((n) => n + 1)}
+          className="mt-1 min-h-9 text-xs underline"
+        >
+          Retry location
+        </button>
       )}
     </div>
-  )
+  );
 }

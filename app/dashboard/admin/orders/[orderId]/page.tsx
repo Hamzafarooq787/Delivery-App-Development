@@ -1,3 +1,5 @@
+import { OrderPaymentPanel } from "@/components/admin/order-payment-panel"
+import { ShoppingFundingPanel } from "@/components/admin/shopping-funding-panel"
 import Link from "next/link"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { notFound } from "next/navigation"
@@ -64,6 +66,7 @@ export default async function AdminOrderDetailPage({
   const customerRating = ratings.find((r) => r.rater_role === "customer")
   const driverRating   = ratings.find((r) => r.rater_role === "driver")
 
+  const {data:cardPayment}=await admin.from('payments').select('amount,status,refund_jobs').eq('delivery_id',orderId).eq('payment_method','stripe').maybeSingle()
   const currentIdx = STATUS_ORDER.indexOf(order.status)
 
   return (
@@ -183,6 +186,8 @@ export default async function AdminOrderDetailPage({
             </div>
           </div>
 
+          {cardPayment && <OrderPaymentPanel id={orderId} amount={cardPayment.amount} status={cardPayment.status} refunds={cardPayment.refund_jobs??[]} />}
+      {order.service_type === "buy_for_me" && <ShoppingFundingPanel id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
           {/* Buy for Me Details */}
           {order.service_type === "buy_for_me" && (
             <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-secondary)]/15 rounded-xl p-5 md:p-6">

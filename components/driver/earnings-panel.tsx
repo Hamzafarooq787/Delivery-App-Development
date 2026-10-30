@@ -4,8 +4,8 @@ import { useState } from "react"
 
 type EarningRow = {
   id: string
-  amount: number | null            // driver's 75%
-  commission_amount: number | null // platform's 25%
+  amount: number | null            // agreed driver amount
+  commission_amount: number | null // recorded platform fee or subsidy
   created_at: string
   delivery_requests: {
     pickup_address: string | null
@@ -60,7 +60,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 md:mb-10">
         <div>
           <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">Earnings</h2>
-          <p className="text-[var(--color-on-surface-variant)] mt-1">Your share of every completed delivery — 75% of the fare.</p>
+          <p className="text-[var(--color-on-surface-variant)] mt-1">The agreed earnings for each completed delivery.</p>
         </div>
         <div className="flex bg-[var(--brand-panel)] p-1 rounded-xl">
           {(["Daily", "Weekly", "Monthly"] as Tab[]).map((tab) => (
@@ -81,9 +81,7 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
       <div className="flex items-center gap-3 bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-xl px-5 py-4 mb-8">
         <span className="material-symbols-outlined text-[var(--brand-soft)]">info</span>
         <p className="text-sm text-[var(--color-on-surface-variant)]">
-          Your earnings are <span className="text-white font-bold">75%</span> of each delivery fare.
-          The remaining <span className="text-[var(--color-secondary)] font-bold">25%</span> is the platform commission.
-          Taxes will be introduced in a future update.
+          Earnings follow the amount agreed before acceptance, including any minimum-pay subsidy. Platform commission applies to service fees, never shopping goods. Each row records the actual deduction.
         </p>
       </div>
 
@@ -144,9 +142,9 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                     <div className="py-16 text-center text-[var(--color-on-surface-variant)] text-sm">No earnings for this period.</div>
                   ) : (
                     filtered.map((e) => {
-                      const fare = e.delivery_requests?.price ?? (e.amount ?? 0) / 0.75
-                      const commission = e.commission_amount ?? (fare * 0.25)
-                      const driverCut = e.amount ?? (fare * 0.75)
+                      const fare = e.delivery_requests?.price ?? (e.amount ?? 0) + (e.commission_amount ?? 0)
+                      const commission = e.commission_amount ?? fare-(e.amount??0)
+                      const driverCut = e.amount ?? 0
                       return (
                         <div key={e.id} className="grid grid-cols-12 gap-4 px-6 py-5 items-center hover:bg-[var(--color-surface-container-high)] transition-colors">
                           <div className="col-span-5 flex items-center gap-3">
@@ -166,14 +164,14 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                           <div className="col-span-3 text-right">
                             <p className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{fmt(fare)}</p>
                           </div>
-                          {/* Commission 25% */}
+                          {/* Recorded commission */}
                           <div className="col-span-2 text-right">
-                            <p className="text-xs font-semibold text-[var(--color-secondary)]">-{fmt(commission)}</p>
+                            <p className="text-xs font-semibold text-[var(--color-secondary)]">{commission<0?"Subsidy ":"−"}{fmt(Math.abs(commission))}</p>
                           </div>
-                          {/* Driver cut 75% */}
+                          {/* Agreed driver earnings */}
                           <div className="col-span-2 text-right">
                             <p className="text-sm font-black text-white">{fmt(driverCut)}</p>
-                            <p className="text-[10px] text-[#6ee7b7] font-bold">75%</p>
+                            <p className="text-[10px] text-[#6ee7b7] font-bold">Agreed earnings</p>
                           </div>
                         </div>
                       )
@@ -245,19 +243,19 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
                   <span className="text-[var(--color-on-surface-variant)]">Total fares collected</span>
                   <span className="text-white font-bold">
                     {fmt(earnings.reduce((s, e) => {
-                      const fare = e.delivery_requests?.price ?? (e.amount ?? 0) / 0.75
+                      const fare = e.delivery_requests?.price ?? (e.amount ?? 0) + (e.commission_amount ?? 0)
                       return s + fare
                     }, 0))}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-[var(--color-secondary)]">Platform commission (25%)</span>
+                  <span className="text-[var(--color-secondary)]">Platform commission</span>
                   <span className="text-[var(--color-secondary)] font-bold">
                     -{fmt(earnings.reduce((s, e) => s + (e.commission_amount ?? 0), 0))}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs border-t border-[var(--color-outline-variant)]/20 pt-2 mt-1">
-                  <span className="text-[#6ee7b7] font-bold">Your earnings (75%)</span>
+                  <span className="text-[#6ee7b7] font-bold">Your earnings</span>
                   <span className="text-[#6ee7b7] font-black">{fmt(allTimeTotal)}</span>
                 </div>
               </div>
