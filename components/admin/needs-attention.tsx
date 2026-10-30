@@ -29,11 +29,11 @@ export async function NeedsAttention() {
       {!data.length ? (
         <p>No open issues in the monitored checks.</p>
       ) : (
-        data.map((r: { id: string; reason: string; at: string }, i: number) => (
+        data.map((r: { id: string; reason: string; at: string; kind?: string }, i: number) => (
           <p key={`${r.id}-${i}`} className="py-2 border-t border-white/10">
             <Link
               className="underline"
-              href={`/dashboard/admin/orders/${r.id}`}
+              href={r.kind === "payout" ? "/dashboard/admin/payouts" : r.kind === "payment" ? "/dashboard/admin/payments" : `/dashboard/admin/orders/${r.id}`}
             >
               {r.reason}
             </Link>{" "}

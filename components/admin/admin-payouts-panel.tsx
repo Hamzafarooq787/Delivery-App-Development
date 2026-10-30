@@ -21,6 +21,8 @@ export type EnrichedPayout = {
   amount: number
   status: "pending" | "approved" | "rejected" | "paid"
   created_at: string
+  admin_note?: string | null
+  provider?: { state: string; error?: string; transfer_id?: string; payout_id?: string } | null
   driver: { full_name: string; email: string; phone: string | null }
   driverStats: { totalEarned: number; pendingEarnings: number; completedDeliveries: number }
 }
@@ -122,6 +124,8 @@ function PayoutActionButtons({
       onDone()
     })
   }
+
+  if (payout.provider) return <div className="text-xs max-w-64 break-words"><p>Stripe: {payout.provider.state}</p>{payout.provider.error && <p className="text-red-300">{payout.provider.error}</p>}<p>{payout.provider.transfer_id}</p><p>{payout.provider.payout_id}</p></div>;
 
   if (payout.status === "pending") {
     return (
@@ -321,6 +325,7 @@ function PayoutDetailModal({
                     <p className="text-[var(--color-on-surface-variant)] text-[10px]">{fmtDate(p.created_at)}</p>
                   </div>
                   <StatusBadge status={p.status} />
+                      {"admin_note" in p && p.admin_note ? <p className="text-xs text-red-300">{String(p.admin_note)}</p> : null}
                 </div>
               ))}
             </div>
@@ -401,7 +406,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
         <KPICard
           label="Platform Commission"
           value={fmt(stats.platformCommission)}
-          sub="25% of all fares"
+          sub="Recorded commission on service fees"
           accent="border-[var(--brand-strong)]"
         />
       </div>
@@ -545,6 +550,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
                     </td>
                     <td className="px-6 py-4 text-center">
                       <StatusBadge status={p.status} />
+                      {"admin_note" in p && p.admin_note ? <p className="text-xs text-red-300">{String(p.admin_note)}</p> : null}
                     </td>
                     <td className="px-6 py-4 text-right text-xs text-[var(--color-on-surface-variant)]">
                       {fmtDate(p.created_at)}
@@ -587,6 +593,7 @@ export function AdminPayoutsPanel({ payouts, pendingDrivers, stats }: AdminPayou
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <StatusBadge status={p.status} />
+                      {"admin_note" in p && p.admin_note ? <p className="text-xs text-red-300">{String(p.admin_note)}</p> : null}
                   <span
                     className="text-[10px] text-[var(--color-on-surface-variant)] hover:text-white"
                     onClick={e => { e.stopPropagation(); setSelected(p) }}

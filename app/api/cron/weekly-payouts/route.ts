@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 export const maxDuration = 60;
-// Reserves weekly statements only. Does not pretend to transfer money.
+// Reserve earnings; the separate 08:30 daily bank worker handles provider operations.
 export async function GET(request: Request) {
   if (
     !process.env.CRON_SECRET ||
