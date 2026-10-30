@@ -475,7 +475,7 @@ export default function CustomerShipments({
           {/* Existing customer-owned proof URL; retain its natural image ratio. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={proof.delivered_image_url ?? ''}
+            src={`/api/delivery-proof?id=${encodeURIComponent(proof.id)}&kind=delivery`}
             alt="Photo confirming delivery"
             style={{ width: '100%', borderRadius: 12, marginTop: 16 }}
           />

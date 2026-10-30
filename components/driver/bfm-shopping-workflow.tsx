@@ -134,7 +134,9 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
   async function handleReceiptUpload(file: File) {
     setUploadingReceipt(true)
     const supabase = createClient()
-    const path = `receipts/${job.id}/${Date.now()}-receipt.jpg`
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { toast.error("Please sign in again."); setUploadingReceipt(false); return }
+    const path = `${user.id}/receipts/${job.id}/${Date.now()}-receipt.jpg`
     const { error } = await supabase.storage.from("delivery-item-photos").upload(path, file, { upsert: true })
     if (error) { toast.error("Upload failed. Try again."); setUploadingReceipt(false); return }
     const { data: { publicUrl } } = supabase.storage.from("delivery-item-photos").getPublicUrl(path)

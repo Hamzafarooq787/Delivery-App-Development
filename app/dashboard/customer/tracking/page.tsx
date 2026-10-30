@@ -538,7 +538,7 @@ function TrackingPageInner() {
                 </p>
               </div>
               <img
-                src={shipment.parcel_image_url}
+                src={`/api/delivery-proof?id=${encodeURIComponent(shipment.id)}&kind=pickup`}
                 alt="Parcel at pickup"
                 className="w-full object-cover"
                 style={{ maxHeight: 180 }}
@@ -561,7 +561,7 @@ function TrackingPageInner() {
                 </p>
               </div>
               <img
-                src={shipment.delivered_image_url}
+                src={`/api/delivery-proof?id=${encodeURIComponent(shipment.id)}&kind=delivery`}
                 alt="Delivered package"
                 className="w-full object-cover"
                 style={{ maxHeight: 180 }}

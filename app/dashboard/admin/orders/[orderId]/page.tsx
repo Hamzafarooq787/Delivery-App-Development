@@ -160,19 +160,19 @@ export default async function AdminOrderDetailPage({
                   <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">Proof Photos</p>
                   <div className="flex flex-wrap gap-3">
                     {order.parcel_image_url && (
-                      <a href={order.parcel_image_url} target="_blank" rel="noreferrer">
+                      <a href={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=pickup`} target="_blank" rel="noreferrer">
                         <div className="w-24 h-24 rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={order.parcel_image_url} alt="Parcel at pickup" className="w-full h-full object-cover" />
+                          <img src={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=pickup`} alt="Parcel at pickup" className="w-full h-full object-cover" />
                         </div>
                         <p className="text-[10px] text-[var(--color-on-surface-variant)] mt-1 text-center">Pickup</p>
                       </a>
                     )}
                     {order.delivered_image_url && (
-                      <a href={order.delivered_image_url} target="_blank" rel="noreferrer">
+                      <a href={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=delivery`} target="_blank" rel="noreferrer">
                         <div className="w-24 h-24 rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={order.delivered_image_url} alt="Delivered package" className="w-full h-full object-cover" />
+                          <img src={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=delivery`} alt="Delivered package" className="w-full h-full object-cover" />
                         </div>
                         <p className="text-[10px] text-[var(--color-on-surface-variant)] mt-1 text-center">Delivery</p>
                       </a>

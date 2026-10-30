@@ -1,14 +1,15 @@
 import { MapPin, Package, Clock, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export default function TrackingPage({ params }: { params: { trackingNumber: string } }) {
+export default async function TrackingPage({ params }: { params: Promise<{ trackingNumber: string }> }) {
+  const { trackingNumber } = await params
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 md:px-6">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-foreground mb-2">Track Delivery</h1>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Package className="h-4 w-4" />
-          <span>Tracking Number: <span className="font-mono font-medium text-foreground">{params.trackingNumber}</span></span>
+          <span>Tracking Number: <span className="font-mono font-medium text-foreground">{trackingNumber}</span></span>
         </div>
       </div>
 

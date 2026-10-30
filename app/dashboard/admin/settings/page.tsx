@@ -19,12 +19,12 @@ export default async function AdminSettingsPage() {
 
   const { data: bfmRow } = await admin
     .from("bfm_settings")
-    .select("service_enabled, max_purchase_amount")
+    .select("*")
     .eq("id", 1)
     .single()
 
   const initialBfmSettings = bfmRow
-    ? { service_enabled: bfmRow.service_enabled ?? true, max_purchase_amount: Number(bfmRow.max_purchase_amount ?? 50) }
+    ? { service_enabled: bfmRow.enabled ?? bfmRow.service_enabled ?? false, max_purchase_amount: Number(bfmRow.max_purchase_amount ?? 50) }
     : { service_enabled: true, max_purchase_amount: 50 }
 
   return (
