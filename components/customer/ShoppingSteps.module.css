@@ -45,3 +45,15 @@
 .body select{width:100%;min-height:44px;margin-top:6px;padding:9px 12px;border:1px solid var(--color-outline-variant);border-radius:11px;background:var(--brand-panel);color:var(--color-on-surface);font-size:16px}
 @media(max-width:899px){.mapAside .budget{display:flex;padding:9px 12px;font-size:12px}.mapAside .budget strong{white-space:nowrap}.mapAside{--shopping-map-height:clamp(90px,calc(var(--shopping-height,100dvh) - 565px),160px)}}
 @media(max-width:899px) and (max-height:720px){.mapAside{--shopping-map-height:clamp(35px,calc(var(--shopping-height,100dvh) - 655px),65px)}}
+
+/* Keep native wheel, touch and keyboard scrolling with a quiet branded rail. */
+.body,.editorDialog,.pinDialog,.savedList,.summaryRows,.suggestions{color-scheme:dark;scrollbar-width:thin;scrollbar-color:var(--color-outline-variant,#45494c) transparent}
+.body:hover,.body:focus-within,.editorDialog:hover,.pinDialog:hover,.savedList:hover,.summaryRows:hover,.suggestions:hover{scrollbar-color:var(--brand-strong,#ff8000) transparent}
+.body::-webkit-scrollbar,.editorDialog::-webkit-scrollbar,.pinDialog::-webkit-scrollbar,.savedList::-webkit-scrollbar,.summaryRows::-webkit-scrollbar,.suggestions::-webkit-scrollbar{width:8px;height:8px}
+.body::-webkit-scrollbar-track,.editorDialog::-webkit-scrollbar-track,.pinDialog::-webkit-scrollbar-track,.savedList::-webkit-scrollbar-track,.summaryRows::-webkit-scrollbar-track,.suggestions::-webkit-scrollbar-track{background:transparent}
+.body::-webkit-scrollbar-thumb,.editorDialog::-webkit-scrollbar-thumb,.pinDialog::-webkit-scrollbar-thumb,.savedList::-webkit-scrollbar-thumb,.summaryRows::-webkit-scrollbar-thumb,.suggestions::-webkit-scrollbar-thumb{border:2px solid transparent;border-radius:999px;background:var(--color-outline-variant,#45494c);background-clip:padding-box}
+.body::-webkit-scrollbar-thumb:hover,.editorDialog::-webkit-scrollbar-thumb:hover,.pinDialog::-webkit-scrollbar-thumb:hover,.savedList::-webkit-scrollbar-thumb:hover,.summaryRows::-webkit-scrollbar-thumb:hover,.suggestions::-webkit-scrollbar-thumb:hover{background-color:var(--brand-strong,#ff8000)}
+.body::-webkit-scrollbar-button,.editorDialog::-webkit-scrollbar-button,.pinDialog::-webkit-scrollbar-button,.savedList::-webkit-scrollbar-button,.summaryRows::-webkit-scrollbar-button,.suggestions::-webkit-scrollbar-button{display:none;width:0;height:0}
+.body::-webkit-scrollbar-corner,.editorDialog::-webkit-scrollbar-corner,.pinDialog::-webkit-scrollbar-corner,.savedList::-webkit-scrollbar-corner,.summaryRows::-webkit-scrollbar-corner,.suggestions::-webkit-scrollbar-corner{background:transparent}
+@supports selector(::-webkit-scrollbar){.body,.editorDialog,.pinDialog,.savedList,.summaryRows,.suggestions,.body:hover,.body:focus-within,.editorDialog:hover,.pinDialog:hover,.savedList:hover,.summaryRows:hover,.suggestions:hover{scrollbar-width:auto;scrollbar-color:auto}}
+@media(forced-colors:active){.body,.editorDialog,.pinDialog,.savedList,.summaryRows,.suggestions{scrollbar-color:auto}}
