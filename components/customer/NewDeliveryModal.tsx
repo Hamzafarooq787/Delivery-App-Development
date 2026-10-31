@@ -234,6 +234,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   }, [])
   function goTo(next: number) {
     if(next < step) checkoutKey.current = null
+    if (next === 2 && !locationAccessRequested.current) {
+      locationAccessRequested.current = true
+      // Ask automatically as Locations opens, still inside the Continue click.
+      // This restores the browser's Allow/Block prompt without another tap.
+      void requestLocationAccess()
+    }
     setStepError(null)
     setStep(next)
   }
@@ -330,6 +336,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   const [liveLocationActive, setLiveLocationActive] = useState(false)
   const [liveLocationLoading, setLiveLocationLoading] = useState(false)
   const [liveLocationError, setLiveLocationError] = useState<LocationIssue | null>(null)
+  const [locationAccessIssue, setLocationAccessIssue] = useState<LocationIssue | null>(null)
+  const locationAccessRequested = useRef(false)
   const locationRequests = useRef({ pickup: 0, destination: 0, live: 0 })
   const liveWatch = useRef<number | null>(null)
   const locationMounted = useRef(true)
@@ -345,7 +353,22 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     }
   }, [])
 
+  async function requestLocationAccess() {
+    setLocationAccessIssue(null)
+    const requests = { ...locationRequests.current }
+    try {
+      const pos = await requestBrowserLocation()
+      if (locationMounted.current) setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      // Permission enables the map; existing pickup/delivery choices stay intact.
+    } catch (error) {
+      if (locationMounted.current && Object.keys(requests).every(key => requests[key as keyof typeof requests] === locationRequests.current[key as keyof typeof requests])) {
+        setLocationAccessIssue(locationIssue(error))
+      }
+    }
+  }
+
   function cancelGps(field: 'pickup' | 'destination') {
+    setLocationAccessIssue(null)
     locationRequests.current[field]++
     if (field === 'pickup') { setGpsPickupLoading(false); setPickupLocationIssue(null) }
     else { setGpsDestLoading(false); setDeliveryLocationIssue(null); setLiveLocationError(null) }
@@ -804,6 +827,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             </div>
           )}
 
+{locationAccessIssue && <LocationFeedback issue={locationAccessIssue} onRetry={() => void requestLocationAccess()} />}
 {liveLocationError && <LocationFeedback issue={liveLocationError} onRetry={() => void startLiveLocation(true)} />}
 <AddressInstructions pickup={pickupInstructions} delivery={deliveryInstructions} onPickup={setPickupInstructions} onDelivery={setDeliveryInstructions}/>
 <BookingRouteMap pickup={pickupCoords} destination={deliveryCoords} userLocation={userCoords}/>

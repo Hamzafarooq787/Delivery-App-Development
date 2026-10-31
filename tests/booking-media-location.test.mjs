@@ -23,6 +23,25 @@ test('GPS success preserves actual coordinates and requests a fresh fix', async 
   assert.equal(f.calls.length, 1)
   assert.equal(f.calls[0].maximumAge, 0)
 })
+test('Automatic permission request and address button share one native request', async () => {
+  const position = { coords: { latitude: 53.48, longitude: -2.24 } }
+  const f = locationFixture([position, position])
+  const automatic = f.requestBrowserLocation()
+  const button = f.requestBrowserLocation()
+  assert.equal(automatic, button)
+  assert.equal(f.calls.length, 1, 'native request starts synchronously and is shared')
+  assert.equal(await automatic, position)
+  assert.equal(await button, position)
+  await f.requestBrowserLocation()
+  assert.equal(f.calls.length, 2, 'a later deliberate click requests a fresh position')
+})
+test('A denied prompt clears the pending request so settings changes can be retried', async () => {
+  const position = { coords: { latitude: 53.48, longitude: -2.24 } }
+  const f = locationFixture([{ code: 1 }, position])
+  await assert.rejects(f.requestBrowserLocation(), e => e.code === 1)
+  assert.equal(await f.requestBrowserLocation(), position)
+  assert.equal(f.calls.length, 2)
+})
 test('Denied permission is not retried or mislabeled as GPS failure', async () => {
   const f = locationFixture([{ code: 1 }])
   await assert.rejects(f.requestBrowserLocation(), e => e.code === 1)
