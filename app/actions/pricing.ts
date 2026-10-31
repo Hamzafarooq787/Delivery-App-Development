@@ -17,6 +17,7 @@
  */
 "use server"
 
+import { SURGE_COLUMNS, surgeSettingsSchema, busyPeriodSchema } from "@/lib/admin-pricing-validation"
 import { issueQuoteConsent, deliveryScope } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -76,12 +77,13 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
 
   const admin = createAdminClient()
   const [surgeSettingsRes, busyRulesRes, onlineDriversRes, pendingOrdersRes] = await Promise.all([
-    admin.from("surge_pricing_settings").select("*").eq("id", true).maybeSingle(),
+    admin.from("surge_pricing_settings").select(SURGE_COLUMNS).eq("id", true).maybeSingle(),
     admin.from("busy_period_rules").select("*").eq("active", true),
     admin.from("driver_profiles").select("id", { count: "exact", head: true }).eq("status", "approved").eq("is_online", true),
     admin.from("delivery_requests").select("id", { count: "exact", head: true }).eq("status", "requested"),
   ])
 
+  if (surgeSettingsRes.error || busyRulesRes.error || onlineDriversRes.error || pendingOrdersRes.error || !surgeSettingsRes.data) return { error: "Pricing is unavailable. Please retry." }
   const surgeSettings = surgeSettingsRes.data
   const surgeFactorsRaw: SurgeFactor[] = []
 
@@ -172,18 +174,20 @@ export type SurgeSettings = {
 export async function adminGetSurgeSettings(): Promise<{ data: SurgeSettings | null; error?: string }> {
   if (!(await requireAdmin())) return { data: null, error: "Not authorized" }
   const admin = createAdminClient()
-  const { data, error } = await admin.from("surge_pricing_settings").select("*").eq("id", true).maybeSingle()
+  const { data, error } = await admin.from("surge_pricing_settings").select(SURGE_COLUMNS).eq("id", true).maybeSingle()
   if (error) return { data: null, error: error.message }
   return { data: data as SurgeSettings | null }
 }
 
 export async function adminUpdateSurgeSettings(settings: SurgeSettings): Promise<{ success?: boolean; error?: string }> {
   if (!(await requireAdmin())) return { error: "Not authorized" }
+  const parsed = surgeSettingsSchema.safeParse(settings)
+  if (!parsed.success) return { error: "Enter valid surge settings. Multipliers must be between 1 and 10; demand ratio 0.1–100 and traffic ratio 1–10." }
   const admin = createAdminClient()
   const { error } = await admin
     .from("surge_pricing_settings")
-    .update({ ...settings, updated_at: new Date().toISOString() })
-    .eq("id", true)
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", true).select("id").single()
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true }
@@ -210,28 +214,28 @@ export type BusyPeriodRuleInput = {
   active: boolean
 }
 
-export async function adminCreateBusyPeriodRule(input: BusyPeriodRuleInput): Promise<{ success?: boolean; error?: string }> {
+export async function adminCreateBusyPeriodRule(input: BusyPeriodRuleInput): Promise<{ success?: boolean; data?: BusyPeriodRuleRow; error?: string }> {
   if (!(await requireAdmin())) return { error: "Not authorized" }
-  if (!input.label.trim()) return { error: "Label is required" }
-  if (!input.multiplier || input.multiplier < 1) return { error: "Multiplier must be at least 1.0" }
+  const parsed = busyPeriodSchema.safeParse(input)
+  if (!parsed.success) return { error: "Enter a label, valid times, day and a multiplier between 1 and 10." }
 
   const admin = createAdminClient()
-  const { error } = await admin.from("busy_period_rules").insert({ ...input, label: input.label.trim() })
+  const { data, error } = await admin.from("busy_period_rules").insert(parsed.data).select("id,label,day_of_week,start_time,end_time,multiplier,active").single()
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
-  return { success: true }
+  return { success: true, data: data as BusyPeriodRuleRow }
 }
 
-export async function adminUpdateBusyPeriodRule(id: string, input: BusyPeriodRuleInput): Promise<{ success?: boolean; error?: string }> {
+export async function adminUpdateBusyPeriodRule(id: string, input: BusyPeriodRuleInput): Promise<{ success?: boolean; data?: BusyPeriodRuleRow; error?: string }> {
   if (!(await requireAdmin())) return { error: "Not authorized" }
-  if (!input.label.trim()) return { error: "Label is required" }
-  if (!input.multiplier || input.multiplier < 1) return { error: "Multiplier must be at least 1.0" }
+  const parsed = busyPeriodSchema.safeParse(input)
+  if (!parsed.success) return { error: "Enter a label, valid times, day and a multiplier between 1 and 10." }
 
   const admin = createAdminClient()
-  const { error } = await admin.from("busy_period_rules").update({ ...input, label: input.label.trim() }).eq("id", id)
+  const { data, error } = await admin.from("busy_period_rules").update(parsed.data).eq("id", id).select("id,label,day_of_week,start_time,end_time,multiplier,active").single()
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
-  return { success: true }
+  return { success: true, data: data as BusyPeriodRuleRow }
 }
 
 export async function adminDeleteBusyPeriodRule(id: string): Promise<{ success?: boolean; error?: string }> {

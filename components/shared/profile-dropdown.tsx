@@ -84,7 +84,9 @@ export function ProfileDropdown({
 
   function handleSwitch(newRole: "customer" | "driver") {
     startTransition(async () => {
-      await switchActiveRole(newRole)
+      setRoleMsg(null)
+      const result = await switchActiveRole(newRole)
+      if (result?.error) setRoleMsg(result.error)
     })
   }
 

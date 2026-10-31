@@ -61,6 +61,8 @@ export function combineSurgeFactors(
   factors: SurgeFactor[],
   maxTotalMultiplier: number
 ): { multiplier: number; factors: SurgeFactor[] } {
+  if (!Number.isFinite(maxTotalMultiplier) || maxTotalMultiplier < 1 || maxTotalMultiplier > 10) throw new Error("Invalid surge cap")
+  if (factors.some(f => !Number.isFinite(f.multiplier) || f.multiplier < 1 || f.multiplier > 10)) throw new Error("Invalid surge multiplier")
   const applicable = factors.filter((f) => f.multiplier > 1)
   if (applicable.length === 0) return { multiplier: 1, factors: [] }
   const multiplier = Math.min(maxTotalMultiplier, Math.max(...applicable.map((f) => f.multiplier)))

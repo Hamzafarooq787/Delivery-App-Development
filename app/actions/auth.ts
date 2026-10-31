@@ -21,7 +21,10 @@ export async function switchActiveRole(newRole: "customer" | "driver") {
   if (newRole !== "customer" && newRole !== "driver") redirect("/login")
 
   const admin = createAdminClient()
-  await admin.from("users").update({ role: newRole }).eq("id", user.id)
+  const { error } = await admin.rpc("switch_account_mode", { p_user: user.id, p_role: newRole })
+  if (error) return { error: error.message.includes("active_delivery")
+    ? "Finish your active delivery before switching to customer mode."
+    : "Could not switch mode. Check that this profile is available and try again." }
 
   redirect(newRole === "driver" ? "/dashboard/driver" : "/dashboard/customer")
 }
@@ -39,13 +42,15 @@ export async function addSecondaryRole(newRole: "customer" | "driver") {
   const admin = createAdminClient()
 
   if (newRole === "driver") {
-    await admin
+    const { error } = await admin
       .from("driver_profiles")
       .upsert({ id: user.id, status: "pending" }, { onConflict: "id", ignoreDuplicates: true })
+    if (error) return { error: "Could not add driver access. Please retry." }
   } else {
-    await admin
+    const { error } = await admin
       .from("customer_profiles")
       .upsert({ id: user.id }, { onConflict: "id", ignoreDuplicates: true })
+    if (error) return { error: "Could not add customer access. Please retry." }
   }
 
   return { success: true }

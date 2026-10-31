@@ -509,7 +509,8 @@ function BusyPeriodRuleModal({ initial, editingId, onClose, onSaved }: {
     startTransition(async () => {
       const result = editingId ? await adminUpdateBusyPeriodRule(editingId, form) : await adminCreateBusyPeriodRule(form)
       if (result.error) { setError(result.error); return }
-      onSaved({ id: editingId ?? crypto.randomUUID(), ...form })
+      if (!result.data) { setError("The saved rule could not be loaded. Please retry."); return }
+      onSaved(result.data)
     })
   }
 
@@ -617,7 +618,7 @@ function BusyPeriodsSection({ initial }: { initial: BusyPeriodRuleRow[] }) {
                 {r.active ? "Active" : "Inactive"}
               </span>
               <div className="flex items-center gap-1.5 shrink-0">
-                <button onClick={() => setModalState({ input: r, id: r.id })} className="p-1.5 rounded-lg text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)]">
+                <button onClick={() => setModalState({ input: { label: r.label, day_of_week: r.day_of_week, start_time: r.start_time, end_time: r.end_time, multiplier: r.multiplier, active: r.active }, id: r.id })} className="p-1.5 rounded-lg text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)]">
                   <span className="material-symbols-outlined text-base">edit</span>
                 </button>
                 <button onClick={() => handleDelete(r.id)} disabled={isPending && deletingId === r.id} className="p-1.5 rounded-lg text-[#ff6e84]/70 hover:text-[#ff6e84] hover:bg-[#ff6e84]/10 disabled:opacity-40">

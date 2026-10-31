@@ -82,7 +82,7 @@ export default async function AdminDashboardPage() {
     admin
       .from("driver_profiles")
       .select("id, created_at, users(full_name, phone), driver_vehicles(vehicle_type, registration_number, make, model)")
-      .eq("status", "pending")
+      .eq("status", "pending").not("verification_submitted_at", "is", null)
       .order("created_at", { ascending: false })
       .limit(5),
 
