@@ -50,7 +50,7 @@ export default async function CheckoutPage({
         <>
           <p className="my-4">
             {result?.error ??
-              "Your order has not been dispatched. You can return to your saved form and try again."}
+              "Your order has not been dispatched. Continue this payment below, or return to the dashboard to start a new booking."}
           </p>
           {params.session_id && (
             <Link
@@ -66,7 +66,7 @@ export default async function CheckoutPage({
           href={resume.url}
           className="block rounded-xl bg-[var(--brand-strong)] p-4"
         >
-          Continue saved checkout
+          Continue payment
         </Link>
       )}
       {resume?.error && <p role="alert">{resume.error}</p>}
