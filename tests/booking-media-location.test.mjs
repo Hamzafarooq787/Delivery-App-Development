@@ -3,6 +3,25 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import vm from 'node:vm'
 import { stripTypeScriptTypes } from 'node:module'
+import { webcrypto } from 'node:crypto'
+
+const shoppingSource = stripTypeScriptTypes(fs.readFileSync('lib/shopping-booking.ts', 'utf8')).replace(/export /g, '')
+const { shoppingEstimate, duplicateShoppingProduct } = vm.runInNewContext(shoppingSource + ';({shoppingEstimate,duplicateShoppingProduct})')
+test('Shopping request IDs remain cryptographic UUIDs when randomUUID is unavailable', () => {
+  const makeId = vm.runInNewContext(shoppingSource + ';newShoppingRequestId', {crypto:{getRandomValues:webcrypto.getRandomValues.bind(webcrypto)}})
+  const first=makeId(), second=makeId()
+  assert.match(first,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  assert.notEqual(first,second)
+})
+test('Shopping estimate preserves the existing checkout consent scope for fractional prices and unknown estimates', () => {
+  const items = [{name:'Milk',quantity:3,estimated_price:.1},{name:'Bread',quantity:2,estimated_price:.99},{name:'Unknown price',quantity:1,estimated_price:null}]
+  assert.equal(shoppingEstimate(items), items.reduce((sum,i)=>sum+(i.estimated_price??0)*i.quantity,0))
+})
+test('Duplicate product detection keeps different sizes separate and matches names without case or whitespace differences', () => {
+  const items = [{name:'Whole milk',brand_size_variant:'2 L'}]
+  assert.equal(duplicateShoppingProduct(items,{name:'  WHOLE  milk ',brand_size_variant:'2 l '}),true)
+  assert.equal(duplicateShoppingProduct(items,{name:'Whole milk',brand_size_variant:'1 L'}),false)
+})
 
 const settingsSource = stripTypeScriptTypes(fs.readFileSync('lib/location-settings.ts', 'utf8')).replace(/export /g, '')
 const locationSettingsGuide = vm.runInNewContext(settingsSource + ';locationSettingsGuide')
