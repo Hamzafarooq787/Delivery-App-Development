@@ -1,4 +1,8 @@
 'use client'
+import { newShoppingRequestId } from '@/lib/shopping-booking'
+import { useOrderPhotoCleanup } from '@/hooks/use-order-photo-cleanup'
+import { cleanupAbandonedOrderPhotos } from '@/app/actions/order-photo-cleanup'
+import { SavedAddressPicker } from './SavedAddressPicker'
 
 import { AddressInstructions } from "@/components/customer/address-instructions"
 import { PriceBreakdown } from "@/components/customer/price-breakdown"
@@ -254,6 +258,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   const [deliveryCoords, setDeliveryCoords] = useState<LatLng | null>(initialDraft?.deliveryCoords ?? null)
   const [itemDescription, setItemDescription] = useState<string>(initialDraft?.itemDescription ?? '')
   const [itemPhotos, setItemPhotos] = useState<string[]>(initialDraft?.itemPhotos ?? [])
+  useOrderPhotoCleanup(itemPhotos)
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [packageSize, setPackageSize] = useState<PackageSize | null>(initialDraft?.packageSize ?? null)
@@ -498,7 +503,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         let compressed: Blob
         try { compressed = await compressImage(file, 1280, 0.82) }
         catch (error) { setPhotoError(error instanceof Error ? error.message : 'Could not prepare this photo.'); continue }
-        const path = `${user.id}/${crypto.randomUUID()}.jpg`
+        const path = `${user.id}/${newShoppingRequestId()}.jpg`
         const { error: uploadErr } = await supabase.storage
           .from('delivery-item-photos')
           .upload(path, compressed, { contentType: compressed.type, upsert: false })
@@ -520,6 +525,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   }
 
   function removePhoto(url: string) {
+    void cleanupAbandonedOrderPhotos([url]).catch(()=>{})
     setItemPhotos((prev) => prev.filter((u) => u !== url))
   }
 
@@ -550,7 +556,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
 
     setSubmitting(true)
     try {
-      checkoutKey.current ??= crypto.randomUUID()
+      checkoutKey.current ??= newShoppingRequestId()
       const result = await startOrderCheckout({ requestKey: checkoutKey.current, type: "delivery", order: {
         pickup_instructions:pickupInstructions,delivery_instructions:deliveryInstructions,
         consent_token: quote.consentToken,
@@ -729,6 +735,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
 </div>
           </div>}
           {step === 2 && <div className={styles.locationStep}>          {/* Pickup */}
+          <SavedAddressPicker label="Saved pickup address" onSelect={p => { cancelGps('pickup'); setPickupValue(p.address); setPickupCoords({lat:p.lat,lng:p.lng}) }} />
           <AddressInput
             label="Pickup location"
             icon="radio_button_checked"
@@ -785,6 +792,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             </div>
           ) : (
             <div className="space-y-2">
+              <SavedAddressPicker label="Saved delivery address" onSelect={p => { cancelGps('destination'); locationRequests.current.live++; stopLiveLocation(); setDeliveryValue(p.address); setDeliveryCoords({lat:p.lat,lng:p.lng}) }} />
               <AddressInput
                 label="Delivery location"
                 icon="location_on"

@@ -13,6 +13,7 @@ import {
 } from "@/app/actions/shopping";
 import type { CreateDeliveryParams } from "@/app/actions/delivery";
 import { validateShoppingItems } from "@/lib/shopping-validation";
+import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media";
 import { checkQuoteConsent, deliveryScope } from "@/lib/quote-consent";
 import {
@@ -36,7 +37,7 @@ export async function startOrderCheckout(
   } = await client.auth.getUser();
   if (!user)
     return {
-      error: "Sign in to confirm your order. Your form has been retained.",
+      error: "Sign in to confirm your order. Keep this form open if possible.",
     };
   if (input.type === 'buy_for_me' && !Array.isArray(input.order.shopping_items)) return { error: 'Enter a valid shopping list.' };
   const photos = input.type === 'delivery' ? input.order.item_photo_urls ?? [] : input.order.shopping_items?.map(i=>i?.photo_url) ?? [];
@@ -100,6 +101,7 @@ export async function startOrderCheckout(
           "This checkout expired. Go back to review a fresh quote and retry.",
       };
     }
+    if (!await leaseOrderPhotos(user.id,photos)) return {error:'An item photo is no longer available. Please upload it again before paying.'};
     let draft: Record<string, unknown>;
     let amount: number;
     let itemsHold = 0;
@@ -317,7 +319,7 @@ export async function startOrderCheckout(
     );
     return {
       error:
-        "Could not start checkout. Your draft is retained; retry with the same booking reference.",
+        "Could not start checkout. Keep this form open and try again.",
     };
   }
 }

@@ -18,6 +18,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
     distanceMiles: number
     status: string
     canCancel: boolean
+    error?: string
   } | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
@@ -27,20 +28,23 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
 
   function handleOpenModal() {
     startTransition(async () => {
+      try {
       const data = await previewCancellationFee(deliveryId)
       setPreview(data)
       setShowModal(true)
+      } catch { setResult({success:false,message:"Could not load cancellation details. Please try again."});setShowModal(true) }
     })
   }
 
   function handleConfirm() {
     setConfirming(true)
     startTransition(async () => {
+      try {
       const res = await cancelOrder(deliveryId)
       if (res.success) {
         setResult({
           success: true,
-          message: res.freeCancel
+          message: res.paymentMethod === "stripe" ? (res.refundAmount > 0 ? `Order cancelled. A £${res.refundAmount.toFixed(2)} refund has been requested to your original payment card. Check Payments for its status.` : "Order cancelled. Check Payments for any refund status.") : res.freeCancel
             ? res.refundAmount > 0
               ? `Order cancelled. £${res.refundAmount.toFixed(2)} refunded to your wallet.`
               : "Order cancelled successfully. No charge applied."
@@ -57,6 +61,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
         setResult({ success: false, message: res.error ?? "Failed to cancel order." })
         setConfirming(false)
       }
+      } catch { setResult({success:false,message:"Could not confirm cancellation. Check your order before retrying."});setConfirming(false) }
     })
   }
 
@@ -71,7 +76,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
         Cancel Order
       </button>
 
-      {showModal && preview && (
+      {showModal && (preview || result) && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { if (!confirming) { setShowModal(false); setPreview(null); setResult(null) } }} />
           <div className="relative w-full max-w-md bg-[#1a1919] border border-[#494847]/20 rounded-2xl overflow-hidden shadow-2xl">
@@ -79,9 +84,9 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#494847]/15">
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${preview.freeCancel ? "bg-[#6ee7b7]/10" : "bg-[#ff6e84]/10"}`}>
-                  <span className={`material-symbols-outlined text-lg ${preview.freeCancel ? "text-[#6ee7b7]" : "text-[#ff6e84]"}`}>
-                    {preview.freeCancel ? "check_circle" : "warning"}
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${preview?.freeCancel ? "bg-[#6ee7b7]/10" : "bg-[#ff6e84]/10"}`}>
+                  <span className={`material-symbols-outlined text-lg ${preview?.freeCancel ? "text-[#6ee7b7]" : "text-[#ff6e84]"}`}>
+                    {preview?.freeCancel ? "check_circle" : "warning"}
                   </span>
                 </div>
                 <h2 className="text-base font-bold text-white">Cancel Order</h2>
@@ -103,7 +108,8 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
                 </div>
               ) : (
                 <>
-                  {preview.freeCancel ? (
+                  {preview?.error && <p role="alert" className="text-red-300">{preview.error}</p>}
+                  {preview?.freeCancel ? (
                     <div className="bg-[#6ee7b7]/10 border border-[#6ee7b7]/20 rounded-xl p-4 flex items-start gap-3">
                       <span className="material-symbols-outlined text-[#6ee7b7] text-xl mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                       <div>
@@ -120,14 +126,14 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
                         <div>
                           <p className="text-sm font-bold text-white">Cancellation Fee Applies</p>
                           <p className="text-xs text-[#adaaaa] mt-1 leading-relaxed">
-                            The driver has already started the journey. A fee of <strong className="text-white">£{preview.cancellationFee}</strong> will be deducted from your wallet.
+                            The driver has already started the journey. A fee of <strong className="text-white">£{preview?.cancellationFee}</strong> will be deducted from your wallet.
                           </p>
                         </div>
                       </div>
                       <div className="bg-[#262626] rounded-xl p-3 space-y-2">
                         <div className="flex justify-between text-xs">
                           <span className="text-[#adaaaa]">Distance</span>
-                          <span className="text-white font-semibold">{preview.distanceMiles > 0 ? `${preview.distanceMiles.toFixed(1)} miles` : "N/A"}</span>
+                          <span className="text-white font-semibold">{preview!.distanceMiles > 0 ? `${preview!.distanceMiles.toFixed(1)} miles` : "N/A"}</span>
                         </div>
                         <div className="flex justify-between text-xs">
                           <span className="text-[#adaaaa]">Rate</span>
@@ -135,7 +141,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
                         </div>
                         <div className="flex justify-between text-xs border-t border-[#494847]/20 pt-2 font-bold">
                           <span className="text-[#adaaaa]">Cancellation Fee</span>
-                          <span className="text-[#ff6e84]">£{preview.cancellationFee}</span>
+                          <span className="text-[#ff6e84]">£{preview?.cancellationFee}</span>
                         </div>
                       </div>
                     </div>
@@ -155,9 +161,9 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
                     </button>
                     <button
                       onClick={handleConfirm}
-                      disabled={confirming}
+                      disabled={confirming || !preview?.canCancel}
                       className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
-                        preview.freeCancel
+                        preview?.freeCancel
                           ? "bg-[#6ee7b7] text-[#052e16] hover:brightness-110"
                           : "bg-[#ff6e84] text-white hover:brightness-110"
                       }`}
@@ -165,7 +171,7 @@ export function CancelOrderButton({ deliveryId, currentStatus, onCancelled }: Pr
                       {confirming ? (
                         <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Cancelling…</>
                       ) : (
-                        preview.freeCancel ? "Cancel for Free" : `Pay £${preview.cancellationFee} & Cancel`
+                        preview?.freeCancel ? "Cancel for Free" : `Pay £${preview?.cancellationFee} & Cancel`
                       )}
                     </button>
                   </div>

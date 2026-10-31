@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import {
@@ -12,6 +12,8 @@ import {
   Wallet,
   CircleHelp,
 } from 'lucide-react'
+import { useCustomerLiveRefresh } from '@/hooks/use-customer-live-refresh'
+import { getCustomerHomeSnapshot } from '@/app/actions/customer-repairs'
 import type { CustomerHomeData } from '@/lib/customer-home-data'
 import { useVisibleViewport } from '@/hooks/use-visible-viewport'
 import { ServiceIllustration } from './ServiceIllustration'
@@ -27,7 +29,10 @@ const ShoppingModal = dynamic(
 
 export default function CustomerHome({ initialData }: { initialData: CustomerHomeData }) {
   const screenRef = useVisibleViewport()
-  const { profile, balance, delivery, loadError, shoppingEnabled } = initialData
+  const [snapshot,setSnapshot]=useState(initialData)
+  const { profile, balance, delivery, loadError, shoppingEnabled } = snapshot
+  useCustomerLiveRefresh(async()=>{const data=await getCustomerHomeSnapshot();if(data&&!data.loadError)setSnapshot(data)},'delivery_requests,wallet_balances,users')
+  useEffect(()=>setSnapshot(initialData),[initialData])
   const [shopping, setShopping] = useState(false)
   // Layout owns the modal and draft-resume flow. A single event opens it once.
   function book(focus?: 'pickup' | 'delivery') {

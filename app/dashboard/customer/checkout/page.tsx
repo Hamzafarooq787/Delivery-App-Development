@@ -1,7 +1,6 @@
-import { ClearCompletedBookingDraft } from "@/components/customer/pending-order-checkouts";
+import { CheckoutConfirmation } from "@/components/customer/checkout-confirmation";
 import Link from "next/link";
 import {
-  getCheckoutOutcome,
   resumeOrderCheckout,
 } from "@/app/actions/order-checkout";
 export const dynamic = "force-dynamic";
@@ -19,48 +18,9 @@ export default async function CheckoutPage({
     params.canceled && params.payment_id
       ? await resumeOrderCheckout(params.payment_id)
       : null;
-  const result = params.session_id
-    ? await getCheckoutOutcome(params.session_id)
-    : null;
   return (
     <main className="mx-auto max-w-lg p-6 text-white">
-      <h1 className="text-2xl font-bold">
-        {result && "data" in result
-          ? "Thank you — your order is confirmed"
-          : params.canceled
-            ? "Payment was not completed"
-            : "Confirming your payment"}
-      </h1>
-      {result && "data" in result && result.data ? (
-        <>
-          <ClearCompletedBookingDraft
-            kind={result.data.service_type ?? "delivery"}
-          />
-          <p className="my-4">
-            Tracking code: <strong>{result.data.tracking_number}</strong>
-          </p>
-          <Link
-            href={`/dashboard/customer/tracking?id=${result.data.id}`}
-            className="block rounded-xl bg-[var(--brand-strong)] p-4"
-          >
-            Track your order
-          </Link>
-        </>
-      ) : (
-        <>
-          <p className="my-4">
-            {result?.error ??
-              "Your order has not been dispatched. Continue this payment below, or return to the dashboard to start a new booking."}
-          </p>
-          {params.session_id && (
-            <Link
-              href={`/dashboard/customer/checkout?session_id=${encodeURIComponent(params.session_id)}`}
-            >
-              Refresh payment status
-            </Link>
-          )}
-        </>
-      )}
+      {params.session_id ? <CheckoutConfirmation sessionId={params.session_id}/> : <><h1 className="text-2xl font-bold">{params.canceled ? 'Payment was not completed' : 'Payment reference missing'}</h1><p className="my-4">Your order has not been dispatched. Continue your payment below or return to the dashboard.</p></>}
       {resume?.url && (
         <Link
           href={resume.url}

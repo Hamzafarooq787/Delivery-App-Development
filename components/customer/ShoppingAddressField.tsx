@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, useId, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { MapPin } from 'lucide-react'
 import { googlePlacesAutocomplete, googlePlaceCoords, googleReverseGeocode, type PlaceSuggestion } from '@/lib/google'
@@ -7,6 +7,7 @@ import styles from './ShoppingSteps.module.css'
 const PinMap = dynamic(() => import('@/components/maps/google-live-map').then(m => m.GoogleLiveMap), { ssr: false })
 export type ShoppingPlace = { address: string; lat: number; lng: number }
 export function ShoppingAddressField({ label, value, onChange, onSelect, locationControl }: { label: string; value: string; onChange: (v: string) => void; onSelect: (p: ShoppingPlace) => void; locationControl?: ReactNode }) {
+  const fieldId = useId()
   const pinDialog = useRef<HTMLDialogElement>(null)
   const [pinOpen, setPinOpen] = useState(false)
   const [pin, setPin] = useState<ShoppingPlace | null>(null)
@@ -56,8 +57,8 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
     finally { if (request === sequence.current) setBusy(false) }
   }
   return <div ref={wrapper} className={styles.field} onKeyDown={e => { if (e.key === 'Escape' && suggestions.length) { e.stopPropagation(); setSuggestions([]) } }}>
-    <div className={styles.addressLabel}><label htmlFor={label === "Shop address" ? "shopping-shop-address" : "shopping-delivery-address"}>{label}</label>{locationControl}</div>
-    <div className={styles.addressInputWrap}><input id={label === "Shop address" ? "shopping-shop-address" : "shopping-delivery-address"} ref={input} aria-label={label} value={value} onChange={e => change(e.target.value)} placeholder="Start typing an address…" autoComplete="off" />
+    <div className={styles.addressLabel}><label htmlFor={fieldId}>{label}</label>{locationControl}</div>
+    <div className={styles.addressInputWrap}><input id={fieldId} ref={input} aria-label={label} value={value} onChange={e => change(e.target.value)} placeholder="Start typing an address…" autoComplete="off" />
     <button type="button" aria-label={`Choose ${label.toLowerCase()} on map`} title="Choose on map" className={styles.mapPinButton} onClick={() => { sequence.current++; setSuggestions([]); setPin(null); setPinOpen(true); setError('') }}><MapPin size={20} /></button></div>
     {pinOpen && <dialog ref={pinDialog} className={styles.pinDialog} aria-label={`Choose ${label} on map`} onKeyDown={e => e.stopPropagation()} onCancel={e => { e.preventDefault(); closePin() }}>
       <p>Tap the exact entrance, then confirm the address.</p>

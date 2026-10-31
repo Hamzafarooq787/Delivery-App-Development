@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { verifyWalletTopupSession } from '@/app/actions/payments'
 import { toast } from 'sonner'
 import BottomNav from '@/components/customer/BottomNav'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
@@ -61,22 +62,24 @@ export default function CustomerDashboardLayout({
     const params = new URLSearchParams(window.location.search)
     if (params.get('resume_delivery') !== '1') return
 
-    const draft = loadDeliveryDraft()
-    clearDeliveryDraft()
-
-    // Strip the resume params from the URL without a full navigation
-    params.delete('resume_delivery')
-    params.delete('topup')
-    const qs = params.toString()
-    router.replace(`/dashboard/customer${qs ? `?${qs}` : ''}`)
-
-    if (draft) {
-      setResumeDraft(draft)
-      setShowModal(true)
-      toast.success('Funds added — continue your delivery request.', {
-        duration: 6000,
-      })
+    let alive = true, timer: ReturnType<typeof setTimeout>, attempts = 0
+    const sessionId = params.get('session_id')
+    const confirm = async () => {
+      if (!sessionId) { toast.error('Please check your wallet to confirm the payment.'); return }
+      try {
+        const r = await verifyWalletTopupSession(sessionId)
+        if (!alive) return
+        if (r.error) { toast.error(r.error); return }
+        if (r.state !== 'credited') { if (++attempts < 20) timer = setTimeout(confirm,3000); else toast('Wallet credit is still being confirmed. Check your wallet before trying again.'); return }
+        const draft = loadDeliveryDraft(); clearDeliveryDraft()
+        params.delete('resume_delivery'); params.delete('topup'); params.delete('session_id')
+        router.replace(`/dashboard/customer${params.size ? `?${params.toString()}` : ''}`)
+        if (draft) { setResumeDraft(draft); setShowModal(true) }
+        toast.success('Funds confirmed — continue your delivery request.')
+      } catch { if (alive) toast.error('Could not confirm payment. Check your wallet or contact support.') }
     }
+    void confirm(); return () => { alive = false; clearTimeout(timer) }
+
   }, [router])
 
   return (

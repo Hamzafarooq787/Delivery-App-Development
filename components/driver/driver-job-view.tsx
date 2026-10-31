@@ -1,4 +1,5 @@
 "use client"
+import { CustomerThread } from "@/components/shared/customer-thread"
 import { orderMediaUrl } from '@/lib/order-media'
 
 import dynamic from "next/dynamic"
@@ -339,6 +340,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
         </div>
 
         {/* Rate the customer — only once delivered */}
+        <CustomerThread kind="order" id={job.id} />
         {job.status === "delivered" && <RateCustomerCard deliveryId={job.id} />}
 
         {/* Delivery Timeline */}

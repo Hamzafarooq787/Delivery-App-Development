@@ -1,4 +1,5 @@
 "use server"
+import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
 
 import { cancelCardBooking } from "@/app/actions/order-checkout"
@@ -58,6 +59,7 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
     return { error: "Select a package size." }
   }
 
+  if (!await leaseOrderPhotos(user.id,params.item_photo_urls??[])) return {error:'An item photo is no longer available. Please upload it again.'}
   const quoteResult = await getDeliveryQuote({
     pickupLat: params.pickup_lat,
     pickupLng: params.pickup_lng,

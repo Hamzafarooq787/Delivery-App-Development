@@ -32,29 +32,30 @@ export async function getWalletBalance(): Promise<{ balance: number; error?: str
   if (!user) return { balance: 0, error: "Not authenticated" }
 
   const admin = createAdminClient()
-  const { data } = await admin.from("wallet_balances").select("balance").eq("user_id", user.id).single()
-  return { balance: data ? Number(data.balance) : 0 }
+  const { data, error } = await admin.from("wallet_balances").select("balance").eq("user_id", user.id).single()
+  return error && error.code !== "PGRST116" ? { balance:0,error:"Could not load wallet balance." } : { balance: data ? Number(data.balance) : 0 }
 }
 
 // ── Get wallet transactions ───────────────────────────────────────────────
-export async function getWalletTransactions(): Promise<{ data: WalletTransaction[] }> {
+export async function getWalletTransactions(): Promise<{ data: WalletTransaction[]; error?:string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { data: [] }
+  if (!user) return { data: [],error:"Please sign in again." }
 
   const admin = createAdminClient()
-  const { data } = await admin
+  const { data,error } = await admin
     .from("wallet_transactions")
     .select("id, type, amount, description, delivery_id, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50)
 
-  return { data: (data ?? []) as WalletTransaction[] }
+  return { data: (data ?? []) as WalletTransaction[], ...(error?{error:"Could not load wallet transactions."}:{}) }
 }
 
 // ── Cancel order (customer) ───────────────────────────────────────────────
 export type CancelOrderResult = {
+  paymentMethod?: "stripe" | "wallet"
   success: boolean
   freeCancel: boolean
   cancellationFee: number
@@ -71,7 +72,7 @@ export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult
   const { data: cardOrder } = await createAdminClient().from("delivery_requests").select("payment_method").eq("id",deliveryId).eq("customer_id",user.id).maybeSingle()
   if (cardOrder?.payment_method === "stripe") {
     const result = await cancelCardBooking(deliveryId)
-    return { success: !result.error, freeCancel: true, cancellationFee: 0, distanceMiles: 0, refundAmount: result.amount ?? 0, error: result.error }
+    return { paymentMethod:"stripe", success: !result.error, freeCancel: true, cancellationFee: 0, distanceMiles: 0, refundAmount: result.amount ?? 0, error: result.error }
   }
   // Atomic RPC — locks the delivery row before doing anything, so concurrent
   // cancel calls on the same order can't both read "still cancellable" and

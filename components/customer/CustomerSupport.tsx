@@ -1,6 +1,7 @@
 'use client'
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import Link from 'next/link'
+import { CustomerThread } from '@/components/shared/customer-thread'
 import {
   ChevronRight,
   CreditCard,
@@ -61,6 +62,12 @@ export default function CustomerSupport({
   const size = useCustomerPageSize(2, 1),
     current = Math.min(page, Math.max(1, Math.ceil(tickets.length / size))),
     visible = tickets.slice((current - 1) * size, current * size)
+  useEffect(() => {
+    let alive = true, busy = false
+    const refresh = async () => { if (busy || document.visibilityState !== 'visible') return; busy = true; try { const r = await getMyTickets(); if (alive) { if (r.error) setError(r.error); else { setTickets(r.data); setError('') } } } catch { if (alive) setError('Could not refresh your requests. Please try again.') } finally { busy = false } }
+    const timer = setInterval(refresh, 15000); window.addEventListener('focus', refresh)
+    return () => { alive = false; clearInterval(timer); window.removeEventListener('focus', refresh) }
+  }, [])
   function open() {
     setError('')
     setCreating(true)
@@ -247,25 +254,7 @@ export default function CustomerSupport({
           title={selected.subject}
           onClose={() => setSelected(null)}
         >
-          <span className={s.badge}>
-            {selected.status === 'closed' ? 'Resolved' : 'Open'}
-          </span>
-          <p style={{ marginTop: 18, whiteSpace: 'pre-wrap' }}>
-            {selected.message}
-          </p>
-          <p className={s.muted} style={{ marginTop: 18 }}>
-            Submitted {shortDate(selected.created_at)}
-          </p>
-          <button
-            className={s.primary}
-            style={{ marginTop: 20 }}
-            onClick={() => {
-              setSelected(null)
-              open()
-            }}
-          >
-            Send another message
-          </button>
+          <CustomerThread kind="support" id={selected.id} />
         </CustomerDialog>
       )}
     </CustomerPage>

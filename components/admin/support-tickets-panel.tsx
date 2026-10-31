@@ -6,8 +6,10 @@
  */
 "use client"
 
-import { useState, useTransition } from "react"
-import { adminSetTicketStatus, type AdminSupportTicket } from "@/app/actions/support"
+import { useState, useTransition, useEffect } from "react"
+import { adminGetSupportTickets, adminSetTicketStatus, type AdminSupportTicket } from "@/app/actions/support"
+
+import { CustomerThread } from "@/components/shared/customer-thread"
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -32,15 +34,18 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => { let alive = true, busy = false; const refresh = async () => { if (busy || document.visibilityState !== 'visible') return; busy = true; try { const r = await adminGetSupportTickets(); if (alive) { if (r.error) setError(r.error); else setTickets(r.data) } } catch { if (alive) setError('Could not refresh tickets.') } finally { busy = false } }; const timer = setInterval(refresh,15000); window.addEventListener('focus',refresh); return () => { alive=false;clearInterval(timer);window.removeEventListener('focus',refresh) } }, [])
   const openCount = tickets.filter((t) => t.status === "open").length
 
   function toggleStatus(ticket: AdminSupportTicket) {
     const newStatus = ticket.status === "open" ? "closed" : "open"
     setError(null)
     startTransition(async () => {
+      try {
       const result = await adminSetTicketStatus(ticket.id, newStatus)
       if (result.error) { setError(result.error); return }
       setTickets((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, status: newStatus } : t)))
+      } catch { setError("Could not update ticket status. Please try again.") }
     })
   }
 
@@ -100,9 +105,7 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
 
                   {expanded && (
                     <div className="px-5 pb-5 pl-11">
-                      <div className="bg-[var(--color-surface-container-highest)] rounded-xl px-4 py-3 mb-3">
-                        <p className="text-sm text-[var(--color-on-surface)] whitespace-pre-wrap leading-relaxed">{t.message}</p>
-                      </div>
+                      <CustomerThread kind="support" id={t.id} />
                       <button
                         onClick={() => toggleStatus(t)}
                         disabled={isPending}

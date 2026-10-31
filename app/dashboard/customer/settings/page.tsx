@@ -1,5 +1,6 @@
 'use client'
 
+import { saveCustomerProfile } from "@/app/actions/customer-repairs"
 import {getServicePushPreference,saveServicePushPreference} from "@/app/actions/notification-preferences"
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -51,6 +52,7 @@ export default function SettingsPage() {
   } | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
+  const [profileLoading,setProfileLoading]=useState(true),[profileError,setProfileError]=useState(''),[profileRevision,setProfileRevision]=useState(0)
   const [userId, setUserId] = useState<string | null>(null)
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
@@ -75,10 +77,12 @@ export default function SettingsPage() {
   useEffect(() => {
     let cancelled = false
     async function load() {
+      setProfileLoading(true);setProfileError('')
+      try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) throw new Error('Sign in required')
       if (cancelled) return
       setUserId(user.id)
       setEmail(user.email ?? '')
@@ -88,38 +92,35 @@ export default function SettingsPage() {
         .eq('id', user.id)
         .maybeSingle()
       if (cancelled) return
-      if (error) {
-        console.error(
-          '[v0] settings load error — code:',
-          error.code,
-          error.message,
-        )
-        return
-      }
+      if (error || !data) throw new Error('Profile unavailable')
       const nm = data?.full_name ?? ''
       const ph = data?.phone ?? ''
       setFullName(nm)
       setPhone(ph)
       setInitialFullName(nm)
       setInitialPhone(ph)
+      } catch { if (!cancelled) setProfileError('Could not load your profile. Please try again.') } finally { if (!cancelled) setProfileLoading(false) }
     }
-    load()
+    void load()
     return () => {
       cancelled = true
     }
-  }, [supabase])
+  }, [supabase,profileRevision])
 
   // Load real marketing consent from the database
   useEffect(() => {
     let cancelled = false
     async function loadMarketing() {
-      const { data } = await getMarketingConsent()
+      try {
+      const { data,error } = await getMarketingConsent()
+      if(error) throw new Error(error)
       if (cancelled || !data) return
       setMarketingPrefs({
         email: data.marketing_email_opt_in,
         push: data.marketing_push_opt_in,
       })
       setMarketingLoaded(true)
+      } catch { if (!cancelled) setMarketingMessage({type:'error',text:'Could not load preferences. Please reload settings.'}) }
     }
     loadMarketing()
     return () => {
@@ -133,6 +134,7 @@ export default function SettingsPage() {
     setMarketingPrefs(next)
     setSavingMarketing(true)
     setMarketingMessage(null)
+    try {
     const { error } = await updateMarketingConsent({
       emailOptIn: next.email,
       pushOptIn: next.push,
@@ -144,9 +146,10 @@ export default function SettingsPage() {
       return
     }
     setMarketingMessage({ type: 'success', text: 'Preferences saved.' })
+    } catch { setMarketingPrefs(marketingPrefs);setMarketingMessage({type:'error',text:'Could not save preferences. Please try again.'}) } finally { setSavingMarketing(false) }
   }
 
-  useEffect(()=>{getServicePushPreference().then(r=>{if(r.error)setSaveMessage({type:'error',text:r.error});else setNotifPrefs({email:false,sms:false,push:r.enabled??true})})},[])
+  useEffect(()=>{let alive=true;getServicePushPreference().then(r=>{if(!alive)return;if(r.error)setSaveMessage({type:'error',text:r.error});else setNotifPrefs({email:false,sms:false,push:r.enabled??true})}).catch(()=>{if(alive)setSaveMessage({type:'error',text:'Could not load notification preferences.'})});return()=>{alive=false}},[])
   async function toggleNotif(key:keyof NotifPrefs){
     if(key!=='push'||saving)return;setSaving(true);
     const next=!notifPrefs.push;let r;try{r=await saveServicePushPreference(next)}catch{r={error:'Unable to save preference'}}finally{setSaving(false)}
@@ -154,35 +157,13 @@ export default function SettingsPage() {
   }
 
   async function handleSaveProfile() {
-    if (!userId || saving) return
-    setSaving(true)
-    setSaveMessage(null)
-    const { data: updated, error } = await supabase
-      .from('users')
-      .update({ full_name: fullName, phone })
-      .eq('id', userId)
-      .select('full_name, phone')
-      .single()
-    setSaving(false)
-    if (error) {
-      console.error(
-        '[v0] settings save error — code:',
-        error.code,
-        error.message,
-      )
-      // PGRST116 = 0 rows matched — RLS is blocking the update
-      const msg =
-        error.code === 'PGRST116'
-          ? 'Save blocked — RLS policy missing. Run the SQL fix in your Supabase dashboard.'
-          : error.message || 'Failed to save profile.'
-      setSaveMessage({ type: 'error', text: msg })
-      return
-    }
-    setFullName(updated.full_name ?? fullName)
-    setPhone(updated.phone ?? phone)
-    setInitialFullName(updated.full_name ?? fullName)
-    setInitialPhone(updated.phone ?? phone)
-    setSaveMessage({ type: 'success', text: 'Profile updated successfully.' })
+    if (!userId || saving || profileLoading || profileError) return
+    setSaving(true);setSaveMessage(null)
+    try {
+      const r=await saveCustomerProfile(fullName,phone)
+      if('error' in r){setSaveMessage({type:'error',text:r.error});return}
+      const updated=r.data!;setFullName(updated.full_name);setPhone(updated.phone??'');setInitialFullName(updated.full_name);setInitialPhone(updated.phone??'');setSaveMessage({type:'success',text:'Profile updated successfully.'})
+    }catch{setSaveMessage({type:'error',text:'Could not save your profile. Please try again.'})}finally{setSaving(false)}
   }
 
   function handleDiscardProfile() {
@@ -206,6 +187,7 @@ export default function SettingsPage() {
       return
     }
     setSavingPassword(true)
+    try {
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     setSavingPassword(false)
     if (error) {
@@ -220,6 +202,7 @@ export default function SettingsPage() {
     setNewPassword('')
     setConfirmPassword('')
     setEditing(null)
+    } catch { setPasswordMessage({type:'error',text:'Could not update your password. Please try again.'}) } finally { setSavingPassword(false) }
   }
 
   const profileForm = (
@@ -231,12 +214,16 @@ export default function SettingsPage() {
       }}
     >
       <h2>Profile details</h2>
+      {profileLoading && <p role="status">Loading your profile…</p>}
+      {profileError && <p role="alert" className={styles.error}>{profileError} <button type="button" onClick={()=>setProfileRevision(v=>v+1)}>Try again</button></p>}
       <label>
         Full name
         <input
           className={styles.input}
           type="text"
           autoComplete="name"
+          required
+          disabled={profileLoading || !!profileError}
           maxLength={100}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
@@ -278,7 +265,7 @@ export default function SettingsPage() {
       <div className={styles.formActions}>
         <button
           className={styles.primary}
-          disabled={saving || !userId}
+          disabled={saving || !userId || profileLoading || !!profileError}
           type="submit"
         >
           {saving ? 'Saving…' : 'Save changes'}
@@ -286,7 +273,7 @@ export default function SettingsPage() {
         <button
           type="button"
           className={styles.secondary}
-          disabled={saving}
+          disabled={saving || profileLoading || !!profileError}
           onClick={handleDiscardProfile}
         >
           Discard
