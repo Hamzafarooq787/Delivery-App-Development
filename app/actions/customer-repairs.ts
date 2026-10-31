@@ -1,4 +1,6 @@
 'use server'
+import { after } from 'next/server'
+import { notifyUser } from '@/lib/notifications/internal'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { validateProfile } from '@/lib/customer-validation'
@@ -48,6 +50,13 @@ export async function getCustomerThread(kind:'order'|'support',id:string,before?
 }
 export async function sendCustomerThread(kind:'order'|'support',id:string,key:string,body:string){
  const user=await identity();if(!user||!uuid.test(id)||!uuid.test(key)||!['order','support'].includes(kind)||typeof body!=='string'||!body.trim()||body.trim().length>4000)return {error:'Enter a message of 1–4,000 characters.'}
- const {error}=await createAdminClient().rpc('append_customer_thread',{p_kind:kind,p_id:id,p_actor:user.id,p_key:key,p_body:body.trim()})
+ const admin=createAdminClient()
+ if(kind==='order'){
+   const {data,error}=await admin.rpc('send_customer_order_message',{p_id:id,p_actor:user.id,p_key:key,p_body:body.trim()})
+   if(error)return {error:'Message could not be sent. Please retry.'}
+   if(data?.created&&data.recipient&&data.url)after(async()=>{await notifyUser({userId:data.recipient,title:'New delivery message',body:'A new message is waiting in your order conversation.',url:data.url,tag:`order-message-${key}`})})
+   return {success:true}
+ }
+ const {error}=await admin.rpc('append_customer_thread',{p_kind:kind,p_id:id,p_actor:user.id,p_key:key,p_body:body.trim()})
  return error?{error:'Message could not be sent. Please retry.'}:{success:true}
 }

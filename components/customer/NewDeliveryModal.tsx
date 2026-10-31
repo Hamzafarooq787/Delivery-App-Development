@@ -19,7 +19,6 @@ const BookingRouteMap = dynamic(() => import('./BookingRouteMap'), { ssr: false 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { updateCustomerLocation, clearCustomerLocation } from '@/app/actions/tracking'
 import { startOrderCheckout } from '@/app/actions/order-checkout'
 import { createWalletTopUpSession } from '@/app/actions/payments'
 import { getWalletBalance } from '@/app/actions/wallet'
@@ -413,9 +412,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         setDeliveryValue(`${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`)
       }
       applyPosition(point)
-      const saved = await updateCustomerLocation(point)
-      if (!current()) return
-      if ('error' in saved) throw new Error('Your location was found, but live sharing could not start. Try again or use the address above.')
+      // Before booking, GPS updates this draft's destination only.
+      // Sharing starts explicitly on the selected order's tracking screen.
       setLiveLocationActive(true)
       // A watch has a bounded timeout and is always cancelled on stop/unmount.
       let lastSent = Date.now()
@@ -433,11 +431,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         const p = { lat: next.coords.latitude, lng: next.coords.longitude }
         applyPosition(p)
         void refreshAddress(p)
-        try {
-          const result = await updateCustomerLocation(p)
-          if (current()) setLiveLocationError('error' in result ? { message: 'Live sharing could not update. Check your connection. Your last location is kept.' } : null)
-        } catch { if (current()) setLiveLocationError({ message: 'Live sharing could not update. Check your connection. Your last location is kept.' }) }
-        finally { syncing = false }
+        syncing = false
+
       }, error => {
         if (!current()) return
         setLiveLocationError(locationIssue(error))
@@ -446,7 +441,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           liveWatch.current = null
           locationRequests.current.live++
           setLiveLocationActive(false)
-          void clearCustomerLocation().catch(() => {})
         }
       }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 })
     } catch (error) { if (current()) reportLocationIssue('live', error) }
@@ -461,7 +455,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     setLiveLocationLoading(false)
     setLiveLocationError(null)
     // Keep the last address available for editing instead of discarding it.
-    await clearCustomerLocation().catch(() => {})
   }
 
   // Upload selected item photos directly to Supabase Storage — the delivery
@@ -777,7 +770,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
                     <span className="material-symbols-outlined text-cyan-400 text-lg relative z-10">my_location</span>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-cyan-400">Your live location</p>
+                    <p className="text-xs font-bold text-cyan-400">Your current GPS destination</p>
                     <p className="text-[10px] text-[#adaaaa] truncate">{deliveryValue || 'Getting your location…'}</p>
                   </div>
                 </div>
@@ -812,7 +805,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
               />
               {/* Live location as alternative to typing destination */}
               <div className={styles.liveLocationAction}>
-                <span>Live delivery location</span>
+                <span>Use a moving GPS destination</span>
                 <LocationButton onRequest={() => useLocation('live')} onPosition={position => useLocation('live', position)}
                   onError={error => reportLocationIssue('live', error)} disabled={liveLocationLoading || gpsDestLoading}
                   suspended={!!locationRecovery}

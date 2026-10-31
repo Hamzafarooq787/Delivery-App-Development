@@ -127,14 +127,14 @@ export async function updateCustomerLocation(input: {
   return { ok: true }
 }
 
-export async function clearCustomerLocation(deliveryId?: string) {
+export async function clearCustomerLocation(deliveryId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
-  let q = admin.from("customer_locations").delete().eq("customer_id", user.id)
-  if (deliveryId) q = q.eq("delivery_id",deliveryId)
+  if (typeof deliveryId !== "string" || !/^[0-9a-f-]{36}$/i.test(deliveryId)) return {error:"Select the delivery whose sharing should stop."}
+  const q = admin.from("customer_locations").delete().eq("customer_id", user.id).eq("delivery_id",deliveryId)
   const { error } = await q
   if (error) return { error: error.message }
   return { ok: true }

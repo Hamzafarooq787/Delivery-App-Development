@@ -13,6 +13,8 @@ const GoogleLiveMap = dynamic(
 )
 
 type Props = {
+  centreRequest?: number
+  mapType?: "roadmap" | "satellite"
   onEta?: (eta: {minutes:number;destination:boolean}|null) => void
   status?: string
   bfmStage?: string | null
@@ -32,6 +34,8 @@ type Props = {
 }
 
 export function LiveTrackingPanel({
+  centreRequest = 0,
+  mapType = "roadmap",
   status,
   onEta,
   bfmStage,
@@ -149,6 +153,8 @@ export function LiveTrackingPanel({
         </div>
       )}
       <GoogleLiveMap
+        centreRequest={centreRequest}
+        mapType={mapType}
         drivers={drivers}
         pickup={pickup ? { lng: pickup.lng, lat: pickup.lat } : null}
         destination={destination ? { lng: destination.lng, lat: destination.lat } : null}

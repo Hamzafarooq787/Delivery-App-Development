@@ -7,6 +7,6 @@ export function shoppingFinancials(order: ShoppingFinancialOrder, payment?: { am
   const actual = settled ? Number(order.actual_items_total) : null
   const unused = actual == null ? null : Math.max(0, Math.round((prepaid - actual) * 100) / 100)
   const refunds = payment?.refund_jobs ?? []
-  const returned = order.payment_method !== 'stripe' && settled ? unused ?? 0 : refunds.filter(r=>r.state==='succeeded').reduce((sum,r)=>sum+Number(r.amount),0)
+  const returned = payment?.refund_jobs !== undefined ? refunds.filter(r=>r.state==='succeeded').reduce((sum,r)=>sum+Number(r.amount),0) : order.payment_method !== 'stripe' && settled ? unused ?? 0 : 0
   return { fees, prepaid, charged, actual, unused, returned, retained: Math.max(0, Math.round((charged-returned)*100)/100), refunds }
 }

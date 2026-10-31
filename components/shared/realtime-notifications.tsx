@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { notificationDestination } from '@/lib/notification-destination'
 import { toast } from "sonner"
 import { playNotificationSound, primeAudio, requestNotificationPermission } from "@/lib/notification-sound"
 
@@ -14,6 +15,7 @@ type Notif = {
   body: string
   at: number
   read: boolean
+  action_url?:string|null
 }
 
 type Props = {
@@ -76,9 +78,13 @@ function getClickAction(
   role: NotifRole,
   router: ReturnType<typeof useRouter>,
   closePanel: () => void,
+  actionUrl?:string|null,
 ) {
   function go(path: string) { closePanel(); router.push(path) }
   function event(name: string) { closePanel(); window.dispatchEvent(new CustomEvent(name)) }
+
+  const destination=notificationDestination(actionUrl,role)
+  if(destination)return ()=>go(destination)
 
   // Chat
   if (title.includes("New Driver Message") || title.includes("Support Reply") || title.includes("Chat")) {
@@ -152,13 +158,14 @@ function actionLabel(title: string, role: NotifRole): string | null {
 // ══════════════════════════════════════════════════════════════════════════
 
 // Set to true to re-enable in-app realtime notifications and chat notification toasts.
-const REALTIME_NOTIFICATIONS_ENABLED = false
+const REALTIME_NOTIFICATIONS_ENABLED = true
 
 export function RealtimeNotifications({ role, userId, icon }: Props) {
   const router  = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const [notifs, setNotifs]   = useState<Notif[]>([])
   const [open, setOpen]       = useState(false)
+  const noticeRevision = useRef(0)
   const panelRef = useRef<HTMLDivElement>(null)
   const [, tick] = useState(0)
 
@@ -193,35 +200,43 @@ export function RealtimeNotifications({ role, userId, icon }: Props) {
   // Initial load
   useEffect(() => {
     if (!userId) return
-    supabase
+    let alive=true
+    const refresh=()=>{const revision=noticeRevision.current;return Promise.resolve(supabase
       .from("notifications")
-      .select("id, title, body, read, created_at")
+      .select("id, title, body, read, created_at, action_url")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(50)
+      .limit(50))
       .then(({ data }) => {
-        if (!data) return
+        if (!data || !alive || revision!==noticeRevision.current) return
         setNotifs(data.map((r) => ({
-          id: r.id, title: r.title, body: r.body,
+          id: r.id, title: r.title, body: r.body, action_url:r.action_url,
           at: new Date(r.created_at).getTime(), read: r.read,
         })))
-      })
+      }).catch(()=>{})}
+    void refresh()
+    const onFocus=()=>{if(document.visibilityState==='visible')void refresh()}
+    const timer=setInterval(onFocus,20000);window.addEventListener('focus',onFocus)
+    return()=>{alive=false;clearInterval(timer);window.removeEventListener('focus',onFocus)}
   }, [supabase, userId])
 
   // Realtime subscription
   useEffect(() => {
     if (!REALTIME_NOTIFICATIONS_ENABLED) return
     if (!userId) return
+    let alive=true
     let channel: ReturnType<typeof supabase.channel> | null = null
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if(!alive)return
       if (session?.access_token) supabase.realtime.setAuth(session.access_token)
       channel = supabase
         .channel(`notifications-${userId}`)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
           (payload) => {
             const row = payload.new as any
-            if (!row) return
-            const n: Notif = { id: row.id, title: row.title, body: row.body, at: new Date(row.created_at).getTime(), read: false }
+            if (!row || !alive) return
+            noticeRevision.current++
+            const n: Notif = { id: row.id, title: row.title, body: row.body, action_url:row.action_url, at: new Date(row.created_at).getTime(), read: false }
             setNotifs((prev) => prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50))
             showBrowserNotification(n.title, n.body)
             playNotificationSound()
@@ -261,12 +276,12 @@ export function RealtimeNotifications({ role, userId, icon }: Props) {
                 { duration: 8000 }
               )
             } else {
-              toast(n.title, { description: n.body, duration: 6000, icon: toastIcon(n.title), closeButton: true })
+              toast(n.title, { description: n.body, duration: 6000, icon: toastIcon(n.title), closeButton: true, ...(notificationDestination(n.action_url,role)?{action:{label:"Open order",onClick:()=>router.push(notificationDestination(n.action_url,role)!)}}:{}) })
             }
           })
         .subscribe((_, err) => { if (err) console.error("[notif] subscription error", err) })
-    })
-    return () => { if (channel) supabase.removeChannel(channel) }
+    }).catch(()=>{})
+    return () => { alive=false;if (channel) supabase.removeChannel(channel) }
   }, [supabase, userId])
 
   // Close on outside click (desktop) or Escape
@@ -289,11 +304,13 @@ export function RealtimeNotifications({ role, userId, icon }: Props) {
   }, [open])
 
   function markAllRead() {
+    noticeRevision.current++
     setNotifs((prev) => prev.map((n) => ({ ...n, read: true })))
     supabase.from("notifications").update({ read: true }).eq("user_id", userId).eq("read", false).then(() => {})
   }
 
   function clearAll() {
+    noticeRevision.current++
     setNotifs([])
     supabase.from("notifications").delete().eq("user_id", userId).then(() => {})
   }
@@ -419,13 +436,16 @@ export function RealtimeNotifications({ role, userId, icon }: Props) {
               <div className="px-3 space-y-1">
                 {notifs.map((n) => {
                   const s      = notifStyle(n.title)
-                  const action = getClickAction(n.title, role, router, closePanel)
-                  const hint   = actionLabel(n.title, role)
+                  const action = getClickAction(n.title, role, router, closePanel,n.action_url)
+                  const hint   = notificationDestination(n.action_url,role)?"Open order conversation →":actionLabel(n.title, role)
                   const clickable = action !== null
 
                   return (
                     <div
                       key={n.id}
+                      role={clickable?"button":undefined}
+                      tabIndex={clickable?0:undefined}
+                      onKeyDown={e=>{if(action&&(e.key==="Enter"||e.key===" ")){e.preventDefault();action()}}}
                       onClick={action ?? undefined}
                       className={`
                         relative rounded-2xl px-4 py-3.5 border-l-[3px] transition-all duration-150 select-none

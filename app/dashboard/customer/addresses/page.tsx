@@ -27,6 +27,7 @@ export default function AddressesPage() {
   const gpsVersion=useRef(0)
   const [coords,setCoords]=useState<{lat:number;lng:number}|null>(null)
   const [revision,setRevision]=useState(0)
+  const [deleting,setDeleting]=useState<string|null>(null)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<string | null>(null)
   const [locating, setLocating] = useState(false)
@@ -160,18 +161,13 @@ export default function AddressesPage() {
     if (!userId) return
     const ok = window.confirm('Delete this address?')
     if (!ok) return
-    const { error } = await supabase
-      .from('addresses')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId)
-    if (error) {
-      console.error('[v0] delete address error', error)
-      window.alert(error.message || 'Failed to delete address.')
-      return
-    }
-    setAddresses((prev) => prev.filter((a) => a.id !== id))
-    if (editingId === id) closeForm()
+    if(deleting)return
+    setDeleting(id);setErrorMsg(null)
+    try {
+      const {data,error}=await supabase.from('addresses').delete().eq('id',id).eq('user_id',userId).select('id').single()
+      if(error||!data)throw new Error('Delete not confirmed')
+      setAddresses(prev=>prev.filter(a=>a.id!==id));if(editingId===id)closeForm()
+    }catch{setErrorMsg('Could not confirm address deletion. Please try again or reload your addresses.')}finally{setDeleting(null)}
   }
 
   const current = Math.min(
@@ -285,6 +281,7 @@ export default function AddressesPage() {
                     </button>
                     <button
                       className={styles.secondary}
+                      disabled={!!deleting}
                       aria-label={`Delete ${addr.address}`}
                       onClick={() => handleDelete(addr.id)}
                     >

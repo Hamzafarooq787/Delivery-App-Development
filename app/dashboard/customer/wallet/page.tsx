@@ -6,52 +6,12 @@ import { toast } from 'sonner'
 import Header from '@/components/customer/Header'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import { SubTabs } from '@/components/ui/sub-tabs'
-import { getWalletBalance, getWalletTransactions } from '@/app/actions/wallet'
+import { getWalletBalance } from '@/app/actions/wallet'
 import { createWalletTopUpSession, verifyWalletTopupSession } from '@/app/actions/payments'
-import { createClient } from '@/lib/supabase/client'
-import type { WalletTransaction } from '@/app/actions/wallet'
+import { WalletHistory } from '@/components/customer/WalletHistory'
+import { useCustomerLiveRefresh } from '@/hooks/use-customer-live-refresh'
 
 const QUICK_AMOUNTS = [5, 10, 20, 50]
-
-const TX_META: Record<
-  WalletTransaction['type'],
-  { icon: string; iconColor: string; bgColor: string; label: string }
-> = {
-  topup: {
-    icon: 'add_circle',
-    iconColor: 'text-[#6ee7b7]',
-    bgColor: 'bg-[#6ee7b7]/10',
-    label: 'Top Up',
-  },
-  cashback: {
-    icon: 'replay',
-    iconColor: 'text-[#60a5fa]',
-    bgColor: 'bg-[#60a5fa]/10',
-    label: 'Cashback',
-  },
-  cancellation_fee: {
-    icon: 'remove_circle',
-    iconColor: 'text-[#ff6e84]',
-    bgColor: 'bg-[#ff6e84]/10',
-    label: 'Cancellation Fee',
-  },
-  deduction: {
-    icon: 'remove_circle',
-    iconColor: 'text-[#fb923c]',
-    bgColor: 'bg-[#fb923c]/10',
-    label: 'Deduction',
-  },
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 export default function WalletPage() {
   // useSearchParams() requires a Suspense boundary during prerendering
@@ -64,7 +24,6 @@ export default function WalletPage() {
 
 function WalletPageInner() {
   const [balance, setBalance] = useState<number>(0)
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -85,14 +44,9 @@ function WalletPageInner() {
   async function loadData() {
     setLoading(true)
     try {
-    const [balRes, txRes] = await Promise.all([
-      getWalletBalance(),
-      getWalletTransactions(),
-    ])
-    if (balRes.error || txRes.error) throw new Error('Could not load wallet.')
-    setLoadError('')
-    setBalance(balRes.balance)
-    setTransactions(txRes.data)
+    const balRes = await getWalletBalance()
+    if (balRes.error) throw new Error('Could not load wallet.')
+    setLoadError(''); setBalance(balRes.balance)
     return balRes.balance
     } catch { setLoadError('Could not load your wallet. Please try again.'); return null } finally { setLoading(false) }
   }
@@ -101,39 +55,7 @@ function WalletPageInner() {
     loadData()
   }, [])
 
-  // Live-update the balance the instant the Stripe webhook credits it —
-  // don't rely solely on a fixed timeout, since webhook delivery time varies
-  // (cold starts, retries). Falls back to polling below if the realtime
-  // socket can't connect.
-  useEffect(() => {
-    const supabase = createClient()
-    let alive = true
-    let channel: ReturnType<typeof supabase.channel> | null = null
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user || !alive) return
-      channel = supabase
-        .channel(`wallet-balance-${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'wallet_balances',
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => {
-            loadData()
-          },
-        )
-        .subscribe()
-    }).catch(() => setLoadError('Could not connect to wallet updates.'))
-
-    return () => {
-      alive = false
-      if (channel) supabase.removeChannel(channel)
-    }
-  }, [])
+  useCustomerLiveRefresh(loadData,'wallet_balances',20000)
 
   // Keep the session stable while polling; clearing the URL must not cancel confirmation.
   useEffect(() => {
@@ -283,74 +205,7 @@ function WalletPageInner() {
             </p>
           </div>
 
-          {/* ── Transaction History ── */}
-          <div>
-            <h3 className="text-sm font-bold text-[#adaaaa] uppercase tracking-widest mb-3">
-              Transaction History
-            </h3>
-
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="bg-[#1a1919] rounded-xl h-16 animate-pulse"
-                  />
-                ))}
-              </div>
-            ) : transactions.length === 0 ? (
-              <div className="bg-[#1a1919] border border-[#494847]/20 rounded-2xl px-6 py-12 flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-2xl bg-[#262626] flex items-center justify-center mb-3">
-                  <span className="material-symbols-outlined text-[#adaaaa] text-2xl">
-                    receipt_long
-                  </span>
-                </div>
-                <p className="text-sm font-bold text-white">
-                  No transactions yet
-                </p>
-                <p className="text-xs text-[#adaaaa] mt-1">
-                  Top up your wallet to get started.
-                </p>
-              </div>
-            ) : (
-              <div className="bg-[#1a1919] border border-[#494847]/20 rounded-2xl overflow-hidden">
-                {transactions.map((tx, idx) => {
-                  const meta = TX_META[tx.type] ?? TX_META.deduction
-                  const isCredit = tx.amount > 0
-                  return (
-                    <div
-                      key={tx.id}
-                      className={`flex items-center gap-4 px-4 py-4 ${idx < transactions.length - 1 ? 'border-b border-[#494847]/10' : ''}`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${meta.bgColor}`}
-                      >
-                        <span
-                          className={`material-symbols-outlined text-xl ${meta.iconColor}`}
-                          style={{ fontVariationSettings: "'FILL' 1" }}
-                        >
-                          {meta.icon}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {tx.description ?? meta.label}
-                        </p>
-                        <p className="text-xs text-[#adaaaa] mt-0.5">
-                          {formatDate(tx.created_at)}
-                        </p>
-                      </div>
-                      <p
-                        className={`text-sm font-black tabular-nums shrink-0 ${isCredit ? 'text-[#6ee7b7]' : 'text-[#ff6e84]'}`}
-                      >
-                        {isCredit ? '+' : ''}£{Math.abs(tx.amount).toFixed(2)}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+          <WalletHistory />
         </div>
       </main>
 

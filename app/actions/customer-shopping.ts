@@ -19,11 +19,12 @@ export async function getCustomerShoppingDetails(orderId: string): Promise<{ dat
     .select('id,status,bfm_stage,shop_name,service_type,price,max_spend_approved,estimated_items_total,actual_items_total,receipt_url,shopping_hold_settled_at,payment_method')
     .eq('id',orderId).eq('customer_id',user.id).eq('service_type','buy_for_me').maybeSingle()
   if (error || !order) return { error: 'Shopping order is unavailable.' }
-  const [items, decisions, payment] = await Promise.all([
+  const [items, decisions, payment, walletRefunds] = await Promise.all([
     db.from('shopping_items').select('id,delivery_id,name,quantity,estimated_price,actual_price,brand_size_variant,notes,photo_url,substitution_preference,status,created_at,confirmed_unit_price').eq('delivery_id',orderId).order('created_at'),
     db.from('shopping_substitutions').select('id,shopping_item_id,suggested_name,suggested_price,driver_notes,photo_url,customer_approved,customer_responded_at').eq('delivery_id',orderId).order('created_at'),
     db.from('payments').select('amount,payment_method,refund_jobs').eq('delivery_id',orderId).maybeSingle(),
+    order.payment_method !== 'stripe' ? db.from('wallet_transactions').select('id,amount,created_at').eq('user_id',user.id).eq('delivery_id',orderId).eq('type','cashback').order('created_at') : Promise.resolve({data:[],error:null}),
   ])
-  if (items.error || decisions.error || payment.error) return { error: 'Shopping details could not load. Please retry.' }
-  return { data: { order, items: items.data as ShoppingItemRow[], decisions: decisions.data as ShoppingDecision[], payment: payment.data } }
+  if (items.error || decisions.error || payment.error || walletRefunds.error) return { error: 'Shopping details could not load. Please retry.' }
+  return { data: { order, items: items.data as ShoppingItemRow[], decisions: decisions.data as ShoppingDecision[], payment: order.payment_method === 'stripe' ? payment.data : {amount:Number(payment.data?.amount??order.price),payment_method:'wallet',refund_jobs:(walletRefunds.data??[]).filter(r=>Number(r.amount)>0).map(r=>({key:r.id,amount:Number(r.amount),state:'succeeded'}))} } }
 }
