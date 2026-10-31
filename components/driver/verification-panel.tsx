@@ -172,6 +172,9 @@ export function VerificationPanel({
         <p className="text-[var(--color-on-surface-variant)] max-w-2xl leading-relaxed">
           Upload your compliance documents below. Once submitted, our team typically reviews within 24 hours.
         </p>
+        <p className="mt-2 text-sm text-[var(--brand-soft)]">
+          Changing approved documents or vehicles requires another review. Finish any active delivery first.
+        </p>
       </div>
 
       {uploadError && (

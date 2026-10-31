@@ -33,25 +33,17 @@ export async function updateMyLocation(input: {
   const { data: profile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
   if (profile?.status !== "approved") return { error: "Approved driver required" }
   if (!input.delivery_id) return { error: "Active job required" }
-  const { data: job } = await admin.from("delivery_requests").select("id").eq("id", input.delivery_id).eq("driver_id", user.id).in("status", ["accepted", "collected", "picked_up", "in_transit"]).maybeSingle()
-  if (!job) return { error: "Active assigned job required" }
   const measured = input.measured_at ? Date.parse(input.measured_at) : Date.now()
   if (!Number.isFinite(measured) || measured > Date.now() + 5000 || Date.now() - measured > 45000) return { error: "Waiting for a fresh GPS position" }
-  const { error } = await admin.from("driver_locations").upsert(
-    {
-      driver_id: user.id,
-      delivery_id: input.delivery_id ?? null,
-      lat: input.lat,
-      lng: input.lng,
-      heading: input.heading ?? null,
-      speed: input.speed ?? null,
-      accuracy: input.accuracy ?? null,
-      updated_at: new Date(measured).toISOString(),
-    },
-    { onConflict: "driver_id" }
-  )
+  const { data, error } = await admin.rpc("publish_driver_location", {
+    p_driver: user.id, p_job: input.delivery_id,
+    p_lat: input.lat, p_lng: input.lng,
+    p_heading: input.heading ?? null, p_speed: input.speed ?? null,
+    p_accuracy: input.accuracy ?? null, p_measured: new Date(measured).toISOString(),
+  })
 
-  if (error) return { error: error.message }
+  if (error) return { error: "Location could not be saved for this active delivery. Please retry." }
+  if (!data) return { error: "Waiting for a newer GPS position." }
   return { ok: true }
 }
 
@@ -92,9 +84,9 @@ export async function clearMyLocation(deliveryId?: string | null) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  if (!deliveryId) return { error: "Active delivery required." }
   const admin = createAdminClient()
-  let query=admin.from("driver_locations").delete().eq("driver_id",user.id)
-  if(deliveryId)query=query.eq("delivery_id",deliveryId)
+  const query=admin.from("driver_locations").delete().eq("driver_id",user.id).eq("delivery_id",deliveryId)
   const {error}=await query
   if (error) return { error: error.message }
   return { ok: true }

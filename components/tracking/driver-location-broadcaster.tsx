@@ -41,9 +41,9 @@ export function DriverLocationBroadcaster({
       registration: ServiceWorkerRegistration | null = null;
     const post = (message: object) =>
       registration?.active?.postMessage(message);
-    if (disabled) {
+    if (disabled || !deliveryId) {
       setStatus("idle");
-      void clearMyLocation(deliveryId);
+      if (deliveryId) void clearMyLocation(deliveryId);
       return;
     }
     if (!navigator.geolocation) {

@@ -201,11 +201,20 @@ export async function getAvailableDeliveries() {
   // all. This is defense-in-depth alongside the client-side onboarding
   // gate in DriverLayoutClient, which only hides the UI.
   if (user) {
-    const { data: profile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
-    if (profile?.status !== "approved") {
+    const [profile, caller] = await Promise.all([
+      admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle(),
+      admin.from("users").select("role").eq("id", user.id).maybeSingle(),
+    ])
+    if (profile.error || caller.error || profile.data?.status !== "approved" || caller.data?.role !== "driver") {
       return { error: "Your account must be verified before you can view available jobs.", data: [] }
     }
   }
+
+  const { count: activeCount, error: activeError } = await admin.from("delivery_requests")
+    .select("id", { count: "exact", head: true }).eq("driver_id", user.id)
+    .in("status", ["accepted", "collected", "picked_up", "in_transit"])
+  if (activeError) return { error: "Available jobs could not load. Please retry.", data: [] }
+  if (activeCount) return { error: "Finish your active delivery before accepting another job.", data: [] }
 
   // Job matching: only show deliveries this driver's vehicles can carry.
   // Uses the UNION of capabilities across ALL of the driver's registered
@@ -219,6 +228,7 @@ export async function getAvailableDeliveries() {
       .eq("driver_id", user.id)
     const types = (vehicles ?? []).map((v) => v.vehicle_type as VehicleType)
     allowedSizes = unionCapabilities(types)
+    if (!allowedSizes.length) return { error: "Register a suitable vehicle before viewing jobs.", data: [] }
   }
 
   let query = admin
@@ -298,7 +308,11 @@ export async function acceptDelivery(deliveryId: string) {
     .select("id")
     .maybeSingle()
 
-  if (error) return { error: error.message }
+  if (error) return { error: error.message.includes("driver_has_active_job")
+    ? "Finish your active delivery before accepting another job."
+    : error.message.includes("driver_not_approved")
+      ? "Your account needs approval before accepting jobs."
+      : "This job could not be accepted. Refresh and try again." }
   if (!updatedDelivery) return { error: "This job was already accepted by another driver." }
 
   // Auto-set driver online when they accept a job

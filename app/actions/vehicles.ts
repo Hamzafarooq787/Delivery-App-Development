@@ -46,6 +46,17 @@ export type VehicleInput = {
 const VEHICLE_COLUMNS =
   "id, vehicle_type, make, model, colour, registration_number, driving_licence_details, insurance_details, created_at"
 
+function vehicleSaveError(message: string) {
+  return message.includes("finish_active_job")
+    ? "Finish your active delivery before changing vehicles."
+    : "Vehicle could not be saved. Please retry."
+}
+
+function refreshVehicleReview() {
+  revalidatePath("/dashboard/driver", "layout")
+  revalidatePath("/dashboard/admin/verification")
+}
+
 // ── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getMyVehicles(): Promise<{ data: DriverVehicle[]; error?: string }> {
@@ -124,8 +135,9 @@ export async function addVehicle(input: VehicleInput): Promise<{ success?: boole
     .select("id")
     .single()
 
-  if (error) return { error: error.message }
+  if (error) return { error: vehicleSaveError(error.message) }
 
+  refreshVehicleReview()
   revalidatePath("/dashboard/driver/verification")
   revalidatePath("/dashboard/driver/settings")
   return { success: true, id: data.id }
@@ -146,8 +158,9 @@ export async function updateVehicle(vehicleId: string, input: VehicleInput): Pro
     .eq("id", vehicleId)
     .eq("driver_id", user.id) // ownership check — never trust vehicleId alone
 
-  if (error) return { error: error.message }
+  if (error) return { error: vehicleSaveError(error.message) }
 
+  refreshVehicleReview()
   revalidatePath("/dashboard/driver/verification")
   revalidatePath("/dashboard/driver/settings")
   return { success: true }
@@ -176,8 +189,9 @@ export async function deleteVehicle(vehicleId: string): Promise<{ success?: bool
     .eq("id", vehicleId)
     .eq("driver_id", user.id)
 
-  if (error) return { error: error.message }
+  if (error) return { error: vehicleSaveError(error.message) }
 
+  refreshVehicleReview()
   revalidatePath("/dashboard/driver/verification")
   revalidatePath("/dashboard/driver/settings")
   return { success: true }
