@@ -2,7 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/server";
-import { notifyDriversOfNewDelivery } from "@/lib/notifications/internal";
+import { notifyDriversOfNewDelivery, notifyMultipleUsers } from "@/lib/notifications/internal";
 export async function fulfillDirectSession(session: Stripe.Checkout.Session) {
   if (
     session.metadata?.type !== "order_booking" ||
@@ -45,7 +45,7 @@ export async function fulfillDirectSession(session: Stripe.Checkout.Session) {
   if (!data.replayed) {
     const { data: order } = await admin
       .from("delivery_requests")
-      .select("pickup_address,package_size")
+      .select("pickup_address,package_size,service_type")
       .eq("id", data.id)
       .single();
     if (order)
@@ -54,6 +54,10 @@ export async function fulfillDirectSession(session: Stripe.Checkout.Session) {
         order.pickup_address,
         order.package_size,
       ).catch(() => {});
+    if (order?.service_type === 'buy_for_me') {
+      const {data: admins} = await admin.from('users').select('id').eq('role','admin');
+      if (admins?.length) await notifyMultipleUsers({userIds:admins.map(a=>a.id),title:'Paid shopping order needs company funding',body:'Assign a driver and verify a funded company purchase card before shopping starts.',url:`/dashboard/admin/orders/${data.id}`,tag:`shopping-funding-${data.id}`}).catch(()=>{});
+    }
   }
   return data as {
     id: string;

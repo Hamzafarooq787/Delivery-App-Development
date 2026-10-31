@@ -35,7 +35,7 @@ const money = (n: number) => new Intl.NumberFormat('en-GB', { style: 'currency',
 const freshItem = (): Item => ({ id: newShoppingRequestId(), name: '', quantity: 1, estimated_price: null, brand_size_variant: null, notes: null, photo_url: null, substitution_preference: 'contact_me' })
 
 function ShoppingSummary({ items, onEdit }: { items: Item[]; onEdit: () => void }) {
-  return <section className={styles.card} aria-label="Shopping summary"><div className={styles.cardHeading}><strong>Your shopping · {items.length} products</strong><button type="button" className={styles.link} onClick={onEdit}>Edit</button></div><div className={styles.summaryRows}>{items.map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Not estimated' : money(i.estimated_price * i.quantity)}</strong></p>)}</div></section>
+  return <section className={styles.card} aria-label="Shopping summary"><div className={styles.cardHeading}><strong>Your shopping · {items.length} products</strong><button type="button" className={styles.link} onClick={onEdit}>Edit</button></div><div className={styles.summaryRows} tabIndex={0} aria-label="Shopping products">{items.map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Not estimated' : money(i.estimated_price * i.quantity)}</strong></p>)}</div></section>
 }
 
 export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
@@ -47,11 +47,8 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [editor, setEditor] = useState<Item | null>(null)
   const [editorError, setEditorError] = useState('')
   const [editorDetails, setEditorDetails] = useState(false)
-  const [listPage, setListPage] = useState(0)
-  const [pageSize, setPageSize] = useState(2)
   const [individual, setIndividual] = useState(false)
   const [replacementIndex, setReplacementIndex] = useState(0)
-  const [reviewPage, setReviewPage] = useState(0)
   const [limitsAccepted, setLimitsAccepted] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [shopName, setShopName] = useState('')
@@ -62,6 +59,10 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [shopInstructions, setShopInstructions] = useState('')
   const [deliveryInstructions, setDeliveryInstructions] = useState('')
   const [quote, setQuote] = useState<ShoppingQuote | null>(null)
+  const [estimate, setEstimate] = useState<ShoppingQuote | null>(null)
+  const [estimating, setEstimating] = useState(false)
+  const [estimateError, setEstimateError] = useState('')
+  const [estimateRetry, setEstimateRetry] = useState(0)
   const [quoting, setQuoting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -80,7 +81,6 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const uploadLock = useRef(false)
   const total = shoppingEstimate(items)
   const maximum = settings?.max_purchase_amount ?? 100
-  const currentPage = Math.min(listPage, Math.max(0, Math.ceil(items.length / pageSize) - 1))
   const savedIds = items.map(i => i.id)
   const persistBooking = useBookingDraft<Draft>('buy_for_me', { items, savedIds, shopName, shopInput, deliveryInput, shop, delivery, shopInstructions, deliveryInstructions }, draft => {
     if (!Array.isArray(draft?.items)) return
@@ -102,7 +102,6 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     const measure = () => {
       if (viewport && viewport.scale !== 1) return
       const height = Math.floor(Math.min(window.innerHeight, viewport?.height ?? window.innerHeight))
-      setPageSize(window.innerWidth < 900 && height < 740 ? 2 : 3)
       frame.current?.style.setProperty('--shopping-height', `${height}px`)
       if (frame.current) { frame.current.style.top = `${viewport?.offsetTop ?? 0}px`; frame.current.dataset.compact = String(height < 700) }
     }
@@ -118,6 +117,20 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     }
   }, [])
   useEffect(() => { if (body.current) body.current.scrollTop = 0; body.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true }) }, [step])
+  useEffect(() => {
+    let active = true
+    setEstimate(null); setEstimateError(''); setEstimating(false)
+    if (step !== 2 || !shop || !delivery || !settings?.enabled) return
+    setEstimating(true)
+    const timer = setTimeout(() => {
+      void getShoppingQuote({shop_lat:shop.lat,shop_lng:shop.lng,delivery_lat:delivery.lat,delivery_lng:delivery.lng,estimated_items_total:total}).then(result => {
+        if (!active) return
+        if ('error' in result) setEstimateError(result.error)
+        else setEstimate(result.data)
+      }).catch(() => { if (active) setEstimateError('Could not calculate the estimate. Please retry.') }).finally(() => { if (active) setEstimating(false) })
+    }, 400)
+    return () => { active = false; clearTimeout(timer) }
+  }, [step, shop?.lat, shop?.lng, delivery?.lat, delivery?.lng, total, settings?.enabled, estimateRetry])
   function invalidate() { quoteVersion.current++; setQuote(null); setQuoting(false); setConfirmed(false); requestKey.current = null; setError('') }
   function cancelGps() { gpsVersion.current++; setLocating(false); setLocationHelp(null) }
   function go(next: number) { if (next < step) invalidate(); cancelGps(); setError(''); setStep(next) }
@@ -130,7 +143,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   async function loadQuote() {
     if (!validItems() || !shop || !delivery || !limitsAccepted) return
     const version = ++quoteVersion.current
-    setStep(4); setReviewPage(0); setQuote(null); setConfirmed(false); setQuoting(true); setError('')
+    setStep(4); setQuote(null); setConfirmed(false); setQuoting(true); setError('')
     try {
       const result = await getShoppingQuote({ shop_lat: shop.lat, shop_lng: shop.lng, delivery_lat: delivery.lat, delivery_lng: delivery.lng, estimated_items_total: total })
       if (!mounted.current || version !== quoteVersion.current) return
@@ -184,9 +197,9 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (shoppingEstimate([...others, cleaned]) > maximum) { setEditorError(`Your estimated shopping must be ${money(maximum)} or less.`); return }
     const exists = items.some(i => i.id === editor.id)
     setItems(prev => exists ? prev.map(i => i.id === editor.id ? cleaned : i) : [...prev, cleaned])
-    setListPage(Math.floor((exists ? items.findIndex(i => i.id === editor.id) : items.length) / pageSize)); invalidate(); closeEditor()
+    invalidate(); closeEditor()
   }
-  function removeItem(id: string) { setItems(prev => prev.filter(i => i.id !== id)); setListPage(0); setReplacementIndex(0); invalidate(); closeEditor() }
+  function removeItem(id: string) { setItems(prev => prev.filter(i => i.id !== id)); setReplacementIndex(0); invalidate(); closeEditor() }
   async function photo(file: File) {
     if (!editor || uploadLock.current) return
     if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) { setEditorError('Choose an image smaller than 10 MB.'); return }
@@ -236,15 +249,14 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
         <h2 id="shopping-title" tabIndex={-1}>{titles[step - 1]}</h2>
         {step === 1 && <div className={styles.layout}><div className={styles.stack}>
           <div className={styles.listHeading}><span>{items.length} of {limits.maxShoppingProducts} products</span><strong>{money(total)} estimated</strong></div>
-          <section className={styles.savedList} aria-label="Added shopping items">
+          <section className={styles.savedList} aria-label="Added shopping items" tabIndex={0}>
             {!items.length && <div className={styles.empty}><ShoppingBag size={36} /><strong>Your shopping list starts here</strong><span>Add a product, quantity and an optional photo.</span></div>}
-            {items.slice(currentPage * pageSize, currentPage * pageSize + pageSize).map(i => <article key={i.id} className={styles.savedItem}>
+            {items.map(i => <article key={i.id} className={styles.savedItem}>
               <div className={styles.itemPhoto}>{i.photo_url ? <ItemPhotoPreview url={i.photo_url} label={`Photo of ${i.name}`} onRemove={() => { setItems(prev => prev.map(x => x.id === i.id ? { ...x, photo_url: null } : x)); invalidate() }} /> : <span aria-hidden="true"><ShoppingBag size={34} /></span>}</div>
               <div className={styles.itemText}><strong>{i.name}</strong><small>{i.brand_size_variant || 'Standard size'} · Qty {i.quantity}</small><b>{i.estimated_price == null ? 'Price not entered' : money(i.estimated_price * i.quantity)}</b></div>
               <button type="button" aria-label={`Edit ${i.name}`} onClick={() => openEditor(i)}><Pencil size={20} /></button>
             </article>)}
           </section>
-          {items.length > pageSize && <div className={styles.itemNav}><button type="button" disabled={!currentPage} onClick={() => setListPage(currentPage - 1)}>Previous</button><span>{currentPage * pageSize + 1}–{Math.min(currentPage * pageSize + pageSize, items.length)} of {items.length}</span><button type="button" disabled={currentPage * pageSize + pageSize >= items.length} onClick={() => setListPage(currentPage + 1)}>Next</button></div>}
           <button className={styles.outline} type="button" disabled={items.length >= limits.maxShoppingProducts} onClick={() => openEditor()}>＋ {items.length ? 'Add another item' : 'Add your first item'}</button>
           <button className={styles.detailsButton} type="button" onClick={() => openEditor(items[0], true)}><Camera size={23} /><span>Photos & item instructions<small>Add a photo or tell us your preferred brand.</small></span><span aria-hidden="true">›</span></button>
           <p className={styles.hint}>Up to {limits.maxShoppingProducts} products · {money(maximum)} shopping limit</p>{settingsError && <p className={styles.error} role="alert">{settingsError}</p>}
@@ -256,15 +268,15 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
           <details className={styles.disclosure}><summary><span className={styles.desktopOnly}>Flat, entrance or access instructions (optional)</span><span className={styles.mobileOnly}>Access & shop instructions (optional)</span></summary><label>Delivery instructions<textarea rows={2} maxLength={500} value={deliveryInstructions} onChange={e => { setDeliveryInstructions(e.target.value); invalidate() }} placeholder="e.g. Flat 4, use the side entrance" /></label><label className={styles.mobileOnly}>Instructions for the shop<textarea rows={2} maxLength={500} value={shopInstructions} onChange={e => { setShopInstructions(e.target.value); invalidate() }} placeholder="Anything your shopper should know?" /></label></details>
           <label className={styles.desktopOnly}>Instructions for the shop (optional)<textarea rows={2} maxLength={500} value={shopInstructions} onChange={e => { setShopInstructions(e.target.value); invalidate() }} placeholder="Anything your shopper should know?" /></label>
           <div className={styles.desktopOnly}><ShoppingSummary items={items} onEdit={() => go(1)} /></div>
-        </div><aside className={styles.mapAside}>{map}<div className={`${styles.card} ${styles.budget}`}><span>Estimated shopping</span><strong>{money(total)}</strong></div></aside></div>}
+        </div><aside className={styles.mapAside}>{map}<div className={`${styles.card} ${styles.budget}`} aria-live="polite"><span>{shop && delivery ? 'Estimated total' : 'Shopping funds budget'}</span><strong>{shop && delivery ? estimate ? money(estimate.totalCharge) : estimating || !estimateError ? 'Calculating…' : 'Unavailable' : money(maximum)}</strong></div>{estimateError && <p className={styles.hint} role="status">{estimateError} <button type="button" className={styles.link} onClick={() => setEstimateRetry(n => n + 1)}>Retry estimate</button></p>}</aside></div>}
         {step === 3 && <div className={styles.layout}><div className={styles.stack}>
-          {individual && <div className={styles.itemNav}><button type="button" disabled={!replacementIndex} onClick={() => setReplacementIndex(p => p - 1)}>Previous</button><span>{replacementItem?.name}</span><button type="button" disabled={replacementIndex >= items.length - 1} onClick={() => setReplacementIndex(p => p + 1)}>Next</button></div>}
+          {individual && <label>Product for replacement preference<select aria-label="Product for replacement preference" value={replacementIndex} onChange={e => setReplacementIndex(Number(e.target.value))}>{items.map((i, n) => <option key={i.id} value={n}>{i.name}</option>)}</select></label>}
           {choices.map(c => <button type="button" key={c.value} className={styles.choice} aria-pressed={individual ? replacementItem?.substitution_preference === c.value : items.every(i => i.substitution_preference === c.value)} onClick={() => { setItems(prev => prev.map(i => !individual || i.id === replacementItem?.id ? { ...i, substitution_preference: c.value } : i)); invalidate() }}><span className={styles.radio} aria-hidden="true" /><span><strong>{c.label}</strong><small>{c.description}</small></span></button>)}
           <p className={styles.hint}>Any higher price needs your approval.</p><label className={styles.check}><input type="checkbox" checked={limitsAccepted} onChange={e => { setLimitsAccepted(e.target.checked); invalidate() }} />My shopping is within {limits.maxShoppingWeightKg} kg total and {limits.maxShoppingDimensionCm} cm per item.</label>
           <button className={styles.link} type="button" onClick={() => { setIndividual(!individual); setReplacementIndex(0) }}>{individual ? 'Apply a choice to all items' : 'Change a specific item'}</button>
         </div><aside className={styles.desktopAside}><ShoppingSummary items={items} onEdit={() => go(1)} /><section className={styles.card}><strong>You stay in control</strong><p className={styles.hint}>Your driver must get approval before buying a replacement or any higher-priced product.</p></section></aside></div>}
         {step === 4 && <div className={`${styles.layout} ${styles.reviewLayout}`}><div className={`${styles.stack} ${styles.reviewDetails}`}>
-          <section className={styles.card}><div className={styles.cardHeading}><strong>{items.length} products</strong><button className={styles.link} type="button" onClick={() => go(1)}>Edit items</button></div><div className={styles.summaryRows}>{items.slice(reviewPage * 2, reviewPage * 2 + 2).map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Not estimated' : money(i.quantity * i.estimated_price)}</strong></p>)}</div>{items.length > 2 && <div className={styles.itemNav}><button type="button" disabled={!reviewPage} onClick={() => setReviewPage(p => p - 1)}>Previous</button><span>{reviewPage * 2 + 1}–{Math.min(reviewPage * 2 + 2, items.length)}</span><button type="button" disabled={reviewPage * 2 + 2 >= items.length} onClick={() => setReviewPage(p => p + 1)}>Next</button></div>}</section>
+          <section className={styles.card}><div className={styles.cardHeading}><strong>{items.length} products</strong><button className={styles.link} type="button" onClick={() => go(1)}>Edit items</button></div><div className={styles.summaryRows} tabIndex={0} aria-label="Shopping products">{items.map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Not estimated' : money(i.quantity * i.estimated_price)}</strong></p>)}</div></section>
           <section className={styles.card}><div className={styles.cardHeading}><strong>Shop</strong><button className={styles.link} type="button" onClick={() => go(2)}>Edit</button></div><p className={styles.addressText}>{shopName}, {shop?.address}</p><strong>Deliver to</strong><p className={styles.addressText}>{delivery?.address}</p></section>
           <button className={styles.link} type="button" onClick={() => go(3)}>Replacement: {items.every(i => i.substitution_preference === items[0]?.substitution_preference) ? choices.find(c => c.value === items[0]?.substitution_preference)?.label : 'Per item'} · Edit</button>
         </div><details className={styles.compactReview}><summary><strong>{items.length} products · {shopName}</strong><span className={styles.reviewExtra}>{items.slice(0, 2).map(i => i.name).join(' · ')}{items.length > 2 ? ` +${items.length - 2} more` : ''}</span><span className={styles.reviewExtra}>Shop: {shop?.address}</span><span>Deliver to {delivery?.address}</span></summary><div className={styles.stack}>
