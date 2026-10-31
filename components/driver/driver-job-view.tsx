@@ -1,4 +1,5 @@
 "use client"
+import { orderMediaUrl } from '@/lib/order-media'
 
 import dynamic from "next/dynamic"
 import Link from "next/link"
@@ -305,8 +306,8 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
               <p className="text-[10px] text-[var(--color-outline-variant)] uppercase mb-2">Customer's Photos</p>
               <div className="flex flex-wrap gap-2">
                 {job.item_photo_urls.map((url) => (
-                  <a key={url} href={url} target="_blank" rel="noreferrer" className="w-16 h-16 rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20 shrink-0">
-                    <img src={url} alt="Item" className="w-full h-full object-cover" />
+                  <a key={url} href={orderMediaUrl(url)} target="_blank" rel="noreferrer" className="w-16 h-16 rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20 shrink-0">
+                    <img src={orderMediaUrl(url)} alt="Item" className="w-full h-full object-cover" />
                   </a>
                 ))}
               </div>

@@ -1,4 +1,5 @@
 "use client"
+import { orderMediaUrl } from '@/lib/order-media'
 
 import { reportShoppingProblem, enableApprovedPurchase } from "@/app/actions/shopping-operations"
 import { useState, useTransition, useEffect } from "react"
@@ -11,7 +12,7 @@ import {
   markItemUnavailable,
   requestSubstitution,
   submitPurchaseReceipt,
-  getShoppingItems,
+  getShoppingWorkflowSnapshot,
   type BfmStage,
   type ShoppingItemRow,
 } from "@/app/actions/shopping"
@@ -71,6 +72,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
   const [shelfPrices,setShelfPrices]=useState<Record<string,string>>({})
   const [problem, setProblem] = useState("")
   const [items, setItems] = useState<ShoppingItemRow[]>([])
+  const [decisions,setDecisions] = useState<{id:string;shopping_item_id:string;suggested_name:string;suggested_price:number;customer_approved:boolean|null}[]>([])
   const [loadingItems, setLoadingItems] = useState(true)
   const [isPending, startTransition] = useTransition()
   const [showOtpModal, setShowOtpModal] = useState(false)
@@ -87,10 +89,18 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
   const currentStage = job.bfm_stage ?? job.status
 
   useEffect(() => {
-    getShoppingItems(job.id).then(({ data }) => {
-      setItems(data)
-      setLoadingItems(false)
-    })
+    let active = true, pending = false
+    const refresh = async () => {
+      if (pending || document.hidden) return
+      pending = true
+      try { const result = await getShoppingWorkflowSnapshot(job.id); if (active && !result.error) { setItems(result.items); setDecisions(result.decisions) } }
+      finally { pending = false; if (active) setLoadingItems(false) }
+    }
+    void refresh().catch(()=>{})
+    const visible = () => { void refresh().catch(()=>{}) }
+    const timer = setInterval(visible,10000)
+    window.addEventListener('focus',visible)
+    return () => { active = false; clearInterval(timer); window.removeEventListener('focus',visible) }
   }, [job.id])
 
   const stageIndex = BFM_STAGES.findIndex((s) => s.stage === currentStage)
@@ -311,8 +321,9 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
                     </span>
                   </div>
 
+                  {decisions.filter(d=>d.shopping_item_id===item.id).map(d=><p key={d.id} className="text-sm text-white">{d.suggested_name} · {fmt(Number(d.suggested_price))} per unit · {d.customer_approved===null ? 'Awaiting customer approval' : d.customer_approved ? 'Customer approved' : 'Customer rejected'}</p>)}
                   {item.photo_url && (
-                    <img src={item.photo_url} alt={item.name} className="w-full h-24 object-cover rounded-lg" />
+                    <img src={orderMediaUrl(item.photo_url)} alt={item.name} className="w-full h-24 object-cover rounded-lg" />
                   )}
 
                   {isShopping && ["pending","substituted","purchased"].includes(item.status) && (
@@ -406,7 +417,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
           <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-3">Purchase Receipt</p>
           {job.receipt_url ? (
             <div className="space-y-2">
-              <img src={job.receipt_url} alt="Receipt" className="w-full rounded-xl object-cover max-h-48" />
+              <img src={orderMediaUrl(job.receipt_url)} alt="Receipt" className="w-full rounded-xl object-cover max-h-48" />
               {job.actual_items_total != null && (
                 <p className="text-sm text-white font-bold">Total spent: {fmt(job.actual_items_total)}</p>
               )}

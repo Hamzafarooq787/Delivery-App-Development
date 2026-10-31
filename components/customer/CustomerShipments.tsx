@@ -11,6 +11,7 @@ import {
   Search,
   Truck,
 } from 'lucide-react'
+import { shoppingFinancials, type RefundRecord } from '@/lib/shopping-summary'
 import { createClient } from '@/lib/supabase/client'
 import { getDriverNamesByIds } from '@/app/actions/driver'
 import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
@@ -28,6 +29,11 @@ import {
 import s from './CustomerPages.module.css'
 
 type Shipment = {
+  max_spend_approved?: number | null
+  actual_items_total?: number | null
+  shopping_hold_settled_at?: string | null
+  payment_method?: string | null
+  payments?: {amount:number;payment_method:string;refund_jobs:RefundRecord[]}[]
   id: string
   tracking_number: string | null
   driver_id: string | null
@@ -85,7 +91,7 @@ export default function CustomerShipments({
         let request = client
           .from('delivery_requests')
           .select(
-            'id,tracking_number,driver_id,pickup_address,delivery_address,item_description,price,status,created_at,service_type,delivered_image_url',
+            'id,tracking_number,driver_id,pickup_address,delivery_address,item_description,price,status,created_at,service_type,delivered_image_url,max_spend_approved,actual_items_total,shopping_hold_settled_at,payment_method,payments(amount,payment_method,refund_jobs)',
             { count: 'exact' },
           )
           .eq('customer_id', user.id)
@@ -156,6 +162,7 @@ export default function CustomerShipments({
       delivered: 'Delivered',
       cancelled: 'Cancelled',
     })[row.status ?? ''] ?? (row.status ?? 'Requested').replaceAll('_', ' ')
+  const totalPaid = (row: Shipment) => row.service_type === 'buy_for_me' ? shoppingFinancials({...row,max_spend_approved:row.max_spend_approved??0},row.payments?.[0]).charged : Number(row.price??0)
   const track = (row: Shipment) => `/dashboard/customer/tracking?id=${row.id}`
   const activeDelivery = rows.find((r) =>
     ['accepted', 'collected', 'in_transit'].includes(r.status ?? ''),
@@ -404,7 +411,7 @@ export default function CustomerShipments({
                     : 'Finding your driver'}
                 </h3>
                 <small>
-                  {status(focus)} · {money(focus.price)}
+                  {status(focus)} · {money(totalPaid(focus))}
                 </small>
               </div>
             </div>
@@ -452,8 +459,9 @@ export default function CustomerShipments({
             </div>
           </div>
           <p style={{ marginBottom: 16 }}>
-            {money(orderDetails.price)} · {status(orderDetails)}
+            {money(totalPaid(orderDetails))} original booking charge · {status(orderDetails)}
           </p>
+          {orderDetails.service_type === 'buy_for_me' && <Link className={s.primary} href={track(orderDetails)}>Shopping items, approvals and receipt</Link>}
           {!history && (
             <CancelOrderButton
               deliveryId={orderDetails.id}

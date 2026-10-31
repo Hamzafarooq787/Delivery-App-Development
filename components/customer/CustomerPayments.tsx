@@ -9,6 +9,7 @@ import {
   RotateCcw,
   ShoppingBag,
 } from 'lucide-react'
+import { shoppingFinancials } from '@/lib/shopping-summary'
 import { createClient } from '@/lib/supabase/client'
 import {
   CustomerDialog,
@@ -24,6 +25,9 @@ type Payment = {
   refund_jobs?: {amount:number;state:string}[]
   shoppingFunds?:number
   serviceFees?:number
+  actualShopping?:number|null
+  unusedShopping?:number|null
+  retainedTotal?:number
   id: string
   delivery_id: string | null
   amount: number
@@ -55,6 +59,7 @@ function PaymentReceipt({
           <dd>{row.status.replaceAll('_', ' ')}</dd>
         </div>
         {!!row.shoppingFunds&&<><div><dt>Service fees</dt><dd>{money(row.serviceFees??0)}</dd></div><div><dt>Prepaid shopping funds</dt><dd>{money(row.shoppingFunds)}</dd></div></>}
+        {row.shoppingFunds ? <><div><dt>Actual receipt total</dt><dd>{row.actualShopping == null ? 'Not settled yet' : money(row.actualShopping)}</dd></div>{row.unusedShopping != null && <div><dt>Unused shopping funds</dt><dd>{money(row.unusedShopping)}</dd></div>}<div><dt>Charged less completed refunds</dt><dd>{money(row.retainedTotal??row.amount)}</dd></div></> : null}
         {row.refund_jobs?.map((refund,i)=><div key={i}><dt>Card refund · {refund.state.replaceAll('_',' ')}</dt><dd>{money(Number(refund.amount))}</dd></div>)}
         <div className={s.total}>
           <dt>Recorded total</dt>
@@ -104,7 +109,7 @@ export default function CustomerPayments() {
         // Existing schema only. Do not assume the separate launch migration exists.
         const { data: deliveries, error: orderError } = await client
           .from('delivery_requests')
-          .select('id,tracking_number,service_type,price,max_spend_approved')
+          .select('id,tracking_number,service_type,price,max_spend_approved,actual_items_total,shopping_hold_settled_at,payment_method')
           .eq('customer_id', user.id)
         if (orderError) throw orderError
         const orders = new Map((deliveries ?? []).map((d) => [d.id, d]))
@@ -122,6 +127,9 @@ export default function CustomerPayments() {
           setRows(
             (data ?? []).map((p) => ({
               ...p,
+              actualShopping:shoppingFinancials(orders.get(p.delivery_id)??{price:0,max_spend_approved:0},p).actual,
+              unusedShopping:shoppingFinancials(orders.get(p.delivery_id)??{price:0,max_spend_approved:0},p).unused,
+              retainedTotal:shoppingFinancials(orders.get(p.delivery_id)??{price:0,max_spend_approved:0},p).retained,
               shoppingFunds:Number(orders.get(p.delivery_id)?.max_spend_approved??0),
               serviceFees:Number(orders.get(p.delivery_id)?.price??0),
               amount: Number(p.amount ?? 0),

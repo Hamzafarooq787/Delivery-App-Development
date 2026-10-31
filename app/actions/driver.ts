@@ -112,12 +112,25 @@ export async function changeDriverPassword(formData: FormData) {
 }
 
 export async function getDriverNamesByIds(driverIds: string[]): Promise<Record<string, string>> {
-  if (driverIds.length === 0) return {}
+  const session = await createClient()
+  const { data: { user } } = await session.auth.getUser()
+  if (!user || !Array.isArray(driverIds)) return {}
+  const ids = [...new Set(driverIds)].filter(id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)).slice(0,100)
+  if (!ids.length) return {}
   const admin = createAdminClient()
+  const { data: caller, error: callerError } = await admin.from('users').select('role').eq('id',user.id).maybeSingle()
+  if (callerError) return {}
+  let allowed = ids
+  if (caller?.role !== 'admin') {
+    const { data: jobs, error } = await admin.from('delivery_requests').select('driver_id').eq('customer_id',user.id).in('driver_id',ids)
+    if (error) return {}
+    allowed = [...new Set((jobs ?? []).map(job=>job.driver_id))].filter((id): id is string => typeof id === 'string')
+  }
+  if (!allowed.length) return {}
   const { data } = await admin
     .from("users")
     .select("id, full_name")
-    .in("id", driverIds)
+    .in("id", allowed)
   const map: Record<string, string> = {}
   for (const u of data ?? []) {
     map[(u as any).id] = (u as any).full_name ?? "Driver"

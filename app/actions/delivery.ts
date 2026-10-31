@@ -1,4 +1,5 @@
 "use server"
+import { ownsOrderPhoto } from "@/lib/order-media"
 
 import { cancelCardBooking } from "@/app/actions/order-checkout"
 import { checkQuoteConsent, deliveryScope } from "@/lib/quote-consent"
@@ -52,6 +53,7 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated", code: "not_authenticated" }
 
+  if (!Array.isArray(params.item_photo_urls ?? []) || params.item_photo_urls?.some(photo=>!ownsOrderPhoto(photo,user.id))) return { error: 'Upload your own item photos before booking.' }
   if (!isPackageSize(params.package_size)) {
     return { error: "Select a package size." }
   }

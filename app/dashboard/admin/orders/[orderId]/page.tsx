@@ -1,3 +1,4 @@
+import { orderMediaUrl } from '@/lib/order-media'
 import {ShoppingItemsHistory} from "@/components/admin/shopping-items-history"
 import { OrderPaymentPanel } from "@/components/admin/order-payment-panel"
 import { ShoppingFundingPanel } from "@/components/admin/shopping-funding-panel"
@@ -149,10 +150,10 @@ export default async function AdminOrderDetailPage({
                   <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">Item Photos</p>
                   <div className="flex flex-wrap gap-2">
                     {order.item_photo_urls.map((url: string) => (
-                      <a key={url} href={url} target="_blank" rel="noreferrer"
+                      <a key={url} href={orderMediaUrl(url)} target="_blank" rel="noreferrer"
                         className="w-16 h-16 rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20 shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="Item" className="w-full h-full object-cover" />
+                        <img src={orderMediaUrl(url)} alt="Item" className="w-full h-full object-cover" />
                       </a>
                     ))}
                   </div>
@@ -239,7 +240,7 @@ export default async function AdminOrderDetailPage({
                 {order.receipt_url && (
                   <div className="sm:col-span-2">
                     <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-2">Purchase Receipt</p>
-                    <a href={order.receipt_url} target="_blank" rel="noreferrer"
+                    <a href={orderMediaUrl(order.receipt_url)} target="_blank" rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-secondary)] hover:underline">
                       <span className="material-symbols-outlined text-sm">receipt_long</span>
                       View Receipt

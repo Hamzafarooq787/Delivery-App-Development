@@ -267,3 +267,9 @@
     height: 34px;
   }
 }
+/* Shopping details stay reachable inside the fixed tracking frame. */
+.trackingContent > aside {
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-outline-variant, #45494c) transparent;
+}
