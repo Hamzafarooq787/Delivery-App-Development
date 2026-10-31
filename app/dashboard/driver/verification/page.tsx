@@ -12,7 +12,7 @@ export default async function VerificationPage() {
   const admin = (await import("@/lib/supabase/admin")).createAdminClient()
 
   const [profileRes, docsRes, vehiclesRes] = await Promise.all([
-    admin.from("driver_profiles").select("status").eq("id", user.id).single(),
+    admin.from("driver_profiles").select("status,verification_submitted_at").eq("id", user.id).single(),
     getMyDocuments(),
     getMyVehicles(),
   ])
@@ -24,6 +24,7 @@ export default async function VerificationPage() {
       driverStatus={driverStatus}
       documents={docsRes.data}
       vehicles={vehiclesRes.data}
+      submittedAt={profileRes.data?.verification_submitted_at}
       userId={user.id}
     />
   )

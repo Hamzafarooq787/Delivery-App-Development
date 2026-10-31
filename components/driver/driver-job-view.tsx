@@ -1,5 +1,7 @@
 "use client"
 import { CustomerThread } from "@/components/shared/customer-thread"
+import { driverEarning } from '@/lib/driver-earnings'
+import { CollectionWaiting } from './collection-waiting'
 import { orderMediaUrl } from '@/lib/order-media'
 
 import dynamic from "next/dynamic"
@@ -50,6 +52,7 @@ type Job = {
   item_description: string | null
   item_photo_urls: string[] | null
   price: number | null
+  driver_earning_quote?: number | null
   parcel_image_url: string | null
   delivered_image_url: string | null
   customer_id: string | null
@@ -122,6 +125,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
         job={{
           id: job.id,
           shop_instructions:job.shop_instructions,delivery_instructions:job.delivery_instructions,
+          pickup_lat:job.pickup_lat,pickup_lng:job.pickup_lng,delivery_lat:job.delivery_lat,delivery_lng:job.delivery_lng,
           status: job.status,
           tracking_number: job.tracking_number,
           delivery_address: job.delivery_address,
@@ -298,7 +302,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
             <div>
               <p className="text-[10px] text-[var(--color-outline-variant)] uppercase mb-0.5">Payout</p>
               <p className="text-sm font-black text-[#6ee7b7]">
-                {job.price != null ? `£${Number(job.price).toFixed(2)}` : "—"}
+                {job.price != null ? `£${driverEarning(job).toFixed(2)}` : "—"}
               </p>
             </div>
           </div>
@@ -341,6 +345,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
 
         {/* Rate the customer — only once delivered */}
         <CustomerThread kind="order" id={job.id} />
+        {job.service_type==='delivery'&&job.status==='accepted'&&<CollectionWaiting id={job.id} driver/>}
         {job.status === "delivered" && <RateCustomerCard deliveryId={job.id} />}
 
         {/* Delivery Timeline */}

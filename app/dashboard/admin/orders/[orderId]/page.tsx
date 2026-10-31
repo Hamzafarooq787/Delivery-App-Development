@@ -188,6 +188,7 @@ export default async function AdminOrderDetailPage({
           </div>
 
           {order.service_type === "buy_for_me" && <ShoppingItemsHistory orderId={orderId} />}
+          {order.collection_wait&&<section className="rounded-xl border border-white/15 bg-[var(--brand-panel)] p-4 text-white"><h3 className="font-bold">Collection waiting request</h3><p>Status: {order.collection_wait.status}</p>{order.collection_wait.amount!=null&&<p>Requested £{Number(order.collection_wait.amount).toFixed(2)} at £{Number(order.collection_wait.rate).toFixed(2)} per minute after 5 free minutes.</p>}<p className="text-sm">Customer approval records consent for review. This feature has not taken a payment or changed driver earnings.</p></section>}
           {cardPayment && <OrderPaymentPanel id={orderId} amount={cardPayment.amount} status={cardPayment.status} refunds={cardPayment.refund_jobs??[]} />}
       {order.service_type === "buy_for_me" && <ShoppingFundingPanel id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
           {/* Buy for Me Details */}

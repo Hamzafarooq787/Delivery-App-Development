@@ -1,80 +1,12 @@
-import { driverEarning } from "@/lib/driver-earnings"
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { getAvailableDeliveries } from '@/app/actions/delivery'
-import {
-  MapFirstDashboard,
-  type DashboardJob,
-} from '@/components/driver/MapFirstDashboard'
-
-export const dynamic = 'force-dynamic'
-
-export default async function DriverDashboard() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('driver_profiles')
-    .select('status, is_online')
-    .eq('id', user.id)
-    .maybeSingle()
-  // The layout shows onboarding for unapproved accounts. Do not fetch offers for them.
-  if (profile?.status !== 'approved') return null
-  const [available, assigned, earnings] = await Promise.all([
-    getAvailableDeliveries(),
-    supabase
-      .from('delivery_requests')
-      .select(
-        'id,status,pickup_address,delivery_address,item_description,price,driver_earning_quote,package_size,service_type,shop_name,created_at',
-      )
-      .eq('driver_id', user.id)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('driver_earnings')
-      .select('amount,created_at,delivery_id')
-      .eq('driver_id', user.id),
-  ])
-  const jobs = assigned.data ?? []
-  const recorded = earnings.data ?? []
-  const covered = new Set(recorded.map((e) => e.delivery_id))
-  // Preserve the deployed earnings fallback and current rates.
-  const merged = [
-    ...recorded,
-    ...jobs
-      .filter(
-        (j) =>
-          j.status === 'delivered' && !covered.has(j.id) && j.price != null,
-      )
-      .map((j) => ({
-        amount: driverEarning(j),
-        created_at: j.created_at,
-        delivery_id: j.id,
-      })),
-  ]
-  const day = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London' })
-  const today = day.format(new Date())
-  const todayRows = merged.filter(
-    (e) => day.format(new Date(e.created_at)) === today,
-  )
-  const activeStatuses = ['accepted', 'collected', 'picked_up', 'in_transit']
-  return (
-    <MapFirstDashboard
-      jobs={(available.data ?? []) as DashboardJob[]}
-      activeJobs={
-        jobs.filter((j) => activeStatuses.includes(j.status)) as DashboardJob[]
-      }
-      todayEarnings={todayRows.reduce(
-        (sum, e) => sum + Number(e.amount ?? 0),
-        0,
-      )}
-      completedToday={new Set(todayRows.map((e) => e.delivery_id)).size}
-      initialOnline={profile.is_online ?? false}
-      dataError={
-        available.error || assigned.error?.message || earnings.error?.message
-      }
-    />
-  )
+import {createClient} from '@/lib/supabase/server'
+import {createAdminClient} from '@/lib/supabase/admin'
+import {getAvailableDeliveries} from '@/app/actions/delivery'
+import {getDriverFinance} from '@/app/actions/driver-operations'
+import {MapFirstDashboard,type DashboardJob} from '@/components/driver/MapFirstDashboard'
+export const dynamic='force-dynamic'
+export default async function DriverDashboard(){
+ const client=await createClient();const {data:{user}}=await client.auth.getUser();if(!user)return null
+ const {data:profile}=await createAdminClient().from('driver_profiles').select('status,is_online').eq('id',user.id).maybeSingle();if(profile?.status!=='approved')return null
+ const [available,active,finance]=await Promise.all([getAvailableDeliveries(),client.from('delivery_requests').select('id,status,pickup_address,delivery_address,item_description,price,driver_earning_quote,package_size,service_type,shop_name,created_at').eq('driver_id',user.id).in('status',['accepted','collected','picked_up','in_transit']).order('created_at',{ascending:false}).limit(20),getDriverFinance()])
+ return <MapFirstDashboard jobs={(available.data??[]) as DashboardJob[]} activeJobs={(active.data??[]) as DashboardJob[]} todayEarnings={Number(finance.data?.totals.today??0)} completedToday={Number(finance.data?.totals.today_jobs??0)} initialOnline={profile.is_online??false} dataError={active.error?.message||finance.error||(!active.data?.length?available.error:undefined)}/>
 }

@@ -26,6 +26,7 @@ const NOTIFICATION_TEMPLATES = [
 ]
 
 const PRICING_FIELDS = [
+  {key:"waitingPerMinute",label:"Collection waiting request per minute (£, 0 = disabled; first 5 minutes free, requires customer approval and support review)",placeholder:"0"},
   {key:"maxShoppingProducts",label:"Maximum different shopping products (15–50)",placeholder:"15"},
   {key:"maxQuantityPerProduct",label:"Maximum quantity per product",placeholder:"10"},
   {key:"maxShoppingWeightKg",label:"Maximum shopping weight (kg)",placeholder:"15"},
@@ -91,7 +92,7 @@ export function SettingsTabsClient({
           return
         }
       }
-      const config = Object.fromEntries(PRICING_FIELDS.map(f => [f.key, Number(pricing[f.key])])) as BookingPricing
+      const config = Object.fromEntries(PRICING_FIELDS.map(f => [f.key, Number(pricing[f.key]??(f.key==='waitingPerMinute'?'0':undefined))])) as BookingPricing
       const result = await saveBookingPricing(config)
       if(!result.error)setHistory(await getBookingPricingHistory())
       setPricingMsg({ text: result.error ?? "Pricing settings saved. New quotes use these rates.", ok: !result.error })

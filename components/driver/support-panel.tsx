@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { createSupportTicket } from "@/app/actions/driver"
+import { useState, useTransition, useEffect, useRef } from "react"
+import { CustomerThread } from "@/components/shared/customer-thread"
+import { createSupportTicket, getDriverTickets } from "@/app/actions/driver"
 import type { SupportTicket } from "@/app/actions/driver"
 
 function TicketStatusBadge({ status }: { status: "open" | "closed" }) {
@@ -27,13 +28,8 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
     startTransition(async () => {
       const result = await createSupportTicket(formData)
       if (result.error) { setError(result.error); return }
-      onCreated({
-        id: Date.now().toString(),
-        subject: formData.get("subject") as string,
-        message: formData.get("message") as string,
-        status: "open",
-        created_at: new Date().toISOString(),
-      })
+      if(!result.data){setError("Your request could not be loaded. Please retry.");return}
+      onCreated(result.data)
       onClose()
     })
   }
@@ -93,18 +89,25 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
 
 export function SupportPanel({
   initialTickets,
+  initialCount=initialTickets.length,
   subtitle = "Get help with your driver account.",
   showChatHint = true,
 }: {
   initialTickets: SupportTicket[]
+  initialCount?:number
   subtitle?: string
   showChatHint?: boolean
 }) {
   const [tickets, setTickets] = useState<SupportTicket[]>(initialTickets)
+  const [page,setPage]=useState(1),[total,setTotal]=useState(initialCount),[selected,setSelected]=useState<string|null>(null),[listError,setListError]=useState(''),[loading,startLoad]=useTransition()
+  const request=useRef(0)
+  function load(next:number){const version=++request.current;startLoad(async()=>{try{const r=await getDriverTickets(next);if(version!==request.current)return;if(r.error)setListError(r.error);else{setTickets(r.data);setTotal(r.count);setPage(next);setListError('')}}catch{setListError('Could not load support requests. Please retry.')}})}
+  useEffect(()=>{const timer=setInterval(()=>{if(!document.hidden)load(page)},30000);return()=>clearInterval(timer)},[page])
   const [showModal, setShowModal] = useState(false)
 
   function handleCreated(t: SupportTicket) {
-    setTickets((prev) => [t, ...prev])
+    setSelected(t.id)
+    load(1)
   }
 
   return (
@@ -142,7 +145,7 @@ export function SupportPanel({
       <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/15 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--color-outline-variant)]/10 flex items-center justify-between">
           <h2 className="text-sm font-bold text-white">My Tickets</h2>
-          <span className="text-xs text-[var(--color-on-surface-variant)]">{tickets.length} total</span>
+          <span className="text-xs text-[var(--color-on-surface-variant)]">{total} total</span>
         </div>
         {tickets.length === 0 ? (
           <div className="py-12 text-center">
@@ -167,7 +170,7 @@ export function SupportPanel({
                       #{t.id.slice(0, 8).toUpperCase()}
                     </td>
                     <td className="px-5 py-3.5 text-sm text-white max-w-xs">
-                      <span className="block truncate" title={t.subject}>{t.subject}</span>
+                      <button onClick={()=>setSelected(t.id)} className="block truncate text-left underline" title={t.subject}>{t.subject}</button>
                     </td>
                     <td className="px-5 py-3.5"><TicketStatusBadge status={t.status} /></td>
                     <td className="px-5 py-3.5 text-xs text-[var(--color-on-surface-variant)] whitespace-nowrap">
@@ -180,6 +183,9 @@ export function SupportPanel({
           </div>
         )}
       </div>
+      {listError&&<p role="alert" className="my-3 text-red-300">{listError}<button onClick={()=>load(page)} className="ml-2 underline">Retry</button></p>}
+      <div className="my-4 flex justify-between text-sm text-white"><button disabled={loading||page===1} onClick={()=>load(page-1)}>Previous</button><span>Page {page} of {Math.max(1,Math.ceil(total/20))}</span><button disabled={loading||page*20>=total} onClick={()=>load(page+1)}>Next</button></div>
+      {selected&&<CustomerThread key={selected} kind="support" id={selected}/>}
     </div>
   )
 }

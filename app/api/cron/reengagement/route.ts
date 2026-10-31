@@ -28,11 +28,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 503 })
   }
   const auth = request.headers.get("authorization")
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const admin = createAdminClient()
+  const compliance=await admin.rpc("driver_compliance_reminders")
+  if(compliance.error)return NextResponse.json({error:"Driver compliance check failed"},{status:500})
 
   const { data: settings } = await admin.from("reengagement_settings").select("*").eq("id", true).maybeSingle()
   if (!settings || !settings.enabled) {

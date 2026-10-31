@@ -3,12 +3,14 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
+import { driverComplianceReady } from "@/lib/driver-compliance"
 
 export type DriverDocument = {
   id: string
   document_type: string
   file_url: string
   created_at: string
+  expires_on?: string | null
 }
 
 export async function getMyDocuments(): Promise<{ data: DriverDocument[]; error?: string }> {
@@ -19,7 +21,7 @@ export async function getMyDocuments(): Promise<{ data: DriverDocument[]; error?
   const admin = createAdminClient()
   const { data, error } = await admin
     .from("driver_documents")
-    .select("id, document_type, file_url, created_at")
+    .select("id, document_type, file_url, created_at, expires_on")
     .eq("driver_id", user.id)
     .order("created_at", { ascending: false })
 
@@ -27,7 +29,7 @@ export async function getMyDocuments(): Promise<{ data: DriverDocument[]; error?
   return { data: ((data ?? []) as DriverDocument[]).map(d => ({ ...d, file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` })) }
 }
 
-export async function recordDriverDocument(documentType: string, fileUrl: string) {
+export async function recordDriverDocument(documentType: string, fileUrl: string, expiresOn?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
@@ -42,10 +44,13 @@ export async function recordDriverDocument(documentType: string, fileUrl: string
   } catch { return { error: "Invalid document URL" } }
 
   if (!(await documentExists(admin,user.id,fileUrl))) return {error:'Document upload could not be verified. Upload the file again.'}
-  const { error } = await admin.rpc("replace_driver_document", {
+  if (expiresOn && (!/^\d{4}-\d{2}-\d{2}$/.test(expiresOn) || !Number.isFinite(Date.parse(expiresOn)))) return {error:"Enter a valid expiry date."}
+  if (documentType === "insurance" && !expiresOn) return {error:"Enter the insurance expiry date."}
+  const { error } = await admin.rpc("save_driver_document", {
     p_driver: user.id,
     p_type: documentType,
     p_url: fileUrl,
+    p_expires: expiresOn || null,
   })
 
   if (error) return { error: error.message.includes("finish_active_job")
@@ -64,21 +69,20 @@ export async function submitForReview() {
   const admin = createAdminClient()
   const [{ data: caller }, { data: docs, error: docsError }, { data: vehicles, error: vehiclesError }, { data: profile }] = await Promise.all([
     admin.from("users").select("role").eq("id", user.id).maybeSingle(),
-    admin.from("driver_documents").select("document_type,file_url").eq("driver_id", user.id),
-    admin.from("driver_vehicles").select("id").eq("driver_id", user.id),
+    admin.from("driver_documents").select("document_type,file_url,expires_on").eq("driver_id", user.id),
+    admin.from("driver_vehicles").select("id,vehicle_type").eq("driver_id", user.id),
     admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle(),
   ])
   if (caller?.role !== "driver") return { error: "Driver account required." }
   if (profile?.status === "approved") return { error: "Your account is already approved." }
-  if (docsError || vehiclesError || !vehicles?.length || !["identity", "selfie", "insurance", "vehicle_registration"].every(type => docs?.some(d => d.document_type === type))) return { error: "Upload all required documents and add your vehicle before submitting." }
+  if (docsError || vehiclesError || !driverComplianceReady(vehicles??[],docs??[])) return { error: "Add your vehicle and all current required documents, including insurance expiry, before submitting." }
   const stored=await Promise.all((docs??[]).map(d=>documentExists(admin,user.id,d.file_url)))
   if(stored.some(ok=>!ok))return{error:'A required document is missing from storage. Re-upload it before submitting.'}
-  const { error } = await admin
-    .from("driver_profiles")
-    .upsert({ id: user.id, status: "pending" }, { onConflict: "id" })
+  const { error } = await admin.rpc("submit_driver_verification", {p_driver:user.id})
 
   if (error) return { error: error.message }
-  revalidatePath("/dashboard/driver/verification")
+  revalidatePath("/dashboard/driver", "layout")
+  revalidatePath("/dashboard/admin/verification")
   return { success: true }
 }
 
@@ -93,7 +97,7 @@ export async function getDriverDocumentsById(driverId: string): Promise<DriverDo
   }
   const { data } = await admin
     .from("driver_documents")
-    .select("id, document_type, file_url, created_at")
+    .select("id, document_type, file_url, created_at, expires_on")
     .eq("driver_id", driverId)
     .order("created_at", { ascending: false })
   return ((data ?? []) as DriverDocument[]).map(d => ({ ...d, file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` }))

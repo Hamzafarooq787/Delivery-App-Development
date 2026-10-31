@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
+import { getDriverCustomerContact } from "@/app/actions/driver-operations"
+import { DriverRefresh } from "@/components/driver/driver-refresh"
 import { notFound } from "next/navigation"
 import { DriverJobView } from "@/components/driver/driver-job-view"
 
@@ -29,9 +31,7 @@ export default async function JobDetailPage({
   if (error || !job) notFound()
 
   const [customerRes, logsRes] = await Promise.all([
-    job.customer_id
-      ? supabase.from("users").select("full_name, phone, email").eq("id", job.customer_id).single()
-      : Promise.resolve({ data: null }),
+    getDriverCustomerContact(jobId).then(data=>({data})),
     supabase
       .from("delivery_status_logs")
       .select("status, created_at")
@@ -58,11 +58,11 @@ export default async function JobDetailPage({
   })
 
   return (
-    <DriverJobView
+    <><DriverRefresh/><DriverJobView
       job={job}
       customer={customer}
       timelineSteps={timelineSteps}
       userId={user?.id ?? ""}
-    />
+    /></>
   )
 }

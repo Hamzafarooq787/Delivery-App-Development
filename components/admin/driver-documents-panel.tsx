@@ -69,6 +69,7 @@ export function DriverDocumentsPanel({ documents }: { documents: DriverDocument[
               <tr key={doc.id} className="hover:bg-[var(--color-surface-container-high)]/40 transition-colors">
                 <td className="px-5 py-3.5 text-sm font-semibold text-white">
                   {DOC_LABELS[doc.document_type] ?? doc.document_type}
+                  {doc.expires_on&&<p className="text-xs text-gray-300">Expires {doc.expires_on}</p>}
                 </td>
                 <td className="px-5 py-3.5 text-xs text-[var(--color-on-surface-variant)]">{fmtDate(doc.created_at)}</td>
                 <td className="px-5 py-3.5">

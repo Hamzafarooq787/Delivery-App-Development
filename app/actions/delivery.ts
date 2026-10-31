@@ -1,4 +1,5 @@
 "use server"
+import { driverDocumentValid, requiredDriverDocuments } from '@/lib/driver-compliance'
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
 
@@ -189,7 +190,7 @@ export async function submitSupportTicket(formData: FormData) {
 
 // ── Driver actions ────────────────────────────────────────────────────────────
 
-export async function getAvailableDeliveries() {
+export async function getAvailableDeliveries(page=1,search="") {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated", data: [] }
@@ -222,10 +223,14 @@ export async function getAvailableDeliveries() {
   // one can handle, with no "active vehicle" switch.
   let allowedSizes: string[] = []
   if (user) {
-    const { data: vehicles } = await admin
-      .from("driver_vehicles")
-      .select("vehicle_type")
-      .eq("driver_id", user.id)
+    const [vehicleResult,documents] = await Promise.all([
+      admin.from("driver_vehicles").select("vehicle_type").eq("driver_id",user.id),
+      admin.from("driver_documents").select("document_type,expires_on").eq("driver_id",user.id),
+    ])
+    if(vehicleResult.error||documents.error)return {error:'Driver details could not load. Please retry.',data:[]}
+    const vehicles=vehicleResult.data
+    const required=requiredDriverDocuments(vehicles??[])
+    if(documents.data?.some(doc=>required.includes(doc.document_type)&&!driverDocumentValid(doc)))return {error:'A required document has expired. Upload a current copy on the Verification page.',data:[]}
     const types = (vehicles ?? []).map((v) => v.vehicle_type as VehicleType)
     allowedSizes = unionCapabilities(types)
     if (!allowedSizes.length) return { error: "Register a suitable vehicle before viewing jobs.", data: [] }
@@ -233,7 +238,7 @@ export async function getAvailableDeliveries() {
 
   let query = admin
     .from("delivery_requests")
-    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total, driver_earning_quote, distance_miles, duration_min, shopping_limits, shopping_items(name,quantity,brand_size_variant,notes), payments!inner(status)")
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total, driver_earning_quote, distance_miles, duration_min, shopping_limits, shopping_items(name,quantity,brand_size_variant,notes), payments!inner(status)", {count:"exact"})
     .eq("payments.status", "paid")
     .eq("status", "requested")
     .is("driver_id", null)
@@ -245,10 +250,13 @@ export async function getAvailableDeliveries() {
     ? query.or(`package_size.is.null,package_size.in.(${allowedSizes.join(",")})`)
     : query.is("package_size", null)
 
-  const { data, error } = await query
+  const safeSearch=search.replace(/[^\p{L}\p{N}\s-]/gu," ").trim().slice(0,80)
+  if(safeSearch)query=query.or(`pickup_address.ilike.%${safeSearch}%,delivery_address.ilike.%${safeSearch}%,tracking_number.ilike.%${safeSearch}%`)
+  const offset=(Math.max(1,Math.min(Math.trunc(page)||1,1000000))-1)*20
+  const { data, error, count } = await query.order("id",{ascending:false}).range(offset,offset+19)
 
   if (error) return { error: error.message, data: [] }
-  return { data: data ?? [] }
+  return { data: data ?? [],count:count??0 }
 }
 
 export async function acceptDelivery(deliveryId: string) {
@@ -312,6 +320,8 @@ export async function acceptDelivery(deliveryId: string) {
     ? "Finish your active delivery before accepting another job."
     : error.message.includes("driver_not_approved")
       ? "Your account needs approval before accepting jobs."
+      : error.message.includes("driver_documents_expired")
+        ? "A required document has expired. Update your verification documents."
       : "This job could not be accepted. Refresh and try again." }
   if (!updatedDelivery) return { error: "This job was already accepted by another driver." }
 
@@ -585,24 +595,28 @@ export async function safetyReleaseJob(deliveryId: string, reason: string) {
   return { success: true }
 }
 
-export async function getDriverDeliveries(statusFilter?: string) {
+export async function getDriverDeliveries(statusFilter?: string,page=1,search="") {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated", data: [] }
 
   let query = supabase
     .from("delivery_requests")
-    .select("*")
+    .select("id,status,tracking_number,pickup_address,delivery_address,item_description,price,driver_earning_quote,created_at,service_type,package_size",{count:"exact"})
     .eq("driver_id", user.id)
     .order("created_at", { ascending: false })
 
-  if (statusFilter) {
+  if (statusFilter && statusFilter!=="all") {
     query = query.eq("status", statusFilter)
   }
 
-  const { data, error } = await query
+  if(!statusFilter)query=query.in("status",["accepted","collected","picked_up","in_transit"])
+  const safeSearch=search.replace(/[^\p{L}\p{N}\s-]/gu," ").trim().slice(0,80)
+  if(safeSearch)query=query.or(`pickup_address.ilike.%${safeSearch}%,delivery_address.ilike.%${safeSearch}%,tracking_number.ilike.%${safeSearch}%`)
+  const offset=(Math.max(1,Math.min(Math.trunc(page)||1,1000000))-1)*20
+  const { data, error,count } = await query.order("id",{ascending:false}).range(offset,offset+19)
   if (error) return { error: error.message, data: [] }
-  return { data: data ?? [] }
+  return { data: data ?? [],count:count??0 }
 }
 
 export async function getDriverEarnings() {
@@ -806,11 +820,10 @@ export async function adminApproveDriver(driverId: string) {
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
-  const { error } = await admin
-    .from("driver_profiles")
-    .upsert({ id: driverId, status: "approved" }, { onConflict: "id" })
+  const session=await createClient();const {data:{user}}=await session.auth.getUser()
+  const { error } = await admin.rpc('approve_driver_verification',{p_driver:driverId,p_actor:user!.id})
 
-  if (error) return { error: error.message }
+  if (error) return { error: "Driver approval could not be saved. Check that the application was submitted and all required documents are current." }
   revalidatePath("/dashboard/admin/drivers")
   revalidatePath(`/dashboard/admin/drivers/${driverId}`)
   revalidatePath("/dashboard/admin/verification")
@@ -1015,7 +1028,7 @@ export type PendingVerificationDriver = {
   phone: string
   vehicles: DriverVehicle[]
   submitted_at: string
-  documents: { document_type: string; file_url: string }[]
+  documents: { document_type: string; file_url: string; expires_on?:string|null }[]
 }
 
 export async function adminGetPendingVerifications(): Promise<{ data: PendingVerificationDriver[]; error?: string }> {
@@ -1024,8 +1037,8 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
 
   const { data: profiles, error: profilesErr } = await admin
     .from("driver_profiles")
-    .select("id, created_at")
-    .eq("status", "pending")
+    .select("id, created_at,verification_submitted_at")
+    .eq("status", "pending").not("verification_submitted_at","is",null)
     .order("created_at", { ascending: false })
 
   if (profilesErr) return { data: [], error: profilesErr.message }
@@ -1035,7 +1048,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
 
   const [usersRes, docsRes, vehiclesRes, authRes] = await Promise.all([
     admin.from("users").select("id, full_name, phone, email").in("id", ids),
-    admin.from("driver_documents").select("id, driver_id, document_type, file_url").in("driver_id", ids),
+    admin.from("driver_documents").select("id, driver_id, document_type, file_url,expires_on").in("driver_id", ids),
     admin.from("driver_vehicles").select(
       "id, driver_id, vehicle_type, make, model, colour, registration_number, driving_licence_details, insurance_details, created_at"
     ).in("driver_id", ids),
@@ -1046,10 +1059,10 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
     (authRes.data?.users ?? []).map((u) => [u.id, u.email ?? ""])
   )
   const userMap = new Map((usersRes.data ?? []).map((u) => [u.id, u]))
-  const docsMap = new Map<string, { document_type: string; file_url: string }[]>()
+  const docsMap = new Map<string, { document_type: string; file_url: string; expires_on?:string|null }[]>()
   for (const doc of docsRes.data ?? []) {
     const arr = docsMap.get(doc.driver_id) ?? []
-    arr.push({ document_type: doc.document_type, file_url: `/api/driver-document?id=${encodeURIComponent(doc.id)}` })
+    arr.push({ document_type: doc.document_type,expires_on:doc.expires_on, file_url: `/api/driver-document?id=${encodeURIComponent(doc.id)}` })
     docsMap.set(doc.driver_id, arr)
   }
   const vehiclesMap = new Map<string, DriverVehicle[]>()
@@ -1068,7 +1081,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
       email: emailMap.get(p.id) ?? u?.email ?? "",
       phone: u?.phone ?? "",
       vehicles: vehiclesMap.get(p.id) ?? [],
-      submitted_at: p.created_at ?? "",
+      submitted_at: p.verification_submitted_at ?? "",
       documents: docsMap.get(p.id) ?? [],
     }
   })
@@ -1082,7 +1095,7 @@ export async function adminGetPendingVerificationCount(): Promise<number> {
   const { count } = await admin
     .from("driver_profiles")
     .select("id", { count: "exact", head: true })
-    .eq("status", "pending")
+    .eq("status", "pending").not("verification_submitted_at","is",null)
   return count ?? 0
 }
 

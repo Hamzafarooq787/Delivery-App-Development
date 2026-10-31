@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
 import type { PendingVerificationDriver } from "@/app/actions/delivery"
 import { DocumentPreviewModal } from "@/components/admin/document-preview-modal"
+import {requiredDriverDocuments} from "@/lib/driver-compliance"
 import { VEHICLE_INFO } from "@/lib/vehicles"
 
 const DOC_TYPES = [
@@ -22,7 +23,7 @@ function isImage(url: string) {
   return /\.(jpe?g|png|webp|gif|bmp)(\?|$)/i.test(url)
 }
 
-type Doc = { document_type: string; file_url: string }
+type Doc = { document_type: string; file_url: string; expires_on?:string|null }
 type DocStatus = "pending" | "approved" | "rejected"
 
 function DocumentCard({
@@ -96,6 +97,7 @@ function DocumentCard({
         )}
       </div>
 
+      {doc?.expires_on&&<p className="px-2 text-xs text-white">Expires {doc.expires_on}</p>}
       {/* Actions */}
       {uploaded && (
         <div className="px-2 py-2 border-t border-[var(--color-outline-variant)]/10 flex flex-col gap-1.5">
@@ -165,7 +167,8 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
   const docMap = new Map(driver.documents.map((d) => [d.document_type, d]))
   const initials = driver.full_name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "DR"
 
-  const uploadedTypes = DOC_TYPES.filter((c) => docMap.has(c.type))
+  const configs=DOC_TYPES.filter(c=>requiredDriverDocuments(driver.vehicles).includes(c.type))
+  const uploadedTypes = configs.filter((c) => docMap.has(c.type))
   const allApproved = uploadedTypes.length > 0 && uploadedTypes.every((c) => docStatuses[c.type] === "approved")
 
   function setDocStatus(type: string, status: DocStatus) {
@@ -272,7 +275,7 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
             )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {DOC_TYPES.map((cfg) => (
+            {configs.map((cfg) => (
               <DocumentCard
                 key={cfg.type}
                 docType={cfg.type}

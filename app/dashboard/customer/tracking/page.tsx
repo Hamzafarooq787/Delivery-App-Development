@@ -8,6 +8,7 @@ import Header from '@/components/customer/Header'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
 import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
+import { CollectionWaiting } from '@/components/driver/collection-waiting'
 import { CustomerThread } from '@/components/shared/customer-thread'
 import { CustomerShoppingOrder } from '@/components/customer/CustomerShoppingOrder'
 import { getDriverNamesByIds } from '@/app/actions/driver'
@@ -636,7 +637,7 @@ function TrackingPageInner() {
               </div>
             </div>
             {shipment?.id && ['accepted','collected','in_transit'].includes(shipment.status) && <CustomerLocationBroadcaster key={shipment.id} deliveryId={shipment.id} orderLabel={shipment.tracking_number??shipment.id.slice(0,8)} />}
-            {shipment?.id && <CustomerThread kind="order" id={shipment.id} />}
+            {shipment?.id && <><CustomerThread kind="order" id={shipment.id} /><CollectionWaiting id={shipment.id}/></>}
 
           </div>
         </aside>

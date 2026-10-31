@@ -1,9 +1,12 @@
 import { getDriverDeliveries } from "@/app/actions/delivery"
+import {driverEarning} from '@/lib/driver-earnings'
+import {DriverPageControls} from "@/components/driver/driver-page-controls"
+import {DriverRefresh} from "@/components/driver/driver-refresh"
 import Link from "next/link"
 
 export const dynamic = "force-dynamic"
 
-const ACTIVE_STATUSES = ["accepted", "collected", "in_transit"]
+const ACTIVE_STATUSES = ["accepted", "collected", "picked_up", "in_transit"]
 
 function formatDate(value: string | null) {
   if (!value) return "—"
@@ -30,14 +33,15 @@ function statusColor(status: string) {
   return "text-[var(--color-on-surface-variant)]"
 }
 
-export default async function ActiveJobsPage() {
-  const { data: allJobs, error } = await getDriverDeliveries()
+export default async function ActiveJobsPage({searchParams}:{searchParams:Promise<{page?:string;q?:string}>}) {
+  const params=await searchParams;const page=Math.max(1,Math.min(Math.trunc(Number(params.page))||1,1000000));const q=String(params.q||"").slice(0,80)
+  const { data: allJobs, error,count } = await getDriverDeliveries(undefined,page,q)
   const jobs = (allJobs ?? []).filter((j: any) =>
     ACTIVE_STATUSES.includes(j.status)
   )
 
   return (
-    <div className="pt-2 pb-12 px-2">
+    <div className="pt-2 pb-12 px-2"><DriverRefresh/><DriverPageControls path="/dashboard/driver/active-jobs" page={page} count={count??0} q={q}/>
       <div className="mb-8 md:mb-10 flex flex-col gap-4 md:flex-row md:items-end justify-between md:gap-6">
         <div>
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white mb-2 font-headline">
@@ -91,7 +95,7 @@ export default async function ActiveJobsPage() {
                         {job.item_description || "Delivery"}
                       </h3>
                       <p className="text-xs text-[var(--color-on-surface-variant)]">
-                        Accepted {formatDate(job.updated_at as string | null)}
+                        Booked {formatDate(job.created_at as string | null)}
                         {` • ${job.tracking_number ?? `KV-${job.id.slice(0, 8).toUpperCase()}`}`}
                       </p>
                     </div>
@@ -145,7 +149,7 @@ export default async function ActiveJobsPage() {
                         {new Intl.NumberFormat(undefined, {
                           style: "currency",
                           currency: "USD",
-                        }).format(job.price)}
+                        }).format(driverEarning(job))}
                       </span>
                     </div>
                   )}

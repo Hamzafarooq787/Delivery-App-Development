@@ -61,7 +61,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
           Completed Jobs
         </h1>
         <p className="text-[var(--color-on-surface-variant)] font-medium">
-          {filtered.length} {filtered.length === 1 ? "delivery" : "deliveries"} · Total payout {fmt(totalPayout)}
+          {filtered.length} {filtered.length === 1 ? "delivery" : "deliveries"} on this page · Page payout {fmt(totalPayout)}
         </p>
       </div>
 
@@ -159,7 +159,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
           </div>
           <div className="px-5 py-3 bg-[var(--brand-bg)]/40 border-t border-[var(--color-outline-variant)]/10 flex justify-between items-center">
             <p className="text-xs text-[var(--color-on-surface-variant)]">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</p>
-            <p className="text-xs font-semibold text-[var(--brand-soft)]">Total: {fmt(totalPayout)}</p>
+            <p className="text-xs font-semibold text-[var(--brand-soft)]">This page: {fmt(totalPayout)}</p>
           </div>
         </div>
       )}
