@@ -7,10 +7,11 @@ export function PendingOrderCheckouts() {
   const path = usePathname(),
     [rows, setRows] = useState<{ id: string; label: string }[]>([]);
   useEffect(() => {
+    if (path !== "/dashboard/customer") { setRows([]); return; }
     let current = true;
     void getPendingOrderCheckouts().then((data) => {
       if (current) setRows(data);
-    });
+    }).catch(() => { if (current) setRows([]); });
     return () => {
       current = false;
     };

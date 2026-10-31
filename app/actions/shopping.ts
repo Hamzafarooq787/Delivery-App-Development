@@ -59,6 +59,11 @@ export async function getBfmSettings(): Promise<BfmSettings> {
   return normalizeBfmSettings(data)
 }
 
+// One browser request; independent settings reads run together on the server.
+export async function getShoppingBookingSettings() {
+  return Promise.all([getBookingPricing(), getBfmSettings()])
+}
+
 export async function updateBfmSettings(settings: Partial<BfmSettings>): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

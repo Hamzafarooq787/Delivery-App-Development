@@ -9,7 +9,7 @@
  *     so push notification opt-in is surfaced after login
  */
 
-import { createClient } from "@/lib/supabase/server"
+import { getDashboardUser } from "@/lib/dashboard-user"
 import { NotificationPermission } from "@/components/pwa/notification-permission"
 
 // All dashboard routes require authentication and live Supabase data.
@@ -27,8 +27,7 @@ export default async function DashboardLayout({
   // can save the FCM token against the correct Supabase row.
   let userId: string | null = null
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getDashboardUser()
     userId = user?.id ?? null
   } catch {
     // Silently ignore — notifications are non-critical
