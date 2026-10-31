@@ -12,6 +12,7 @@ import { ProfileDropdown } from '@/components/shared/profile-dropdown'
 import { InstallButton } from '@/components/pwa/install-button'
 import { FloatingLiveChat } from '@/components/driver/floating-live-chat'
 import { TestPushButton } from '@/components/driver/test-push-button'
+import { DriverTrackingSelection } from '@/components/tracking/driver-tracking-selection'
 
 interface DriverLayoutClientProps {
   children: React.ReactNode
@@ -45,6 +46,7 @@ export function DriverLayoutClient({
     isLocked && !ALLOWED_WHEN_LOCKED.some((p) => pathname.startsWith(p))
 
   return (
+    <DriverTrackingSelection>
     <div
       className={`flex h-screen overflow-hidden bg-[var(--brand-bg)] ${isMapDashboard ? styles.dashboardRoot : ''}`}
     >
@@ -166,5 +168,6 @@ export function DriverLayoutClient({
           )}
       </div>
     </div>
+    </DriverTrackingSelection>
   )
 }

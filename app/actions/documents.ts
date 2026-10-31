@@ -42,17 +42,17 @@ export async function recordDriverDocument(documentType: string, fileUrl: string
   } catch { return { error: "Invalid document URL" } }
 
   if (!(await documentExists(admin,user.id,fileUrl))) return {error:'Document upload could not be verified. Upload the file again.'}
-  // Replace any existing doc of the same type
-  await admin.from("driver_documents").delete().eq("driver_id", user.id).eq("document_type", documentType)
-
-  const { error } = await admin.from("driver_documents").insert({
-    driver_id: user.id,
-    document_type: documentType,
-    file_url: fileUrl,
+  const { error } = await admin.rpc("replace_driver_document", {
+    p_driver: user.id,
+    p_type: documentType,
+    p_url: fileUrl,
   })
 
-  if (error) return { error: error.message }
-  revalidatePath("/dashboard/driver/verification")
+  if (error) return { error: error.message.includes("finish_active_job")
+    ? "Finish your active delivery before changing verification documents."
+    : "Document could not be saved. Your previous document has been kept. Please retry." }
+  revalidatePath("/dashboard/driver", "layout")
+  revalidatePath("/dashboard/admin/verification")
   return { success: true }
 }
 

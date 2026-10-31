@@ -106,17 +106,17 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
   const stageIndex = BFM_STAGES.findIndex((s) => s.stage === currentStage)
 
   function handleStageAdvance() {
+    if (isPending) return
+    if (currentStage === "heading_to_customer") {
+      setShowOtpModal(true)
+      return
+    }
     const next = NEXT_STAGE[currentStage]
     if (!next) return
 
     if (next === "purchase_completed") {
       // Need receipt first
       setShowReceiptForm(true)
-      return
-    }
-    if (currentStage === "heading_to_customer") {
-      // Deliver via OTP
-      setShowOtpModal(true)
       return
     }
 
@@ -198,9 +198,10 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
     })
   }
 
-  const canAdvance = !isPending && currentStage !== "delivered" && currentStage !== "heading_to_customer" || currentStage === "heading_to_customer"
+  const canAdvance = !["delivered", "cancelled"].includes(job.status) &&
+    (currentStage === "heading_to_customer" || !!NEXT_STAGE[currentStage])
   const nextStageLabel = NEXT_STAGE_LABEL[currentStage]
-  const isDelivered = currentStage === "delivered" || job.status === "delivered"
+  const isClosed = currentStage === "delivered" || ["delivered", "cancelled"].includes(job.status)
   const isShopping = currentStage === "shopping"
 
   const inputCls = "w-full bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-xl px-4 py-3 text-white text-sm placeholder-[var(--color-outline-variant)] outline-none focus:border-[var(--brand-strong)]/40 transition-all"
@@ -483,7 +484,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
       )}
 
       {/* Action Button */}
-      {!isDelivered && !showReceiptForm && (
+      {!isClosed && !showReceiptForm && (
         <button
           type="button"
           disabled={isPending || !canAdvance}

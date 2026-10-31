@@ -1,4 +1,5 @@
 'use client'
+import { useDriverTrackingSelection } from '@/components/tracking/driver-tracking-selection'
 
 import { driverEarning } from "@/lib/driver-earnings"
 import dynamic from 'next/dynamic'
@@ -113,6 +114,12 @@ export function MapFirstDashboard({
   const index = Math.min(selected, Math.max(0, list.length - 1))
   const job = list[index] ?? null
   const isActive = activeJobs.length > 0
+  const { selectDelivery } = useDriverTrackingSelection()
+  const selectedActiveId = isActive ? job?.id ?? null : null
+  useEffect(() => {
+    selectDelivery(selectedActiveId)
+    return () => selectDelivery(null)
+  }, [selectedActiveId, selectDelivery])
   const route =
     routeResult && job && routeResult.id === job.id ? routeResult.route : null
   const routeFailed =

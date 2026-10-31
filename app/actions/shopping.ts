@@ -282,11 +282,16 @@ export async function updateBfmStage(
     updates.status = "collected" // reuse collected to indicate "at shop / shopping"
   }
 
-  const { data: changed, error: stageError } = await admin
+  let stageUpdate = admin
     .from("delivery_requests")
     .update(updates)
     .eq("id", deliveryId)
+    .eq("driver_id", user.id)
     .eq("status", delivery.status)
+  stageUpdate = delivery.bfm_stage == null
+    ? stageUpdate.is("bfm_stage", null)
+    : stageUpdate.eq("bfm_stage", delivery.bfm_stage)
+  const { data: changed, error: stageError } = await stageUpdate
     .select("id")
   if (stageError || !changed?.length) return { error: "Order changed. Refresh before trying again." }
 
