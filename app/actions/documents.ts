@@ -1,5 +1,6 @@
 "use server"
 
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -11,6 +12,9 @@ export type DriverDocument = {
   file_url: string
   created_at: string
   expires_on?: string | null
+  review_status?: "pending"|"approved"|"rejected"
+  review_reason?: string|null
+  reviewed_at?: string|null
 }
 
 export async function getMyDocuments(): Promise<{ data: DriverDocument[]; error?: string }> {
@@ -21,7 +25,7 @@ export async function getMyDocuments(): Promise<{ data: DriverDocument[]; error?
   const admin = createAdminClient()
   const { data, error } = await admin
     .from("driver_documents")
-    .select("id, document_type, file_url, created_at, expires_on")
+    .select("id, document_type, file_url, created_at, expires_on,review_status,review_reason,reviewed_at")
     .eq("driver_id", user.id)
     .order("created_at", { ascending: false })
 
@@ -93,11 +97,11 @@ export async function getDriverDocumentsById(driverId: string): Promise<DriverDo
   const admin = createAdminClient()
   if (user.id !== driverId) {
     const { data: caller } = await admin.from("users").select("role").eq("id", user.id).maybeSingle()
-    if (caller?.role !== "admin") return []
+    if (!(await getAdminActor("operations"))) return []
   }
   const { data } = await admin
     .from("driver_documents")
-    .select("id, document_type, file_url, created_at, expires_on")
+    .select("id, document_type, file_url, created_at, expires_on,review_status,review_reason,reviewed_at")
     .eq("driver_id", driverId)
     .order("created_at", { ascending: false })
   return ((data ?? []) as DriverDocument[]).map(d => ({ ...d, file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` }))

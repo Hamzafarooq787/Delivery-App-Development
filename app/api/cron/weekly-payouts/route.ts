@@ -1,7 +1,8 @@
+import {recordHealth} from "@/lib/integration-health"
 import { createAdminClient } from "@/lib/supabase/admin";
 export const maxDuration = 60;
 // Reserve earnings; the separate 08:30 daily bank worker handles provider operations.
-export async function GET(request: Request) {
+async function run(request: Request) {
   if (
     !process.env.CRON_SECRET ||
     request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
@@ -35,4 +36,9 @@ export async function GET(request: Request) {
     offset += 100;
   }
   return Response.json({ reserved, bankTransfersSent: 0 });
+}
+
+export async function GET(request:Request){
+ if(!process.env.CRON_SECRET||request.headers.get('authorization')!==`Bearer ${process.env.CRON_SECRET}`)return new Response('Unauthorized',{status:401})
+ try{const response=await run(request);await recordHealth("cron_weekly_payouts",response.ok,`HTTP ${response.status}`);return response}catch{await recordHealth("cron_weekly_payouts",false,'Run failed; check the operational queue and logs');return Response.json({error:'Scheduled processing failed'},{status:500})}
 }

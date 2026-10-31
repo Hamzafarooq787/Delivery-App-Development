@@ -1,3 +1,5 @@
+import {recordDispatchFailure} from "@/lib/dispatch-failures"
+import {recordHealth} from "@/lib/integration-health"
 /**
  * lib/notifications/send.ts
  * ─────────────────────────────────────────────────────────────────────────────
@@ -72,7 +74,7 @@ async function purgeInvalidToken(token: string): Promise<void> {
  *   }
  * })
  */
-export async function sendPushNotification({
+async function sendPushNotificationRaw({
   userId,
   notification,
 }: {
@@ -270,3 +272,9 @@ export async function sendPushNotificationToMultipleUsers({
     )
     .map((r) => r.value)
 }
+
+export async function sendPushNotification(input:{userId:string;notification:NotificationPayload}):Promise<MulticastResult>{
+ try{const result=await sendPushNotificationRaw(input);if(result.failureCount>0){await recordDispatchFailure('push',input.userId,{notification:input.notification},input.notification.tag);await recordHealth('push',false,'Some notification deliveries failed')}else if(result.successCount>0)await recordHealth('push',true,'Push provider accepted delivery');return result}
+ catch{await recordDispatchFailure('push',input.userId,{notification:input.notification},input.notification.tag);await recordHealth('push',false,'Push provider unavailable');return{successCount:0,failureCount:1,failedTokens:[]}}
+}
+export async function retryPushDelivery(input:{userId:string;notification:NotificationPayload}){return sendPushNotificationRaw(input)}

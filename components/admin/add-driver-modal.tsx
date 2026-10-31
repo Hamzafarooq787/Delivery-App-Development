@@ -113,8 +113,7 @@ export function AddDriverModal({ onClose }: { onClose: () => void }) {
               )}
 
               <p className="text-[10px] text-[var(--color-on-surface-variant)] leading-relaxed">
-                If this email already exists, the account will be converted to a driver role. New accounts
-                are created with email confirmation bypassed — the driver can set their password via "Forgot Password".
+                Existing accounts keep their current mode and verification. New drivers receive an invitation to set their password and complete verification.
               </p>
 
               <div className="flex gap-3 pt-1">

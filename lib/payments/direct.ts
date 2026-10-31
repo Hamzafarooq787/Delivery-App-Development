@@ -68,15 +68,15 @@ export async function fulfillDirectSession(session: Stripe.Checkout.Session) {
 }
 export async function processOrderRefunds(deliveryId: string) {
   const admin = createAdminClient();
-  const { data: payment, error } = await admin
+  const { data: payments, error } = await admin
     .from("payments")
     .select("id,stripe_payment_intent,refund_jobs")
-    .eq("delivery_id", deliveryId)
-    .eq("payment_method", "stripe")
-    .maybeSingle();
+    .or(`delivery_id.eq.${deliveryId},related_delivery_id.eq.${deliveryId}`)
+    .eq("payment_method", "stripe");
   if (error) throw error;
-  if (!payment) return;
+  if (!payments?.length) return;
   const stripe = getStripe();
+  for (const payment of payments) {
   for (const job of payment.refund_jobs ?? []) {
     if (
       job.state === "succeeded" ||
@@ -114,6 +114,7 @@ export async function processOrderRefunds(deliveryId: string) {
       p_state: refund.status ?? "pending",
     });
     if (recordError) throw recordError;
+  }
   }
 }
 

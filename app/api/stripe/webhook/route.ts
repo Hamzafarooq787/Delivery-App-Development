@@ -1,3 +1,5 @@
+import {recordHealth} from "@/lib/integration-health"
+import {fulfillWaitingSession} from "@/lib/payments/waiting"
 /** Verified Stripe events finalize paid order bookings or credit legacy wallet top-ups. */
 
 import { fulfillDirectSession, reconcileStripeRefund } from "@/lib/payments/direct"
@@ -46,6 +48,10 @@ export async function POST(request: NextRequest) {
         const session = event.data.object
         const metadataType = session.metadata?.type
 
+        if (metadataType === "collection_wait") {
+          if (session.payment_status === "paid") await fulfillWaitingSession(session)
+          break
+        }
         if (metadataType === "order_booking") {
           if (session.payment_status === "paid") await fulfillDirectSession(session)
           break
@@ -106,9 +112,11 @@ export async function POST(request: NextRequest) {
         break
     }
   } catch (err) {
+    await recordHealth("stripe_webhook",false,"Verified event handler failed; provider retry required")
     console.error("[Stripe Webhook] Handler error:", err)
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 })
   }
 
+  await recordHealth("stripe_webhook",true,"Verified webhook processed")
   return NextResponse.json({ received: true })
 }

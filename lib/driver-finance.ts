@@ -6,7 +6,7 @@ export type DriverFinanceRow = {
   created_at: string
   payment_reference?: string | null
   provider?: { error?: string } | null
-  delivery_requests?: { tracking_number?: string | null; price?: number | null }
+  delivery_requests?: { tracking_number?: string | null; price?: number | null; adjustment?:string|null }
 }
 export type DriverFinanceSnapshot = {
   totals: { available: number; total: number; today: number; today_jobs: number; jobs: number }

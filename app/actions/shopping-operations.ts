@@ -1,10 +1,13 @@
 "use server";
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/server";
 import { notifyMultipleUsers } from "@/lib/notifications/internal";
 import { revalidatePath } from "next/cache";
 export async function fundShoppingCard(deliveryId: string, cardId: string) {
+ return runAdminMutation("finance","fundShoppingCard",deliveryId,async()=>{
   const client = await createClient();
   const {
     data: { user },
@@ -16,7 +19,7 @@ export async function fundShoppingCard(deliveryId: string, cardId: string) {
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
-  if (caller?.role !== "admin") return { error: "Not authorized" };
+  if (!(await getAdminActor("finance"))) return { error: "Not authorized" };
   if (!/^ic_[a-zA-Z0-9]+$/.test(cardId))
     return {
       error: "Enter a Stripe Issuing card reference, never a card number.",
@@ -125,6 +128,8 @@ export async function fundShoppingCard(deliveryId: string, cardId: string) {
         "Company card could not be verified. Stripe Issuing must be enabled and funded; the driver must not use personal money.",
     };
   }
+
+ })
 }
 export async function reportShoppingProblem(
   deliveryId: string,

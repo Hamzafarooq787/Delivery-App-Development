@@ -1,22 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import {ukDate} from "@/lib/admin-operations"
+import {requiredDriverDocuments} from "@/lib/driver-compliance"
+import {reviewDocument} from "@/app/actions/admin-operations"
+import { useRouter } from "next/navigation"
+import { useState,useTransition } from "react"
 import { DocumentPreviewModal } from "@/components/admin/document-preview-modal"
 import type { DriverDocument } from "@/app/actions/documents"
 
 const DOC_TYPES = ["identity", "insurance", "vehicle_registration"] as const
 const DOC_LABELS: Record<string, string> = {
   identity: "Identity / Driving Licence",
+  selfie: "Selfie",
   insurance: "Insurance Policy",
   vehicle_registration: "Vehicle Registration",
 }
 
 function fmtDate(v: string) {
   if (!v) return "—"
-  return new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+  return ukDate(v)
 }
 
-export function DriverDocumentsPanel({ documents }: { documents: DriverDocument[] }) {
+export function DriverDocumentsPanel({ documents,vehicles=[] }: { documents: DriverDocument[];vehicles?:{vehicle_type:string}[] }) {
+  const router=useRouter();const [pending,start]=useTransition();const [message,setMessage]=useState("")
   const [previewDoc, setPreviewDoc] = useState<{ document_type: string; file_url: string } | null>(null)
 
   if (documents.length === 0) {
@@ -34,9 +40,10 @@ export function DriverDocumentsPanel({ documents }: { documents: DriverDocument[
         <DocumentPreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       )}
 
+      <p role="status" className="text-sm text-white">{message}</p>
       {/* Checklist */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {DOC_TYPES.map((type) => {
+        {requiredDriverDocuments(vehicles).map((type) => {
           const uploaded = documents.some((d) => d.document_type === type)
           return (
             <span
@@ -74,6 +81,8 @@ export function DriverDocumentsPanel({ documents }: { documents: DriverDocument[
                 <td className="px-5 py-3.5 text-xs text-[var(--color-on-surface-variant)]">{fmtDate(doc.created_at)}</td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2">
+                    <span className="text-xs text-white">{doc.review_status??"pending"}{doc.review_reason?` · ${doc.review_reason}`:""}</span>
+                    {(["approved","rejected"] as const).map(status=><button key={status} disabled={pending} className="text-xs underline text-white" onClick={()=>{const reason=status==="rejected"?window.prompt("Rejection reason:"):"Document reviewed";if(reason===null)return;start(async()=>{const result=await reviewDocument(doc.id,status,reason);setMessage(result.error??"Review saved.");router.refresh()})}}>{status==="approved"?"Approve":"Reject"}</button>)}
                     <button
                       onClick={() => setPreviewDoc({ document_type: doc.document_type, file_url: doc.file_url })}
                       className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)] hover:text-white hover:border-[var(--brand-strong)]/30 rounded-lg text-xs font-semibold transition-all"

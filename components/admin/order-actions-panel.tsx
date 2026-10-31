@@ -17,14 +17,16 @@ export function OrderActionsPanel({
   orderId,
   orderStatus,
   currentDriverId,
-  drivers,
+  drivers, paymentMethod, shoppingStage,
 }: {
   orderId: string
   orderStatus: string
   currentDriverId: string | null
   drivers: DriverOption[]
+  paymentMethod: string
+  shoppingStage?: string | null
 }) {
-  const canCancel = !["delivered", "cancelled"].includes(orderStatus)
+  const canCancel = ["requested","accepted"].includes(orderStatus) && !["shopping","purchase_completed","heading_to_customer"].includes(shoppingStage??"")
 
   const refundKey=useRef<string | null>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
@@ -137,7 +139,7 @@ export function OrderActionsPanel({
       )}
 
       {/* Issue Refund */}
-      {showRefundInput ? (
+      {paymentMethod !== "stripe" && (showRefundInput ? (
         <div className="px-4 py-3 bg-emerald-500/5 rounded-lg border border-emerald-500/20 space-y-2">
           <p className="text-xs text-emerald-400 font-medium">Enter refund amount (£)</p>
           <input
@@ -179,7 +181,7 @@ export function OrderActionsPanel({
           <span className="material-symbols-outlined text-sm text-emerald-400">payments</span>
           Issue Refund
         </button>
-      )}
+      ))}
     </div>
   )
 }

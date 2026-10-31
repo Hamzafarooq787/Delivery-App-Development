@@ -1,5 +1,6 @@
 "use server"
 
+import { getAdminActor } from "@/lib/admin-access"
 import { validCoordinates } from "@/lib/customer-validation"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -62,7 +63,7 @@ export async function getDriverLocationForDelivery(deliveryId: string) {
   if (dErr || !delivery) return { data: null, error: dErr?.message ?? "Delivery not found" }
   if (delivery.customer_id !== user.id && delivery.driver_id !== user.id) {
     const { data: me } = await admin.from("users").select("role").eq("id", user.id).maybeSingle()
-    if (me?.role !== "admin") return { data: null, error: "Forbidden" }
+    if (!(await getAdminActor("operations"))) return { data: null, error: "Forbidden" }
   }
 
   if (!delivery.driver_id || !["accepted", "collected", "picked_up", "in_transit"].includes(delivery.status)) {

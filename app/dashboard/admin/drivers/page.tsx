@@ -1,9 +1,5 @@
-import { adminGetDrivers } from "@/app/actions/delivery"
-import { DriversPanel } from "@/components/admin/drivers-panel"
-
-export default async function AdminDriversPage() {
-  const { data: drivers, error } = await adminGetDrivers()
-
-  if (error) throw new Error("Driver records could not load. Please retry.")
-  return <DriversPanel drivers={drivers ?? []} />
-}
+import {getAdminRecords} from '@/app/actions/admin-operations'
+import {createAdminClient} from '@/lib/supabase/admin'
+import {RecordFilters,RecordPager,type RecordParams} from '@/components/admin/admin-records'
+import {DriversPanel} from '@/components/admin/drivers-panel'
+export default async function AdminDriversPage({searchParams}:{searchParams:Promise<RecordParams>}){const params=await searchParams;const result=await getAdminRecords('drivers',params);if(result.error)throw new Error(result.error);const data=result.data;const ids=data.rows.map((r:any)=>r.id);const profiles=ids.length?await createAdminClient().from('driver_profiles').select('id,status').in('id',ids):{data:[],error:null};if(profiles.error)throw new Error('Driver profiles could not load.');const status=new Map((profiles.data??[]).map(r=>[r.id,r.status]));return <><div className="px-5"><RecordFilters kind="drivers" params={params}/><RecordPager count={data.count} page={data.page} params={params}/></div><DriversPanel drivers={data.rows.map((r:any)=>({...r,email:r.email??'',full_name:r.full_name??'Driver',status:status.get(r.id)??'pending'}))}/><div className="px-5"><RecordPager count={data.count} page={data.page} params={params}/></div></>}

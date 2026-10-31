@@ -1,4 +1,6 @@
 "use server";
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/server";
@@ -47,29 +49,40 @@ export async function connectDriverBank() {
 }
 
 export async function setAutomaticPayouts(enabled: boolean) {
+ return runAdminMutation("finance","setAutomaticPayouts",enabled,async()=>{
   if (typeof enabled !== "boolean") return { error: "Invalid setting." };
   const session = await createClient();
   const { data: { user } } = await session.auth.getUser();
   if (!user) return { error: "Not signed in." };
   const role = await session.from("users").select("role").eq("id", user.id).single();
-  if (role.data?.role !== "admin") return { error: "Not authorized." };
+  if (!(await getAdminActor("finance"))) return { error: "Not authorized." };
   try {
-    if (enabled) await getStripe().balance.retrieve();
+    if (enabled) {
+      const reconciliation=await createAdminClient().rpc("admin_finance_snapshot",{p_actor:user.id});
+      if(reconciliation.error||Number(reconciliation.data?.missingPaymentOrders)>0||Number(reconciliation.data?.missingEarningsOrders)>0)return{error:"Reconcile completed orders with missing payment or earnings evidence before enabling bank payouts."};
+      await getStripe().balance.retrieve();
+      const profiles=await createAdminClient().from('driver_profiles').select('stripe_connect_account_id').eq('status','approved').not('stripe_connect_account_id','is',null)
+      if(profiles.error||!profiles.data?.length)return{error:'Connect and verify at least one driver bank account before enabling bank payouts.'}
+      for(const driver of profiles.data){const account=await getStripe().v2.core.accounts.retrieve(driver.stripe_connect_account_id,{include:['configuration.recipient']});const balance=account.configuration?.recipient?.capabilities?.stripe_balance;if(balance?.stripe_transfers?.status!=='active'||balance?.payouts?.status!=='active')return{error:'A connected driver still needs Stripe identity or bank checks. Complete those checks before enabling automatic payouts.'}}
+    }
     const db = createAdminClient();
     const saved = await db.rpc("set_automatic_bank_payouts", { p_actor: user.id, p_enabled: enabled });
     if (saved.error) throw saved.error;
     revalidatePath("/dashboard/admin/payouts");
     return { success: true };
   } catch { return { error: "Unable to save payout setting. Check Stripe configuration and retry." }; }
+
+ })
 }
 
 /** Queue a new BANK attempt only after Stripe proves the old payout returned. */
 export async function retryFailedBankPayout(id: string) {
+ return runAdminMutation("finance","retryFailedBankPayout",id,async()=>{
   const session = await createClient();
   const { data: { user } } = await session.auth.getUser();
   if (!user) return { error: "Not signed in." };
   const role = await session.from("users").select("role").eq("id", user.id).single();
-  if (role.data?.role !== "admin") return { error: "Not authorized." };
+  if (!(await getAdminActor("finance"))) return { error: "Not authorized." };
   const db = createAdminClient();
   const row = await db.from("payouts").select("amount,provider").eq("id", id).single();
   if (row.error || !row.data?.provider?.payout_id) return { error: "No bank payout to reconcile." };
@@ -88,4 +101,6 @@ export async function retryFailedBankPayout(id: string) {
     revalidatePath("/dashboard/admin/payouts");
     return { success: true };
   } catch { return { error: "Could not verify returned bank funds. No retry was created." }; }
+
+ })
 }

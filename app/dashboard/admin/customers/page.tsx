@@ -1,8 +1,3 @@
-import { adminGetCustomers } from "@/app/actions/delivery"
-import { CustomersClient } from "./customers-client"
-
-export default async function AdminCustomersPage() {
-  const { data: rows = [], error } = await adminGetCustomers()
-  if (error) throw new Error("Customer records could not load. Please retry.")
-  return <CustomersClient rows={rows} />
-}
+import {getAdminRecords} from '@/app/actions/admin-operations'
+import {RecordFilters,RecordPager,SimpleRecords,type RecordParams} from '@/components/admin/admin-records'
+export default async function AdminCustomersPage({searchParams}:{searchParams:Promise<RecordParams>}){const params=await searchParams;const result=await getAdminRecords('customers',params);if(result.error)throw new Error(result.error);const data=result.data;return <div className="p-4 md:p-8 text-white"><h1 className="text-3xl font-bold">Customers</h1><p className="mt-2">Recent means an order in the last 30 days. Customer records remain visible in either account mode.</p><RecordFilters kind="customers" params={params} statuses={['recent','inactive']}/><RecordPager count={data.count} page={data.page} params={params}/><SimpleRecords kind="customers" rows={data.rows}/><RecordPager count={data.count} page={data.page} params={params}/></div>}

@@ -1,9 +1,6 @@
-import { adminGetPendingRatings } from "@/app/actions/ratings"
-import { ReviewsPanel } from "@/components/admin/reviews-panel"
-
-export const dynamic = "force-dynamic"
-
-export default async function AdminReviewsPage() {
-  const { data } = await adminGetPendingRatings()
-  return <ReviewsPanel initialRatings={data} />
-}
+import {parseAdminDate} from "@/lib/admin-operations"
+import {createAdminClient} from '@/lib/supabase/admin'
+import {getAdminActor} from '@/lib/admin-access'
+import {ReviewsPanel} from '@/components/admin/reviews-panel'
+import {RecordFilters,RecordPager,type RecordParams} from '@/components/admin/admin-records'
+export default async function AdminReviewsPage({searchParams}:{searchParams:Promise<RecordParams>}){if(!(await getAdminActor('support')))return <p className="p-5 text-white">Support permission is required.</p>;const params=await searchParams,page=Math.max(1,Math.trunc(Number(params.page)||1));let query=createAdminClient().from('ratings').select('*, delivery:delivery_requests(tracking_number), rater:users!ratings_rater_id_fkey(full_name), rated:users!ratings_rated_id_fkey(full_name)',{count:'exact'}).order('created_at',{ascending:false}).order('id').range((page-1)*50,page*50-1);if(params.status&&['pending','approved','rejected'].includes(params.status))query=query.eq('status',params.status);if(params.q)query=query.ilike('comment',`%${params.q.replace(/[%_]/g,'')}%`);const from=parseAdminDate(params.from),to=parseAdminDate(params.to,true);if(from)query=query.gte('created_at',from);if(to)query=query.lt('created_at',to);const {data,count,error}=await query;if(error)throw new Error('Reviews could not load.');return <><div className="px-5"><RecordFilters kind="reviews" params={params} statuses={['pending','approved','rejected']}/><RecordPager count={count??0} page={page} params={params}/></div><ReviewsPanel key={JSON.stringify(params)} initialRatings={data as any}/></>}

@@ -17,6 +17,9 @@
  */
 "use server"
 
+import { bookingAvailability } from "@/lib/booking-availability"
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { SURGE_COLUMNS, surgeSettingsSchema, busyPeriodSchema } from "@/lib/admin-pricing-validation"
 import { issueQuoteConsent, deliveryScope } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
@@ -49,6 +52,7 @@ export type DeliveryQuote = {
 }
 
 export type QuoteParams = {
+  serviceType?: "delivery" | "buy_for_me"
   pickupLat: number
   pickupLng: number
   deliveryLat: number
@@ -62,6 +66,8 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  const availability = await bookingAvailability(user.id,params.serviceType??"delivery",{lat:params.pickupLat,lng:params.pickupLng},{lat:params.deliveryLat,lng:params.deliveryLng})
+  if(availability)return {error:availability}
   if (!isPackageSize(params.packageSize)) return { error: "Select a package size." }
 
   let config: BookingPricing
@@ -157,7 +163,7 @@ async function requireAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
   const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  return data?.role === "admin"
+  return !!(await getAdminActor("settings"))
 }
 
 export type SurgeSettings = {
@@ -180,6 +186,7 @@ export async function adminGetSurgeSettings(): Promise<{ data: SurgeSettings | n
 }
 
 export async function adminUpdateSurgeSettings(settings: SurgeSettings): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("settings","adminUpdateSurgeSettings",settings,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const parsed = surgeSettingsSchema.safeParse(settings)
   if (!parsed.success) return { error: "Enter valid surge settings. Multipliers must be between 1 and 10; demand ratio 0.1–100 and traffic ratio 1–10." }
@@ -191,6 +198,8 @@ export async function adminUpdateSurgeSettings(settings: SurgeSettings): Promise
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true }
+
+ })
 }
 
 // ── Admin: busy period rules ─────────────────────────────────────────────────────
@@ -215,6 +224,7 @@ export type BusyPeriodRuleInput = {
 }
 
 export async function adminCreateBusyPeriodRule(input: BusyPeriodRuleInput): Promise<{ success?: boolean; data?: BusyPeriodRuleRow; error?: string }> {
+ return runAdminMutation("settings","adminCreateBusyPeriodRule",input,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const parsed = busyPeriodSchema.safeParse(input)
   if (!parsed.success) return { error: "Enter a label, valid times, day and a multiplier between 1 and 10." }
@@ -224,9 +234,12 @@ export async function adminCreateBusyPeriodRule(input: BusyPeriodRuleInput): Pro
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true, data: data as BusyPeriodRuleRow }
+
+ })
 }
 
 export async function adminUpdateBusyPeriodRule(id: string, input: BusyPeriodRuleInput): Promise<{ success?: boolean; data?: BusyPeriodRuleRow; error?: string }> {
+ return runAdminMutation("settings","adminUpdateBusyPeriodRule",id,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const parsed = busyPeriodSchema.safeParse(input)
   if (!parsed.success) return { error: "Enter a label, valid times, day and a multiplier between 1 and 10." }
@@ -236,13 +249,18 @@ export async function adminUpdateBusyPeriodRule(id: string, input: BusyPeriodRul
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true, data: data as BusyPeriodRuleRow }
+
+ })
 }
 
 export async function adminDeleteBusyPeriodRule(id: string): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("settings","adminDeleteBusyPeriodRule",id,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
   const { error } = await admin.from("busy_period_rules").delete().eq("id", id)
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true }
+
+ })
 }

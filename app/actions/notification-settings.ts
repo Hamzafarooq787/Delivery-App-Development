@@ -1,4 +1,6 @@
 "use server";
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 async function actor() {
@@ -12,7 +14,7 @@ async function actor() {
     .select("role")
     .eq("id", user.id)
     .single();
-  return data?.role === "admin" ? user.id : null;
+  return (await getAdminActor("settings"))?.id ?? null;
 }
 export async function getNotificationSettings() {
   if (!(await actor())) return { error: "Not authorized" };
@@ -28,6 +30,7 @@ export async function getNotificationSettings() {
 export async function saveNotificationSettings(
   settings: Record<string, { enabled: boolean; title: string }>,
 ) {
+ return runAdminMutation("settings","saveNotificationSettings",settings,async()=>{
   const id = await actor();
   if (!id) return { error: "Not authorized" };
   const allowed = [
@@ -67,4 +70,6 @@ export async function saveNotificationSettings(
   return error
     ? { error: "Unable to save notification settings" }
     : { success: true };
+
+ })
 }

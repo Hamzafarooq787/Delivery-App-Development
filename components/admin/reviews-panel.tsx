@@ -60,6 +60,7 @@ function ReviewCard({ rating, onResolved }: { rating: PendingRating; onResolved:
 
       {error && <p className="text-xs text-[#ff6e84]">{error}</p>}
 
+      {rating.status === "pending" ? (
       <div className="flex items-center gap-2 pt-1">
         <button
           onClick={() => handleAction("reject")}
@@ -78,6 +79,7 @@ function ReviewCard({ rating, onResolved }: { rating: PendingRating; onResolved:
           {isPending && action === "approve" ? "Approving…" : "Approve & Publish"}
         </button>
       </div>
+      ) : <p className="text-sm capitalize text-white">{rating.status} · Moderated {rating.moderated_at ? new Date(rating.moderated_at).toLocaleDateString("en-GB") : "previously"}</p>}
     </div>
   )
 }
@@ -95,7 +97,7 @@ export function ReviewsPanel({ initialRatings }: { initialRatings: PendingRating
         {ratings.length > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--brand-strong)]/10 border border-[var(--brand-strong)]/20 rounded-full">
             <span className="w-2 h-2 rounded-full bg-[var(--brand-strong)] animate-pulse" />
-            <span className="text-xs font-bold text-[var(--brand-soft)]">{ratings.length} pending</span>
+            <span className="text-xs font-bold text-[var(--brand-soft)]">{ratings.filter(r=>r.status==="pending").length} pending in this page</span>
           </div>
         )}
       </div>
@@ -103,8 +105,8 @@ export function ReviewsPanel({ initialRatings }: { initialRatings: PendingRating
       {ratings.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[var(--color-outline-variant)]/30 bg-[var(--brand-panel)] px-6 py-20 text-center">
           <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)] mb-3 block">rate_review</span>
-          <p className="text-base font-semibold text-white">No pending reviews</p>
-          <p className="mt-1 text-sm text-[var(--color-on-surface-variant)]">New ratings will show up here for approval.</p>
+          <p className="text-base font-semibold text-white">No matching reviews</p>
+          <p className="mt-1 text-sm text-[var(--color-on-surface-variant)]">Change the filters to browse pending, approved and rejected reviews.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -50,7 +50,7 @@ export function DisputesPanel({ disputes: initial, total }: { disputes: Dispute[
       <input aria-label="Search loaded disputes" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search cases…"
         className="sm:ml-auto rounded-xl border border-white/20 bg-[var(--brand-panel)] px-4 py-2 text-white max-w-full" />
     </div>
-    <p className="text-sm text-[var(--color-on-surface-variant)] mb-4">Showing {initial.length} of {total} cases{total > initial.length ? " (latest 50)" : ""}.</p>
+    <p className="text-sm text-[var(--color-on-surface-variant)] mb-4">Showing {initial.length} of {total} cases{total > initial.length ? " (current page)" : ""}.</p>
     {error && <p role="alert" className="mb-4 rounded-xl border border-red-400/30 p-4 text-red-300">{error}</p>}
     <div className="space-y-3">
       {filtered.length === 0 && <p className="bg-[var(--brand-panel)] rounded-xl p-10 text-center text-white">No disputes found.</p>}

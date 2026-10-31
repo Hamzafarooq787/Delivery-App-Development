@@ -16,6 +16,8 @@ export function AssignDriverDropdown({
   drivers: DriverOption[]
   disabled?: boolean
 }) {
+  const [reason,setReason]=useState("")
+  const [error,setError]=useState("")
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [localDriverId, setLocalDriverId] = useState(currentDriverId)
@@ -32,11 +34,12 @@ export function AssignDriverDropdown({
   }, [])
 
   function handleSelect(driverId: string | null) {
+    if(reason.trim().length<3){setError("Enter an assignment reason first.");return}
     setOpen(false)
     if (driverId === localDriverId) return
     setLocalDriverId(driverId)
     startTransition(async () => {
-      const result = await adminAssignDriver(deliveryId, driverId)
+      const result = await adminAssignDriver(deliveryId, driverId, reason)
       if (result.error) {
         setLocalDriverId(currentDriverId)
         alert("Failed to assign driver: " + result.error)
@@ -82,6 +85,7 @@ export function AssignDriverDropdown({
           <div className="px-3 py-2 border-b border-[var(--color-outline-variant)]/10">
             <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Select Driver</p>
           </div>
+          <div className="p-3"><label className="text-xs text-white">Assignment reason<input value={reason} maxLength={500} onChange={e=>setReason(e.target.value)} className="block w-full mt-1 rounded bg-black/20 p-2"/></label>{error&&<p role="alert" className="text-xs text-red-300">{error}</p>}</div>
           <div className="max-h-56 overflow-y-auto">
             {/* Unassign option */}
             <button

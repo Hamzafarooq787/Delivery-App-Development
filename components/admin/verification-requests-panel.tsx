@@ -1,5 +1,7 @@
 "use client"
 
+import {ukDate} from "@/lib/admin-operations"
+import {reviewDocument} from "@/app/actions/admin-operations"
 import { useState, useTransition } from "react"
 import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
 import type { PendingVerificationDriver } from "@/app/actions/delivery"
@@ -16,14 +18,14 @@ const DOC_TYPES = [
 
 function fmtDate(v: string) {
   if (!v) return "—"
-  return new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+  return ukDate(v)
 }
 
 function isImage(url: string) {
   return /\.(jpe?g|png|webp|gif|bmp)(\?|$)/i.test(url)
 }
 
-type Doc = { document_type: string; file_url: string; expires_on?:string|null }
+type Doc = { id:string; document_type: string; file_url: string; expires_on?:string|null; review_status?:DocStatus; review_reason?:string|null }
 type DocStatus = "pending" | "approved" | "rejected"
 
 function DocumentCard({
@@ -97,6 +99,7 @@ function DocumentCard({
         )}
       </div>
 
+      {doc?.review_reason&&<p className="px-2 text-xs text-white">{doc.review_reason}</p>}
       {doc?.expires_on&&<p className="px-2 text-xs text-white">Expires {doc.expires_on}</p>}
       {/* Actions */}
       {uploaded && (
@@ -162,7 +165,7 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
   const [action, setAction] = useState<"approve" | "reject" | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null)
-  const [docStatuses, setDocStatuses] = useState<Record<string, DocStatus>>({})
+  const [docStatuses, setDocStatuses] = useState<Record<string, DocStatus>>(()=>Object.fromEntries(driver.documents.map(d=>[d.document_type,d.review_status??"pending"])))
 
   const docMap = new Map(driver.documents.map((d) => [d.document_type, d]))
   const initials = driver.full_name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "DR"
@@ -172,22 +175,24 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
   const allApproved = uploadedTypes.length > 0 && uploadedTypes.every((c) => docStatuses[c.type] === "approved")
 
   function setDocStatus(type: string, status: DocStatus) {
-    setDocStatuses((prev) => ({ ...prev, [type]: status }))
+    const doc=docMap.get(type);if(!doc||status==='pending')return
+    const reason=status==='rejected'?window.prompt('Reason for rejecting this document:'):"Document reviewed"
+    if(reason===null)return
+    startTransition(async()=>{const result=await reviewDocument(doc.id,status,reason);if(result.error)setError(result.error);else setDocStatuses(previous=>({...previous,[type]:status}))})
   }
-
   function approveAllDocs() {
-    const next: Record<string, DocStatus> = {}
-    uploadedTypes.forEach((c) => { next[c.type] = "approved" })
-    setDocStatuses(next)
+    startTransition(async()=>{for(const cfg of uploadedTypes){const doc=docMap.get(cfg.type)!;const result=await reviewDocument(doc.id,'approved','Document reviewed');if(result.error){setError(result.error);return}setDocStatuses(previous=>({...previous,[cfg.type]:'approved'}))}})
   }
 
   function handleAction(type: "approve" | "reject") {
+    const reason=type==="reject"?window.prompt("Reason for rejecting this application:"):null
+    if(type==="reject"&&reason===null)return
     setAction(type)
     setError(null)
     startTransition(async () => {
       const result = type === "approve"
         ? await adminApproveDriver(driver.id)
-        : await adminRejectDriver(driver.id)
+        : await adminRejectDriver(driver.id,reason??undefined)
       if (result.error) { setError(result.error); setAction(null); return }
       onRemove(driver.id)
     })

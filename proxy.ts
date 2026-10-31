@@ -1,3 +1,4 @@
+import {createAdminClient} from "@/lib/supabase/admin"
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
@@ -116,9 +117,19 @@ export async function proxy(request: NextRequest) {
 
     // Fetch the user's role from the users table.
     // RLS policy "Allow user to read own row" permits this select.
-    const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
+    const { data } = await supabase.from("users").select("role,account_status,admin_access").eq("id", user.id).maybeSingle()
 
     const role = data?.role as "admin" | "driver" | "customer" | undefined
+    if(data?.account_status && data.account_status!=='active')return redirectWithCookies(new URL('/unauthorized',request.url))
+    if(role==='admin'&&pathname.startsWith('/dashboard/admin')&&pathname!=='/dashboard/admin/security'){
+      const config=await createAdminClient().from('surge_pricing_settings').select('operational_settings').eq('id',true).single()
+      if(config.error)return new NextResponse('Admin settings are unavailable. Please retry.',{status:503})
+      if(config.data.operational_settings?.requireAdminMfa){const level=await supabase.auth.mfa.getAuthenticatorAssuranceLevel();if(level.error||level.data.currentLevel!=='aal2')return redirectWithCookies(new URL('/dashboard/admin/security',request.url))}
+      const section=pathname.split('/')[3]??''
+      const allowed:Record<string,string[]>={payments:['finance'],payouts:['finance'],reports:['finance'],settings:['settings'],theme:['settings'],audit:['settings'],marketing:['marketing'],promotions:['settings'],support:['support'],reviews:['support'],disputes:['support'],tracking:['operations'],drivers:['operations'],verification:['operations'],customers:['operations','support'],orders:['operations','finance','support']}
+      if(!data?.admin_access?.owner&&allowed[section]&&!allowed[section].some(scope=>data?.admin_access?.scopes?.includes(scope)))return redirectWithCookies(new URL('/unauthorized',request.url))
+    }
+
 
     // Role-based restriction - block cross-role access.
     if (pathname.startsWith("/dashboard/admin") && role !== "admin") {

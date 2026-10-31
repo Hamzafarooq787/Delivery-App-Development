@@ -1,0 +1,2 @@
+import type {SupabaseClient,User} from '@supabase/supabase-js'
+export async function allAuthUsers(admin:SupabaseClient){const users:User[]=[];for(let page=1;page<=10000;page++){const result=await admin.auth.admin.listUsers({page,perPage:1000});if(result.error)return{data:{users:[] as User[]},error:result.error};users.push(...result.data.users);if(result.data.users.length<1000)return{data:{users},error:null}}throw new Error('User directory is too large to read in one operation.')}
