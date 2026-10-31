@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-export async function SupportContact() {
+export async function SupportContact({ showName = true }: { showName?: boolean } = {}) {
   const { data, error } = await createAdminClient()
     .from("surge_pricing_settings")
     .select("platform_settings")
@@ -13,9 +13,10 @@ export async function SupportContact() {
       </p>
     );
   const p = data.platform_settings;
+  if (!showName && !p.email && !p.phone) return null;
   return (
-    <div className="px-4 pt-3 flex flex-wrap gap-3 text-sm text-white">
-      <span>{p.name} support</span>
+    <div aria-label="Support contact details" className={showName ? "px-4 pt-3 flex flex-wrap gap-3 text-sm text-white" : "flex flex-wrap gap-3 text-sm text-white"}>
+      {showName && <span>{p.name} support</span>}
       {p.email && (
         <a className="underline" href={`mailto:${p.email}`}>
           {p.email}

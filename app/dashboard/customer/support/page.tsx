@@ -5,6 +5,6 @@ export const dynamic = 'force-dynamic'
 export default async function CustomerSupportPage() {
   const result = await getMyTickets()
   return (
-    <><SupportContact/><CustomerSupport initialTickets={result.data} initialError={result.error} /></>
+    <CustomerSupport initialTickets={result.data} initialError={result.error} contactDetails={<SupportContact showName={false} />} />
   )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   ChevronRight,
@@ -45,9 +45,11 @@ const topics = [
 export default function CustomerSupport({
   initialTickets,
   initialError,
+  contactDetails,
 }: {
   initialTickets: SupportTicket[]
   initialError?: string
+  contactDetails?: ReactNode
 }) {
   const [tickets, setTickets] = useState(initialTickets),
     [page, setPage] = useState(1),
@@ -99,6 +101,7 @@ export default function CustomerSupport({
       title="How can we help?"
       subtitle="Get support with your deliveries, payments or account."
     >
+      {contactDetails}
       <div className={s.supportTopics}>
         {topics.map(({ title, detail, icon: Icon, href }) => (
           <Link key={title} href={href} className={`${s.panel} ${s.topic}`}>
