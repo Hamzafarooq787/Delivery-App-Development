@@ -11,6 +11,7 @@
 - Tracking contains the customer's requested products, quantities, proposed replacements/prices, price changes, notes and approval/rejection buttons.
 - Buttons lock while saving. Existing atomic database ownership, active-stage and immutable-decision protections remain authoritative.
 - Customer and driver views refresh decisions in the background while visible. Approval and receipt notifications link to the exact order.
+- Legacy replacements without a recorded price cannot be approved; rejection remains available.
 - Approval does not increase prepaid funds; existing funded-card, basket-budget and receipt-reconciliation checks remain intact.
 
 ## Batch 3: shopping order details and totals
@@ -20,7 +21,7 @@
 - Long tracking details scroll within the existing fixed frame on desktop and mobile.
 
 ## Verification
-- 63 tests pass, including database tests for exact-order location isolation, anonymous storage denial, private bucket configuration, forged photo-reference denial and service-only RPC privileges; server tests for authenticated name lookups, protected image redirects, customer-scoped shopping reads, foreign-photo checkout rejection and pending/completed financial calculations.
+- 64 tests pass, including database tests for exact-order location isolation, anonymous storage denial, private bucket configuration, forged photo-reference denial and service-only RPC privileges; server tests for authenticated name lookups, protected image redirects, customer-scoped shopping reads, foreign-photo checkout rejection and pending/completed financial calculations.
 - Existing atomic substitution-decision and approved-basket purchase tests pass.
 - TypeScript, icon checks and production build pass.
 - Browser QA uses real customer components with test services: approve/reject, double-click lock (one request), pending-to-completed refund refresh, 15-product scrolling and a 320px sidebar without horizontal overflow.

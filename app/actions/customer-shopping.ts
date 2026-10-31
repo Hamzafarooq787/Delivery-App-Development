@@ -8,7 +8,7 @@ export type CustomerShoppingOrder = {
   price: number; max_spend_approved: number; estimated_items_total: number | null; actual_items_total: number | null
   receipt_url: string | null; shopping_hold_settled_at: string | null; payment_method: string | null
 }
-export type ShoppingDecision = { id: string; shopping_item_id: string; suggested_name: string; suggested_price: number; driver_notes: string | null; photo_url: string | null; customer_approved: boolean | null; customer_responded_at: string | null }
+export type ShoppingDecision = { id: string; shopping_item_id: string; suggested_name: string; suggested_price: number | null; driver_notes: string | null; photo_url: string | null; customer_approved: boolean | null; customer_responded_at: string | null }
 export type CustomerShoppingDetails = { order: CustomerShoppingOrder; items: ShoppingItemRow[]; decisions: ShoppingDecision[]; payment: { amount: number; payment_method: string; refund_jobs: RefundRecord[] } | null }
 export async function getCustomerShoppingDetails(orderId: string): Promise<{ data: CustomerShoppingDetails } | { error: string }> {
   const session = await createClient()

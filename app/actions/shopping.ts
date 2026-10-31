@@ -419,7 +419,7 @@ export async function respondToSubstitution(
   const admin = createAdminClient()
   const { data: sub } = await admin
     .from("shopping_substitutions")
-    .select("id, shopping_item_id, delivery_id, driver_id, suggested_name")
+    .select("id, shopping_item_id, delivery_id, driver_id, suggested_name, suggested_price")
     .eq("id", substitutionId)
     .single()
 
@@ -435,6 +435,7 @@ export async function respondToSubstitution(
   if (!delivery || delivery.customer_id !== user.id) return { error: "Not your order" }
 
   if (delivery.status !== "collected" || delivery.bfm_stage !== "shopping" || typeof approved !== "boolean") return { error: "This order is no longer awaiting a shopping decision." }
+  if (approved && (sub.suggested_price == null || !Number.isFinite(Number(sub.suggested_price)) || Number(sub.suggested_price) < 0)) return { error: "Your driver must provide a valid price before you approve." }
   const { error: decisionError } = await admin.rpc("decide_shopping_substitution", { p_id: substitutionId, p_customer_id: user.id, p_approved: approved })
   if (decisionError) return { error: "This decision could not be saved. Refresh the order and retry." }
 

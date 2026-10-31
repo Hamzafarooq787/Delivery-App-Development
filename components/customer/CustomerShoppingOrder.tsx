@@ -49,7 +49,7 @@ export function CustomerShoppingOrder({ orderId }: { orderId: string }) {
   const decisionsOpen = order?.status === 'collected' && order.bfm_stage === 'shopping'
   return <section className={styles.panel} aria-label="Your shopping order">
     <h2>Your shopping order</h2>
-    {order && <p>{order.shop_name} · {(order.bfm_stage ?? order.status).replaceAll('_',' ')}</p>}
+    {order && <p>{order.shop_name} · {(order.bfm_stage ?? order.status ?? 'pending').replaceAll('_',' ')}</p>}
     {loading && <p role="status">Loading shopping details…</p>}
     {error && <div role="alert"><p>{error}</p><button type="button" onClick={()=>void refresh()}>Refresh shopping details</button></div>}
     {notice && <p role="status">{notice}</p>}
@@ -64,12 +64,12 @@ export function CustomerShoppingOrder({ orderId }: { orderId: string }) {
           {item.confirmed_unit_price != null && <p>Confirmed shelf price per unit: {money(Number(item.confirmed_unit_price))}</p>}
           {details.decisions.filter(d=>d.shopping_item_id===item.id).map(d=><div key={d.id} className={styles.decision}>
             <h4>{d.customer_approved === null ? 'Your approval is needed' : d.customer_approved ? 'Approved' : 'Rejected'}</h4>
-            <p>Suggested product: {d.suggested_name}</p><p>{money(Number(d.suggested_price))} per unit · {money(Number(d.suggested_price)*item.quantity)} for {item.quantity}</p>
-            {item.estimated_price != null && <p>Change from your estimate: {money((Number(d.suggested_price)-Number(item.estimated_price))*item.quantity)}</p>}
+            <p>Suggested product: {d.suggested_name}</p>{d.suggested_price == null ? <p>Your driver must provide a price before you can approve.</p> : <p>{money(Number(d.suggested_price))} per unit · {money(Number(d.suggested_price)*item.quantity)} for {item.quantity}</p>}
+            {item.estimated_price != null && d.suggested_price != null && <p>Change from your estimate: {money((Number(d.suggested_price)-Number(item.estimated_price))*item.quantity)}</p>}
             {Number(d.suggested_price)*item.quantity > Number(order?.max_spend_approved??0) && <p>This exceeds your prepaid shopping funds. Reject it and ask your driver for an option within your budget.</p>}{d.driver_notes && <p>{d.driver_notes}</p>}
             {d.photo_url && <a href={orderMediaUrl(d.photo_url)} target="_blank" rel="noreferrer">View suggested product photo</a>}
             {d.customer_approved === null && (decisionsOpen ? <div className={styles.actions}>
-              <button type="button" disabled={!!busy || !!error || Number(d.suggested_price)*item.quantity > Number(order?.max_spend_approved??0)} onClick={()=>void decide(d.id,true)} aria-label={`Approve ${d.suggested_name}`}>{busy===d.id ? 'Saving…' : 'Approve'}</button>
+              <button type="button" disabled={!!busy || !!error || d.suggested_price == null || Number(d.suggested_price)*item.quantity > Number(order?.max_spend_approved??0)} onClick={()=>void decide(d.id,true)} aria-label={`Approve ${d.suggested_name}`}>{busy===d.id ? 'Saving…' : 'Approve'}</button>
               <button type="button" disabled={!!busy || !!error} onClick={()=>void decide(d.id,false)} aria-label={`Reject ${d.suggested_name}`}>Reject</button>
             </div> : <p>This order is no longer accepting shopping decisions.</p>)}
           </div>)}
