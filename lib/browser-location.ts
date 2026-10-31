@@ -1,5 +1,5 @@
 /** Browser-only GPS helpers. Never substitute an IP-derived location for device GPS. */
-export type LocationIssue = { message: string; help?: string }
+export type LocationIssue = { message: string; help?: string; code?: number }
 
 export function locationIssue(error: unknown, userAgent = navigator.userAgent): LocationIssue {
   const code = (error as { code?: number })?.code
@@ -9,10 +9,10 @@ export function locationIssue(error: unknown, userAgent = navigator.userAgent): 
       : /Android/i.test(userAgent)
         ? 'Turn on your phone’s Location setting. Allow location for your browser in app permissions and for this website in Site settings → Location, then tap Try again.'
         : 'Allow Location for this website using the icon beside the address bar. Also enable location for your browser in your device settings, then tap Try again.'
-    return { message: 'Location access is blocked. You can enable it or enter an address.', help }
+    return { code, message: 'Location access is blocked. You can enable it or enter an address.', help }
   }
-  if (code === 2) return { message: 'Your device could not find a location. Turn on Location Services, check your signal and try again, or enter an address.' }
-  if (code === 3) return { message: 'Finding your location took too long. Try again with a better signal, or enter an address.' }
+  if (code === 2) return { code, message: 'Your device could not find a location. Turn on Location Services, check your signal and try again, or enter an address.' }
+  if (code === 3) return { code, message: 'Finding your location took too long. Try again with a better signal, or enter an address.' }
   return { message: error instanceof Error ? error.message : 'Location is unavailable. Try again or enter an address.' }
 }
 

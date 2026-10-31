@@ -4,6 +4,22 @@ import fs from 'node:fs'
 import vm from 'node:vm'
 import { stripTypeScriptTypes } from 'node:module'
 
+const settingsSource = stripTypeScriptTypes(fs.readFileSync('lib/location-settings.ts', 'utf8')).replace(/export /g, '')
+const locationSettingsGuide = vm.runInNewContext(settingsSource + ';locationSettingsGuide')
+test('Location settings only link to a documented OS URI on Windows', () => {
+  assert.equal(locationSettingsGuide('Mozilla/5.0 (Windows NT 10.0) Chrome/153').systemSettingsUrl, 'ms-settings:privacy-location')
+  for (const ua of ['iPhone Safari/605.1', 'Android Chrome/153', 'Macintosh Safari/605.1', 'Linux Firefox/140']) {
+    assert.equal(locationSettingsGuide(ua).systemSettingsUrl, undefined)
+    assert.match(locationSettingsGuide(ua).helpUrl, /^https:\/\/support\./)
+  }
+})
+test('Location recovery distinguishes iPad desktop mode and non-Safari iOS browsers', () => {
+  assert.equal(locationSettingsGuide('Macintosh Safari/605.1', 5).device, 'iPhone / iPad')
+  assert.equal(locationSettingsGuide('iPhone CriOS/150 Safari/605.1').device, 'Chrome on iPhone / iPad')
+  assert.ok(locationSettingsGuide('iPhone Safari/605.1').steps.some(s => s.includes('In Safari')))
+  assert.ok(locationSettingsGuide('iPhone FxiOS/140 Safari/605.1').steps.every(s => !s.includes('In Safari')))
+})
+
 function locationFixture(responses, { secure = true, supported = true } = {}) {
   const calls = []
   const navigator = { userAgent: 'iPhone', ...(supported ? { geolocation: {

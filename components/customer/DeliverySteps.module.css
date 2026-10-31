@@ -19,6 +19,8 @@
 .addressLabel{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap}
 .addressLabel label{min-width:0}
 .addressLabel button{white-space:nowrap}
+.liveLocationAction{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px dashed var(--color-outline-variant);border-radius:10px}
+.liveLocationAction>span{font-size:12px;color:var(--color-on-surface-variant)}
 .locationStep .locationFeedback{padding:10px 12px;border:1px solid var(--color-outline-variant);border-radius:10px;background:var(--brand-panel);margin-top:8px;font-size:12px;line-height:1.5}
 .locationFeedback p{margin:0;color:var(--color-on-surface)}
 .locationFeedback summary{cursor:pointer;text-decoration:underline;margin-top:6px}

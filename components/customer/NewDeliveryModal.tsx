@@ -9,6 +9,8 @@ import { PackageIllustration } from './PackageIllustration'
 import { ItemPhotoPreview } from './ItemPhotoPreview'
 import { compressImage } from '@/lib/image-compress'
 import { requestBrowserLocation, locationIssue, type LocationIssue } from '@/lib/browser-location'
+import { LocationButton, supportsLocationControl } from './LocationButton'
+import { LocationPermissionDialog } from './LocationPermissionDialog'
 const BookingRouteMap = dynamic(() => import('./BookingRouteMap'), { ssr: false })
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -51,19 +53,23 @@ const PROHIBITED_ITEMS = [
 ]
 
 type LatLng = { lng: number; lat: number }
+type LocationTarget = 'pickup' | 'destination' | 'live'
 
 function AddressInput({
   label, icon, color, placeholder, value, onChange, onSelect,
-  onGpsClick, gpsLoading, proximity, countryCode, issue,
+  onGpsClick, onGpsPosition, onGpsError, getGpsVersion, gpsLoading, locationHelpOpen, proximity, countryCode,
 }: {
   label: string; icon: string; color: string; placeholder: string; value: string
   onChange: (v: string) => void
   onSelect: (place: string, coords: LatLng | null) => void
   onGpsClick: () => void
+  onGpsPosition: (position: GeolocationPosition) => void
+  onGpsError: (error: unknown) => void
+  getGpsVersion: () => number
   gpsLoading: boolean
+  locationHelpOpen: boolean
   proximity: LatLng | null
   countryCode: string | null
-  issue?: LocationIssue | null
 }) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [open, setOpen] = useState(false)
@@ -126,17 +132,8 @@ function AddressInput({
           <span className="material-symbols-outlined text-sm">{icon}</span>
           {label}
         </label>
-        <button
-          type="button"
-          onClick={onGpsClick}
-          disabled={gpsLoading || selecting}
-          className="flex items-center gap-1 text-[10px] font-bold text-[var(--color-primary)] hover:text-white transition-colors disabled:opacity-50"
-        >
-          <span className="material-symbols-outlined text-sm">
-            {gpsLoading ? 'hourglass_empty' : 'my_location'}
-          </span>
-          {gpsLoading ? 'Locating…' : 'Use my location'}
-        </button>
+        <LocationButton onRequest={onGpsClick} onPosition={onGpsPosition} onError={onGpsError} getRequestVersion={getGpsVersion}
+          disabled={gpsLoading || selecting} suspended={locationHelpOpen} label={gpsLoading ? 'Locating…' : `Use my location for ${label.toLowerCase()}`} />
       </div>
       <div className="relative">
         <input
@@ -154,7 +151,6 @@ function AddressInput({
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#adaaaa]">Getting location…</span>
         )}
       </div>
-      {issue && <LocationFeedback issue={issue} onRetry={onGpsClick} />}
       {open && suggestions.length > 0 && dropdownRect && (
         <div
           style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, maxHeight: Math.max(60, (window.visualViewport?.height ?? window.innerHeight) - dropdownRect.top - 76), overflowY: 'auto', zIndex: 99999 }}
@@ -179,14 +175,6 @@ function AddressInput({
       )}
     </div>
   )
-}
-
-function LocationFeedback({ issue, onRetry }: { issue: LocationIssue; onRetry: () => void }) {
-  return <div className={styles.locationFeedback}>
-    <p role="alert">{issue.message}</p>
-    {issue.help && <details><summary>How to allow location</summary><p>{issue.help}</p></details>}
-    <button type="button" onClick={onRetry}>Try again</button>
-  </div>
 }
 
 export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }: NewDeliveryModalProps) {
@@ -234,7 +222,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   }, [])
   function goTo(next: number) {
     if(next < step) checkoutKey.current = null
-    if (next === 2 && !locationAccessRequested.current) {
+    if (next === 2 && !locationAccessRequested.current && !supportsLocationControl()) {
       locationAccessRequested.current = true
       // Ask automatically as Locations opens, still inside the Continue click.
       // This restores the browser's Allow/Block prompt without another tap.
@@ -331,12 +319,10 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   const [gpsPickupLoading, setGpsPickupLoading] = useState(false)
   const [gpsDestLoading, setGpsDestLoading] = useState(false)
 
-  const [pickupLocationIssue, setPickupLocationIssue] = useState<LocationIssue | null>(null)
-  const [deliveryLocationIssue, setDeliveryLocationIssue] = useState<LocationIssue | null>(null)
+  const [locationRecovery, setLocationRecovery] = useState<{ target: LocationTarget; issue: LocationIssue } | null>(null)
   const [liveLocationActive, setLiveLocationActive] = useState(false)
   const [liveLocationLoading, setLiveLocationLoading] = useState(false)
   const [liveLocationError, setLiveLocationError] = useState<LocationIssue | null>(null)
-  const [locationAccessIssue, setLocationAccessIssue] = useState<LocationIssue | null>(null)
   const locationAccessRequested = useRef(false)
   const locationRequests = useRef({ pickup: 0, destination: 0, live: 0 })
   const liveWatch = useRef<number | null>(null)
@@ -354,35 +340,37 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   }, [])
 
   async function requestLocationAccess() {
-    setLocationAccessIssue(null)
-    const requests = { ...locationRequests.current }
     try {
       const pos = await requestBrowserLocation()
       if (locationMounted.current) setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
       // Permission enables the map; existing pickup/delivery choices stay intact.
-    } catch (error) {
-      if (locationMounted.current && Object.keys(requests).every(key => requests[key as keyof typeof requests] === locationRequests.current[key as keyof typeof requests])) {
-        setLocationAccessIssue(locationIssue(error))
-      }
-    }
+    } catch { /* Show help only after an explicit location action, not when opening this step. */ }
+  }
+
+  function reportLocationIssue(target: LocationTarget, error: unknown) {
+    if (locationMounted.current) setLocationRecovery({ target, issue: locationIssue(error) })
+  }
+
+  function useLocation(target: LocationTarget, position?: GeolocationPosition) {
+    setLocationRecovery(null)
+    if (target === 'live') void startLiveLocation(true, position)
+    else void fillFromGps(target, position)
   }
 
   function cancelGps(field: 'pickup' | 'destination') {
-    setLocationAccessIssue(null)
     locationRequests.current[field]++
-    if (field === 'pickup') { setGpsPickupLoading(false); setPickupLocationIssue(null) }
-    else { setGpsDestLoading(false); setDeliveryLocationIssue(null); setLiveLocationError(null) }
+    if (field === 'pickup') setGpsPickupLoading(false)
+    else { setGpsDestLoading(false); setLiveLocationError(null) }
   }
 
-  async function fillFromGps(field: 'pickup' | 'destination') {
+  async function fillFromGps(field: 'pickup' | 'destination', position?: GeolocationPosition) {
     cancelGps(field)
     const request = locationRequests.current[field]
     const current = () => locationMounted.current && request === locationRequests.current[field]
     const loading = field === 'pickup' ? setGpsPickupLoading : setGpsDestLoading
-    const setIssue = field === 'pickup' ? setPickupLocationIssue : setDeliveryLocationIssue
     loading(true)
     try {
-      const pos = await requestBrowserLocation()
+      const pos = position ?? await requestBrowserLocation()
       if (!current()) return
       const point = { lat: pos.coords.latitude, lng: pos.coords.longitude }
       const fallback = `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`
@@ -396,11 +384,11 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         if (field === 'pickup') setPickupValue(place)
         else setDeliveryValue(place)
       }
-    } catch (error) { if (current()) setIssue(locationIssue(error)) }
+    } catch (error) { if (current()) reportLocationIssue(field, error) }
     finally { if (current()) loading(false) }
   }
 
-  async function startLiveLocation(restart = false) {
+  async function startLiveLocation(restart = false, position?: GeolocationPosition) {
     if (liveLocationLoading || (liveLocationActive && !restart)) return
     if (liveWatch.current !== null) navigator.geolocation.clearWatch(liveWatch.current)
     liveWatch.current = null
@@ -411,7 +399,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     setLiveLocationError(null)
     setLiveLocationLoading(true)
     try {
-      const pos = await requestBrowserLocation()
+      const pos = position ?? await requestBrowserLocation()
       if (!current()) return
       const point = { lat: pos.coords.latitude, lng: pos.coords.longitude }
       const applyPosition = (p: LatLng) => {
@@ -456,7 +444,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           void clearCustomerLocation().catch(() => {})
         }
       }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 })
-    } catch (error) { if (current()) setLiveLocationError(locationIssue(error)) }
+    } catch (error) { if (current()) reportLocationIssue('live', error) }
     finally { if (current()) setLiveLocationLoading(false) }
   }
 
@@ -646,7 +634,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     <div ref={frameRef} className={styles.overlay} onKeyDown={(event) => {
       if (event.key === 'Escape' && !submitting && !addingFunds) onClose()
       if (event.key === 'Tab') {
-        const controls = Array.from(frameRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled)') ?? []).filter(el => el.getClientRects().length > 0)
+        const controls = Array.from(frameRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), geolocation, input:not(:disabled), textarea:not(:disabled)') ?? []).filter(el => el.getClientRects().length > 0)
         const first = controls[0], last = controls[controls.length - 1]
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
         if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
@@ -754,9 +742,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             value={pickupValue}
             onChange={(v) => { cancelGps('pickup'); setPickupValue(v); setPickupCoords(null) }}
             onSelect={(place, coords) => { cancelGps('pickup'); setPickupValue(place); setPickupCoords(coords ?? null) }}
-            onGpsClick={() => fillFromGps('pickup')}
+            onGpsClick={() => useLocation('pickup')}
+            onGpsPosition={position => useLocation('pickup', position)}
+            onGpsError={error => reportLocationIssue('pickup', error)}
+            getGpsVersion={() => locationRequests.current.pickup}
             gpsLoading={gpsPickupLoading}
-            issue={pickupLocationIssue}
+            locationHelpOpen={!!locationRecovery}
             proximity={userCoords}
             countryCode={countryCode}
           />
@@ -807,28 +798,29 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
                 value={deliveryValue}
                 onChange={(v) => { cancelGps('destination'); locationRequests.current.live++; setLiveLocationLoading(false); setDeliveryValue(v); setDeliveryCoords(null) }}
                 onSelect={(place, coords) => { cancelGps('destination'); setDeliveryValue(place); setDeliveryCoords(coords ?? null) }}
-                onGpsClick={() => fillFromGps('destination')}
+                onGpsClick={() => useLocation('destination')}
+                onGpsPosition={position => useLocation('destination', position)}
+                onGpsError={error => reportLocationIssue('destination', error)}
+                getGpsVersion={() => locationRequests.current.destination}
                 gpsLoading={gpsDestLoading || liveLocationLoading}
-                issue={deliveryLocationIssue}
+                locationHelpOpen={!!locationRecovery}
                 proximity={userCoords}
                 countryCode={countryCode}
               />
               {/* Live location as alternative to typing destination */}
-              <button
-                type="button"
-                onClick={() => void startLiveLocation()}
-                disabled={liveLocationLoading || gpsDestLoading}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-dashed border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/5 transition-all"
-              >
-                <span className="material-symbols-outlined text-base">share_location</span>
-                <span className="text-xs font-bold">{liveLocationLoading ? 'Finding your live location…' : 'Use my live location as destination'}</span>
-              </button>
+              <div className={styles.liveLocationAction}>
+                <span>Live delivery location</span>
+                <LocationButton onRequest={() => useLocation('live')} onPosition={position => useLocation('live', position)}
+                  onError={error => reportLocationIssue('live', error)} disabled={liveLocationLoading || gpsDestLoading}
+                  suspended={!!locationRecovery}
+                  getRequestVersion={() => `${locationRequests.current.destination}:${locationRequests.current.live}`}
+                  label={liveLocationLoading ? 'Locating…' : 'Use my live location as destination'} />
+              </div>
 
             </div>
           )}
 
-{locationAccessIssue && <LocationFeedback issue={locationAccessIssue} onRetry={() => void requestLocationAccess()} />}
-{liveLocationError && <LocationFeedback issue={liveLocationError} onRetry={() => void startLiveLocation(true)} />}
+{liveLocationError && <div className={styles.locationFeedback}><p role="status">{liveLocationError.message}</p><button type="button" onClick={() => setLocationRecovery({ target: 'live', issue: liveLocationError })}>Reconnect live location</button></div>}
 <AddressInstructions pickup={pickupInstructions} delivery={deliveryInstructions} onPickup={setPickupInstructions} onDelivery={setDeliveryInstructions}/>
 <BookingRouteMap pickup={pickupCoords} destination={deliveryCoords} userLocation={userCoords}/>
 </div>}
@@ -944,6 +936,10 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           {step === 3 && <p className={styles.secure}>Secure card checkout</p>}
         </footer>
       </section>
+      {locationRecovery && <LocationPermissionDialog issue={locationRecovery.issue}
+        onClose={() => setLocationRecovery(null)} onRetry={() => useLocation(locationRecovery.target)}
+        onPosition={position => useLocation(locationRecovery.target, position)}
+        onError={error => reportLocationIssue(locationRecovery.target, error)} />}
     </div>
   )
 }
