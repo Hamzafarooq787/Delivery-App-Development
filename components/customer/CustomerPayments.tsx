@@ -9,6 +9,7 @@ import {
   RotateCcw,
   ShoppingBag,
 } from 'lucide-react'
+import { paymentDisplayStatus } from '@/lib/payment-display'
 import { useCustomerLiveRefresh } from '@/hooks/use-customer-live-refresh'
 import { getCustomerPayments } from '@/app/actions/customer-repairs'
 import {
@@ -106,7 +107,7 @@ export default function CustomerPayments() {
         const r = await getCustomerPayments(page, size, tab === 'refunds')
         if (!alive) return
         if (r.error) setError(r.error)
-        else { setRows(r.data.rows); setDetails(prev=>prev?r.data.rows.find((p:Payment)=>p.id===prev.id)??prev:null); setSummary(r.data); setError(''); const last = Math.max(1, Math.ceil(r.data.totalCount / size)); if (page > last) setPage(last) }
+        else { const normalized=r.data.rows.map((p:Payment)=>({...p,status:paymentDisplayStatus(p.status,Number(p.amount),p.refund_jobs??[])})); setRows(normalized); setDetails(prev=>prev?normalized.find((p:Payment)=>p.id===prev.id)??prev:null); setSummary(r.data); setError(''); const last = Math.max(1, Math.ceil(r.data.totalCount / size)); if (page > last) setPage(last) }
       } catch { if (alive) setError('Could not load payments. Please try again.') }
       finally { busy = false; if (alive) setLoading(false) }
     }

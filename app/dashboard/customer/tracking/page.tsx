@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
 import { CustomerThread } from '@/components/shared/customer-thread'
 import { CustomerShoppingOrder } from '@/components/customer/CustomerShoppingOrder'
 import { getDriverNamesByIds } from '@/app/actions/driver'
@@ -104,6 +105,7 @@ function buildSteps(
 }
 
 function TrackingPageInner() {
+  const [centreRequest,setCentreRequest]=useState(0),[mapType,setMapType]=useState<'roadmap'|'satellite'>('roadmap')
   const [eta, setEta] = useState<{minutes:number;destination:boolean}|null>(null)
   const [loading, setLoading] = useState(true), [loadError,setLoadError]=useState(''), [revision,setRevision]=useState(0)
   const [showModal, setShowModal] = useState(false)
@@ -633,6 +635,7 @@ function TrackingPageInner() {
                 </div>
               </div>
             </div>
+            {shipment?.id && ['accepted','collected','in_transit'].includes(shipment.status) && <CustomerLocationBroadcaster key={shipment.id} deliveryId={shipment.id} orderLabel={shipment.tracking_number??shipment.id.slice(0,8)} />}
             {shipment?.id && <CustomerThread kind="order" id={shipment.id} />}
 
           </div>
@@ -643,6 +646,8 @@ function TrackingPageInner() {
           {/* When delivered, just show static pickup→destination route — no live driver marker */}
           <LiveTrackingPanel
                 onEta={setEta}
+                centreRequest={centreRequest}
+                mapType={mapType}
             status={shipment?.status}
             bfmStage={shipment?.bfm_stage}
             matchDeliveryId
@@ -694,6 +699,8 @@ function TrackingPageInner() {
             <button
               className="w-11 h-11 bg-[#0e0e0e]/85 backdrop-blur-sm rounded-xl border border-[#494847]/30 flex items-center justify-center text-[#adaaaa] hover:text-white hover:bg-[#262626]/80 transition-all"
               title="Centre map"
+              aria-label="Centre map"
+              onClick={()=>setCentreRequest(n=>n+1)}
             >
               <span className="material-symbols-outlined text-xl">
                 my_location
@@ -702,6 +709,9 @@ function TrackingPageInner() {
             <button
               className="w-11 h-11 bg-[#0e0e0e]/85 backdrop-blur-sm rounded-xl border border-[#494847]/30 flex items-center justify-center text-[#adaaaa] hover:text-white hover:bg-[#262626]/80 transition-all"
               title="Map layers"
+              aria-label="Satellite map"
+              aria-pressed={mapType==='satellite'}
+              onClick={()=>setMapType(t=>t==='roadmap'?'satellite':'roadmap')}
             >
               <span className="material-symbols-outlined text-xl">layers</span>
             </button>

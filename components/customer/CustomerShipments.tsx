@@ -14,7 +14,7 @@ import {
 import { shoppingFinancials, type RefundRecord } from '@/lib/shopping-summary'
 import { createClient } from '@/lib/supabase/client'
 import { getDriverNamesByIds } from '@/app/actions/driver'
-import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
+import { useCustomerLiveRefresh } from '@/hooks/use-customer-live-refresh'
 import { CancelOrderButton } from './cancel-order-button'
 import {
   CustomerDialog,
@@ -65,6 +65,7 @@ export default function CustomerShipments({
     [selected, setSelected] = useState<string | null>(null),
     [proof, setProof] = useState<Shipment | null>(null),
     [orderDetails, setOrderDetails] = useState<Shipment | null>(null)
+  const [detailsError,setDetailsError]=useState(''),[detailsLoading,setDetailsLoading]=useState(false)
   const size = useCustomerPageSize(5, 2)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -129,25 +130,13 @@ export default function CustomerShipments({
       alive = false
     }
   }, [client, history, current, size, search, revision])
-  useEffect(() => {
-    if (!userId) return
-    const channel = client
-      .channel(`customer-shipment-list-${userId}-${history}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'delivery_requests',
-          filter: `customer_id=eq.${userId}`,
-        },
-        () => setRevision((r) => r + 1),
-      )
-      .subscribe()
-    return () => {
-      void client.removeChannel(channel)
-    }
-  }, [client, userId, history])
+  useEffect(()=>{
+    const id=orderDetails?.id
+    if(!id||!userId)return
+    let alive=true;setDetailsLoading(true);setDetailsError('')
+    void Promise.resolve(client.from('delivery_requests').select('id,tracking_number,driver_id,pickup_address,delivery_address,item_description,price,status,created_at,service_type,delivered_image_url,max_spend_approved,actual_items_total,shopping_hold_settled_at,payment_method,payments(amount,payment_method,refund_jobs)').eq('id',id).eq('customer_id',userId).maybeSingle()).then(({data,error})=>{if(!alive)return;if(error||!data)setDetailsError('Could not refresh this order. Please retry.');else setOrderDetails(data as Shipment)}).catch(()=>{if(alive)setDetailsError('Could not refresh this order. Please retry.')}).finally(()=>{if(alive)setDetailsLoading(false)})
+    return()=>{alive=false}
+  },[client,userId,orderDetails?.id,revision])
   const focus = rows.find((r) => r.id === selected) ?? rows[0]
   const label = (row: Shipment) =>
     row.tracking_number ?? `GD-${row.id.slice(0, 6).toUpperCase()}`
@@ -164,9 +153,8 @@ export default function CustomerShipments({
     })[row.status ?? ''] ?? (row.status ?? 'Requested').replaceAll('_', ' ')
   const totalPaid = (row: Shipment) => row.service_type === 'buy_for_me' ? shoppingFinancials({...row,max_spend_approved:row.max_spend_approved??0},row.payments?.[0]).charged : Number(row.price??0)
   const track = (row: Shipment) => `/dashboard/customer/tracking?id=${row.id}`
-  const activeDelivery = rows.find((r) =>
-    ['accepted', 'collected', 'in_transit'].includes(r.status ?? ''),
-  )
+  useCustomerLiveRefresh(async()=>{setRevision(r=>r+1)},'delivery_requests',20000)
+  const liveDetails = orderDetails
   return (
     <CustomerPage
       title="Your shipments"
@@ -178,9 +166,6 @@ export default function CustomerShipments({
         </button>
       }
     >
-      {activeDelivery && !history && (
-        <CustomerLocationBroadcaster deliveryId={activeDelivery.id} />
-      )}
       <div className={s.toolbar}>
         <div className={s.tabs}>
           <Link
@@ -433,39 +418,41 @@ export default function CustomerShipments({
           </aside>
         )}
       </div>
-      {orderDetails && (
+      {liveDetails && (
         <CustomerDialog
           title="Order details"
           onClose={() => setOrderDetails(null)}
         >
           <p>
-            <strong>{label(orderDetails)}</strong>
+            <strong>{label(liveDetails)}</strong>
           </p>
-          <p style={{ marginTop: 12 }}>{orderDetails.item_description}</p>
+          <p style={{ marginTop: 12 }}>{liveDetails.item_description}</p>
           <div className={s.routeStops}>
             <div>
               <MapPin size={17} />
               <span>
                 <small>Pickup</small>
-                {orderDetails.pickup_address}
+                {liveDetails.pickup_address}
               </span>
             </div>
             <div>
               <MapPin size={17} />
               <span>
                 <small>Delivery</small>
-                {orderDetails.delivery_address}
+                {liveDetails.delivery_address}
               </span>
             </div>
           </div>
           <p style={{ marginBottom: 16 }}>
-            {money(totalPaid(orderDetails))} original booking charge · {status(orderDetails)}
+            {money(totalPaid(liveDetails))} original booking charge · {status(liveDetails)}
           </p>
-          {orderDetails.service_type === 'buy_for_me' && <Link className={s.primary} href={track(orderDetails)}>Shopping items, approvals and receipt</Link>}
-          {!history && (
+          {liveDetails.service_type === 'buy_for_me' && <Link className={s.primary} href={track(liveDetails)}>Shopping items, approvals and receipt</Link>}
+          {detailsError&&<p role="alert" className={s.error}>{detailsError} <button className={s.textButton} onClick={()=>setRevision(v=>v+1)}>Retry order details</button></p>}
+          {detailsLoading&&<p role="status">Refreshing order…</p>}
+          {!history && !detailsLoading && !detailsError && (
             <CancelOrderButton
-              deliveryId={orderDetails.id}
-              currentStatus={orderDetails.status ?? 'requested'}
+              deliveryId={liveDetails.id}
+              currentStatus={liveDetails.status ?? 'requested'}
               onCancelled={() => {
                 setOrderDetails(null)
                 setRevision((r) => r + 1)

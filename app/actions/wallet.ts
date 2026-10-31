@@ -37,20 +37,15 @@ export async function getWalletBalance(): Promise<{ balance: number; error?: str
 }
 
 // ── Get wallet transactions ───────────────────────────────────────────────
-export async function getWalletTransactions(): Promise<{ data: WalletTransaction[]; error?:string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { data: [],error:"Please sign in again." }
-
-  const admin = createAdminClient()
-  const { data,error } = await admin
-    .from("wallet_transactions")
-    .select("id, type, amount, description, delivery_id, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(50)
-
-  return { data: (data ?? []) as WalletTransaction[], ...(error?{error:"Could not load wallet transactions."}:{}) }
+export async function getWalletTransactions(page=1,size=20):Promise<{data:WalletTransaction[];totalCount:number;page:number;error?:string}> {
+  const client=await createClient();const {data:{user}}=await client.auth.getUser()
+  if(!user)return {data:[],totalCount:0,page:1,error:'Please sign in again.'}
+  const limit=Math.max(1,Math.min(50,Math.trunc(size)||20)),requested=Math.max(1,Math.min(1000000,Math.trunc(page)||1))
+  const {data,count,error}=await createAdminClient().from('wallet_transactions')
+    .select('id,type,amount,description,delivery_id,created_at',{count:'exact'})
+    .eq('user_id',user.id).order('created_at',{ascending:false}).order('id',{ascending:false})
+    .range((requested-1)*limit,requested*limit-1)
+  return {data:(data??[]) as WalletTransaction[],totalCount:count??0,page:requested,...(error?{error:'Could not load wallet transactions. Please retry.'}:{})}
 }
 
 // ── Cancel order (customer) ───────────────────────────────────────────────

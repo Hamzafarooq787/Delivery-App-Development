@@ -51,6 +51,8 @@ type Driver = {
 }
 
 type Props = {
+  centreRequest?: number
+  mapType?: "roadmap" | "satellite"
   onPick?: (point: LngLat) => void
   drivers?: Driver[]
   pickup?: LngLat | null
@@ -127,6 +129,8 @@ function DriverPin({ driver }: { driver: Driver }) {
 }
 
 export function GoogleLiveMap({
+  centreRequest=0,
+  mapType="roadmap",
   onPick,
   drivers = [],
   pickup,
@@ -190,7 +194,7 @@ export function GoogleLiveMap({
       const z = map.getZoom()
       if (z !== undefined && z > 15) map.setZoom(15)
     })
-  }, [mapReady, driverPositionKey, pickup?.lat, pickup?.lng, destination?.lat, destination?.lng, !!customerLocation, userLocation])
+  }, [mapReady, driverPositionKey, pickup?.lat, pickup?.lng, destination?.lat, destination?.lng, customerLocation?.lat, customerLocation?.lng, userLocation, centreRequest])
 
   // Follow specific driver
   useEffect(() => {
@@ -223,7 +227,8 @@ export function GoogleLiveMap({
         zoom={11}
         onLoad={onMapLoad}
         options={{
-          styles: DARK_STYLES,
+          styles: mapType === "roadmap" ? DARK_STYLES : [],
+          mapTypeId: mapType,
           disableDefaultUI: true,
           zoomControl: true,
           zoomControlOptions: { position: 9 /* BOTTOM_RIGHT */ },

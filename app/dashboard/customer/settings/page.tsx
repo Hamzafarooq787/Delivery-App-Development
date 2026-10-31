@@ -44,6 +44,7 @@ export default function SettingsPage() {
     email: false,
     push: false,
   })
+  const [marketingRetry,setMarketingRetry]=useState(0)
   const [marketingLoaded, setMarketingLoaded] = useState(false)
   const [savingMarketing, setSavingMarketing] = useState(false)
   const [marketingMessage, setMarketingMessage] = useState<{
@@ -111,22 +112,24 @@ export default function SettingsPage() {
   useEffect(() => {
     let cancelled = false
     async function loadMarketing() {
+      setMarketingLoaded(false);setMarketingMessage(null)
       try {
       const { data,error } = await getMarketingConsent()
       if(error) throw new Error(error)
-      if (cancelled || !data) return
+      if(cancelled)return
+      if(!data)throw new Error('Preferences unavailable')
       setMarketingPrefs({
         email: data.marketing_email_opt_in,
         push: data.marketing_push_opt_in,
       })
       setMarketingLoaded(true)
-      } catch { if (!cancelled) setMarketingMessage({type:'error',text:'Could not load preferences. Please reload settings.'}) }
+      } catch { if (!cancelled) setMarketingMessage({type:'error',text:'Could not load preferences. Please try again.'}) }
     }
     loadMarketing()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [marketingRetry])
 
   async function toggleMarketing(key: keyof MarketingPrefs) {
     if (savingMarketing) return
@@ -342,7 +345,7 @@ export default function SettingsPage() {
           }
           role="status"
         >
-          {marketingMessage.text}
+          {marketingMessage.text}{marketingMessage.type==='error'&&!marketingLoaded&&<button type="button" className={styles.textButton} onClick={()=>setMarketingRetry(v=>v+1)}>Retry preferences</button>}
         </p>
       )}
     </div>
