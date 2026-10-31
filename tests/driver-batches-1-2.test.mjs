@@ -175,7 +175,7 @@ test('Actual Buy for Me final button opens OTP, while closed orders have no adva
   const jsx=(type,props)=>({type,props})
   const react={useState:initial=>{const i=slot++;if(!(i in state))state[i]=initial;return[state[i],v=>{state[i]=v}]},useEffect:()=>{},useTransition:()=>[false,()=>{}]}
   const OtpModal=()=>null
-  const component=compile('components/driver/bfm-shopping-workflow.tsx',{'@/lib/order-media':{},'@/app/actions/shopping-operations':{},react,'react/jsx-runtime':{jsx,jsxs:jsx},'next/navigation':{useRouter:()=>({})},sonner:{toast:{}},'@/lib/supabase/client':{},'@/app/actions/shopping':{},'./delivery-otp-modal':{DeliveryOtpModal:OtpModal}})
+  const component=compile('components/driver/bfm-shopping-workflow.tsx',{'@/lib/order-media':{},'@/components/shared/customer-thread':{},'next/dynamic':{default:()=>()=>null},'@/app/actions/shopping-operations':{},react,'react/jsx-runtime':{jsx,jsxs:jsx},'next/navigation':{useRouter:()=>({})},sonner:{toast:{}},'@/lib/supabase/client':{},'@/app/actions/shopping':{},'./delivery-otp-modal':{DeliveryOtpModal:OtpModal}})
   const props={job:{id:job,status,bfm_stage:'heading_to_customer'},userId:driver}
   const tree=component.BfmShoppingWorkflow(props)
   const button=elements(tree).find(n=>n.type==='button'&&n.props.children==='Deliver to Customer')

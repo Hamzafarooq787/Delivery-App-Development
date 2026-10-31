@@ -29,27 +29,28 @@ export type ChatSession = {
 }
 
 // ── Driver: get or create their chat session ─────────────────────────────────
-export async function getOrCreateChatSession(): Promise<{ sessionId: string | null; error?: string }> {
+export async function getOrCreateChatSession(): Promise<{ sessionId: string | null; error?: string; unread?:number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { sessionId: null, error: "Not authenticated" }
 
+  if(await getCallerRole(user.id)!=="driver")return {sessionId:null,error:"Driver account required."}
   const admin = createAdminClient()
 
   // Try to get existing session
   const { data: existing } = await admin
     .from("chat_sessions")
-    .select("id")
+    .select("id,driver_unread")
     .eq("driver_id", user.id)
     .single()
 
-  if (existing) return { sessionId: existing.id }
+  if (existing) return { sessionId: existing.id,unread:existing.driver_unread??0 }
 
   // Create new session
   const { data: created, error } = await admin
     .from("chat_sessions")
     .insert({ driver_id: user.id })
-    .select("id")
+    .select("id,driver_unread")
     .single()
 
   if (error) return { sessionId: null, error: error.message }

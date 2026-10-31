@@ -2,6 +2,7 @@
 
 import { BrandLogo } from '@/components/shared/brand-logo'
 import styles from '@/components/driver/MapFirstDashboard.module.css'
+import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { DriverSidebar } from '@/components/driver/driver-sidebar'
@@ -13,6 +14,7 @@ import { InstallButton } from '@/components/pwa/install-button'
 import { FloatingLiveChat } from '@/components/driver/floating-live-chat'
 import { TestPushButton } from '@/components/driver/test-push-button'
 import { DriverTrackingSelection } from '@/components/tracking/driver-tracking-selection'
+import { DriverRefresh } from '@/components/driver/driver-refresh'
 
 interface DriverLayoutClientProps {
   children: React.ReactNode
@@ -20,6 +22,7 @@ interface DriverLayoutClientProps {
   isOnline: boolean
   driverStatus: string
   hasDocuments: boolean
+  submittedAt?: string|null
   userId: string
 }
 
@@ -34,6 +37,7 @@ export function DriverLayoutClient({
   isOnline,
   driverStatus,
   hasDocuments,
+  submittedAt,
   userId,
 }: DriverLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -47,6 +51,7 @@ export function DriverLayoutClient({
 
   return (
     <DriverTrackingSelection>
+    {isLocked&&<DriverRefresh/>}
     <div
       className={`flex h-screen overflow-hidden bg-[var(--brand-bg)] ${isMapDashboard ? styles.dashboardRoot : ''}`}
     >
@@ -95,38 +100,38 @@ export function DriverLayoutClient({
                 <BrandLogo />
               </a>
               {!isLocked && (
-                <div className="relative w-full max-w-md hidden lg:block">
+                <form action="/dashboard/driver/search" className="relative w-full max-w-md hidden lg:block">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-on-surface-variant)] text-sm">
                     search
                   </span>
                   <input
                     className="w-full bg-[var(--color-surface-container-highest)]/50 border-none text-sm rounded-lg pl-10 pr-4 py-2 focus:ring-1 focus:ring-[var(--brand-strong)]/30 text-white placeholder-[var(--color-on-surface-variant)] outline-none"
-                    placeholder="Search jobs, earnings, or IDs..."
+                    placeholder="Search your jobs or tracking IDs" name="q"
                     type="text"
                   />
-                </div>
+                </form>
               )}
             </div>
             <div className="flex items-center gap-1 sm:gap-3 md:gap-5 shrink-0">
               <TestPushButton />
               <InstallButton />
               {!isLocked && (
-                <button
+                <Link href="/dashboard/driver/search"
                   className="lg:hidden text-[var(--color-on-surface-variant)] hover:text-[var(--brand-soft)] transition-colors"
                   aria-label="Search"
                 >
                   <span className="material-symbols-outlined">search</span>
-                </button>
+                </Link>
               )}
               {userId && isApproved && (
                 <RealtimeNotifications role="driver" userId={userId} />
               )}
-              <button
+              <Link href="/dashboard/driver/support"
                 className="hidden md:block text-[var(--color-on-surface-variant)] hover:text-[var(--brand-soft)] transition-colors"
                 aria-label="Help"
               >
                 <span className="material-symbols-outlined">help_outline</span>
-              </button>
+              </Link>
               <ProfileDropdown
                 name={user.full_name}
                 email={user.email}
@@ -151,7 +156,7 @@ export function DriverLayoutClient({
             <DriverOnboarding
               user={user}
               driverStatus={driverStatus}
-              hasDocuments={hasDocuments}
+              hasDocuments={!!submittedAt}
             />
           ) : (
             children
@@ -161,8 +166,7 @@ export function DriverLayoutClient({
           isLocked={isLocked}
           onMore={() => setSidebarOpen(true)}
         />
-        {isApproved &&
-          !isMapDashboard &&
+        {!isMapDashboard &&
           !pathname.startsWith('/dashboard/driver/jobs/') && (
             <FloatingLiveChat />
           )}

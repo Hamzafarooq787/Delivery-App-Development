@@ -1,10 +1,11 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { recordDriverDocument, submitForReview } from "@/app/actions/documents"
 import type { DriverDocument } from "@/app/actions/documents"
 import type { DriverVehicle } from "@/app/actions/vehicles"
+import { driverComplianceReady, driverDocumentValid, londonDate, requiredDriverDocuments } from "@/lib/driver-compliance"
 import { VehicleManager } from "@/components/driver/vehicle-manager"
 
 type DocType = "identity" | "insurance" | "vehicle_registration" | "selfie"
@@ -80,11 +81,13 @@ export function VerificationPanel({
   documents: initialDocs,
   vehicles: initialVehicles,
   userId,
+  submittedAt,
 }: {
   driverStatus: DriverStatus
   documents: DriverDocument[]
   vehicles: DriverVehicle[]
   userId: string
+  submittedAt?: string | null
 }) {
   const [driverStatus, setDriverStatus] = useState<DriverStatus>(initialStatus)
   const [docs, setDocs] = useState<DriverDocument[]>(initialDocs)
@@ -92,15 +95,18 @@ export function VerificationPanel({
   const [uploading, setUploading] = useState<DocType | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [submitPending, startSubmitTransition] = useTransition()
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState(!!submittedAt)
+  useEffect(()=>{setDriverStatus(initialStatus);setDocs(initialDocs);setVehicles(initialVehicles);setSubmitted(!!submittedAt)},[initialStatus,initialDocs,initialVehicles,submittedAt])
+  const [expiry,setExpiry] = useState<Record<string,string>>({})
+  const configs=DOC_CONFIGS.filter(c=>requiredDriverDocuments(vehicles).includes(c.type))
 
   const fileInputRefs = useRef<Partial<Record<DocType, HTMLInputElement | null>>>({})
 
   const docMap = new Map(docs.map((d) => [d.document_type, d]))
-  const uploadedCount = DOC_CONFIGS.filter((c) => docMap.has(c.type)).length
+  const uploadedCount = configs.filter(c=>{const d=docMap.get(c.type);return !!d&&driverDocumentValid(d)&&(c.type!=="insurance"||!!d.expires_on)}).length
   const hasVehicle = vehicles.length > 0
   // Vehicle registration counts as one extra "step" alongside the 3 document types
-  const totalSteps = DOC_CONFIGS.length + 1
+  const totalSteps = configs.length + 1
   const completedSteps = uploadedCount + (hasVehicle ? 1 : 0)
   const pct =
     driverStatus === "approved" ? 100 : Math.round((completedSteps / totalSteps) * 66) + (driverStatus === "rejected" ? 0 : completedSteps > 0 ? 10 : 0)
@@ -124,7 +130,7 @@ export function VerificationPanel({
 
       const { data: { publicUrl } } = supabase.storage.from("driver-documents").getPublicUrl(path)
 
-      const result = await recordDriverDocument(docType, publicUrl)
+      const result = await recordDriverDocument(docType, publicUrl, expiry[docType]??docMap.get(docType)?.expires_on??undefined)
       if (result.error) {
         setUploadError(result.error)
         return
@@ -135,9 +141,10 @@ export function VerificationPanel({
         const filtered = prev.filter((d) => d.document_type !== docType)
         return [
           ...filtered,
-          { id: Date.now().toString(), document_type: docType, file_url: URL.createObjectURL(file), created_at: new Date().toISOString() },
+          { id: Date.now().toString(), document_type: docType, file_url: URL.createObjectURL(file), created_at: new Date().toISOString(), expires_on: expiry[docType] || docMap.get(docType)?.expires_on || null },
         ]
       })
+      setSubmitted(false)
     } finally {
       setUploading(null)
     }
@@ -161,7 +168,7 @@ export function VerificationPanel({
     })
   }
 
-  const canSubmit = uploadedCount > 0 && hasVehicle && driverStatus !== "approved"
+  const canSubmit = driverComplianceReady(vehicles,docs) && !uploading && !submitted && driverStatus !== "approved"
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -205,7 +212,7 @@ export function VerificationPanel({
               </span>
               <span className="text-[var(--color-on-surface-variant)]">Complete</span>
             </div>
-            <div className="mt-3">{statusBadge(driverStatus)}</div>
+            <div className="mt-3">{driverStatus==="pending"&&!submitted?<p className="text-sm text-white">Draft — not submitted</p>:statusBadge(driverStatus)}</div>
           </div>
 
           <div className="mt-8 space-y-4">
@@ -233,7 +240,7 @@ export function VerificationPanel({
                 </span>
                 <span className={hasVehicle ? "text-white" : "text-[var(--color-on-surface-variant)]"}>Vehicle registered</span>
               </div>
-              {DOC_CONFIGS.map((c) => {
+              {configs.map((c) => {
                 const uploaded = docMap.has(c.type)
                 return (
                   <div key={c.type} className="flex items-center gap-2 text-xs">
@@ -265,7 +272,7 @@ export function VerificationPanel({
             <VehicleManager vehicles={vehicles} onChange={setVehicles} />
           </div>
 
-          {DOC_CONFIGS.map((config) => {
+          {configs.map((config) => {
             const existing = docMap.get(config.type)
             const isUploading = uploading === config.type
             const fileName = existing ? decodeURIComponent(existing.file_url.split("/").pop() ?? "").replace(/^\d+-/, "") : null
@@ -300,6 +307,8 @@ export function VerificationPanel({
                       )}
                     </div>
                     <p className="text-[var(--color-on-surface-variant)] text-xs">{config.description}</p>
+                    {config.type!=="selfie"&&<label className="mt-2 block text-xs text-white">Expiry date {config.type==="insurance"?"(required)":"(if applicable)"}<input type="date" min={londonDate()} value={expiry[config.type]??existing?.expires_on??""} onChange={e=>setExpiry(p=>({...p,[config.type]:e.target.value}))} className="ml-2 rounded bg-[var(--brand-bg)] p-2" /></label>}
+                    {existing?.expires_on&&<p className="text-xs text-white">Expires {existing.expires_on}{!driverDocumentValid(existing)?" — upload a current copy":""}</p>}
                     {fileName && (
                       <p className="mt-1 text-[10px] text-[var(--color-on-surface-variant)] font-mono truncate">
                         📎 {fileName}
@@ -321,7 +330,7 @@ export function VerificationPanel({
                     )}
                     <button
                       onClick={() => fileInputRefs.current[config.type]?.click()}
-                      disabled={isUploading || driverStatus === "approved"}
+                      disabled={isUploading || (config.type==="insurance"&&!expiry[config.type]&&!existing?.expires_on)}
                       className="px-4 py-2 bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-xs rounded-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                       style={{ boxShadow: "0px 0px 10px rgba(var(--brand-rgb),0.15)" }}
                     >

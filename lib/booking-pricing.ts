@@ -1,4 +1,5 @@
 export type BookingPricing = {
+  waitingPerMinute?: number
   maxShoppingProducts: number
   maxQuantityPerProduct: number
   maxShoppingWeightKg: number
@@ -18,6 +19,7 @@ export const DEFAULT_BOOKING_PRICING: BookingPricing = { maxShoppingProducts:15,
 export function validateBookingPricing(value: unknown): value is BookingPricing {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
+  if (v.waitingPerMinute !== undefined && (typeof v.waitingPerMinute !== 'number' || !Number.isFinite(v.waitingPerMinute) || v.waitingPerMinute < 0 || v.waitingPerMinute > 10 || Math.abs(Math.round(v.waitingPerMinute*100)-v.waitingPerMinute*100)>1e-7)) return false
   return Object.keys(DEFAULT_BOOKING_PRICING).every(k => typeof v[k] === 'number' && Number.isFinite(v[k]) && (v[k] as number) >= 0 && (v[k] as number) <= 500) && ['baseFare','perMile','shoppingFee','largeFee','vanFee','weatherFee','minimumDriverEarnings'].every(k=>Math.abs(Math.round(Number(v[k])*100)-Number(v[k])*100)<1e-7) && (v.baseFare as number) > 0 && (v.commissionPercent as number) <= 100 && Number.isInteger(v.maxShoppingProducts) && (v.maxShoppingProducts as number)>=1 && (v.maxShoppingProducts as number)<=50 && Number.isInteger(v.maxQuantityPerProduct) && (v.maxQuantityPerProduct as number)>=1 && (v.maxQuantityPerProduct as number)<=99 && (v.maxShoppingWeightKg as number)>0 && (v.maxShoppingDimensionCm as number)>0
 }
 export function calculateDeliveryFare(miles: number, config: BookingPricing, size = 'small'): number {

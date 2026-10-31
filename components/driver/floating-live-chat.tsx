@@ -29,17 +29,20 @@ export function FloatingLiveChat() {
 
   // Init session
   useEffect(() => {
-    getOrCreateChatSession().then(({ sessionId: sid }) => {
+    getOrCreateChatSession().then(({ sessionId: sid,error,unread }) => {
+      if(error)setChatError(error)
+      setDriverUnread(unread??0)
       if (sid) {
         setSessionId(sid)
-        getChatMessages(sid).then(({ data }) => {
+        getChatMessages(sid).then(({ data,error }) => {
+          if(error)setChatError(error)
           setMessages(data)
           setLoading(false)
-        })
+        }).catch(()=>{setLoading(false);setChatError("Could not load chat. Please retry.")})
       } else {
         setLoading(false)
       }
-    })
+    }).catch(()=>{setLoading(false);setChatError("Could not connect to support chat. Please refresh.")})
   }, [])
 
   // Realtime subscription for chat_messages
@@ -95,9 +98,10 @@ export function FloatingLiveChat() {
     if (!text || !sessionId || sending) return
     setInput("")
     setSending(true)
-    const result=await sendChatMessage(sessionId, text, "driver")
-    if(result.error){setChatError(result.error);setInput(text)}else{setChatError("");if(result.data)setMessages(prev=>prev.some(m=>m.id===result.data!.id)?prev:[...prev,result.data!])}
-    setSending(false)
+    try{
+     const result=await sendChatMessage(sessionId,text,'driver')
+     if(result.error){setChatError(result.error);setInput(text)}else{setChatError('');if(result.data)setMessages(prev=>prev.some(m=>m.id===result.data!.id)?prev:[...prev,result.data!])}
+    }catch{setChatError('Message could not be sent. Please retry.');setInput(text)}finally{setSending(false)}
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {

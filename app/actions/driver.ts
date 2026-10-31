@@ -38,17 +38,17 @@ export async function createSupportTicket(formData: FormData) {
   if (!subject || !message || subject.length > 180 || message.length > 4000) return { error: "Subject and message are required" }
 
   const admin = createAdminClient()
-  const { error } = await admin.from("support_tickets").insert({
+  const { data, error } = await admin.from("support_tickets").insert({
     user_id: user.id,
     subject,
     message,
     status: "open",
-  })
+  }).select("id,subject,message,status,created_at").single()
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/driver/support")
   revalidatePath("/dashboard/customer/support")
-  return { success: true }
+  return { success: true, data: data as SupportTicket }
 }
 
 export async function toggleDriverOnline(isOnline: boolean) {
@@ -136,4 +136,12 @@ export async function getDriverNamesByIds(driverIds: string[]): Promise<Record<s
     map[(u as any).id] = (u as any).full_name ?? "Driver"
   }
   return map
+}
+
+export async function getDriverTickets(page=1){
+ const db=await createClient();const {data:{user}}=await db.auth.getUser()
+ if(!user)return {data:[] as SupportTicket[],count:0,error:'Please sign in again.'}
+ const offset=(Math.max(1,Math.min(Math.trunc(page)||1,1000000))-1)*20
+ const {data,error,count}=await createAdminClient().from('support_tickets').select('id,subject,message,status,created_at',{count:'exact'}).eq('user_id',user.id).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+19)
+ return {data:(data??[]) as SupportTicket[],count:count??0,error:error?'Could not load support requests. Please retry.':undefined}
 }

@@ -16,7 +16,8 @@ await db.exec("alter table shopping_items add constraint fail_item check(name<>'
 
 function actions(file,names,{user=null,rows={}}={}) {
  const calls=[];const db={from(table){const q={};for(const method of ['select','eq','order','update','insert','upsert','is','in'])q[method]=(...args)=>{calls.push({table,method,args});return q};q.single=q.maybeSingle=async()=>({data:rows[table]??null,error:null});q.then=fn=>fn({data:Array.isArray(rows[table])?rows[table]:[],error:null});return q}};
- const ctx={console,Date,Math,Number,URL,process,createClient:async()=>({auth:{getUser:async()=>({data:{user}})}}),createAdminClient:()=>db,revalidatePath:()=>{},notifyUser:async()=>{},normalizeBfmSettings:checks.normalizeBfmSettings,validateShoppingItems:checks.validateShoppingItems};
+ const compliance=vm.runInNewContext(stripTypeScriptTypes(fs.readFileSync("lib/driver-compliance.ts","utf8")).replace(/export /g,"")+";({driverComplianceReady})",{Intl,Date});
+ const ctx={driverComplianceReady:compliance.driverComplianceReady,console,Date,Math,Number,URL,process,createClient:async()=>({auth:{getUser:async()=>({data:{user}})}}),createAdminClient:()=>db,revalidatePath:()=>{},notifyUser:async()=>{},normalizeBfmSettings:checks.normalizeBfmSettings,validateShoppingItems:checks.validateShoppingItems};
  const text=stripTypeScriptTypes(fs.readFileSync(file,'utf8')).replace(/^import .*$/gm,'').replace(/export /g,'');return {api:vm.runInNewContext(text+';({'+names.join(',')+'})',ctx),calls};
 }
 test('anonymous users cannot read private document/substitution data',async()=>{

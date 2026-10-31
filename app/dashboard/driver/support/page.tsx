@@ -1,11 +1,12 @@
 import {SupportContact} from "@/components/support-contact"
-import { getMyTickets } from "@/app/actions/driver"
+import { getDriverTickets } from "@/app/actions/driver"
 import { SupportPanel } from "@/components/driver/support-panel"
 
 export const dynamic = "force-dynamic"
 
 export default async function DriverSupportPage() {
-  const { data: tickets } = await getMyTickets()
+  const { data: tickets,count,error } = await getDriverTickets()
 
-  return <><SupportContact/><SupportPanel initialTickets={tickets} /></>
+  if(error)throw new Error(error)
+  return <><SupportContact/><SupportPanel initialTickets={tickets} initialCount={count} /></>
 }
