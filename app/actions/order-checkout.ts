@@ -13,6 +13,7 @@ import {
 } from "@/app/actions/shopping";
 import type { CreateDeliveryParams } from "@/app/actions/delivery";
 import { validateShoppingItems } from "@/lib/shopping-validation";
+import { ownsOrderPhoto } from "@/lib/order-media";
 import { checkQuoteConsent, deliveryScope } from "@/lib/quote-consent";
 import {
   fulfillDirectSession,
@@ -37,6 +38,9 @@ export async function startOrderCheckout(
     return {
       error: "Sign in to confirm your order. Your form has been retained.",
     };
+  if (input.type === 'buy_for_me' && !Array.isArray(input.order.shopping_items)) return { error: 'Enter a valid shopping list.' };
+  const photos = input.type === 'delivery' ? input.order.item_photo_urls ?? [] : input.order.shopping_items?.map(i=>i?.photo_url) ?? [];
+  if (!Array.isArray(photos) || photos.some(photo=>!ownsOrderPhoto(photo,user.id))) return { error: 'Upload your own item photos before booking.' };
   if (!isStripeConfigured())
     return { error: "Card payments are currently unavailable." };
   if (

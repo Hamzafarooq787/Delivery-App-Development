@@ -1,4 +1,5 @@
 "use server"
+import { ownsOrderPhoto } from "@/lib/order-media"
 
 import { verifyCompanyReceipt } from "@/lib/payments/company-card"
 import { processOrderRefunds } from "@/lib/payments/direct"
@@ -93,6 +94,7 @@ export async function createShoppingRequest(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated", code: "not_authenticated" }
 
+  if (!Array.isArray(params.shopping_items) || params.shopping_items.some(i=>!ownsOrderPhoto(i?.photo_url,user.id))) return { error: 'Upload your own item photos before booking.' }
   const admin = createAdminClient()
 
   // Check BFM is enabled and get settings
@@ -369,6 +371,8 @@ export async function requestSubstitution(params: {
   if (!relatedItem) return { error: "Item does not belong to this order" }
   if (params.suggested_price == null || (!Number.isFinite(params.suggested_price) || params.suggested_price < 0)) return { error: "Invalid replacement price" }
 
+  if (!params.suggested_name?.trim() || params.suggested_name.length > 200 || !ownsOrderPhoto(params.photo_url,user.id)) return { error: 'Enter a replacement name and upload your own photo.' }
+
   const { data: sub, error } = await admin
     .from("shopping_substitutions")
     .insert({
@@ -393,7 +397,7 @@ export async function requestSubstitution(params: {
     userId: delivery.customer_id,
     title: "Item substitution requested",
     body: `Your driver suggests replacing an item with "${params.suggested_name}". Tap to review.`,
-    url: `/dashboard/customer/active-deliveries`,
+    url: `/dashboard/customer/tracking?id=${params.delivery_id}`,
     tag: `bfm-sub-${params.shopping_item_id}`,
   }).catch(console.error)
 
@@ -489,7 +493,7 @@ export async function submitPurchaseReceipt(params: {
     userId: delivery.customer_id,
     title: "Purchase completed",
     body: `Your driver spent £${params.actual_items_total.toFixed(2)} at ${delivery.shop_name ?? "the shop"}.${refund > 0 ? ` £${refund.toFixed(2)} ${delivery.payment_method === "stripe" ? "refund requested to your original payment card" : "refunded to your wallet"}.` : ""}`,
-    url: `/dashboard/customer/active-deliveries`,
+    url: `/dashboard/customer/tracking?id=${params.deliveryId}`,
     tag: `bfm-purchased-${params.deliveryId}`,
   }).catch(console.error)
 
@@ -531,6 +535,7 @@ export async function getShoppingItems(deliveryId: string) {
 }
 
 export type ShoppingItemRow = {
+  confirmed_unit_price?: number | null
   id: string
   delivery_id: string
   name: string
@@ -648,4 +653,11 @@ function receiptObjectPath(url: string): string | null {
     const prefix = "/storage/v1/object/public/delivery-item-photos/"
     return parsed.origin === origin && parsed.pathname.startsWith(prefix) ? decodeURIComponent(parsed.pathname.slice(prefix.length)) : null
   } catch { return null }
+}
+
+export async function getShoppingWorkflowSnapshot(deliveryId: string) {
+  const items = await getShoppingItems(deliveryId)
+  if (items.error) return { items: items.data, decisions: [], error: items.error }
+  const {data,error} = await createAdminClient().from('shopping_substitutions').select('id,shopping_item_id,suggested_name,suggested_price,customer_approved').eq('delivery_id',deliveryId).order('created_at')
+  return { items: items.data, decisions: data??[], error: error ? 'Shopping approvals could not load.' : undefined }
 }

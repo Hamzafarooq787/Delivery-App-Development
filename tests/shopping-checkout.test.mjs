@@ -21,6 +21,7 @@ function fixture() {
   const stripe={balance:{retrieve(){balanceReads++;throw Error('Issuing balance is not needed for customer checkout')}},checkout:{sessions:{async create(p,key){sessions++;sessionParams=p;assert.equal(key.idempotencyKey,'booking:payment-1');return{id:'cs_test',url:'https://checkout.stripe.test/session'}},async retrieve(){return{status:'open',url:'https://checkout.stripe.test/session'}}}}}
   const api=compile('app/actions/order-checkout.ts',{
     'node:crypto':nodeCrypto,
+    '@/lib/order-media':compile('lib/order-media.ts',{}, {URL,process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co'}}}),
     '@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:'customer',email:'test@example.test'}}})}})},
     '@/lib/supabase/admin':{createAdminClient:()=>db},
     '@/lib/stripe/server':{getStripe:()=>stripe,isStripeConfigured:()=>true},
@@ -52,4 +53,8 @@ test('Invalid quote consent still prevents shopping checkout before a Stripe ses
   const f=fixture();f.input.order.consent_token='invalid'
   assert.match((await f.api.startOrderCheckout(f.input)).error,/Quote changed or expired/)
   assert.equal(f.sessions,0);assert.equal(f.reserves,0)
+})
+test('A customer cannot attach another account item photo to card checkout',async()=>{
+ const f=fixture();f.input.order.shopping_items[0].photo_url='https://example.supabase.co/storage/v1/object/public/delivery-item-photos/another-account/private.jpg';
+ assert.match((await f.api.startOrderCheckout(f.input)).error,/own item photos/);assert.equal(f.sessions,0);assert.equal(f.reserves,0)
 })

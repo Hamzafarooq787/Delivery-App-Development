@@ -1,3 +1,4 @@
+import { orderMediaUrl } from '@/lib/order-media'
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 export async function ShoppingItemsHistory({ orderId }: { orderId: string }) {
@@ -49,7 +50,7 @@ export async function ShoppingItemsHistory({ orderId }: { orderId: string }) {
               className="underline"
               target="_blank"
               rel="noopener noreferrer"
-              href={i.photo_url}
+              href={orderMediaUrl(i.photo_url)}
             >
               Requested item photo
             </a>
@@ -70,7 +71,7 @@ export async function ShoppingItemsHistory({ orderId }: { orderId: string }) {
                     className="underline mr-2"
                     target="_blank"
                     rel="noopener noreferrer"
-                    href={d.photo_url}
+                    href={orderMediaUrl(d.photo_url)}
                   >
                     Replacement photo
                   </a>

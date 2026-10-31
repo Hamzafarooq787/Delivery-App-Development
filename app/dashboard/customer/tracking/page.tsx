@@ -1,4 +1,5 @@
 'use client'
+import { orderMediaUrl } from '@/lib/order-media'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -6,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { CustomerShoppingOrder } from '@/components/customer/CustomerShoppingOrder'
+import { getDriverNamesByIds } from '@/app/actions/driver'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
 import { getDeliveryOtp } from '@/app/actions/delivery'
 import {
@@ -136,7 +139,7 @@ function TrackingPageInner() {
       let q = supabase
         .from('delivery_requests')
         .select(
-          'id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls,price,base_price,surge_multiplier,discount_amount,promo_code',
+          'id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls,price,base_price,surge_multiplier,discount_amount,promo_code,service_type,bfm_stage',
         )
         .eq('customer_id', user.id)
 
@@ -176,12 +179,8 @@ function TrackingPageInner() {
         setSteps(buildSteps(data.status, logs ?? [], data.created_at))
 
       if (data.driver_id) {
-        const { data: drv } = await supabase
-          .from('users')
-          .select('full_name')
-          .eq('id', data.driver_id)
-          .maybeSingle()
-        if (!cancelled) setDriver(drv as Driver)
+        const names = await getDriverNamesByIds([data.driver_id])
+        if (!cancelled) setDriver({ full_name: names[data.driver_id] ?? 'Your driver' } as Driver)
 
         const summary = await getRatingSummary(data.driver_id)
         if (!cancelled) setDriverRating(summary)
@@ -237,12 +236,9 @@ function TrackingPageInner() {
 
           // If driver changed (e.g. reassigned), re-fetch driver name + rating
           if (updated.driver_id && updated.driver_id !== shipment.driver_id) {
-            const { data: drv } = await supabase
-              .from('users')
-              .select('full_name')
-              .eq('id', updated.driver_id)
-              .maybeSingle()
-            setDriver(drv as Driver)
+            const names = await getDriverNamesByIds([updated.driver_id])
+            setDriver({ full_name: names[updated.driver_id] ?? 'Your driver' } as Driver)
+
             const summary = await getRatingSummary(updated.driver_id)
             setDriverRating(summary)
           }
@@ -283,7 +279,7 @@ function TrackingPageInner() {
           flex flex-col
           bg-[#0e0e0e] md:border-r border-[#494847]/20
           rounded-t-2xl md:rounded-none
-          overflow-y-auto md:overflow-hidden
+          overflow-y-auto
           z-10
         "
         >
@@ -349,7 +345,7 @@ function TrackingPageInner() {
           </div>
 
           {/* ── Payment breakdown ── */}
-          {shipment?.price != null && (
+          {shipment?.service_type !== 'buy_for_me' && shipment?.price != null && (
             <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0 bg-[#1a1919]">
               <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#494847]/15">
                 <span className="material-symbols-outlined text-[#6ee7b7] text-base">
@@ -394,6 +390,8 @@ function TrackingPageInner() {
               </div>
             </div>
           )}
+
+          {shipment?.service_type === 'buy_for_me' && <CustomerShoppingOrder key={shipment.id} orderId={shipment.id} />}
 
           {/* ── Rate your driver ── */}
           {isDelivered && shipment?.driver_id && (
@@ -505,13 +503,13 @@ function TrackingPageInner() {
                       {shipment.item_photo_urls.map((url: string) => (
                         <a
                           key={url}
-                          href={url}
+                          href={orderMediaUrl(url)}
                           target="_blank"
                           rel="noreferrer"
                           className="w-16 h-16 rounded-lg overflow-hidden border border-[#494847]/20 shrink-0"
                         >
                           <img
-                            src={url}
+                            src={orderMediaUrl(url)}
                             alt="Item"
                             className="w-full h-full object-cover"
                           />
@@ -685,7 +683,11 @@ function TrackingPageInner() {
         <div className="order-1 md:order-2 flex-[4] md:flex-1 md:h-full relative bg-[#131313]">
           {/* When delivered, just show static pickup→destination route — no live driver marker */}
           <LiveTrackingPanel
-            driverId={isDelivered ? null : (shipment?.driver_id ?? null)}
+            status={shipment?.status}
+            bfmStage={shipment?.bfm_stage}
+            matchDeliveryId
+            showViewerLocation={false}
+            driverId={isDelivered || shipment?.status === 'cancelled' ? null : (shipment?.driver_id ?? null)}
             pickup={
               shipment?.pickup_lat != null && shipment?.pickup_lng != null
                 ? {

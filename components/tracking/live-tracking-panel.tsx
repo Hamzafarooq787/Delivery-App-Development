@@ -41,7 +41,7 @@ export function LiveTrackingPanel({
   height = 400,
   followDriver = false,
   isDriverView = false,
-  matchDeliveryId = false,
+  matchDeliveryId = true,
   showViewerLocation = true,
 }: Props) {
   const supabase = useMemo(() => createClient(), [])
