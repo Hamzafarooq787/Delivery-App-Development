@@ -13,7 +13,7 @@ const dark: google.maps.MapTypeStyle[] = [
   {featureType:'water',elementType:'geometry',stylers:[{color:'#142330'}]},
   {featureType:'poi',stylers:[{visibility:'off'}]},
 ]
-export default function BookingRouteMap({pickup,destination,userLocation}:{pickup:LngLat|null;destination:LngLat|null;userLocation:LngLat|null}) {
+export default function BookingRouteMap({pickup,destination,userLocation,mapHeight}:{pickup:LngLat|null;destination:LngLat|null;userLocation:LngLat|null;mapHeight?:string}) {
   const {isLoaded,loadError}=useJsApiLoader({id:'google-map-script',googleMapsApiKey:process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY??''})
   const {brand}=useBrand()
   const [route,setRoute]=useState<RouteResult|null>(null)
@@ -55,7 +55,7 @@ export default function BookingRouteMap({pickup,destination,userLocation}:{picku
   </GoogleMap>
   return <div className={styles.mapCard}>
     <div className={styles.mapHeader}><strong>Route preview</strong><button ref={expandButton} type="button" onClick={()=>setExpanded(true)}>Expand map ↗</button></div>
-    <div className={styles.mapCanvas}>{!expanded&&content()}</div>
+    <div className={styles.mapCanvas} style={mapHeight ? {height:mapHeight} : undefined}>{!expanded&&content()}</div>
     <p className={styles.mapMeta} role="status">{loading?'Calculating route…':routeError?'Route unavailable. Please check your addresses.':route?`${route.distance_miles.toFixed(1)} miles · Estimated journey ${route.duration_min} min`:'Choose pickup and delivery to preview your route.'}</p>
     {expanded&&<dialog ref={dialog} className={styles.mapDialog} onCancel={e=>{e.preventDefault();close()}} onKeyDown={e=>e.stopPropagation()}>
       <div className={styles.mapHeader}><strong>Route preview</strong><button autoFocus type="button" onClick={close}>Close map ×</button></div>
