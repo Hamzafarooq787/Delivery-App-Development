@@ -1,9 +1,10 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useTrackingRoute } from "@/hooks/use-tracking-route"
+import { fetchRoute } from "@/lib/google"
 import { goesToDestination } from "@/lib/tracking-utils"
 
 const GoogleLiveMap = dynamic(
@@ -12,6 +13,7 @@ const GoogleLiveMap = dynamic(
 )
 
 type Props = {
+  onEta?: (eta: {minutes:number;destination:boolean}|null) => void
   status?: string
   bfmStage?: string | null
   driverId: string | null
@@ -31,6 +33,7 @@ type Props = {
 
 export function LiveTrackingPanel({
   status,
+  onEta,
   bfmStage,
   driverId,
   pickup,
@@ -53,6 +56,21 @@ export function LiveTrackingPanel({
   const target = goesToDestination(status, bfmStage) ? destination : pickup
   const route2 = useTrackingRoute(isDriverView ? driverPos : null, target, true)
 
+  const etaPosition = useRef(driverPos); etaPosition.current = driverPos
+  useEffect(() => {
+    let alive = true, busy = false
+    const estimate = async () => {
+      if (busy || !onEta) return
+      const origin = etaPosition.current
+      if (!origin || !target || stale || !['accepted','collected','in_transit'].includes(status ?? '')) { onEta(null); return }
+      busy = true
+      try { const r = await fetchRoute(origin, target); if (alive) onEta(r && Number.isFinite(r.duration_min) ? {minutes:Math.max(1,Math.ceil(r.duration_min)),destination:goesToDestination(status,bfmStage)} : null) }
+      catch { if (alive) onEta(null) } finally { busy = false }
+    }
+    onEta?.(null); void estimate(); const timer = setInterval(() => { if (document.visibilityState === 'visible') void estimate() },30000)
+    return () => { alive = false; clearInterval(timer) }
+  },[onEta, !!driverPos, target?.lat, target?.lng, stale, status, bfmStage, driverId, deliveryId])
+
   // Subscribe to driver location
   useEffect(() => {
     let alive=true,latest=0,revision=0,requestSequence=0
@@ -72,36 +90,25 @@ export function LiveTrackingPanel({
     return()=>{alive=false;clearInterval(timer);void supabase.removeChannel(channel)}
   },[supabase,driverId,matchDeliveryId,deliveryId])
 
-  // Subscribe to customer location
+  // Customer sharing expires after signal loss, even if a tab-close clear was interrupted.
   useEffect(() => {
-    let alive=true
+    let alive=true,revision=0,expiry:ReturnType<typeof setTimeout>
     setCustomerPos(null)
-    if (!customerId) return
-    supabase
-      .from("customer_locations")
-      .select("lat, lng, delivery_id")
-      .eq("customer_id", customerId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (alive && data && data.delivery_id === deliveryId) setCustomerPos({ lat: data.lat, lng: data.lng })
-      })
-
-    const channel = supabase
-      .channel(`customer-loc-${customerId}`)
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "customer_locations",
-        filter: `customer_id=eq.${customerId}`,
-      }, (payload) => {
-        if(!alive)return
-        const row = payload.new as any
-        if (row?.lat != null && row?.delivery_id === deliveryId) setCustomerPos({ lat: row.lat, lng: row.lng })
-        else setCustomerPos(null)
-      })
-      .subscribe()
-    return () => { alive=false;supabase.removeChannel(channel) }
-  }, [supabase, customerId, deliveryId])
+    if(!customerId||!deliveryId)return
+    const apply=(row:any)=>{
+      if(!alive)return
+      clearTimeout(expiry)
+      const age=Date.now()-Date.parse(row?.updated_at)
+      if(row?.delivery_id!==deliveryId||!Number.isFinite(age)||age>=45000){setCustomerPos(null);return}
+      setCustomerPos({lat:Number(row.lat),lng:Number(row.lng)})
+      expiry=setTimeout(()=>{if(alive)setCustomerPos(null)},Math.max(0,45000-age))
+    }
+    const refresh=async()=>{const version=revision;try{const {data,error}=await supabase.from('customer_locations').select('lat,lng,delivery_id,updated_at').eq('customer_id',customerId).eq('delivery_id',deliveryId).maybeSingle();if(alive&&version===revision&&!error)apply(data)}catch{/* The last signal still expires automatically. */}}
+    void refresh()
+    const channel=supabase.channel(`customer-loc-${customerId}-${deliveryId}`).on('postgres_changes',{event:'*',schema:'public',table:'customer_locations',filter:`customer_id=eq.${customerId}`},payload=>{revision++;apply(payload.new)}).subscribe()
+    const timer=setInterval(()=>{if(document.visibilityState==='visible')void refresh()},15000)
+    return()=>{alive=false;clearTimeout(expiry);clearInterval(timer);void supabase.removeChannel(channel)}
+  },[supabase,customerId,deliveryId])
 
   // Stale detection — 45 seconds before showing "Signal lost"
   useEffect(() => {

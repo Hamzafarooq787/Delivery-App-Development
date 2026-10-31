@@ -1,80 +1,22 @@
-"use client"
-
-import { useEffect, useRef, useState } from "react"
-import { updateCustomerLocation, clearCustomerLocation } from "@/app/actions/tracking"
-
-type Props = {
-  deliveryId?: string | null
-  disabled?: boolean
-  intervalMs?: number
-}
-
-export function CustomerLocationBroadcaster({ deliveryId = null, disabled = false, intervalMs = 6000 }: Props) {
-  const [sharing, setSharing] = useState(false)
-  const [denied, setDenied] = useState(false)
-  const lastSentRef = useRef<number>(0)
-  const watchIdRef = useRef<number | null>(null)
-  const inFlightRef = useRef<boolean>(false)
-  const fallbackTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const wakeLockRef = useRef<any>(null)
-
-  async function acquireWakeLock() {
-    if (!("wakeLock" in navigator)) return
-    try { wakeLockRef.current = await (navigator as any).wakeLock.request("screen") } catch {}
-  }
-
-  function startWatch(onPos: PositionCallback) {
-    if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current)
-    watchIdRef.current = navigator.geolocation.watchPosition(onPos, () => {}, {
-      enableHighAccuracy: true, maximumAge: 2000, timeout: 15000,
-    })
-  }
-
-  useEffect(() => {
-    if (disabled || !("geolocation" in navigator)) return
-
-    const send = (pos: GeolocationPosition) => {
-      const now = Date.now()
-      if (inFlightRef.current || now - lastSentRef.current < intervalMs) return
-      lastSentRef.current = now
-      inFlightRef.current = true
-      setSharing(true)
-      updateCustomerLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, delivery_id: deliveryId })
-        .catch(() => {})
-        .finally(() => { inFlightRef.current = false })
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => { send(pos); acquireWakeLock() },
-      (err) => { if (err.code === err.PERMISSION_DENIED) setDenied(true) },
-    )
-
-    startWatch(send)
-
-    fallbackTimerRef.current = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(send, () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 })
-    }, intervalMs * 2)
-
-    const onVisible = () => { if (document.visibilityState === "visible") { startWatch(send); acquireWakeLock() } }
-    document.addEventListener("visibilitychange", onVisible)
-
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible)
-      if (watchIdRef.current != null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null }
-      if (fallbackTimerRef.current) { clearInterval(fallbackTimerRef.current); fallbackTimerRef.current = null }
-      if (wakeLockRef.current) { wakeLockRef.current.release().catch(() => {}); wakeLockRef.current = null }
-      clearCustomerLocation().catch(() => {})
-    }
-  }, [disabled, intervalMs, deliveryId])
-
-  if (disabled) return null
-
-  return (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1a1919] border border-[#494847]/30">
-      <span className={`w-2 h-2 rounded-full ${denied ? "bg-red-400" : sharing ? "bg-cyan-400 animate-pulse" : "bg-yellow-400 animate-pulse"}`} />
-      <span className="text-[10px] font-bold uppercase tracking-wider text-white">
-        {denied ? "Location denied" : sharing ? "Sharing your location" : "Acquiring GPS…"}
-      </span>
-    </div>
-  )
+'use client'
+import {useEffect,useRef,useState} from 'react'
+import { updateCustomerLocation,clearCustomerLocation } from '@/app/actions/tracking'
+type Props={deliveryId?:string|null;disabled?:boolean;intervalMs?:number}
+export function CustomerLocationBroadcaster({deliveryId=null,disabled=false,intervalMs=6000}:Props){
+ const [enabled,setEnabled]=useState(false),[sharing,setSharing]=useState(false),[error,setError]=useState('')
+ const queue=useRef<Promise<unknown>>(Promise.resolve())
+ useEffect(()=>{setEnabled(false);setSharing(false);setError('')},[deliveryId,disabled])
+ useEffect(()=>{
+ if(!enabled||disabled||!deliveryId)return
+ let active=true,last=0
+ if(!navigator.geolocation){setError('Location is unavailable. Your saved delivery address will be used.');setEnabled(false);return}
+ const watcher=navigator.geolocation.watchPosition(pos=>{
+ if(!active||Date.now()-last<intervalMs)return;last=Date.now()
+ const input={lat:pos.coords.latitude,lng:pos.coords.longitude,delivery_id:deliveryId}
+ queue.current=queue.current.catch(()=>{}).then(async()=>{if(!active)return;const r=await updateCustomerLocation(input);if(active){if(r.error){setError(r.error);setSharing(false)}else{setSharing(true);setError('')}}}).catch(()=>{if(active){setSharing(false);setError('Location update failed. Try again.')}})
+ },()=>{if(active){setError('Location access was unavailable. Your delivery address will still be used.');setSharing(false);setEnabled(false)}},{enableHighAccuracy:true,maximumAge:2000,timeout:15000})
+ return()=>{active=false;navigator.geolocation.clearWatch(watcher);setSharing(false);queue.current=queue.current.catch(()=>{}).then(()=>clearCustomerLocation(deliveryId)).catch(()=>{})}
+ },[enabled,disabled,deliveryId,intervalMs])
+ if(disabled||!deliveryId)return null
+ return <div className="text-xs text-white space-y-1"><button type="button" aria-pressed={enabled} className="rounded-full px-3 py-2 border border-cyan-500/30 bg-cyan-500/10" onClick={()=>{setError('');setEnabled(v=>!v)}}>{enabled?(sharing?'Stop sharing live location':'Stop locating…'):'Share live location with this driver'}</button><p className="text-gray-400">{enabled?'Only shared for this active delivery.':'Optional. Your delivery address is used when sharing is off.'}</p>{error&&<p role="alert" className="text-red-300">{error}</p>}</div>
 }

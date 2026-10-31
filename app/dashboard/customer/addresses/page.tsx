@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import { ShoppingAddressField } from '@/components/customer/ShoppingAddressField'
+import { validCoordinates } from '@/lib/customer-validation'
 import { createClient } from '@/lib/supabase/client'
 import { MapPin, Plus, Pencil, Trash2, Navigation, Home } from 'lucide-react'
 import {
@@ -16,10 +18,15 @@ import styles from '@/components/customer/CustomerPages.module.css'
 type AddressRow = {
   id: string
   address: string
+  lat: number | null
+  lng: number | null
   created_at: string | null
 }
 
 export default function AddressesPage() {
+  const gpsVersion=useRef(0)
+  const [coords,setCoords]=useState<{lat:number;lng:number}|null>(null)
+  const [revision,setRevision]=useState(0)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<string | null>(null)
   const [locating, setLocating] = useState(false)
@@ -40,6 +47,7 @@ export default function AddressesPage() {
     let cancelled = false
     async function load() {
       setLoading(true)
+      try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -54,7 +62,7 @@ export default function AddressesPage() {
       setUserId(user.id)
       const { data, error } = await supabase
         .from('addresses')
-        .select('id,address,created_at')
+        .select('id,address,lat,lng,created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       if (cancelled) return
@@ -65,17 +73,18 @@ export default function AddressesPage() {
           'Could not load your addresses. Please refresh and try again.',
         )
       } else {
-        setAddresses((data ?? []) as AddressRow[])
+        setAddresses((data ?? []) as AddressRow[]);setErrorMsg(null)
       }
-      setLoading(false)
+      } catch { if (!cancelled) setErrorMsg('Could not load your addresses. Please try again.') } finally { if (!cancelled) setLoading(false) }
     }
-    load()
+    void load()
     return () => {
-      cancelled = true
+      cancelled = true; gpsVersion.current++
     }
-  }, [supabase])
+  }, [supabase, revision])
 
   function openAddForm() {
+    gpsVersion.current++; setLocating(false); setCoords(null)
     setEditingId(null)
     setAddressInput('')
     setErrorMsg(null)
@@ -83,6 +92,7 @@ export default function AddressesPage() {
   }
 
   function openEditForm(addr: AddressRow) {
+    gpsVersion.current++; setLocating(false); setCoords(addr.lat!=null&&addr.lng!=null?{lat:Number(addr.lat),lng:Number(addr.lng)}:null)
     setEditingId(addr.id)
     setAddressInput(addr.address ?? '')
     setErrorMsg(null)
@@ -90,6 +100,7 @@ export default function AddressesPage() {
   }
 
   function closeForm() {
+    gpsVersion.current++; setLocating(false); setCoords(null)
     setFormOpen(false)
     setEditingId(null)
     setAddressInput('')
@@ -104,16 +115,18 @@ export default function AddressesPage() {
       setErrorMsg('Address cannot be empty.')
       return
     }
+    if (!coords || !validCoordinates(coords.lat,coords.lng)) { setErrorMsg('Select an address suggestion or confirm its map pin before saving.'); return }
     setSaving(true)
     setErrorMsg(null)
+    try {
 
     if (editingId) {
       const { data, error } = await supabase
         .from('addresses')
-        .update({ address: trimmed })
+        .update({ address: trimmed, ...coords })
         .eq('id', editingId)
         .eq('user_id', userId)
-        .select('id,address,created_at')
+        .select('id,address,lat,lng,created_at')
         .single()
       setSaving(false)
       if (error) {
@@ -128,8 +141,8 @@ export default function AddressesPage() {
     } else {
       const { data, error } = await supabase
         .from('addresses')
-        .insert({ user_id: userId, address: trimmed })
-        .select('id,address,created_at')
+        .insert({ user_id: userId, address: trimmed, ...coords })
+        .select('id,address,lat,lng,created_at')
         .single()
       setSaving(false)
       if (error) {
@@ -140,6 +153,7 @@ export default function AddressesPage() {
       setAddresses((prev) => [data as AddressRow, ...prev])
       closeForm()
     }
+    } catch { setErrorMsg('Could not save your address. Please try again.') } finally { setSaving(false) }
   }
 
   async function handleDelete(id: string) {
@@ -167,6 +181,7 @@ export default function AddressesPage() {
   const visible = addresses.slice((current - 1) * size, current * size)
   const focusedAddress = addresses.find((a) => a.id === selected) ?? visible[0]
   async function useLocation() {
+    const version=++gpsVersion.current
     if (!navigator.geolocation) {
       setErrorMsg(
         'Location is unavailable on this device. Please enter an address.',
@@ -187,16 +202,20 @@ export default function AddressesPage() {
             throw new Error(
               'Could not find your address. Please enter it manually.',
             )
+          if(version!==gpsVersion.current)return
+          setCoords({lat:position.coords.latitude,lng:position.coords.longitude})
           setEditingId(null)
           setAddressInput(address)
           setFormOpen(true)
         } catch {
+          if(version!==gpsVersion.current)return
           setErrorMsg('Could not find your address. Please enter it manually.')
         } finally {
-          setLocating(false)
+          if(version===gpsVersion.current)setLocating(false)
         }
       },
       () => {
+        if(version!==gpsVersion.current)return
         setLocating(false)
         setErrorMsg(
           'Location access was unavailable. You can still add an address manually.',
@@ -221,7 +240,7 @@ export default function AddressesPage() {
     >
       {errorMsg && !formOpen && (
         <p className={styles.error} role="alert">
-          {errorMsg}
+          {errorMsg} <button type="button" className={styles.textButton} onClick={()=>setRevision(v=>v+1)}>Try again</button>
         </p>
       )}
       <div className={styles.addressLayout}>
@@ -330,20 +349,7 @@ export default function AddressesPage() {
           }}
         >
           <form onSubmit={handleSubmit}>
-            <label htmlFor="customer-address">
-              Address
-              <textarea
-                id="customer-address"
-                className={styles.input}
-                rows={3}
-                required
-                maxLength={500}
-                value={addressInput}
-                onChange={(e) => setAddressInput(e.target.value)}
-                placeholder="Street, city and postcode"
-                autoComplete="street-address"
-              />
-            </label>
+            <ShoppingAddressField label="Saved address" value={addressInput} onChange={v=>{gpsVersion.current++;setLocating(false);setAddressInput(v);setCoords(null)}} onSelect={p=>{gpsVersion.current++;setLocating(false);setAddressInput(p.address);setCoords({lat:p.lat,lng:p.lng})}} />
             {errorMsg && (
               <p className={styles.error} role="alert">
                 {errorMsg}

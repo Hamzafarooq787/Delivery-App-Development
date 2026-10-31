@@ -10,7 +10,7 @@
     "check:icons": "node scripts/check-icon-names.mjs",
     "generate-icons": "node scripts/generate-icons-fallback.mjs",
     "typecheck": "tsc --noEmit",
-    "test:repairs": "node --test tests/repairs.test.mjs tests/batches-11-14.test.mjs tests/bank-payouts.test.mjs tests/booking-media-location.test.mjs tests/shopping-checkout.test.mjs tests/customer-home.test.mjs tests/customer-batches-1-3.test.mjs"
+    "test:repairs": "node --test tests/repairs.test.mjs tests/batches-11-14.test.mjs tests/bank-payouts.test.mjs tests/booking-media-location.test.mjs tests/shopping-checkout.test.mjs tests/customer-home.test.mjs tests/customer-batches-1-3.test.mjs tests/customer-batches-4-10.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.93.0",

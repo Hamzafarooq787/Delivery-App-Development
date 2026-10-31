@@ -1,5 +1,6 @@
 "use server"
 
+import { validCoordinates } from "@/lib/customer-validation"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -108,7 +109,10 @@ export async function updateCustomerLocation(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  if (!validCoordinates(input.lat,input.lng) || !input.delivery_id) return {error:"Choose an active delivery before sharing your location."}
   const admin = createAdminClient()
+  const {data:order,error:orderError}=await admin.from('delivery_requests').select('id').eq('id',input.delivery_id).eq('customer_id',user.id).in('status',['accepted','collected','in_transit']).maybeSingle()
+  if(orderError||!order)return {error:'Live location sharing is available only for your active delivery with an assigned driver.'}
   const { error } = await admin.from("customer_locations").upsert(
     {
       customer_id: user.id,
@@ -123,13 +127,15 @@ export async function updateCustomerLocation(input: {
   return { ok: true }
 }
 
-export async function clearCustomerLocation() {
+export async function clearCustomerLocation(deliveryId?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
   const admin = createAdminClient()
-  const { error } = await admin.from("customer_locations").delete().eq("customer_id", user.id)
+  let q = admin.from("customer_locations").delete().eq("customer_id", user.id)
+  if (deliveryId) q = q.eq("delivery_id",deliveryId)
+  const { error } = await q
   if (error) return { error: error.message }
   return { ok: true }
 }

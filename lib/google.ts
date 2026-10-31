@@ -99,7 +99,7 @@ export async function fetchRoute(from: LngLat, to: LngLat): Promise<RouteResult 
     return {
       distance_km,
       distance_miles: distance_km / 1.609344,
-      duration_min: Math.round((leg?.duration?.value ?? 0) / 60),
+      duration_min: Math.round((leg?.duration_in_traffic?.value ?? leg?.duration?.value ?? 0) / 60),
       geometry: { type: 'LineString', coordinates: coords },
     }
   } catch {

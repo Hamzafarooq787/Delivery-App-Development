@@ -1,4 +1,5 @@
 "use server"
+import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
 
 import { verifyCompanyReceipt } from "@/lib/payments/company-card"
@@ -97,6 +98,7 @@ export async function createShoppingRequest(
   if (!Array.isArray(params.shopping_items) || params.shopping_items.some(i=>!ownsOrderPhoto(i?.photo_url,user.id))) return { error: 'Upload your own item photos before booking.' }
   const admin = createAdminClient()
 
+  if (!await leaseOrderPhotos(user.id,params.shopping_items.map(i=>i.photo_url))) return {error:'An item photo is no longer available. Please upload it again.'}
   // Check BFM is enabled and get settings
   let bfm: BfmSettings
   try { bfm = await getBfmSettings() } catch { return { error: "Shopping settings are unavailable. Please try again." } }

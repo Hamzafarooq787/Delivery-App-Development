@@ -35,7 +35,7 @@ export async function createSupportTicket(formData: FormData) {
 
   const subject = (formData.get("subject") as string ?? "").trim()
   const message = (formData.get("message") as string ?? "").trim()
-  if (!subject || !message) return { error: "Subject and message are required" }
+  if (!subject || !message || subject.length > 180 || message.length > 4000) return { error: "Subject and message are required" }
 
   const admin = createAdminClient()
   const { error } = await admin.from("support_tickets").insert({

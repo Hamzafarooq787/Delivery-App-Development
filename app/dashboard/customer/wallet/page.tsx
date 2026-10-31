@@ -7,7 +7,7 @@ import Header from '@/components/customer/Header'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import { SubTabs } from '@/components/ui/sub-tabs'
 import { getWalletBalance, getWalletTransactions } from '@/app/actions/wallet'
-import { createWalletTopUpSession } from '@/app/actions/payments'
+import { createWalletTopUpSession, verifyWalletTopupSession } from '@/app/actions/payments'
 import { createClient } from '@/lib/supabase/client'
 import type { WalletTransaction } from '@/app/actions/wallet'
 
@@ -76,19 +76,25 @@ function WalletPageInner() {
   const [isPending, startTransition] = useTransition()
   const [topUpError, setTopUpError] = useState<string | null>(null)
 
-  const balanceRef = useRef(balance)
-  balanceRef.current = balance
+  const [loadError,setLoadError]=useState('')
+  const [confirmation,setConfirmation]=useState('')
+  const [returnSession] = useState(() => searchParams.get('session_id'))
+  const [returnedTopup] = useState(() => searchParams.get('topup') === '1')
+  const [confirmationRetry,setConfirmationRetry]=useState(0)
 
   async function loadData() {
     setLoading(true)
+    try {
     const [balRes, txRes] = await Promise.all([
       getWalletBalance(),
       getWalletTransactions(),
     ])
+    if (balRes.error || txRes.error) throw new Error('Could not load wallet.')
+    setLoadError('')
     setBalance(balRes.balance)
     setTransactions(txRes.data)
-    setLoading(false)
     return balRes.balance
+    } catch { setLoadError('Could not load your wallet. Please try again.'); return null } finally { setLoading(false) }
   }
 
   useEffect(() => {
@@ -101,10 +107,11 @@ function WalletPageInner() {
   // socket can't connect.
   useEffect(() => {
     const supabase = createClient()
+    let alive = true
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
+      if (!user || !alive) return
       channel = supabase
         .channel(`wallet-balance-${user.id}`)
         .on(
@@ -120,50 +127,33 @@ function WalletPageInner() {
           },
         )
         .subscribe()
-    })
+    }).catch(() => setLoadError('Could not connect to wallet updates.'))
 
     return () => {
+      alive = false
       if (channel) supabase.removeChannel(channel)
     }
   }, [])
 
-  // Handle redirect back from Stripe Checkout (?topup=1 / ?canceled=1)
+  // Keep the session stable while polling; clearing the URL must not cancel confirmation.
   useEffect(() => {
-    if (searchParams.get('topup') === '1') {
-      toast.success('Payment successful!', {
-        description:
-          "Your wallet balance is updating — it'll appear in a few seconds.",
-        duration: 6000,
-      })
-      router.replace('/dashboard/customer/wallet')
-
-      // Realtime (above) should pick this up instantly, but poll as a
-      // fallback in case the socket didn't connect in time — several
-      // attempts spread out further, since webhook delivery can be slow
-      // on a cold serverless start.
-      const startingBalance = balanceRef.current
-      const delays = [2000, 5000, 10000, 20000]
-      const timers = delays.map((ms) =>
-        setTimeout(async () => {
-          const updated = await loadData()
-          if (ms === delays[delays.length - 1] && updated === startingBalance) {
-            toast.warning('Still waiting on payment confirmation', {
-              description:
-                "This is taking longer than expected. If your balance doesn't update in a minute, contact support with your payment receipt.",
-              duration: 10000,
-            })
-          }
-        }, ms),
-      )
-      return () => timers.forEach(clearTimeout)
-    } else if (searchParams.get('canceled') === '1') {
-      toast('Payment cancelled', {
-        description: 'No charge was made. You can top up anytime.',
-        duration: 5000,
-      })
-      router.replace('/dashboard/customer/wallet')
+    if (!returnedTopup) return
+    if (!returnSession) { setConfirmation('Please check your wallet transactions or contact support to confirm this payment.'); return }
+    let alive = true, timer: ReturnType<typeof setTimeout>, attempts = 0
+    const verify = async () => {
+      setConfirmation('Confirming your payment and wallet credit…')
+      try {
+        const r = await verifyWalletTopupSession(returnSession)
+        if (!alive) return
+        if (r.error) { setConfirmation(r.error); return }
+        if (r.state === 'credited') { await loadData(); if (!alive) return; setConfirmation('Payment confirmed. Your wallet has been credited.'); toast.success('Wallet top-up confirmed.'); router.replace('/dashboard/customer/wallet'); return }
+        if (++attempts < 20) timer = setTimeout(verify,3000)
+        else setConfirmation('Your wallet credit is still being confirmed. Try again, or contact support with your payment reference.')
+      } catch { if (alive) setConfirmation('Could not confirm payment. Please try again.') }
     }
-  }, [searchParams, router])
+    void verify(); return () => { alive=false; clearTimeout(timer) }
+  }, [returnSession, returnedTopup, confirmationRetry, router])
+  useEffect(() => { if (searchParams.get('canceled') === '1') { toast('Payment cancelled.'); router.replace('/dashboard/customer/wallet') } }, [searchParams,router])
 
   function handleQuickAmount(amt: number) {
     setTopUpAmount(amt)
@@ -227,6 +217,8 @@ function WalletPageInner() {
             />
           </div>
 
+          {loadError && <p role="alert" className="text-red-300 mb-4">{loadError} <button onClick={() => void loadData()}>Try again</button></p>}
+          {confirmation && <p role="status" className="text-white mb-4">{confirmation} <button className="underline ml-2" onClick={()=>setConfirmationRetry(v=>v+1)}>Check payment</button></p>}
           {/* ── Balance Card ── */}
           <div className="bg-[#1a1919] border border-[#494847]/20 rounded-2xl p-6 mb-4">
             <div className="flex items-start justify-between mb-6">

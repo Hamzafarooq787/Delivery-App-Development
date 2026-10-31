@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import { CustomerThread } from '@/components/shared/customer-thread'
 import { CustomerShoppingOrder } from '@/components/customer/CustomerShoppingOrder'
 import { getDriverNamesByIds } from '@/app/actions/driver'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
@@ -103,6 +104,8 @@ function buildSteps(
 }
 
 function TrackingPageInner() {
+  const [eta, setEta] = useState<{minutes:number;destination:boolean}|null>(null)
+  const [loading, setLoading] = useState(true), [loadError,setLoadError]=useState(''), [revision,setRevision]=useState(0)
   const [showModal, setShowModal] = useState(false)
   const [shipment, setShipment] = useState<any>(null)
   const [driver, setDriver] = useState<Driver>(null)
@@ -129,10 +132,13 @@ function TrackingPageInner() {
   useEffect(() => {
     let cancelled = false
     async function load() {
+      setLoading(true); setLoadError(''); setShipment(null); setDriver(null); setOtp(null); setMyRating(null); setEta(null)
+      try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-      if (!user || cancelled) return
+      if (cancelled) return
+      if (!user) throw new Error('Please sign in to view tracking.')
       setUserId(user.id)
 
       // Always select parcel_image_url so we can show it when delivered
@@ -161,14 +167,15 @@ function TrackingPageInner() {
       }
 
       const { data, error } = await q.maybeSingle()
-      if (cancelled || error) return
+      if (cancelled) return
+      if (error) throw error
       if (!data) {
         setShipment(null)
         setDriver(null)
         return
       }
 
-      applyShipment(data)
+      if (!cancelled) applyShipment(data)
 
       const { data: logs } = await supabase
         .from('delivery_status_logs')
@@ -193,68 +200,35 @@ function TrackingPageInner() {
         const { data: rating } = await getMyRatingForDelivery(data.id)
         if (!cancelled) setMyRating(rating)
       }
+      } catch { if (!cancelled) setLoadError('Could not load tracking. Please try again.') } finally { if (!cancelled) setLoading(false) }
     }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [supabase, requestedId])
+    void load()
+    return () => { cancelled = true }
+  }, [supabase, requestedId, revision])
 
-  // ── Realtime: watch delivery_requests for live status updates ───────────────
+  // Realtime plus a visible-page fallback if the socket is unavailable.
   useEffect(() => {
     if (!shipment?.id) return
-
-    const channel = supabase
-      .channel(`tracking-delivery-${shipment.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'delivery_requests',
-          filter: `id=eq.${shipment.id}`,
-        },
-        async (payload) => {
-          const updated = payload.new as any
-          if (!updated) return
-
-          // Merge new fields into shipment state
-          setShipment((prev: any) => ({ ...prev, ...updated }))
-
-          const { data: logs } = await supabase
-            .from('delivery_status_logs')
-            .select('status, created_at')
-            .eq('delivery_id', updated.id)
-            .order('created_at', { ascending: true })
-          setSteps(
-            buildSteps(
-              updated.status,
-              logs ?? [],
-              updated.created_at ?? shipment.created_at,
-            ),
-          )
-
-          // If driver changed (e.g. reassigned), re-fetch driver name + rating
-          if (updated.driver_id && updated.driver_id !== shipment.driver_id) {
-            const names = await getDriverNamesByIds([updated.driver_id])
-            setDriver({ full_name: names[updated.driver_id] ?? 'Your driver' } as Driver)
-
-            const summary = await getRatingSummary(updated.driver_id)
-            setDriverRating(summary)
-          }
-
-          if (updated.status === 'delivered') {
-            const { data: rating } = await getMyRatingForDelivery(updated.id)
-            setMyRating(rating)
-          }
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
+    let alive=true,busy=false,version=0,knownDriver=shipment.driver_id,knownStatus=shipment.status
+    const receive=async(updated:any)=>{
+      const request=++version
+      if(!alive||!updated)return
+      setShipment((prev:any)=>prev?.id===updated.id?{...prev,...updated}:prev)
+      const {data:logs,error}=await supabase.from('delivery_status_logs').select('status, created_at').eq('delivery_id',updated.id).order('created_at',{ascending:true})
+      if(!alive||request!==version)return
+      if(!error)setSteps(buildSteps(updated.status,logs??[],updated.created_at??shipment.created_at))
+      if(updated.driver_id!==knownDriver){
+        knownDriver=updated.driver_id;setDriver(null);setDriverRating({average:null,count:0});setEta(null)
+        if(updated.driver_id){const [names,summary]=await Promise.all([getDriverNamesByIds([updated.driver_id]),getRatingSummary(updated.driver_id)]);if(!alive||request!==version)return;setDriver({full_name:names[updated.driver_id]??'Your driver'});setDriverRating(summary)}
+      }
+      if(updated.status==='delivered'&&knownStatus!=='delivered'){const {data:rating}=await getMyRatingForDelivery(updated.id);if(alive&&request===version)setMyRating(rating)}
+      knownStatus=updated.status
     }
-  }, [supabase, shipment?.id])
+    const refresh=async()=>{if(busy||document.visibilityState!=='visible')return;busy=true;try{const {data,error}=await supabase.from('delivery_requests').select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls,price,base_price,surge_multiplier,discount_amount,promo_code,service_type,bfm_stage').eq('id',shipment.id).eq('customer_id',userId).maybeSingle();if(alive){if(error)setLoadError('Tracking updates are delayed. Please try again.');else if(data){setLoadError('');await receive(data)}}}catch{if(alive)setLoadError('Tracking updates are delayed. Please try again.')}finally{busy=false}}
+    const channel=supabase.channel(`tracking-delivery-${shipment.id}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'delivery_requests',filter:`id=eq.${shipment.id}`},payload=>{void receive(payload.new).catch(()=>{if(alive)setLoadError('Could not refresh tracking details. Please try again.')})}).subscribe()
+    const timer=setInterval(refresh,20000);window.addEventListener('focus',refresh)
+    return()=>{alive=false;version++;clearInterval(timer);window.removeEventListener('focus',refresh);void supabase.removeChannel(channel)}
+  },[supabase,shipment?.id,userId])
 
   function applyShipment(data: any) {
     setShipment(data)
@@ -266,6 +240,7 @@ function TrackingPageInner() {
   return (
     <>
       <Header onNewDelivery={() => setShowModal(true)} userId={userId} />
+      {loadError && <div role="alert" className="fixed top-24 left-4 right-4 z-50 bg-[#1b1d20] border border-red-400/40 rounded-xl p-4 text-white">{loadError} <button type="button" className="text-[var(--brand-soft)] underline" onClick={() => setRevision(v=>v+1)}>Try again</button></div>}
 
       <main
         className={`${navStyles.trackingContent} overflow-hidden flex flex-col md:flex-row`}
@@ -329,7 +304,7 @@ function TrackingPageInner() {
               {shipment
                 ? (shipment.tracking_number ??
                   `KV-${shipment.id.slice(0, 8).toUpperCase()}`)
-                : 'No shipment found'}
+                : loading ? 'Loading tracking…' : loadError ? 'Tracking unavailable' : 'No shipment found'}
             </p>
             {shipment && (
               <p className="text-xs text-[#adaaaa] mt-1 leading-relaxed">
@@ -456,15 +431,13 @@ function TrackingPageInner() {
             <div className="px-5 py-4 border-b border-[#494847]/20 shrink-0 flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#adaaaa] mb-1">
-                  Estimated Arrival
+                  {eta?.destination ? 'Estimated delivery' : 'Driver arrival'}
                 </p>
                 <p className="text-3xl font-black font-headline text-white tracking-tighter">
-                  {shipment?.status === 'in_transit' ? 'LIVE' : '--:--'}
+                  {eta ? `${eta.minutes} min` : '—'}
                 </p>
                 <p className="text-xs text-[#adaaaa]/60 mt-0.5">
-                  {shipment?.status === 'in_transit'
-                    ? 'Driver en route'
-                    : 'Awaiting dispatch'}
+                  {eta ? (eta.destination ? 'Estimated delivery · traffic may vary' : 'Driver reaches pickup · traffic may vary') : shipment?.driver_id ? 'Waiting for a current route estimate' : 'Awaiting driver'}
                 </p>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
@@ -660,22 +633,8 @@ function TrackingPageInner() {
                 </div>
               </div>
             </div>
-            {!isDelivered && (
-              <div className="grid grid-cols-2 gap-3">
-                <button className="bg-[#262626] hover:bg-[#303030] text-white text-sm font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors border border-[#494847]/20 active:scale-95">
-                  <span className="material-symbols-outlined text-base text-[#adaaaa]">
-                    mail
-                  </span>
-                  Message
-                </button>
-                <button className="bg-[var(--color-primary)] hover:brightness-110 text-[var(--color-on-primary)] text-sm font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-[var(--color-primary)]/20">
-                  <span className="material-symbols-outlined text-base">
-                    call
-                  </span>
-                  Call
-                </button>
-              </div>
-            )}
+            {shipment?.id && <CustomerThread kind="order" id={shipment.id} />}
+
           </div>
         </aside>
 
@@ -683,6 +642,7 @@ function TrackingPageInner() {
         <div className="order-1 md:order-2 flex-[4] md:flex-1 md:h-full relative bg-[#131313]">
           {/* When delivered, just show static pickup→destination route — no live driver marker */}
           <LiveTrackingPanel
+                onEta={setEta}
             status={shipment?.status}
             bfmStage={shipment?.bfm_stage}
             matchDeliveryId
@@ -755,7 +715,7 @@ function TrackingPageInner() {
                   explore_off
                 </span>
                 <p className="text-white font-bold text-base">
-                  No shipment found
+                  {loading ? 'Loading tracking…' : loadError ? 'Tracking unavailable' : 'No shipment found'}
                 </p>
                 <p className="text-[#adaaaa] text-sm mt-1">
                   Check your delivery history for past orders

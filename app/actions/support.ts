@@ -72,6 +72,7 @@ export async function adminSetTicketStatus(
   status: "open" | "closed"
 ): Promise<{ success?: boolean; error?: string }> {
   if (!(await requireAdmin())) return { error: "Not authorized" }
+  if (!["open","closed"].includes(status)) return {error:"Choose Open or Resolved."}
 
   const admin = createAdminClient()
   const { error } = await admin

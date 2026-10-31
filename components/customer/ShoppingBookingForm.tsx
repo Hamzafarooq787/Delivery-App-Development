@@ -13,6 +13,9 @@ import { googleReverseGeocode } from '@/lib/google'
 import { shoppingEstimate, duplicateShoppingProduct, newShoppingRequestId } from '@/lib/shopping-booking'
 import { validateShoppingItems } from '@/lib/shopping-validation'
 import { useFreshBookingForm } from '@/hooks/use-fresh-booking-form'
+import { useOrderPhotoCleanup } from '@/hooks/use-order-photo-cleanup'
+import { cleanupAbandonedOrderPhotos } from '@/app/actions/order-photo-cleanup'
+import { SavedAddressPicker } from './SavedAddressPicker'
 import { ShoppingAddressField, type ShoppingPlace } from './ShoppingAddressField'
 import { ShoppingItemEditor } from './ShoppingItemEditor'
 import { ItemPhotoPreview } from './ItemPhotoPreview'
@@ -80,6 +83,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const total = shoppingEstimate(items)
   const maximum = settings?.max_purchase_amount ?? 100
   useFreshBookingForm('buy_for_me')
+  useOrderPhotoCleanup([...items.map(i=>i.photo_url).filter((u):u is string=>!!u),...(editor?.photo_url?[editor.photo_url]:[])])
   useEffect(() => {
     let active = true
     void getShoppingBookingSettings().then(([pricing, bfm]) => {
@@ -177,7 +181,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (!existing && items.length >= limits.maxShoppingProducts) { setError(`You can add up to ${limits.maxShoppingProducts} different products.`); return }
     editorVersion.current++; setEditor(existing ? { ...existing } : freshItem()); setEditorError(''); setEditorDetails(details)
   }
-  function closeEditor() { if (!uploadLock.current) { editorVersion.current++; setEditor(null); setEditorError('') } }
+  function closeEditor() { if (!uploadLock.current) { const old=items.find(i=>i.id===editor?.id)?.photo_url; if(editor?.photo_url&&editor.photo_url!==old)void cleanupAbandonedOrderPhotos([editor.photo_url]).catch(()=>{}); editorVersion.current++; setEditor(null); setEditorError('') } }
   function saveItem() {
     if (!editor || uploadLock.current) return
     const cleaned = { ...editor, name: editor.name.trim(), brand_size_variant: editor.brand_size_variant?.trim() || null }
@@ -188,9 +192,9 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (shoppingEstimate([...others, cleaned]) > maximum) { setEditorError(`Your estimated shopping must be ${money(maximum)} or less.`); return }
     const exists = items.some(i => i.id === editor.id)
     setItems(prev => exists ? prev.map(i => i.id === editor.id ? cleaned : i) : [...prev, cleaned])
-    invalidate(); closeEditor()
+    invalidate(); editorVersion.current++; setEditor(null); setEditorError('')
   }
-  function removeItem(id: string) { setItems(prev => prev.filter(i => i.id !== id)); setReplacementIndex(0); invalidate(); closeEditor() }
+  function removeItem(id: string) { const photo=items.find(i=>i.id===id)?.photo_url;if(photo)void cleanupAbandonedOrderPhotos([photo]).catch(()=>{});setItems(prev => prev.filter(i => i.id !== id)); setReplacementIndex(0); invalidate(); closeEditor() }
   async function photo(file: File) {
     if (!editor || uploadLock.current) return
     if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) { setEditorError('Choose an image smaller than 10 MB.'); return }
@@ -204,7 +208,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
       const result = await client.storage.from('delivery-item-photos').upload(path, compressed, { contentType: compressed.type, upsert: false })
       if (result.error) throw result.error
       const { data } = client.storage.from('delivery-item-photos').getPublicUrl(path)
-      if (current()) setEditor(prev => prev?.id === id ? { ...prev, photo_url: data.publicUrl } : prev)
+      if (current()) { const old=editor.photo_url; if(old && old!==items.find(i=>i.id===id)?.photo_url)void cleanupAbandonedOrderPhotos([old]).catch(()=>{});setEditor(prev => prev?.id === id ? { ...prev, photo_url: data.publicUrl } : prev) } else void cleanupAbandonedOrderPhotos([data.publicUrl]).catch(()=>{})
     } catch { if (current()) setEditorError('Photo upload failed. Try again.') }
     finally { uploadLock.current = false; if (mounted.current) setUploading(false) }
   }
@@ -254,7 +258,9 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
         </div><aside className={styles.desktopAside}>{map}<ShoppingSummary items={items} onEdit={() => openEditor(items[0])} /><p className={styles.hint}>Add each product separately. You can update quantities without losing other items.</p></aside></div>}
         {step === 2 && <div className={styles.layout}><div className={styles.stack}>
           <label>Shop name<input maxLength={200} value={shopName} onChange={e => { setShopName(e.target.value); invalidate() }} placeholder="e.g. Tesco" /></label>
+          <SavedAddressPicker label="Saved shop or collection address" onSelect={p => { setShop(p); setShopInput(p.address); invalidate() }} />
           <ShoppingAddressField label="Shop address" value={shopInput} onChange={v => { setShopInput(v); setShop(null); invalidate() }} onSelect={p => { setShop(p); setShopInput(p.address); invalidate() }} />
+          <SavedAddressPicker label="Saved delivery address" onSelect={p => { cancelGps(); setDelivery(p); setDeliveryInput(p.address); invalidate() }} />
           <ShoppingAddressField label="Delivery address" value={deliveryInput} onChange={v => { cancelGps(); setDeliveryInput(v); setDelivery(null); invalidate() }} onSelect={p => { cancelGps(); setDelivery(p); setDeliveryInput(p.address); invalidate() }} locationControl={<LocationButton label={locating ? 'Locating…' : 'Use my location for delivery'} disabled={locating} suspended={!!locationHelp} getRequestVersion={() => gpsVersion.current} onRequest={() => void gps()} onPosition={p => void gps(p)} onError={e => setLocationHelp(locationIssue(e))} />} />
           <details className={styles.disclosure}><summary><span className={styles.desktopOnly}>Flat, entrance or access instructions (optional)</span><span className={styles.mobileOnly}>Access & shop instructions (optional)</span></summary><label>Delivery instructions<textarea rows={2} maxLength={500} value={deliveryInstructions} onChange={e => { setDeliveryInstructions(e.target.value); invalidate() }} placeholder="e.g. Flat 4, use the side entrance" /></label><label className={styles.mobileOnly}>Instructions for the shop<textarea rows={2} maxLength={500} value={shopInstructions} onChange={e => { setShopInstructions(e.target.value); invalidate() }} placeholder="Anything your shopper should know?" /></label></details>
           <label className={styles.desktopOnly}>Instructions for the shop (optional)<textarea rows={2} maxLength={500} value={shopInstructions} onChange={e => { setShopInstructions(e.target.value); invalidate() }} placeholder="Anything your shopper should know?" /></label>

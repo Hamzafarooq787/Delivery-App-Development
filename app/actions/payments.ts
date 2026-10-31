@@ -83,7 +83,7 @@ export async function createWalletTopUpSession(
         user_id: user.id,
         amount: roundedAmount.toFixed(2),
       },
-      success_url: `${origin}${TOPUP_RETURN_PATHS[returnTo]}${TOPUP_RETURN_PATHS[returnTo].includes("?") ? "&" : "?"}topup=1`,
+      success_url: `${origin}${TOPUP_RETURN_PATHS[returnTo]}${TOPUP_RETURN_PATHS[returnTo].includes("?") ? "&" : "?"}topup=1&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/dashboard/customer/wallet?canceled=1`,
     })
 
@@ -93,4 +93,19 @@ export async function createWalletTopUpSession(
     console.error("[Payments] createWalletTopUpSession failed:", error)
     return { error: "Payment could not be started. Please try again." }
   }
+}
+
+/** Read-only verification. Only the idempotent Stripe webhook may credit money. */
+export async function verifyWalletTopupSession(id:string):Promise<{state?:'pending'|'credited';error?:string}>{
+ const client=await createClient();const {data:{user}}=await client.auth.getUser()
+ if(!user||typeof id!=='string'||!/^cs_[A-Za-z0-9_]+$/.test(id)||id.length>255)return {error:'Payment reference unavailable. Please contact support.'}
+ try{
+ const session=await getStripe().checkout.sessions.retrieve(id)
+ const expected=Math.round(Number(session.metadata?.amount)*100)
+ if(session.metadata?.type!=='wallet_topup'||session.metadata?.user_id!==user.id||session.currency!=='gbp'||!Number.isFinite(expected)||expected<100||expected>50000||session.amount_total!==expected)return {error:'Payment reference could not be verified.'}
+ if(session.payment_status!=='paid')return {state:'pending'}
+ const {data,error}=await client.from('wallet_transactions').select('amount').eq('user_id',user.id).eq('stripe_session_id',id).eq('type','topup').maybeSingle()
+ if(error)return {error:'Could not confirm wallet credit. Please try again.'}
+ return {state:data&&Math.round(Number(data.amount)*100)===expected?'credited':'pending'}
+ }catch{return {error:'Could not confirm payment. Please try again.'}}
 }

@@ -21,6 +21,7 @@ function fixture() {
   const stripe={balance:{retrieve(){balanceReads++;throw Error('Issuing balance is not needed for customer checkout')}},checkout:{sessions:{async create(p,key){sessions++;sessionParams=p;assert.equal(key.idempotencyKey,'booking:payment-1');return{id:'cs_test',url:'https://checkout.stripe.test/session'}},async retrieve(){return{status:'open',url:'https://checkout.stripe.test/session'}}}}}
   const api=compile('app/actions/order-checkout.ts',{
     'node:crypto':nodeCrypto,
+    '@/lib/order-photo-lifecycle':{leaseOrderPhotos:async()=>true},
     '@/lib/order-media':compile('lib/order-media.ts',{}, {URL,process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co'}}}),
     '@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:'customer',email:'test@example.test'}}})}})},
     '@/lib/supabase/admin':{createAdminClient:()=>db},

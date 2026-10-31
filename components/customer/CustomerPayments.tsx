@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowDownToLine,
@@ -9,8 +9,8 @@ import {
   RotateCcw,
   ShoppingBag,
 } from 'lucide-react'
-import { shoppingFinancials } from '@/lib/shopping-summary'
-import { createClient } from '@/lib/supabase/client'
+import { useCustomerLiveRefresh } from '@/hooks/use-customer-live-refresh'
+import { getCustomerPayments } from '@/app/actions/customer-repairs'
 import {
   CustomerDialog,
   CustomerEmpty,
@@ -28,6 +28,7 @@ type Payment = {
   actualShopping?:number|null
   unusedShopping?:number|null
   retainedTotal?:number
+  payment_method?: string
   id: string
   delivery_id: string | null
   amount: number
@@ -60,7 +61,7 @@ function PaymentReceipt({
         </div>
         {!!row.shoppingFunds&&<><div><dt>Service fees</dt><dd>{money(row.serviceFees??0)}</dd></div><div><dt>Prepaid shopping funds</dt><dd>{money(row.shoppingFunds)}</dd></div></>}
         {row.shoppingFunds ? <><div><dt>Actual receipt total</dt><dd>{row.actualShopping == null ? 'Not settled yet' : money(row.actualShopping)}</dd></div>{row.unusedShopping != null && <div><dt>Unused shopping funds</dt><dd>{money(row.unusedShopping)}</dd></div>}<div><dt>Charged less completed refunds</dt><dd>{money(row.retainedTotal??row.amount)}</dd></div></> : null}
-        {row.refund_jobs?.map((refund,i)=><div key={i}><dt>Card refund · {refund.state.replaceAll('_',' ')}</dt><dd>{money(Number(refund.amount))}</dd></div>)}
+        {row.refund_jobs?.map((refund,i)=><div key={i}><dt>{row.payment_method==='wallet'?'Wallet refund':'Card refund'} · {refund.state.replaceAll('_',' ')}</dt><dd>{money(Number(refund.amount))}</dd></div>)}
         <div className={s.total}>
           <dt>Recorded total</dt>
           <dd>{money(row.amount)}</dd>
@@ -86,7 +87,6 @@ function PaymentReceipt({
   )
 }
 export default function CustomerPayments() {
-  const client = useMemo(() => createClient(), [])
   const [rows, setRows] = useState<Payment[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
@@ -96,86 +96,28 @@ export default function CustomerPayments() {
     [details, setDetails] = useState<Payment | null>(null),
     [revision, setRevision] = useState(0)
   const size = useCustomerPageSize(5, 2)
+  const [summary, setSummary] = useState({totalCount:0, paidMonth:0, refunds:0})
   useEffect(() => {
-    let alive = true
+    let alive = true, busy = false
+    setLoading(true)
     async function load() {
-      setLoading(true)
-      setError('')
+      if (busy) return; busy = true
       try {
-        const {
-          data: { user },
-        } = await client.auth.getUser()
-        if (!user) throw new Error('Please sign in to view payments.')
-        // Existing schema only. Do not assume the separate launch migration exists.
-        const { data: deliveries, error: orderError } = await client
-          .from('delivery_requests')
-          .select('id,tracking_number,service_type,price,max_spend_approved,actual_items_total,shopping_hold_settled_at,payment_method')
-          .eq('customer_id', user.id)
-        if (orderError) throw orderError
-        const orders = new Map((deliveries ?? []).map((d) => [d.id, d]))
-        if (!orders.size) {
-          if (alive) setRows([])
-          return
-        }
-        const { data, error: paymentError } = await client
-          .from('payments')
-          .select('id,amount,status,created_at,delivery_id,refund_jobs,payment_method')
-          .in('delivery_id', [...orders.keys()])
-          .order('created_at', { ascending: false })
-        if (paymentError) throw paymentError
-        if (alive)
-          setRows(
-            (data ?? []).map((p) => ({
-              ...p,
-              actualShopping:shoppingFinancials(orders.get(p.delivery_id)??{price:0,max_spend_approved:0},p).actual,
-              unusedShopping:shoppingFinancials(orders.get(p.delivery_id)??{price:0,max_spend_approved:0},p).unused,
-              retainedTotal:shoppingFinancials(orders.get(p.delivery_id)??{price:0,max_spend_approved:0},p).retained,
-              shoppingFunds:Number(orders.get(p.delivery_id)?.max_spend_approved??0),
-              serviceFees:Number(orders.get(p.delivery_id)?.price??0),
-              amount: Number(p.amount ?? 0),
-              status: (p.status ?? 'pending').toLowerCase(),
-              tracking:
-                orders.get(p.delivery_id)?.tracking_number ??
-                `GD-${p.id.slice(0, 6).toUpperCase()}`,
-              service:
-                orders.get(p.delivery_id)?.service_type === 'buy_for_me'
-                  ? 'Buy for Me'
-                  : 'Collect & Deliver',
-            })),
-          )
-      } catch {
-        if (alive) setError('Could not load payments. Please try again.')
-      } finally {
-        if (alive) setLoading(false)
-      }
+        const r = await getCustomerPayments(page, size, tab === 'refunds')
+        if (!alive) return
+        if (r.error) setError(r.error)
+        else { setRows(r.data.rows); setDetails(prev=>prev?r.data.rows.find((p:Payment)=>p.id===prev.id)??prev:null); setSummary(r.data); setError(''); const last = Math.max(1, Math.ceil(r.data.totalCount / size)); if (page > last) setPage(last) }
+      } catch { if (alive) setError('Could not load payments. Please try again.') }
+      finally { busy = false; if (alive) setLoading(false) }
     }
-    void load()
-    return () => {
-      alive = false
-    }
-  }, [client, revision])
-  const filtered = rows.filter((r) =>
-    tab === 'refunds'
-      ? (r.refund_jobs?.length??0)>0 || ['refunded', 'partially_refunded'].includes(r.status)
-      : true,
-  )
-  const current = Math.min(
-      page,
-      Math.max(1, Math.ceil(filtered.length / size)),
-    ),
-    visible = filtered.slice((current - 1) * size, current * size)
-  const focus = filtered.find((r) => r.id === selected) ?? visible[0]
-  const now = new Date()
-  const paidMonth = rows
-    .filter(
-      (r) =>
-        ['paid', 'released'].includes(r.status) &&
-        r.created_at &&
-        new Date(r.created_at).getMonth() === now.getMonth() &&
-        new Date(r.created_at).getFullYear() === now.getFullYear(),
-    )
-    .reduce((sum, r) => sum + r.amount, 0)
-  const refunds = rows.reduce((sum,r)=>sum+(r.refund_jobs?.filter(j=>j.state==='succeeded').reduce((total,j)=>total+Number(j.amount),0)??(r.status==='refunded'?r.amount:0)),0)
+    const refresh = () => { if (document.visibilityState === 'visible') void load() }
+    void load(); const timer = setInterval(refresh,15000); window.addEventListener('focus',refresh)
+    return () => { alive = false; clearInterval(timer); window.removeEventListener('focus',refresh) }
+  }, [page, size, tab, revision])
+  const current = page, visible = rows
+  const focus = rows.find(r => r.id === selected) ?? visible[0]
+  const {paidMonth, refunds} = summary
+  useCustomerLiveRefresh(async()=>{setRevision(v=>v+1)},'payments',0)
   function download(row: Payment) {
     const text = `GoDrop payment summary\nOrder: ${row.tracking}\nService: ${row.service}\nDate: ${shortDate(row.created_at)}\nStatus: ${row.status}\nRecorded total: ${money(row.amount)}\nPayment reference: ${row.id}\n\nThis is a payment summary, not a VAT invoice.`
     const url = URL.createObjectURL(
@@ -200,7 +142,7 @@ export default function CustomerPayments() {
               <CreditCard size={23} />
             </span>
             <div>
-              <small>Paid this month</small>
+              <small>Paid this month · before refunds</small>
               <strong>{loading ? '—' : money(paidMonth)}</strong>
             </div>
           </div>
@@ -209,7 +151,7 @@ export default function CustomerPayments() {
               <RotateCcw size={22} />
             </span>
             <div>
-              <small>Recorded refunds</small>
+              <small>Completed refunds · all time</small>
               <strong>{loading ? '—' : money(refunds)}</strong>
             </div>
           </div>
@@ -372,7 +314,7 @@ export default function CustomerPayments() {
           )}
           <CustomerPagination
             page={current}
-            count={filtered.length}
+            count={summary.totalCount}
             size={size}
             onChange={setPage}
           />
