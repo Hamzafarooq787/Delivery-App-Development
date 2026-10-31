@@ -2,7 +2,7 @@
 
 import { AddressInstructions } from "@/components/customer/address-instructions"
 import { PriceBreakdown } from "@/components/customer/price-breakdown"
-import { useBookingDraft } from "@/hooks/use-booking-draft"
+import { useFreshBookingForm } from "@/hooks/use-fresh-booking-form"
 import styles from './DeliverySteps.module.css'
 import dynamic from 'next/dynamic'
 import { PackageIllustration } from './PackageIllustration'
@@ -537,11 +537,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     : (!quote && !submitting) ? 'Calculating price…'
     : null
 
-  const persistBooking = useBookingDraft('delivery', {pickupValue,deliveryValue,pickupCoords,deliveryCoords,itemDescription,itemPhotos,packageSize,promoCode,pickupInstructions,deliveryInstructions}, draft=>{
-    if(initialDraft)return
-    setPickupInstructions(draft.pickupInstructions??"");setDeliveryInstructions(draft.deliveryInstructions??"")
-    setPickupValue(draft.pickupValue);setDeliveryValue(draft.deliveryValue);setPickupCoords(draft.pickupCoords);setDeliveryCoords(draft.deliveryCoords);setItemDescription(draft.itemDescription);setItemPhotos(draft.itemPhotos);setPackageSize(draft.packageSize);setPromoCode(draft.promoCode)
-  })
+  useFreshBookingForm('delivery')
   async function handleSubmit() {
     if (submitting || success) return
     if (!pickupValue || !pickupCoords) { toast.error('Select a pickup address from the suggestions list.'); return }
@@ -554,7 +550,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
 
     setSubmitting(true)
     try {
-      persistBooking()
       checkoutKey.current ??= crypto.randomUUID()
       const result = await startOrderCheckout({ requestKey: checkoutKey.current, type: "delivery", order: {
         pickup_instructions:pickupInstructions,delivery_instructions:deliveryInstructions,

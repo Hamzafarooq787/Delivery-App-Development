@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { googleReverseGeocode } from '@/lib/google'
 import { shoppingEstimate, duplicateShoppingProduct, newShoppingRequestId } from '@/lib/shopping-booking'
 import { validateShoppingItems } from '@/lib/shopping-validation'
-import { useBookingDraft } from '@/hooks/use-booking-draft'
+import { useFreshBookingForm } from '@/hooks/use-fresh-booking-form'
 import { ShoppingAddressField, type ShoppingPlace } from './ShoppingAddressField'
 import { ShoppingItemEditor } from './ShoppingItemEditor'
 import { ItemPhotoPreview } from './ItemPhotoPreview'
@@ -22,7 +22,6 @@ import styles from './ShoppingSteps.module.css'
 
 const BookingRouteMap = dynamic(() => import('./BookingRouteMap'), { ssr: false })
 type Item = ShoppingItem & { id: string }
-type Draft = { items: Item[]; savedIds: string[]; shopName: string; shopInput: string; deliveryInput: string; shop: ShoppingPlace | null; delivery: ShoppingPlace | null; shopInstructions: string; deliveryInstructions: string }
 const steps = ['Shopping items', 'Shop & delivery', 'Replacements', 'Review & Pay']
 const titles = ['What should we buy?', 'Where should we shop?', 'If an item is unavailable', 'Check your shopping']
 const choices = [
@@ -80,14 +79,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const uploadLock = useRef(false)
   const total = shoppingEstimate(items)
   const maximum = settings?.max_purchase_amount ?? 100
-  const savedIds = items.map(i => i.id)
-  const persistBooking = useBookingDraft<Draft>('buy_for_me', { items, savedIds, shopName, shopInput, deliveryInput, shop, delivery, shopInstructions, deliveryInstructions }, draft => {
-    if (!Array.isArray(draft?.items)) return
-    // Legacy drafts included an unfinished row; only restore saved products.
-    setItems(draft.items.filter(i => i && typeof i.id === 'string' && typeof i.name === 'string' && i.name.trim() && (!Array.isArray(draft.savedIds) || draft.savedIds.includes(i.id))))
-    setShopName(draft.shopName ?? ''); setShopInput(draft.shopInput ?? ''); setDeliveryInput(draft.deliveryInput ?? '')
-    setShop(draft.shop ?? null); setDelivery(draft.delivery ?? null); setShopInstructions(draft.shopInstructions ?? ''); setDeliveryInstructions(draft.deliveryInstructions ?? '')
-  })
+  useFreshBookingForm('buy_for_me')
   useEffect(() => {
     let active = true
     void getShoppingBookingSettings().then(([pricing, bfm]) => {
@@ -168,7 +160,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (submitLock.current || !confirmed || !limitsAccepted || !quote || !shop || !delivery || uploading || !validItems()) return
     submitLock.current = true; setSubmitting(true); setError('')
     try {
-      persistBooking(); requestKey.current ??= newShoppingRequestId()
+      requestKey.current ??= newShoppingRequestId()
       const result = await startOrderCheckout({ requestKey: requestKey.current, type: 'buy_for_me', order: {
         request_key: requestKey.current, limits_acknowledged: limitsAccepted, consent_token: quote.consentToken,
         shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng,
