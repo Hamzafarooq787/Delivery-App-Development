@@ -1,5 +1,8 @@
 'use client'
 
+import { compressImage } from '@/lib/image-compress'
+import { ItemPhotoPreview } from './ItemPhotoPreview'
+
 import { AddressInstructions } from "@/components/customer/address-instructions"
 import { getBookingPricing } from "@/app/actions/booking-settings"
 import { DEFAULT_BOOKING_PRICING } from "@/lib/booking-pricing"
@@ -175,7 +178,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (uploading) return
     if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) { setError('Choose an image smaller than 10 MB.'); return }
     const id = item.id; setUploading(true); setError('')
-    try { const client = createClient(); const { data: { user } } = await client.auth.getUser(); if (!user) throw new Error("Session expired"); const path = `${user.id}/bfm-items/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`; const result = await client.storage.from('delivery-item-photos').upload(path, file); if (result.error) throw result.error; const { data } = client.storage.from('delivery-item-photos').getPublicUrl(path); setItems(prev => prev.map(i => i.id === id ? { ...i, photo_url: data.publicUrl } : i)) }
+    try { const client = createClient(); const { data: { user } } = await client.auth.getUser(); if (!user) throw new Error("Session expired"); const compressed = await compressImage(file, 1280, 0.82); const path = `${user.id}/bfm-items/${crypto.randomUUID()}.jpg`; const result = await client.storage.from('delivery-item-photos').upload(path, compressed, { contentType: compressed.type, upsert: false }); if (result.error) throw result.error; const { data } = client.storage.from('delivery-item-photos').getPublicUrl(path); setItems(prev => prev.map(i => i.id === id ? { ...i, photo_url: data.publicUrl } : i)) }
     catch { setError('Photo upload failed. Try again.') }
     finally { setUploading(false) }
   }
@@ -236,8 +239,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
               <label>Brand, size or variant (optional)<input value={item.brand_size_variant ?? ''} onChange={e => update('brand_size_variant',e.target.value)} /></label>
               <label>Notes (optional)<textarea rows={2} value={item.notes ?? ''} onChange={e => update('notes',e.target.value)} /></label>
               <label>Photo (optional)<input type="file" accept="image/*" disabled={uploading} onChange={e => { if (e.target.files?.[0]) void photo(e.target.files[0]) }} /></label>
-              {item.photo_url && <div className={styles.photo}>{/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.photo_url} alt="Shopping item" /><button onClick={() => update('photo_url',null)}>Remove photo</button></div>}
+              {item.photo_url && <ItemPhotoPreview url={item.photo_url} label="Shopping item" onRemove={() => update('photo_url', null)} />}
             </> : <>
               <label>Item name<input value={item.name} onChange={e => update('name',e.target.value)} placeholder="e.g. Whole milk 2L" /></label>
               <div className={styles.columns}><label>Quantity<div className={styles.quantity}><button aria-label="Reduce quantity" disabled={item.quantity <= 1} onClick={() => update('quantity',item.quantity - 1)}>−</button><strong>{item.quantity}</strong><button aria-label="Increase quantity" disabled={item.quantity>=limits.maxQuantityPerProduct} onClick={() => update('quantity',item.quantity + 1)}>+</button></div></label><label>Est. price per item (£)<input type="number" min="0" step="0.01" value={item.estimated_price ?? ''} onChange={e => update('estimated_price',e.target.value === '' ? null : Number(e.target.value))} placeholder="Optional" /></label></div>

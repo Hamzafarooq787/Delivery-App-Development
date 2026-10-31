@@ -6,6 +6,9 @@ import { useBookingDraft } from "@/hooks/use-booking-draft"
 import styles from './DeliverySteps.module.css'
 import dynamic from 'next/dynamic'
 import { PackageIllustration } from './PackageIllustration'
+import { ItemPhotoPreview } from './ItemPhotoPreview'
+import { compressImage } from '@/lib/image-compress'
+import { requestBrowserLocation, locationIssue, type LocationIssue } from '@/lib/browser-location'
 const BookingRouteMap = dynamic(() => import('./BookingRouteMap'), { ssr: false })
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -22,7 +25,6 @@ import {
   googlePlacesAutocomplete,
   googlePlaceCoords,
   googleReverseGeocode,
-  googleDetectCountryCode,
   type PlaceSuggestion,
 } from '@/lib/google'
 import { clearDeliveryDraft, saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
@@ -52,7 +54,7 @@ type LatLng = { lng: number; lat: number }
 
 function AddressInput({
   label, icon, color, placeholder, value, onChange, onSelect,
-  onGpsClick, gpsLoading, proximity, countryCode,
+  onGpsClick, gpsLoading, proximity, countryCode, issue,
 }: {
   label: string; icon: string; color: string; placeholder: string; value: string
   onChange: (v: string) => void
@@ -61,6 +63,7 @@ function AddressInput({
   gpsLoading: boolean
   proximity: LatLng | null
   countryCode: string | null
+  issue?: LocationIssue | null
 }) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [open, setOpen] = useState(false)
@@ -118,7 +121,7 @@ function AddressInput({
 
   return (
     <div ref={wrapRef} className="relative">
-      <div className="flex items-center justify-between mb-2">
+      <div className={styles.addressLabel}>
         <label className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${color}`}>
           <span className="material-symbols-outlined text-sm">{icon}</span>
           {label}
@@ -151,6 +154,7 @@ function AddressInput({
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#adaaaa]">Getting location…</span>
         )}
       </div>
+      {issue && <LocationFeedback issue={issue} onRetry={onGpsClick} />}
       {open && suggestions.length > 0 && dropdownRect && (
         <div
           style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, maxHeight: Math.max(60, (window.visualViewport?.height ?? window.innerHeight) - dropdownRect.top - 76), overflowY: 'auto', zIndex: 99999 }}
@@ -177,6 +181,14 @@ function AddressInput({
   )
 }
 
+function LocationFeedback({ issue, onRetry }: { issue: LocationIssue; onRetry: () => void }) {
+  return <div className={styles.locationFeedback}>
+    <p role="alert">{issue.message}</p>
+    {issue.help && <details><summary>How to allow location</summary><p>{issue.help}</p></details>}
+    <button type="button" onClick={onRetry}>Try again</button>
+  </div>
+}
+
 export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }: NewDeliveryModalProps) {
   const router = useRouter()
   const [pickupInstructions,setPickupInstructions]=useState("")
@@ -190,6 +202,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   }, [])
   const [stepError, setStepError] = useState<string | null>(null)
   const frameRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // The old step's scroll position must never clip the new step's heading.
+    if (bodyRef.current) bodyRef.current.scrollTop = 0
+    bodyRef.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true })
+  }, [step])
   useEffect(() => {
     const viewport = window.visualViewport
     const measure = () => {
@@ -222,6 +240,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   function continueStep() {
     if (step === 1 && !packageSize) { setStepError('Choose a package size to continue.'); return }
     if (step === 1 && uploadingPhotos) { setStepError('Please wait for your photos to finish uploading.'); return }
+    if (step === 2 && (gpsPickupLoading || gpsDestLoading || liveLocationLoading)) { setStepError('Please wait while we find your location.'); return }
     if (step === 2 && (!pickupValue || !pickupCoords)) { setStepError('Choose a pickup address from the suggestions.'); return }
     if (step === 2 && (!deliveryValue || !deliveryCoords)) { setStepError('Choose a delivery address or use your live location.'); return }
     goTo(step + 1)
@@ -271,10 +290,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     if (!pickupCoords || !deliveryCoords || !packageSize) {
       setQuote(null)
       setQuoteError(null)
+      setQuoteLoading(false)
       return
     }
     let current = true
     setQuoteLoading(true)
+    setQuote(null)
     setQuoteError(null)
     const timer = setTimeout(async () => {
       const result = await getDeliveryQuote({
@@ -284,7 +305,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         deliveryLng: deliveryCoords.lng,
         packageSize,
         promoCode: promoCode.trim() || null,
-      })
+      }).catch(() => ({ error: 'Could not calculate the price. Check your connection and try again.' }))
       if (!current) return
       if ('data' in result) {
         setQuote(result.data)
@@ -300,115 +321,131 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
 
   // User's device GPS + detected country
   const [userCoords, setUserCoords] = useState<LatLng | null>(null)
-  const [countryCode, setCountryCode] = useState<string | null>(null)
+  const countryCode = null // Keep address search available even when GPS permission is blocked.
   const [gpsPickupLoading, setGpsPickupLoading] = useState(false)
   const [gpsDestLoading, setGpsDestLoading] = useState(false)
 
-  // Live location sharing state
+  const [pickupLocationIssue, setPickupLocationIssue] = useState<LocationIssue | null>(null)
+  const [deliveryLocationIssue, setDeliveryLocationIssue] = useState<LocationIssue | null>(null)
   const [liveLocationActive, setLiveLocationActive] = useState(false)
-  const [liveLocationError, setLiveLocationError] = useState<string | null>(null)
-  const liveLocationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [liveLocationLoading, setLiveLocationLoading] = useState(false)
+  const [liveLocationError, setLiveLocationError] = useState<LocationIssue | null>(null)
+  const locationRequests = useRef({ pickup: 0, destination: 0, live: 0 })
+  const liveWatch = useRef<number | null>(null)
+  const locationMounted = useRef(true)
 
-  // On mount: silently get GPS and detect country to restrict autocomplete
   useEffect(() => {
-    if (!('geolocation' in navigator)) return
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const coords: LatLng = { lng: pos.coords.longitude, lat: pos.coords.latitude }
-      setUserCoords(coords)
-      const code = await googleDetectCountryCode(coords.lat, coords.lng).catch(() => null)
-      if (code) setCountryCode(code)
-    }, () => {}, { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 })
-  }, [])
-
-  // Cleanup live location interval on unmount
-  useEffect(() => {
+    locationMounted.current = true
     return () => {
-      if (liveLocationIntervalRef.current) {
-        clearInterval(liveLocationIntervalRef.current)
-      }
+      locationMounted.current = false
+      locationRequests.current.live++
+      locationRequests.current.pickup++
+      locationRequests.current.destination++
+      if (liveWatch.current !== null) navigator.geolocation.clearWatch(liveWatch.current)
     }
   }, [])
 
-  // Fill an address field from device GPS (reverse geocode to exact street address)
+  function cancelGps(field: 'pickup' | 'destination') {
+    locationRequests.current[field]++
+    if (field === 'pickup') { setGpsPickupLoading(false); setPickupLocationIssue(null) }
+    else { setGpsDestLoading(false); setDeliveryLocationIssue(null); setLiveLocationError(null) }
+  }
+
   async function fillFromGps(field: 'pickup' | 'destination') {
-    if (!('geolocation' in navigator)) { toast.error('GPS not supported on this device.'); return }
-    if (field === 'pickup') setGpsPickupLoading(true)
-    else setGpsDestLoading(true)
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { longitude: lng, latitude: lat } = pos.coords
-        setUserCoords({ lat, lng })
-        // Set coords immediately — stops the spinner
-        if (field === 'pickup') {
-          setPickupCoords({ lat, lng })
-          setPickupValue(`${lat.toFixed(5)}, ${lng.toFixed(5)}`)
-          setGpsPickupLoading(false)
-        } else {
-          setDeliveryCoords({ lat, lng })
-          setDeliveryValue(`${lat.toFixed(5)}, ${lng.toFixed(5)}`)
-          setGpsDestLoading(false)
-        }
-        // Then silently update the text to a real address
-        googleReverseGeocode(lat, lng).then((place) => {
-          if (!place) return
-          if (field === 'pickup') setPickupValue(place)
-          else setDeliveryValue(place)
-        }).catch(() => {})
-      },
-      () => {
-        if (field === 'pickup') setGpsPickupLoading(false)
-        else setGpsDestLoading(false)
-        toast.error('Location permission denied. Please allow location access.')
-      },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
-    )
-  }
-
-  // Start live location sharing — also sets destination to customer's GPS
-  function startLiveLocation() {
-    if (!('geolocation' in navigator)) {
-      setLiveLocationError('GPS not supported on this device.')
-      return
-    }
-    setLiveLocationError(null)
-
-    const sendAndUpdate = (pos: GeolocationPosition) => {
-      const { latitude: lat, longitude: lng } = pos.coords
-      updateCustomerLocation({ lat, lng })
-      // Keep destination coords in sync so the route map stays current
-      setDeliveryCoords({ lat, lng })
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords
-        // Reverse geocode to get exact street address for the destination field
-        const place = await googleReverseGeocode(lat, lng).catch(() => null)
-        setDeliveryValue(place || `${lat.toFixed(6)}, ${lng.toFixed(6)}`)
-        setDeliveryCoords({ lat, lng })
-        await updateCustomerLocation({ lat, lng })
-        setLiveLocationActive(true)
-        liveLocationIntervalRef.current = setInterval(() => {
-          navigator.geolocation.getCurrentPosition(sendAndUpdate, () => {})
-        }, 5000)
-      },
-      () => {
-        setLiveLocationError('Location permission denied. Please allow location access.')
+    cancelGps(field)
+    const request = locationRequests.current[field]
+    const current = () => locationMounted.current && request === locationRequests.current[field]
+    const loading = field === 'pickup' ? setGpsPickupLoading : setGpsDestLoading
+    const setIssue = field === 'pickup' ? setPickupLocationIssue : setDeliveryLocationIssue
+    loading(true)
+    try {
+      const pos = await requestBrowserLocation()
+      if (!current()) return
+      const point = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      const fallback = `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`
+      setUserCoords(point)
+      if (field === 'pickup') { setPickupCoords(point); setPickupValue(fallback) }
+      else { setDeliveryCoords(point); setDeliveryValue(fallback) }
+      // Coordinates are usable immediately, even if address lookup is unavailable.
+      loading(false)
+      const place = await googleReverseGeocode(point.lat, point.lng).catch(() => null)
+      if (place && current()) {
+        if (field === 'pickup') setPickupValue(place)
+        else setDeliveryValue(place)
       }
-    )
+    } catch (error) { if (current()) setIssue(locationIssue(error)) }
+    finally { if (current()) loading(false) }
   }
 
-  // Stop live location sharing — clear destination so user can fill it manually
-  async function stopLiveLocation() {
-    if (liveLocationIntervalRef.current) {
-      clearInterval(liveLocationIntervalRef.current)
-      liveLocationIntervalRef.current = null
-    }
+  async function startLiveLocation(restart = false) {
+    if (liveLocationLoading || (liveLocationActive && !restart)) return
+    if (liveWatch.current !== null) navigator.geolocation.clearWatch(liveWatch.current)
+    liveWatch.current = null
     setLiveLocationActive(false)
-    setDeliveryValue('')
-    setDeliveryCoords(null)
-    await clearCustomerLocation()
+    cancelGps('destination')
+    const request = ++locationRequests.current.live
+    const current = () => locationMounted.current && request === locationRequests.current.live
+    setLiveLocationError(null)
+    setLiveLocationLoading(true)
+    try {
+      const pos = await requestBrowserLocation()
+      if (!current()) return
+      const point = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      const applyPosition = (p: LatLng) => {
+        setUserCoords(p)
+        setDeliveryCoords(previous => previous?.lat === p.lat && previous.lng === p.lng ? previous : p)
+        setDeliveryValue(`${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`)
+      }
+      applyPosition(point)
+      const saved = await updateCustomerLocation(point)
+      if (!current()) return
+      if ('error' in saved) throw new Error('Your location was found, but live sharing could not start. Try again or use the address above.')
+      setLiveLocationActive(true)
+      // A watch has a bounded timeout and is always cancelled on stop/unmount.
+      let lastSent = Date.now()
+      let syncing = false
+      let revision = 0
+      const refreshAddress = async (p: LatLng) => {
+        const version = ++revision
+        const place = await googleReverseGeocode(p.lat, p.lng).catch(() => null)
+        if (current() && version === revision && place) setDeliveryValue(place)
+      }
+      void refreshAddress(point)
+      liveWatch.current = navigator.geolocation.watchPosition(async next => {
+        if (!current() || syncing || Date.now() - lastSent < 5000) return
+        syncing = true; lastSent = Date.now()
+        const p = { lat: next.coords.latitude, lng: next.coords.longitude }
+        applyPosition(p)
+        void refreshAddress(p)
+        try {
+          const result = await updateCustomerLocation(p)
+          if (current()) setLiveLocationError('error' in result ? { message: 'Live sharing could not update. Check your connection. Your last location is kept.' } : null)
+        } catch { if (current()) setLiveLocationError({ message: 'Live sharing could not update. Check your connection. Your last location is kept.' }) }
+        finally { syncing = false }
+      }, error => {
+        if (!current()) return
+        setLiveLocationError(locationIssue(error))
+        if (error.code === 1) {
+          if (liveWatch.current !== null) navigator.geolocation.clearWatch(liveWatch.current)
+          liveWatch.current = null
+          locationRequests.current.live++
+          setLiveLocationActive(false)
+          void clearCustomerLocation().catch(() => {})
+        }
+      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 })
+    } catch (error) { if (current()) setLiveLocationError(locationIssue(error)) }
+    finally { if (current()) setLiveLocationLoading(false) }
+  }
+
+  async function stopLiveLocation() {
+    locationRequests.current.live++
+    if (liveWatch.current !== null) navigator.geolocation.clearWatch(liveWatch.current)
+    liveWatch.current = null
+    setLiveLocationActive(false)
+    setLiveLocationLoading(false)
+    setLiveLocationError(null)
+    // Keep the last address available for editing instead of discarding it.
+    await clearCustomerLocation().catch(() => {})
   }
 
   // Upload selected item photos directly to Supabase Storage — the delivery
@@ -417,7 +454,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (files.length === 0) return
+    if (files.length === 0 || uploadingPhotos) return
 
     const remaining = MAX_ITEM_PHOTOS - itemPhotos.length
     if (remaining <= 0) {
@@ -447,11 +484,13 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           setPhotoError(`${file.name} is larger than ${MAX_PHOTO_SIZE_MB}MB.`)
           continue
         }
-        const ext = file.name.split('.').pop() ?? 'jpg'
-        const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
+        let compressed: Blob
+        try { compressed = await compressImage(file, 1280, 0.82) }
+        catch (error) { setPhotoError(error instanceof Error ? error.message : 'Could not prepare this photo.'); continue }
+        const path = `${user.id}/${crypto.randomUUID()}.jpg`
         const { error: uploadErr } = await supabase.storage
           .from('delivery-item-photos')
-          .upload(path, file, { contentType: file.type, upsert: true })
+          .upload(path, compressed, { contentType: compressed.type, upsert: false })
         if (uploadErr) {
           setPhotoError(uploadErr.message)
           continue
@@ -462,6 +501,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
       if (uploadedUrls.length > 0) {
         setItemPhotos((prev) => [...prev, ...uploadedUrls])
       }
+    } catch {
+      setPhotoError('Photo upload failed. Check your connection and try again.')
     } finally {
       setUploadingPhotos(false)
     }
@@ -595,8 +636,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           <button aria-label="Close booking" disabled={submitting} onClick={onClose}>×</button>
         </header>
         <div className={styles.progress} aria-hidden="true"><div style={{width: `${step / 3 * 100}%`}} /></div>
-        <div className={styles.body}>
-          <h2 id="booking-title">{['What are you sending?', 'Where should we collect and deliver?', 'Check your order'][step - 1]}</h2>
+        <div ref={bodyRef} className={styles.body}>
+          <h2 id="booking-title" tabIndex={-1}>{['What are you sending?', 'Where should we collect and deliver?', 'Check your order'][step - 1]}</h2>
           {step === 1 && <div className={styles.packageStep}>
             <div className={styles.sizes}>          {/* Package size — determines which drivers (by vehicle) get matched */}
           <div>
@@ -633,7 +674,9 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             <textarea
               value={itemDescription}
               onChange={(e) => setItemDescription(e.target.value.slice(0, 300))}
-              placeholder="Describe what's being delivered — e.g. 3 boxes of clothing, a fragile glass vase, a birthday cake…"
+              id="item-description"
+              aria-label="Item description"
+              placeholder="e.g. 2 boxes of clothes"
               rows={2}
               className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors resize-none"
             />
@@ -646,20 +689,9 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
               <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider">Item Photos <span className="text-[#494847] normal-case">(optional)</span></p>
               <span className="text-[10px] text-[#494847]">{itemPhotos.length}/{MAX_ITEM_PHOTOS}</span>
             </div>
-            <div className="flex gap-2">
-              {itemPhotos.map((url) => (
-                <div key={url} className="relative w-12 h-12 rounded-xl overflow-hidden border border-[#494847]/20 group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="Item photo" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(url)}
-                    className="absolute inset-0 bg-black/60 opacity-100 flex items-center justify-center transition-opacity"
-                    aria-label="Remove photo"
-                  >
-                    <span className="material-symbols-outlined text-white text-lg">delete</span>
-                  </button>
-                </div>
+            <div className={styles.photoList}>
+              {itemPhotos.map((url, index) => (
+                <ItemPhotoPreview key={url} url={url} label={`Item photo ${index + 1}`} onRemove={() => removePhoto(url)} />
               ))}
               {itemPhotos.length < MAX_ITEM_PHOTOS && (
                 <label className={`w-12 h-12 rounded-xl border border-dashed flex items-center justify-center cursor-pointer transition-all ${
@@ -673,14 +705,16 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
                     multiple
                     disabled={uploadingPhotos}
                     onChange={handlePhotoSelect}
-                    className="hidden"
+                    className="sr-only"
+                    aria-label="Add item photos"
                   />
                   <span className="material-symbols-outlined text-xl">
                     {uploadingPhotos ? 'hourglass_empty' : 'add_a_photo'}
-                  </span><span className={styles.photoLabel}>Add photo</span>
+                  </span><span className={styles.photoLabel}>{uploadingPhotos ? 'Preparing…' : 'Add photo'}</span>
                 </label>
               )}
             </div>
+            <p className={styles.photoHint}>Photos are compressed automatically. Tap a photo to enlarge.</p>
             {photoError && (
               <p className="text-[10px] text-red-400 mt-1.5">{photoError}</p>
             )}
@@ -695,10 +729,11 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
             color="text-[var(--color-primary)]"
             placeholder="Search pickup address..."
             value={pickupValue}
-            onChange={(v) => { setPickupValue(v); setPickupCoords(null) }}
-            onSelect={(place, coords) => { setPickupValue(place); setPickupCoords(coords ?? null) }}
+            onChange={(v) => { cancelGps('pickup'); setPickupValue(v); setPickupCoords(null) }}
+            onSelect={(place, coords) => { cancelGps('pickup'); setPickupValue(place); setPickupCoords(coords ?? null) }}
             onGpsClick={() => fillFromGps('pickup')}
             gpsLoading={gpsPickupLoading}
+            issue={pickupLocationIssue}
             proximity={userCoords}
             countryCode={countryCode}
           />
@@ -747,28 +782,29 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
                 color="text-[var(--color-secondary)]"
                 placeholder="Search delivery address..."
                 value={deliveryValue}
-                onChange={(v) => { setDeliveryValue(v); setDeliveryCoords(null) }}
-                onSelect={(place, coords) => { setDeliveryValue(place); setDeliveryCoords(coords ?? null) }}
+                onChange={(v) => { cancelGps('destination'); locationRequests.current.live++; setLiveLocationLoading(false); setDeliveryValue(v); setDeliveryCoords(null) }}
+                onSelect={(place, coords) => { cancelGps('destination'); setDeliveryValue(place); setDeliveryCoords(coords ?? null) }}
                 onGpsClick={() => fillFromGps('destination')}
-                gpsLoading={gpsDestLoading}
+                gpsLoading={gpsDestLoading || liveLocationLoading}
+                issue={deliveryLocationIssue}
                 proximity={userCoords}
                 countryCode={countryCode}
               />
               {/* Live location as alternative to typing destination */}
               <button
                 type="button"
-                onClick={startLiveLocation}
+                onClick={() => void startLiveLocation()}
+                disabled={liveLocationLoading || gpsDestLoading}
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border border-dashed border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/5 transition-all"
               >
                 <span className="material-symbols-outlined text-base">share_location</span>
-                <span className="text-xs font-bold">Use my live location as destination</span>
+                <span className="text-xs font-bold">{liveLocationLoading ? 'Finding your live location…' : 'Use my live location as destination'}</span>
               </button>
-              {liveLocationError && (
-                <p className="text-[10px] text-red-400 px-1">{liveLocationError}</p>
-              )}
+
             </div>
           )}
 
+{liveLocationError && <LocationFeedback issue={liveLocationError} onRetry={() => void startLiveLocation(true)} />}
 <AddressInstructions pickup={pickupInstructions} delivery={deliveryInstructions} onPickup={setPickupInstructions} onDelivery={setDeliveryInstructions}/>
 <BookingRouteMap pickup={pickupCoords} destination={deliveryCoords} userLocation={userCoords}/>
 </div>}
