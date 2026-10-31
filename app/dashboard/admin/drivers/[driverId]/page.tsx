@@ -36,11 +36,13 @@ function StatusPill({ status }: { status: string }) {
 }
 
 export default async function AdminDriverDetailPage({
-  params,
+  params, searchParams,
 }: {
   params: Promise<{ driverId: string }>
+  searchParams: Promise<{ review?: string }>
 }) {
   const { driverId } = await params
+  const { review } = await searchParams
   const [{ data: driver, error }, documents, vehicles] = await Promise.all([
     adminGetDriverById(driverId),
     getDriverDocumentsById(driverId),
@@ -54,18 +56,22 @@ export default async function AdminDriverDetailPage({
 
   async function approve() {
     "use server"
-    await adminApproveDriver(driverId)
+    const result = await adminApproveDriver(driverId)
+    if (result.error) redirect(`/dashboard/admin/drivers/${driverId}?review=approval-failed`)
     redirect(`/dashboard/admin/drivers/${driverId}`)
   }
 
   async function reject() {
     "use server"
-    await adminRejectDriver(driverId)
+    const result = await adminRejectDriver(driverId)
+    if (result.error) redirect(`/dashboard/admin/drivers/${driverId}?review=rejection-failed`)
     redirect(`/dashboard/admin/drivers/${driverId}`)
   }
 
   return (
     <div className="pt-2 pb-12 px-2">
+      {review === "approval-failed" && <p role="alert" className="mb-5 rounded-xl border border-red-400/30 p-4 text-red-300">Approval failed. Check that the application was submitted and all required documents are current.</p>}
+      {review === "rejection-failed" && <p role="alert" className="mb-5 rounded-xl border border-red-400/30 p-4 text-red-300">Rejection could not be saved. Please retry.</p>}
       {/* Back + Header */}
       <div className="flex items-center gap-3 mb-8 md:mb-10">
         <Link

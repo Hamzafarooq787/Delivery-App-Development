@@ -36,11 +36,12 @@ export default async function AdminCustomerDetailPage({
     admin
       .from("disputes")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", customerId)
+      .eq("raised_by", customerId)
       .eq("status", "open"),
     admin.auth.admin.getUserById(customerId),
   ])
 
+  if (ordersRes.error || disputeRes.error) throw new Error("Customer records could not load. Please retry.")
   const orders = ordersRes.data ?? []
   const openDisputes = disputeRes.count ?? 0
   const totalSpent = orders.reduce((sum, o) => sum + (o.price ?? 0), 0)

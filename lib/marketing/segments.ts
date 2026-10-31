@@ -37,6 +37,7 @@ export async function getLastActivityMap(
       .order("created_at", { ascending: false }),
   ])
 
+  if (usersRes.error || ordersRes.error) throw new Error("Customer activity could not load. Please retry.")
   const activity: Record<string, string> = {}
   for (const u of usersRes.data ?? []) {
     activity[u.id] = u.created_at
@@ -60,11 +61,11 @@ export async function resolveMarketingRecipients(
   segment: MarketingSegment,
   inactiveDays?: number | null
 ): Promise<MarketingRecipient[]> {
-  const { data: customers } = await admin
-    .from("users")
+  const { data: customers, error } = await admin
+    .from("admin_customer_accounts")
     .select("id, full_name, marketing_email_opt_in, marketing_push_opt_in, created_at")
-    .eq("role", "customer")
 
+  if (error) throw new Error("Customer audience could not load. Please retry.")
   if (!customers || customers.length === 0) return []
 
   const customerIds = customers.map((c) => c.id)
@@ -72,6 +73,7 @@ export async function resolveMarketingRecipients(
     admin.auth.admin.listUsers({ perPage: 1000 }),
     getLastActivityMap(admin, customerIds),
   ])
+  if (authRes.error) throw new Error("Customer contact details could not load. Please retry.")
   const emailMap = new Map((authRes.data?.users ?? []).map((u: { id: string; email?: string }) => [u.id, u.email ?? null]))
 
   let filtered = customers

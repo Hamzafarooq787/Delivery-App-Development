@@ -685,15 +685,14 @@ export async function adminGetDisputes() {
 }
 
 export async function adminUpdateDisputeStatus(id: string, status: string) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from("disputes")
-    .update({ status })
-    .eq("id", id)
-
-  if (error) return { error: error.message }
-  revalidatePath("/admin/disputes")
+  if (!(await requireAdmin())) return { error: "Not authorized" }
+  if (!["resolved", "rejected"].includes(status)) return { error: "Choose Resolve or Reject for an open dispute." }
+  const { error, data } = await createAdminClient().from("disputes")
+    .update({ status }).eq("id", id).eq("status", "open").select("id").maybeSingle()
+  if (error) return { error: "Could not update this dispute. Please retry." }
+  if (!data) return { error: "This dispute was already updated or could not be found. Refresh the page." }
+  revalidatePath("/dashboard/admin/disputes")
+  revalidatePath("/dashboard/admin/customers", "layout")
   return { success: true }
 }
 
@@ -725,18 +724,19 @@ export async function adminGetDrivers() {
   if (!(await requireAdmin())) return { data: [], error: "Not authorized" }
   const admin = createAdminClient()
 
-  // Fetch both sources in parallel: driver_profiles rows AND users with role='driver'
+  // Include driver identities even while their account is in customer mode.
   const [profilesRes, driverUsersRes, authData] = await Promise.all([
     admin.from("driver_profiles").select("id, status, created_at"),
-    admin.from("users").select("id, full_name, phone, created_at").eq("role", "driver"),
+    admin.from("admin_driver_accounts").select("id, full_name, phone, created_at"),
     admin.auth.admin.listUsers({ perPage: 1000 }),
   ])
 
+  if (profilesRes.error || driverUsersRes.error || authData.error) return { data: [], error: "Could not load driver records. Please retry." }
   const profiles = profilesRes.data ?? []
   const driverUsers = driverUsersRes.data ?? []
   const emailMap = new Map((authData.data?.users ?? []).map((u) => [u.id, u.email ?? ""]))
 
-  // Merge: start with all users who have role='driver', supplement with driver_profiles
+  // Merge stable identities with their compliance profiles.
   const profileMap = new Map(profiles.map((p) => [p.id, p]))
   const userMap = new Map(driverUsers.map((u) => [u.id, u]))
 
@@ -889,11 +889,10 @@ export async function adminGetCustomers() {
   if (!(await requireAdmin())) return { data: [], error: "Not authorized" }
   const admin = createAdminClient()
 
-  // Get all users with role = customer from public.users
+  // Customer identity survives switching the active account mode.
   const { data: users, error } = await admin
-    .from("users")
+    .from("admin_customer_accounts")
     .select("id, full_name, phone, created_at")
-    .eq("role", "customer")
     .order("created_at", { ascending: false })
     .limit(50)
 
@@ -911,6 +910,7 @@ export async function adminGetCustomers() {
       .in("customer_id", customerIds),
   ])
 
+  if (authRes.error || deliveriesRes.error) return { data: [], error: "Could not load customer records. Please retry." }
   const emailMap = new Map((authRes.data?.users ?? []).map((u) => [u.id, u.email ?? ""]))
 
   // Aggregate delivery count (all statuses) and total spend (delivered = paid)
