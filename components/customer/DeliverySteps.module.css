@@ -6,3 +6,4 @@
 
 .description p,.photos p{font-size:13px;text-transform:none;letter-spacing:0}.description p span,.photos p span{font-size:12px}
 .summary{display:flex;flex-direction:column}.summary .reviewPackage{order:-1;border-bottom:1px solid var(--color-outline-variant);padding-bottom:12px;margin-bottom:4px}
+.photos>div>div.flex{flex-wrap:wrap}.photos>div>div.flex>div{flex-shrink:0}
