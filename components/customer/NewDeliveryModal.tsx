@@ -4,6 +4,9 @@ import { AddressInstructions } from "@/components/customer/address-instructions"
 import { PriceBreakdown } from "@/components/customer/price-breakdown"
 import { useBookingDraft } from "@/hooks/use-booking-draft"
 import styles from './DeliverySteps.module.css'
+import dynamic from 'next/dynamic'
+import { PackageIllustration } from './PackageIllustration'
+const BookingRouteMap = dynamic(() => import('./BookingRouteMap'), { ssr: false })
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -158,7 +161,8 @@ function AddressInput({
               key={i}
               type="button"
               className="w-full flex items-start gap-2.5 px-4 py-2.5 text-left hover:bg-[#262626] transition-colors border-b border-[#494847]/10 last:border-0"
-              onMouseDown={(e) => { e.preventDefault(); handleSelect(s) }}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => void handleSelect(s)}
             >
               <span className="material-symbols-outlined text-[#adaaaa] text-sm mt-0.5 shrink-0">location_on</span>
               <span className="text-xs text-white leading-relaxed">{s.text}</span>
@@ -269,6 +273,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
       setQuoteError(null)
       return
     }
+    let current = true
     setQuoteLoading(true)
     setQuoteError(null)
     const timer = setTimeout(async () => {
@@ -280,6 +285,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
         packageSize,
         promoCode: promoCode.trim() || null,
       })
+      if (!current) return
       if ('data' in result) {
         setQuote(result.data)
         setQuoteError(null)
@@ -289,7 +295,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
       }
       setQuoteLoading(false)
     }, 400)
-    return () => clearTimeout(timer)
+    return () => { current = false; clearTimeout(timer) }
   }, [pickupCoords, deliveryCoords, packageSize, promoCode])
 
   // User's device GPS + detected country
@@ -332,6 +338,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { longitude: lng, latitude: lat } = pos.coords
+        setUserCoords({ lat, lng })
         // Set coords immediately — stops the spinner
         if (field === 'pickup') {
           setPickupCoords({ lat, lng })
@@ -584,17 +591,17 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
       <div className={styles.backdrop} />
       <section role="dialog" aria-modal="true" aria-labelledby="booking-title" className={styles.dialog}>
         <header className={styles.header}>
-          <div><p>Collect &amp; Deliver</p><span>Step {step} of 3 · {['Package', 'Locations', 'Review & Pay'][step - 1]}</span></div>
+          <div><p className={styles.wordmark}><b>Go</b>Drop</p><span>{step} of 3 · {['Package', 'Locations', 'Review & Pay'][step - 1]}</span></div>
           <button aria-label="Close booking" disabled={submitting} onClick={onClose}>×</button>
         </header>
         <div className={styles.progress} aria-hidden="true"><div style={{width: `${step / 3 * 100}%`}} /></div>
         <div className={styles.body}>
-          <h2 id="booking-title">{['What are we delivering?', 'Where should we deliver?', 'Review your delivery'][step - 1]}</h2>
+          <h2 id="booking-title">{['What are you sending?', 'Where should we collect and deliver?', 'Check your order'][step - 1]}</h2>
           {step === 1 && <div className={styles.packageStep}>
             <div className={styles.sizes}>          {/* Package size — determines which drivers (by vehicle) get matched */}
           <div>
-            <p className="text-[10px] font-bold text-[#adaaaa] uppercase tracking-wider mb-2">Package Size</p>
-            <div className="grid grid-cols-2 gap-2">
+
+            <div className={styles.packageGrid}>
               {PACKAGE_SIZES.map((size) => {
                 const active = packageSize === size
                 const info = PACKAGE_SIZE_INFO[size]
@@ -604,14 +611,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
                     type="button"
                     aria-pressed={active}
                     onClick={() => { setPackageSize(size); setStepError(null) }}
-                    className={`flex flex-col items-start gap-0.5 py-2.5 px-3 rounded-xl border text-left transition-all ${
-                      active
-                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/40'
-                        : 'bg-[#262626] border-[#494847]/20 hover:border-[#494847]/40'
-                    }`}
+                    className={styles.packageCard}
+                    title={info.description}
                   >
-                    <span className={`text-xs font-bold ${active ? 'text-[var(--color-primary)]' : 'text-white'}`}>{info.label}</span>
-                    <span className="text-[10px] text-[#adaaaa] leading-snug">{info.description}</span>
+                    {active && <span className={styles.selectedMark} aria-hidden="true">✓</span>}
+                    <span className={styles.parcel} data-size={size}><PackageIllustration bulky={size === 'bulky'}/></span>
+                    <strong>{info.label}</strong>
                   </button>
                 )
               })}
@@ -672,7 +677,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
                   />
                   <span className="material-symbols-outlined text-xl">
                     {uploadingPhotos ? 'hourglass_empty' : 'add_a_photo'}
-                  </span>
+                  </span><span className={styles.photoLabel}>Add photo</span>
                 </label>
               )}
             </div>
@@ -685,7 +690,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           </div>}
           {step === 2 && <div className={styles.locationStep}>          {/* Pickup */}
           <AddressInput
-            label="Pickup"
+            label="Pickup location"
             icon="radio_button_checked"
             color="text-[var(--color-primary)]"
             placeholder="Search pickup address..."
@@ -737,7 +742,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           ) : (
             <div className="space-y-2">
               <AddressInput
-                label="Destination"
+                label="Delivery location"
                 icon="location_on"
                 color="text-[var(--color-secondary)]"
                 placeholder="Search delivery address..."
@@ -765,13 +770,14 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           )}
 
 <AddressInstructions pickup={pickupInstructions} delivery={deliveryInstructions} onPickup={setPickupInstructions} onDelivery={setDeliveryInstructions}/>
+<BookingRouteMap pickup={pickupCoords} destination={deliveryCoords} userLocation={userCoords}/>
 </div>}
           {step === 3 && <div className={styles.reviewStep}>
-            
+
           <div className={styles.summary}>
             <div><span>Pickup</span><p>{pickupValue}</p><button onClick={() => goTo(2)}>Edit</button></div>
             <div><span>Delivery</span><p>{deliveryValue}</p><button onClick={() => goTo(2)}>Edit</button></div>
-            <div><span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
+            <div className={styles.reviewPackage}>{packageSize && <span className={styles.reviewParcel}><PackageIllustration bulky={packageSize === "bulky"}/></span>}<span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
           </div>
           <div className={styles.price}>
             <div><span>Delivery subtotal</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
@@ -870,11 +876,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
               style={{ boxShadow: confirmed ? '0 0 20px rgba(var(--brand-rgb),0.25)' : 'none' }}
             >
               <span className="material-symbols-outlined text-base">bolt</span>
-              {submitting ? 'Requesting…' : price !== null ? `Confirm & Pay — £${formatPrice(price)}` : 'Request Delivery'}
+              {submitting ? 'Requesting…' : price !== null ? `Confirm & Pay £${formatPrice(price)}` : 'Request Delivery'}
             </button>
           )}
 </>}
           </div>
+          {step === 3 && <p className={styles.secure}>Secure card checkout</p>}
         </footer>
       </section>
     </div>
