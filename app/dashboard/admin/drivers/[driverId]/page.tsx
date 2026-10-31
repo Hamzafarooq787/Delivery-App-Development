@@ -1,3 +1,4 @@
+import {ukDate} from "@/lib/admin-operations"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { adminApproveDriver, adminRejectDriver, adminGetDriverById } from "@/app/actions/delivery"
@@ -8,11 +9,11 @@ import { VEHICLE_INFO } from "@/lib/vehicles"
 
 function fmtDate(v: string) {
   if (!v) return "—"
-  return new Date(v).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+  return ukDate(v)
 }
 
 function fmt(v: number) {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(v)
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "GBP" }).format(v)
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -61,9 +62,9 @@ export default async function AdminDriverDetailPage({
     redirect(`/dashboard/admin/drivers/${driverId}`)
   }
 
-  async function reject() {
+  async function reject(formData:FormData) {
     "use server"
-    const result = await adminRejectDriver(driverId)
+    const result = await adminRejectDriver(driverId,String(formData.get("reason")??""))
     if (result.error) redirect(`/dashboard/admin/drivers/${driverId}?review=rejection-failed`)
     redirect(`/dashboard/admin/drivers/${driverId}`)
   }
@@ -156,7 +157,7 @@ export default async function AdminDriverDetailPage({
               <p className="text-sm font-bold text-white">Submitted Documents</p>
               <span className="ml-auto text-xs text-[var(--color-on-surface-variant)]">{documents.length} file{documents.length !== 1 ? "s" : ""}</span>
             </div>
-            <DriverDocumentsPanel documents={documents} />
+            <DriverDocumentsPanel documents={documents} vehicles={vehicles}/>
           </div>
         </div>
 
@@ -183,6 +184,7 @@ export default async function AdminDriverDetailPage({
                 </button>
               </form>
               <form action={reject}>
+                <label className="block text-xs text-white">Rejection reason<input name="reason" required minLength={5} maxLength={500} className="block w-full my-2 rounded bg-black/20 p-2"/></label>
                 <button
                   type="submit"
                   disabled={driver.status === "rejected"}

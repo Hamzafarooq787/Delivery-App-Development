@@ -1,5 +1,7 @@
 "use server"
 
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { cancelCardBooking } from "@/app/actions/order-checkout"
 import { processOrderRefunds } from "@/lib/payments/direct"
 import { createClient } from "@/lib/supabase/server"
@@ -64,7 +66,8 @@ export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Not authenticated" }
 
-  const { data: cardOrder } = await createAdminClient().from("delivery_requests").select("payment_method").eq("id",deliveryId).eq("customer_id",user.id).maybeSingle()
+  const { data: cardOrder } = await createAdminClient().from("delivery_requests").select("payment_method,cancellation_policy").eq("id",deliveryId).eq("customer_id",user.id).maybeSingle()
+  if(cardOrder?.cancellation_policy?.before==="review")return{success:false,freeCancel:false,cancellationFee:0,distanceMiles:0,refundAmount:0,error:"Contact support to review this cancellation. No extra charge has been created."}
   if (cardOrder?.payment_method === "stripe") {
     const result = await cancelCardBooking(deliveryId)
     return { paymentMethod:"stripe", success: !result.error, freeCancel: true, cancellationFee: 0, distanceMiles: 0, refundAmount: result.amount ?? 0, error: result.error }
@@ -108,7 +111,7 @@ export async function previewCancellationFee(deliveryId: string): Promise<{
   const admin = createAdminClient()
   const { data: delivery } = await admin
     .from("delivery_requests")
-    .select("id, status, customer_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng, payment_method, bfm_stage")
+    .select("id, status, customer_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng, payment_method, bfm_stage,cancellation_policy")
     .eq("id", deliveryId)
     .single()
 
@@ -121,25 +124,9 @@ export async function previewCancellationFee(deliveryId: string): Promise<{
     return { freeCancel: false, cancellationFee: 0, distanceMiles: 0, status, canCancel: false }
   }
 
-  if (delivery.payment_method === 'stripe') {
-    const allowed=['requested','accepted'].includes(status)&&!['shopping','purchase_completed','heading_to_customer'].includes(delivery.bfm_stage)
-    return { freeCancel: allowed, cancellationFee: 0, distanceMiles: 0, status, canCancel: allowed, ...(!allowed ? { error: 'Contact support to cancel after collection or shopping starts.' } : {}) }
-  }
-  const freeCancel = ["requested", "accepted"].includes(status)
-  let cancellationFee = 0
-  let distanceMiles = 0
+  const allowed=['requested','accepted'].includes(status)&&!['shopping','purchase_completed','heading_to_customer'].includes(delivery.bfm_stage??'')&&delivery.cancellation_policy?.before!=='review'
+  return {freeCancel:allowed,cancellationFee:0,distanceMiles:0,status,canCancel:allowed,...(!allowed?{error:'Contact support for cancellation review or recovery after collection.'}:{})}
 
-  if (!freeCancel) {
-    const d = delivery as any
-    if (d.pickup_lat && d.pickup_lng && d.delivery_lat && d.delivery_lng) {
-      distanceMiles = haversineMiles(Number(d.pickup_lat), Number(d.pickup_lng), Number(d.delivery_lat), Number(d.delivery_lng))
-      cancellationFee = Math.ceil(distanceMiles)
-    } else {
-      cancellationFee = 5
-    }
-  }
-
-  return { freeCancel, cancellationFee, distanceMiles, status, canCancel: true }
 }
 
 // ── Admin: cancel an order and optionally refund the customer ─────────────
@@ -149,11 +136,12 @@ export async function adminCancelOrder(deliveryId: string): Promise<{
   refundAmount?: number
   error?: string
 }> {
+ return runAdminMutation("finance","adminCancelOrder",deliveryId,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
   const { data: adminRow } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  if (adminRow?.role !== "admin") return { error: "Not authorized" }
+  if (!(await getAdminActor("finance"))) return { error: "Not authorized" }
 
   const admin = createAdminClient()
 
@@ -166,6 +154,8 @@ export async function adminCancelOrder(deliveryId: string): Promise<{
   if(error)return {error:error.message}
   const {revalidatePath}=await import("next/cache");revalidatePath("/dashboard/admin/orders");
   return {success:true,refunded:Number(data)>0,refundAmount:Number(data)}
+
+ })
 }
 
 // ── Admin: issue a manual refund to the customer's wallet ─────────────────
@@ -173,11 +163,12 @@ export async function adminIssueRefund(deliveryId: string, amount: number, reque
   success?: boolean
   error?: string
 }> {
+ return runAdminMutation("finance","adminIssueRefund",deliveryId,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
   const { data: adminRow } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  if (adminRow?.role !== "admin") return { error: "Not authorized" }
+  if (!(await getAdminActor("finance"))) return { error: "Not authorized" }
 
   if (!amount || amount <= 0) return { error: "Invalid refund amount" }
 
@@ -188,4 +179,6 @@ export async function adminIssueRefund(deliveryId: string, amount: number, reque
   if(error)return {error:error.message}
   const {revalidatePath}=await import("next/cache");revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
   return {success:true}
+
+ })
 }

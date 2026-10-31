@@ -1,3 +1,4 @@
+import {recordHealth} from "@/lib/integration-health"
 /**
  * lib/google-server.ts
  * ─────────────────────────────────────────────────────────────────────────────
@@ -40,13 +41,14 @@ export async function fetchRouteServer(
     const res = await fetch(url)
     const data = await res.json()
     const route = data.routes?.[0]
-    if (!route) return null
+    if (!route) { await recordHealth("maps",false,"Route could not be calculated"); return null }
 
     const leg = route.legs?.[0]
     if (!leg?.distance?.value || !leg?.duration?.value) return null
 
     const distance_km = leg.distance.value / 1000
 
+    await recordHealth("maps",true,"Driving route calculated")
     return {
       distance_km,
       distance_miles: distance_km / 1.609344,

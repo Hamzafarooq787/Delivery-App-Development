@@ -5,7 +5,7 @@ import vm from 'node:vm'
 import ts from 'typescript'
 import {PGlite} from '@electric-sql/pglite'
 const customer='00000000-0000-4000-8000-000000000001',driver='00000000-0000-4000-8000-000000000002',other='00000000-0000-4000-8000-000000000003',job='00000000-0000-4000-8000-000000000005',key='00000000-0000-4000-8000-000000000007'
-function compile(file,imports,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:n=>{if(n in imports)return imports[n];throw Error('Unmocked '+n)},console,Number,Math,Date,...extra});return exports}
+function compile(file,imports,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:n=>{if(n==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(n==='@/lib/integration-health')return{recordHealth:async()=>{}};if(n in imports)return imports[n];throw Error('Unmocked '+n)},console,Number,Math,Date,...extra});return exports}
 const validation=compile('lib/customer-validation.ts',{})
 const summary=compile('lib/shopping-summary.ts',{})
 const display=compile('lib/payment-display.ts',{})

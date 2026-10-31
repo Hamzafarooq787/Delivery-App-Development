@@ -8,6 +8,7 @@
  * ⚠️  SERVER-SIDE ONLY.
  */
 
+import {allAuthUsers} from "@/lib/auth-directory"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export type MarketingSegment = "all" | "inactive"
@@ -28,28 +29,10 @@ export async function getLastActivityMap(
 ): Promise<Record<string, string>> {
   if (customerIds.length === 0) return {}
 
-  const [usersRes, ordersRes] = await Promise.all([
-    admin.from("users").select("id, created_at").in("id", customerIds),
-    admin
-      .from("delivery_requests")
-      .select("customer_id, created_at")
-      .in("customer_id", customerIds)
-      .order("created_at", { ascending: false }),
-  ])
+  const {data,error}=await admin.rpc('marketing_customer_activity',{p_ids:customerIds})
+  if(error)throw new Error('Customer activity could not load. Please retry.')
+  return data??{}
 
-  if (usersRes.error || ordersRes.error) throw new Error("Customer activity could not load. Please retry.")
-  const activity: Record<string, string> = {}
-  for (const u of usersRes.data ?? []) {
-    activity[u.id] = u.created_at
-  }
-  // Orders are sorted newest-first, so the first row seen per customer is their latest.
-  for (const o of ordersRes.data ?? []) {
-    if (!o.customer_id) continue
-    if (!activity[o.customer_id] || new Date(o.created_at) > new Date(activity[o.customer_id])) {
-      activity[o.customer_id] = o.created_at
-    }
-  }
-  return activity
 }
 
 /**
@@ -61,16 +44,17 @@ export async function resolveMarketingRecipients(
   segment: MarketingSegment,
   inactiveDays?: number | null
 ): Promise<MarketingRecipient[]> {
-  const { data: customers, error } = await admin
-    .from("admin_customer_accounts")
-    .select("id, full_name, marketing_email_opt_in, marketing_push_opt_in, created_at")
-
-  if (error) throw new Error("Customer audience could not load. Please retry.")
+  const customers: {id:string;full_name:string|null;created_at:string;marketing_email_opt_in:boolean;marketing_push_opt_in:boolean}[]=[]
+  for(let page=0;;page++){
+    const {data,error}=await admin.from("admin_customer_accounts").select("id, full_name, marketing_email_opt_in, marketing_push_opt_in, created_at").eq("account_status","active").order('id').range(page*1000,page*1000+999)
+    if(error)throw new Error("Customer audience could not load. Please retry.")
+    customers.push(...(data??[]));if(!data||data.length<1000)break
+  }
   if (!customers || customers.length === 0) return []
 
   const customerIds = customers.map((c) => c.id)
   const [authRes, activityMap] = await Promise.all([
-    admin.auth.admin.listUsers({ perPage: 1000 }),
+    allAuthUsers(admin),
     getLastActivityMap(admin, customerIds),
   ])
   if (authRes.error) throw new Error("Customer contact details could not load. Please retry.")

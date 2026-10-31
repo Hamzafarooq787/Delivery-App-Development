@@ -1,4 +1,5 @@
 "use server";
+import { getAdminActor } from "@/lib/admin-access"
 import { createHash } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -360,7 +361,7 @@ export async function cancelCardBooking(
   const admin = createAdminClient();
   const { data: job } = await admin
     .from("delivery_requests")
-    .select("company_card_reference,customer_id,driver_id,status,bfm_stage")
+    .select("company_card_reference,customer_id,driver_id,status,bfm_stage,cancellation_policy")
     .eq("id", deliveryId)
     .maybeSingle();
   const { data: caller } = await admin
@@ -372,7 +373,7 @@ export async function cancelCardBooking(
     !job ||
     (job.customer_id !== user.id &&
       job.driver_id !== user.id &&
-      caller?.role !== "admin")
+      !(await getAdminActor("finance")))
   )
     return { error: "Not authorized" };
   if (
@@ -386,6 +387,7 @@ export async function cancelCardBooking(
       error:
         "Contact support to cancel after collection or shopping has started.",
     };
+  if(job.cancellation_policy?.before==="review" && !(await getAdminActor("finance")))return{error:"This booking requires a support cancellation review. No refund or extra charge has been created."}
   if (job.company_card_reference) {
     try {
       await getStripe().issuing.cards.update(job.company_card_reference, {
@@ -467,7 +469,7 @@ export async function retryOrderRefunds(
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
-  if (caller?.role !== "admin") return { error: "Not authorized" };
+  if (!(await getAdminActor("finance"))) return { error: "Not authorized" };
   try {
     await processOrderRefunds(deliveryId);
     return { success: true };
@@ -519,7 +521,7 @@ export async function adminRefundCardOrder(
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
-  if (caller?.role !== "admin") return { error: "Not authorized" };
+  if (!(await getAdminActor("finance"))) return { error: "Not authorized" };
   if (
     !Number.isFinite(amount) ||
     amount <= 0 ||

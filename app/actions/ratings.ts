@@ -14,6 +14,8 @@
  */
 "use server"
 
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -144,7 +146,7 @@ async function requireAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
   const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  return data?.role === "admin"
+  return !!(await getAdminActor("support"))
 }
 
 export async function adminGetPendingReviewCount(): Promise<number> {
@@ -168,6 +170,7 @@ export async function adminGetPendingRatings(): Promise<{ data: PendingRating[];
 }
 
 export async function adminApproveRating(ratingId: string): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("support","adminApproveRating",ratingId,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !(await requireAdmin())) return { error: "Not authorized" }
@@ -181,9 +184,12 @@ export async function adminApproveRating(ratingId: string): Promise<{ success?: 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/reviews")
   return { success: true }
+
+ })
 }
 
 export async function adminRejectRating(ratingId: string): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("support","adminRejectRating",ratingId,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !(await requireAdmin())) return { error: "Not authorized" }
@@ -197,4 +203,6 @@ export async function adminRejectRating(ratingId: string): Promise<{ success?: b
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/reviews")
   return { success: true }
+
+ })
 }

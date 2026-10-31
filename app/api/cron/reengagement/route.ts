@@ -1,3 +1,4 @@
+import {recordHealth} from "@/lib/integration-health"
 /**
  * app/api/cron/reengagement/route.ts
  * ─────────────────────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ import { sendCampaignToRecipients } from "@/lib/marketing/send-campaign"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-export async function GET(request: NextRequest) {
+async function run(request: Request) {
   if (!process.env.CRON_SECRET) {
     return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 503 })
   }
@@ -120,4 +121,9 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ campaignId: campaign.id, ...result })
+}
+
+export async function GET(request:Request){
+ if(!process.env.CRON_SECRET||request.headers.get('authorization')!==`Bearer ${process.env.CRON_SECRET}`)return new Response('Unauthorized',{status:401})
+ try{const response=await run(request);await recordHealth("cron_reengagement",response.ok,`HTTP ${response.status}`);return response}catch{await recordHealth("cron_reengagement",false,'Run failed; check the operational queue and logs');return Response.json({error:'Scheduled processing failed'},{status:500})}
 }

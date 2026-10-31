@@ -1,4 +1,9 @@
 "use server"
+import {randomInt} from "node:crypto"
+import {getAppOrigin} from "@/lib/get-app-origin"
+import {allAuthUsers} from "@/lib/auth-directory"
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { driverDocumentValid, requiredDriverDocuments } from '@/lib/driver-compliance'
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
@@ -536,14 +541,15 @@ export async function verifyDeliveryOtpAndComplete(deliveryId: string, code: str
  * when a driver has been locked out after too many incorrect entries.
  */
 export async function adminResetDeliveryOtp(deliveryId: string): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("operations","adminResetDeliveryOtp",deliveryId,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
   const { data: adminRow } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  if (adminRow?.role !== "admin") return { error: "Not authorized" }
+  if (!(await getAdminActor("operations"))) return { error: "Not authorized" }
 
   const admin = createAdminClient()
-  const newOtp = Math.floor(Math.random() * 10000).toString().padStart(4, "0")
+  const newOtp = randomInt(0,10000).toString().padStart(4, "0")
   const { error } = await admin
     .from("delivery_otps")
     .update({ otp: newOtp, attempts: 0, verified_at: null })
@@ -552,6 +558,8 @@ export async function adminResetDeliveryOtp(deliveryId: string): Promise<{ succe
   if (error) return { error: error.message }
   revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
   return { success: true }
+
+ })
 }
 
 export async function safetyReleaseJob(deliveryId: string, reason: string) {
@@ -646,7 +654,7 @@ async function requireAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
   const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  return data?.role === "admin"
+  return !!(await getAdminActor("operations"))
 }
 
 export async function adminGetAllDeliveries() {
@@ -662,6 +670,8 @@ export async function adminGetAllDeliveries() {
 }
 
 export async function adminGetAllUsers(role?: string) {
+  if(!(await getAdminActor("operations")))return{data:[],error:"Not authorised."}
+
   const supabase = await createClient()
 
   let query = supabase.from("users").select("*").order("created_at", { ascending: false })
@@ -673,6 +683,8 @@ export async function adminGetAllUsers(role?: string) {
 }
 
 export async function adminGetDisputes() {
+  if(!(await getAdminActor("support")))return{data:[],error:"Not authorised."}
+
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -685,6 +697,7 @@ export async function adminGetDisputes() {
 }
 
 export async function adminUpdateDisputeStatus(id: string, status: string) {
+ return runAdminMutation("operations","adminUpdateDisputeStatus",id,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   if (!["resolved", "rejected"].includes(status)) return { error: "Choose Resolve or Reject for an open dispute." }
   const { error, data } = await createAdminClient().from("disputes")
@@ -694,9 +707,13 @@ export async function adminUpdateDisputeStatus(id: string, status: string) {
   revalidatePath("/dashboard/admin/disputes")
   revalidatePath("/dashboard/admin/customers", "layout")
   return { success: true }
+
+ })
 }
 
 export async function adminGetPayments() {
+  if(!(await getAdminActor("finance")))return{data:[],error:"Not authorised."}
+
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -709,6 +726,8 @@ export async function adminGetPayments() {
 }
 
 export async function adminGetPayouts() {
+  if(!(await getAdminActor("finance")))return{data:[],error:"Not authorised."}
+
   const supabase = await createClient()
 
   const { data, error } = await supabase
@@ -728,7 +747,7 @@ export async function adminGetDrivers() {
   const [profilesRes, driverUsersRes, authData] = await Promise.all([
     admin.from("driver_profiles").select("id, status, created_at"),
     admin.from("admin_driver_accounts").select("id, full_name, phone, created_at"),
-    admin.auth.admin.listUsers({ perPage: 1000 }),
+    allAuthUsers(admin),
   ])
 
   if (profilesRes.error || driverUsersRes.error || authData.error) return { data: [], error: "Could not load driver records. Please retry." }
@@ -778,111 +797,74 @@ export async function adminGetDrivers() {
 }
 
 export async function adminCreateDriver(formData: FormData) {
+ return runAdminMutation("operations","adminCreateDriver","driver-onboarding",async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
-  const admin = createAdminClient()
-
-  const email = (formData.get("email") as string).trim()
-  const full_name = (formData.get("full_name") as string).trim()
-  const phone = ((formData.get("phone") as string) ?? "").trim() || null
-
-  if (!email || !full_name) return { error: "Name and email are required" }
-
-  // Check if user already exists in auth
-  const { data: authList } = await admin.auth.admin.listUsers({ perPage: 1000 })
-  const existing = authList?.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())
-
-  let userId: string
-
-  if (existing) {
-    userId = existing.id
-    // Update role to driver in case they were a customer
-    await admin.from("users").upsert({ id: userId, full_name, phone, role: "driver" }, { onConflict: "id" })
-  } else {
-    // Create new auth user with a temporary password they can reset
-    const { data: newUser, error: createError } = await admin.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { full_name, role: "driver", phone },
-    })
-    if (createError || !newUser.user) return { error: createError?.message ?? "Failed to create user" }
-    userId = newUser.user.id
-    await admin.from("users").upsert({ id: userId, full_name, phone, role: "driver" }, { onConflict: "id" })
+  const admin=createAdminClient(),email=String(formData.get("email")??"").trim().toLowerCase(),full_name=String(formData.get("full_name")??"").trim(),phone=String(formData.get("phone")??"").trim()||null
+  if(!/^\S+@\S+\.\S+$/.test(email)||email.length>254||!full_name||full_name.length>80||phone&&!/^\+?[\d\s()-]{7,25}$/.test(phone))return{error:"Enter a valid name, email and phone number."}
+  const authList=await allAuthUsers(admin);if(authList.error)return{error:"The account directory could not load. Please retry."}
+  const existing=authList.data.users.find(u=>u.email?.toLowerCase()===email)
+  let userId:string
+  if(existing){
+    userId=existing.id
+    const profile=await admin.from('users').select('role,account_status').eq('id',userId).maybeSingle()
+    if(profile.error||!profile.data||profile.data.role==='admin'||profile.data.account_status!=='active')return{error:"This account cannot be added as a driver. Admin and inactive accounts are protected."}
+  }else{
+    const origin=await getAppOrigin()
+    const invited=await admin.auth.admin.inviteUserByEmail(email,{data:{full_name,phone,role:'driver'},redirectTo:`${origin}/auth/callback`})
+    if(invited.error||!invited.data.user)return{error:invited.error?.message??"The driver invitation could not be sent."}
+    userId=invited.data.user.id
+    const saved=await admin.from('users').upsert({id:userId,full_name,phone,role:'driver'},{onConflict:'id'})
+    if(saved.error)return{error:"The invitation was sent, but the driver profile needs reconciliation. Retry the same email to finish setup."}
   }
-
-  // Ensure driver_profiles row exists
-  await admin.from("driver_profiles").upsert({ id: userId, status: "pending" }, { onConflict: "id" })
-
-  revalidatePath("/dashboard/admin/drivers")
-  return { success: true }
+  const profile=await admin.from('driver_profiles').upsert({id:userId,status:'pending'},{onConflict:'id',ignoreDuplicates:true})
+  if(profile.error)return{error:"Driver access could not be saved. Please retry; existing verification has been kept."}
+  revalidatePath('/dashboard/admin/drivers');return{success:true}
+ })
 }
 
 export async function adminApproveDriver(driverId: string) {
+ return runAdminMutation("operations","adminApproveDriver",driverId,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
   const session=await createClient();const {data:{user}}=await session.auth.getUser()
-  const { error } = await admin.rpc('approve_driver_verification',{p_driver:driverId,p_actor:user!.id})
+  const { error } = await admin.rpc('admin_review_driver',{p_driver:driverId,p_actor:user!.id,p_decision:'approved',p_reason:'Application and required documents reviewed'})
 
   if (error) return { error: "Driver approval could not be saved. Check that the application was submitted and all required documents are current." }
   revalidatePath("/dashboard/admin/drivers")
   revalidatePath(`/dashboard/admin/drivers/${driverId}`)
   revalidatePath("/dashboard/admin/verification")
   return { success: true }
+
+ })
 }
 
-export async function adminRejectDriver(driverId: string) {
+export async function adminRejectDriver(driverId: string, reason?: string) {
+ return runAdminMutation("operations","adminRejectDriver",driverId,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
 
-  const { error } = await admin
-    .from("driver_profiles")
-    .upsert({ id: driverId, status: "rejected" }, { onConflict: "id" })
+  if(!reason||reason.trim().length<5)return{error:"Enter a clear rejection reason."}
+  const actor=await getAdminActor("operations")
+  const { error } = await admin.rpc("admin_review_driver",{p_actor:actor!.id,p_driver:driverId,p_decision:"rejected",p_reason:reason})
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/drivers")
   revalidatePath(`/dashboard/admin/drivers/${driverId}`)
   revalidatePath("/dashboard/admin/verification")
   return { success: true }
+
+ })
 }
 
-export async function adminAssignDriver(deliveryId: string, driverId: string | null) {
-  if (!(await requireAdmin())) return { error: "Not authorized" }
-  const admin = createAdminClient()
-
-  const { data: job } = await admin.from("delivery_requests").select("status, package_size").eq("id", deliveryId).maybeSingle()
-  if (!job || !["requested", "accepted"].includes(job.status)) return { error: "Only uncollected active jobs can be reassigned." }
-  if (driverId) {
-    const [{ data: profile }, { data: vehicles }] = await Promise.all([
-      admin.from("driver_profiles").select("status").eq("id", driverId).maybeSingle(),
-      admin.from("driver_vehicles").select("vehicle_type").eq("driver_id", driverId),
-    ])
-    const sizes = unionCapabilities((vehicles ?? []).map(v => v.vehicle_type as VehicleType))
-    if (profile?.status !== "approved" || !sizes.length || (job.package_size && !sizes.includes(job.package_size))) return { error: "Choose an approved driver with a suitable vehicle." }
-  }
-  // Payment before dispatch — an admin can unassign freely, but assigning a
-  // driver requires the same payment guarantee as the normal accept flow.
-  if (driverId) {
-    const { data: paidPayment } = await admin
-      .from("payments")
-      .select("id")
-      .eq("delivery_id", deliveryId)
-      .eq("status", "paid")
-      .maybeSingle()
-    if (!paidPayment) {
-      return { error: "This delivery hasn't been paid for yet — a driver can't be assigned." }
-    }
-  }
-
-  const update: Record<string, string | null> =
-    driverId
-      ? { driver_id: driverId, status: "accepted" }
-      : { driver_id: null, status: "requested" }
-
-  const { data: changed, error } = await admin.from("delivery_requests").update(update).eq("id", deliveryId).eq("status", job.status).select("id").maybeSingle()
-  if (error || !changed) return { error: error?.message ?? "Order changed. Refresh before reassigning." }
-  revalidatePath("/dashboard/admin/orders")
-  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
-  return { success: true }
+export async function adminAssignDriver(deliveryId: string, driverId: string | null, reason: string) {
+ return runAdminMutation("operations","adminAssignDriver",deliveryId,async()=>{
+  const actor=await getAdminActor("operations");if(!actor)return{error:"Not authorised."}
+  const {error}=await createAdminClient().rpc("admin_assign_delivery",{p_actor:actor.id,p_id:deliveryId,p_driver:driverId,p_reason:reason})
+  if(error)return{error:"Assignment could not save. Enter a reason and select an approved, available driver with a suitable vehicle. Paid and uncollected orders only."}
+  revalidatePath("/dashboard/admin/orders");revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
+  return{success:true}
+ })
 }
 
 export async function adminGetCustomers() {
@@ -903,7 +885,7 @@ export async function adminGetCustomers() {
 
   // Batch-fetch emails + delivery data in parallel (no N+1)
   const [authRes, deliveriesRes] = await Promise.all([
-    admin.auth.admin.listUsers({ perPage: 1000 }),
+    allAuthUsers(admin),
     admin
       .from("delivery_requests")
       .select("customer_id, price, status")
@@ -939,16 +921,18 @@ export async function adminGetCustomers() {
 
 export async function adminGetDriverById(driverId: string) {
   if (!(await requireAdmin())) return { error: "Not authorized", data: null }
+  const actor=await getAdminActor("operations");if(!actor)return{data:null,error:"Not authorised."}
   const admin = createAdminClient()
 
   const [userRes, profileRes, earningsRes, jobsRes, authUserRes] = await Promise.all([
     admin.from("users").select("id, full_name, phone, created_at").eq("id", driverId).single(),
     admin.from("driver_profiles").select("status, created_at").eq("id", driverId).single(),
-    admin.from("driver_earnings").select("amount").eq("driver_id", driverId),
+    admin.rpc("admin_driver_totals",{p_actor:actor.id,p_driver:driverId}),
     admin.from("delivery_requests").select("id", { count: "exact", head: true }).eq("driver_id", driverId).eq("status", "delivered"),
     admin.auth.admin.getUserById(driverId),
   ])
 
+  if (earningsRes.error || jobsRes.error) return {data:null,error:"Driver totals could not load."}
   if (userRes.error || !userRes.data) return { error: "Driver not found", data: null }
 
   return {
@@ -959,19 +943,20 @@ export async function adminGetDriverById(driverId: string) {
       phone: userRes.data.phone ?? null,
       created_at: userRes.data.created_at,
       status: (profileRes.data?.status ?? "pending") as "pending" | "approved" | "rejected",
-      totalEarned: (earningsRes.data ?? []).reduce((s, e) => s + (e.amount ?? 0), 0),
+      totalEarned: Number(earningsRes.data?.earned??0),
       jobsCompleted: jobsRes.count ?? 0,
     },
   }
 }
 
 export async function adminSaveSettings(formData: FormData) {
+ return runAdminMutation("settings","adminSaveSettings",formData,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
   const {data:actor}=await supabase.from("users").select("role").eq("id",user.id).single()
-  if(actor?.role!=="admin")return {error:"Not authorized"}
+  if(!(await getAdminActor("settings")))return {error:"Not authorized"}
   const name=String(formData.get("full_name")??"").trim(),email=String(formData.get("email")??"").trim(),phone=String(formData.get("phone")??"").trim()
   if(!name||name.length>80||phone.length>40||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))return {error:"Check platform name and support contact details"}
   const {error}=await createAdminClient().from("surge_pricing_settings").update({platform_settings:{name,email,phone,updated_by:user.id,updated_at:new Date().toISOString()}}).eq("id",1).select("id").single()
@@ -979,6 +964,8 @@ export async function adminSaveSettings(formData: FormData) {
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/settings")
   return { success: true }
+
+ })
 }
 
 export async function updateDriverProfile(formData: FormData) {
@@ -1028,10 +1015,10 @@ export type PendingVerificationDriver = {
   phone: string
   vehicles: DriverVehicle[]
   submitted_at: string
-  documents: { document_type: string; file_url: string; expires_on?:string|null }[]
+  documents: { id:string; document_type: string; file_url: string; expires_on?:string|null; review_status?:"pending"|"approved"|"rejected"; review_reason?:string|null }[]
 }
 
-export async function adminGetPendingVerifications(): Promise<{ data: PendingVerificationDriver[]; error?: string }> {
+export async function adminGetPendingVerifications(page=1): Promise<{ data: PendingVerificationDriver[]; error?: string }> {
   if (!(await requireAdmin())) return { data: [], error: "Not authorized" }
   const admin = createAdminClient()
 
@@ -1039,7 +1026,7 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
     .from("driver_profiles")
     .select("id, created_at,verification_submitted_at")
     .eq("status", "pending").not("verification_submitted_at","is",null)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false }).order("id").range((Math.max(1,page)-1)*50,Math.max(1,page)*50-1)
 
   if (profilesErr) return { data: [], error: profilesErr.message }
   if (!profiles || profiles.length === 0) return { data: [] }
@@ -1048,21 +1035,21 @@ export async function adminGetPendingVerifications(): Promise<{ data: PendingVer
 
   const [usersRes, docsRes, vehiclesRes, authRes] = await Promise.all([
     admin.from("users").select("id, full_name, phone, email").in("id", ids),
-    admin.from("driver_documents").select("id, driver_id, document_type, file_url,expires_on").in("driver_id", ids),
+    admin.from("driver_documents").select("id, driver_id, document_type, file_url,expires_on,review_status,review_reason,reviewed_at,reviewed_by").in("driver_id", ids),
     admin.from("driver_vehicles").select(
       "id, driver_id, vehicle_type, make, model, colour, registration_number, driving_licence_details, insurance_details, created_at"
     ).in("driver_id", ids),
-    admin.auth.admin.listUsers({ perPage: 1000 }),
+    allAuthUsers(admin),
   ])
 
   const emailMap = new Map(
     (authRes.data?.users ?? []).map((u) => [u.id, u.email ?? ""])
   )
   const userMap = new Map((usersRes.data ?? []).map((u) => [u.id, u]))
-  const docsMap = new Map<string, { document_type: string; file_url: string; expires_on?:string|null }[]>()
+  const docsMap = new Map<string, PendingVerificationDriver["documents"]>()
   for (const doc of docsRes.data ?? []) {
     const arr = docsMap.get(doc.driver_id) ?? []
-    arr.push({ document_type: doc.document_type,expires_on:doc.expires_on, file_url: `/api/driver-document?id=${encodeURIComponent(doc.id)}` })
+    arr.push({ id:doc.id,review_status:doc.review_status,review_reason:doc.review_reason,document_type: doc.document_type,expires_on:doc.expires_on, file_url: `/api/driver-document?id=${encodeURIComponent(doc.id)}` })
     docsMap.set(doc.driver_id, arr)
   }
   const vehiclesMap = new Map<string, DriverVehicle[]>()

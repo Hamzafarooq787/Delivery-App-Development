@@ -1,4 +1,5 @@
 'use server'
+import { getAdminActor } from "@/lib/admin-access"
 import { after } from 'next/server'
 import { notifyUser } from '@/lib/notifications/internal'
 import { createClient } from '@/lib/supabase/server'
@@ -35,7 +36,7 @@ export async function getCustomerThread(kind:'order'|'support',id:string,before?
  if(error||!row)return {error:'Conversation unavailable.'}
  const record=row as unknown as Record<string,any>
  let allowed=kind==='order'?(record.customer_id===user.id||record.driver_id===user.id):record.user_id===user.id
- if(!allowed&&kind==='support'){const {data:profile}=await admin.from('users').select('role').eq('id',user.id).maybeSingle();allowed=profile?.role==='admin'}
+ if(!allowed&&kind==='support'){const {data:profile}=await admin.from('users').select('role').eq('id',user.id).maybeSingle();allowed=!!(await getAdminActor('support'))}
  if(!allowed)return {error:'Conversation unavailable.'}
  const all=(kind==='order'?record.order_messages:record.replies) as ThreadMessage[]??[]
  const end=before?all.findIndex(m=>m.id===before):all.length

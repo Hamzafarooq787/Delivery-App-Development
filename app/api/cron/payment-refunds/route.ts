@@ -1,10 +1,11 @@
+import {recordHealth} from "@/lib/integration-health"
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   processOrderRefunds,
   reconcilePaymentProcessingFee,
 } from "@/lib/payments/direct";
 export const maxDuration = 60;
-export async function GET(request: Request) {
+async function run(request: Request) {
   if (
     !process.env.CRON_SECRET ||
     request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
       await createAdminClient()
         .from("payments")
         .update({ refund_checked_at: new Date().toISOString() })
-        .eq("delivery_id", row.delivery_id)
+        .or(`delivery_id.eq.${row.delivery_id},related_delivery_id.eq.${row.delivery_id}`)
         .eq("payment_method", "stripe");
     }
     if (processed + failed >= 20) break;
@@ -61,4 +62,9 @@ export async function GET(request: Request) {
     { processed, failed, feesUpdated },
     { status: failed ? 500 : 200 },
   );
+}
+
+export async function GET(request:Request){
+ if(!process.env.CRON_SECRET||request.headers.get('authorization')!==`Bearer ${process.env.CRON_SECRET}`)return new Response('Unauthorized',{status:401})
+ try{const response=await run(request);await recordHealth("cron_payment_refunds",response.ok,`HTTP ${response.status}`);return response}catch{await recordHealth("cron_payment_refunds",false,'Run failed; check the operational queue and logs');return Response.json({error:'Scheduled processing failed'},{status:500})}
 }

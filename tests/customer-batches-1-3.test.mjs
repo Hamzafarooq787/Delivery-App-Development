@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import vm from 'node:vm'
 import ts from 'typescript'
 import { PGlite } from '@electric-sql/pglite'
-function compile(file,imports,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,require:n=>{if(n in imports)return imports[n];throw Error('Unmocked '+n)},URL,Response,Request,Number,Math,Date,console,process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co'}},...extra});return exports}
+function compile(file,imports,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,require:n=>{if(n==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(n==='@/lib/integration-health')return{recordHealth:async()=>{}};if(n in imports)return imports[n];throw Error('Unmocked '+n)},URL,Response,Request,Number,Math,Date,console,process:{env:{NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co'}},...extra});return exports}
 const customer='00000000-0000-4000-8000-000000000001',driver='00000000-0000-4000-8000-000000000002',other='00000000-0000-4000-8000-000000000003',administrator='00000000-0000-4000-8000-000000000004',job='00000000-0000-4000-8000-000000000005',job2='00000000-0000-4000-8000-000000000006'
 const base='https://example.supabase.co/storage/v1/object/public/delivery-item-photos/'
 const media=compile('lib/order-media.ts',{})

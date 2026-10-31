@@ -35,7 +35,7 @@ type Props = {
 
 export function GoogleMultiDriver({ deliveries, focusedDeliveryId, height = 420, className }: Props) {
   const supabase = useMemo(() => createClient(), [])
-  const [positions, setPositions] = useState<Record<string, { lat: number; lng: number; updated_at: string }>>({})
+  const [positions, setPositions] = useState<Record<string, { lat: number; lng: number; updated_at: string; delivery_id:string|null }>>({})
   const [now, setNow] = useState(Date.now())
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 5000); return () => clearInterval(timer) }, [])
 
@@ -44,40 +44,25 @@ export function GoogleMultiDriver({ deliveries, focusedDeliveryId, height = 420,
     [deliveries]
   )
 
-  // Initial fetch of all online driver locations
   useEffect(() => {
-    if (driverIds.length === 0) { setPositions({}); return }
-    supabase
-      .from("driver_locations")
-      .select("driver_id, lat, lng, updated_at")
-      .in("driver_id", driverIds)
-      .then(({ data }) => {
-        if (!data) return
-        const map: Record<string, { lat: number; lng: number; updated_at: string }> = {}
-        data.forEach((r) => { map[r.driver_id] = { lat: r.lat, lng: r.lng, updated_at: r.updated_at } })
-        setPositions(map)
-
-      })
-  }, [supabase, driverIds.join(",")])
-
-  // Realtime driver location updates
-  useEffect(() => {
-    if (driverIds.length === 0) return
-    const channel = supabase
-      .channel("google-multi-driver-locations")
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_locations" }, (payload) => {
-        const row = (payload.eventType === "DELETE" ? payload.old : payload.new) as any
-        if (!row || !driverIds.includes(row.driver_id)) return
-        if (payload.eventType === "DELETE") {
-          setPositions((prev) => { const n = { ...prev }; delete n[row.driver_id]; return n })
-
-        } else {
-          setPositions((prev) => ({ ...prev, [row.driver_id]: { lat: row.lat, lng: row.lng, updated_at: row.updated_at } }))
-        }
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [supabase, driverIds.join(",")])
+    if(!driverIds.length){setPositions({});return}
+    let alive=true
+    const refresh=async()=>{
+      const {data,error}=await supabase.from("driver_locations").select("driver_id,delivery_id,lat,lng,updated_at").in("driver_id",driverIds)
+      if(!alive||error||!data)return
+      const next:Record<string,{lat:number;lng:number;updated_at:string;delivery_id:string|null}>={}
+      for(const row of data)next[row.driver_id]={lat:Number(row.lat),lng:Number(row.lng),updated_at:row.updated_at,delivery_id:row.delivery_id}
+      setPositions(next)
+    }
+    void refresh()
+    const focus=()=>{if(!document.hidden)void refresh()}
+    const timer=setInterval(focus,15000)
+    window.addEventListener('focus',focus);document.addEventListener('visibilitychange',focus)
+    const channel=supabase.channel('google-multi-driver-locations')
+      .on('postgres_changes',{event:'*',schema:'public',table:'driver_locations'},()=>{void refresh()})
+      .subscribe(status=>{if(status==='SUBSCRIBED')void refresh()})
+    return()=>{alive=false;clearInterval(timer);window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',focus);void supabase.removeChannel(channel)}
+  },[supabase,driverIds.join(',')])
 
   // Focused delivery
   const focusedDelivery = useMemo(() => {
@@ -94,12 +79,12 @@ export function GoogleMultiDriver({ deliveries, focusedDeliveryId, height = 420,
     : null
 
   const focusedDriverId = focusedDelivery?.driver_id ?? null
-  const focusedDriverPos = focusedDriverId ? positions[focusedDriverId] ?? null : null
+  const focusedDriverPos = focusedDriverId && positions[focusedDriverId]?.delivery_id===focusedDelivery?.id ? positions[focusedDriverId] : null
 
   const routeGeometry = useTrackingRoute(pickup, destination)
   const target = goesToDestination(focusedDelivery?.status, focusedDelivery?.bfm_stage) ? destination : pickup
   const routeGeometry2 = useTrackingRoute(focusedDriverPos && isFreshLocation(focusedDriverPos.updated_at, now) ? focusedDriverPos : null, target, true)
-  const drivers: DriverPosition[] = driverIds.filter(id => positions[id] && isFreshLocation(positions[id].updated_at, now)).map(id => ({
+  const drivers: DriverPosition[] = driverIds.filter(id => positions[id] && deliveries.some(d=>d.driver_id===id&&d.id===positions[id].delivery_id&&ACTIVE_DELIVERY_STATUSES.includes(d.status)) && isFreshLocation(positions[id].updated_at, now)).map(id => ({
     id, label: deliveries.find(d => d.driver_id === id)?.driver_name || "Driver",
     position: { lng: positions[id].lng, lat: positions[id].lat }, isAccepted: true,
   }))

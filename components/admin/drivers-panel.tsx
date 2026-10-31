@@ -1,5 +1,6 @@
 "use client"
 
+import {ukDate} from "@/lib/admin-operations"
 import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
@@ -121,7 +122,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
     if (!selected || isPending) return
     setActionError(null)
     startTransition(async () => {
-      const result = await adminRejectDriver(selected.id)
+      const result = await adminRejectDriver(selected.id,window.prompt("Reason for rejecting this driver:")??undefined)
       if (result.error) { setActionError(result.error); return }
       setSelectedId(null)
       router.refresh()

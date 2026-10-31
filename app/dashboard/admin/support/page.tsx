@@ -1,10 +1,5 @@
-import { adminGetSupportTickets } from "@/app/actions/support"
-import { SupportTicketsPanel } from "@/components/admin/support-tickets-panel"
-
-export const dynamic = "force-dynamic"
-
-export default async function AdminSupportPage() {
-  const { data: tickets } = await adminGetSupportTickets()
-
-  return <SupportTicketsPanel initialTickets={tickets} />
-}
+import {getAdminRecords} from '@/app/actions/admin-operations'
+import {createAdminClient} from '@/lib/supabase/admin'
+import {RecordFilters,RecordPager,type RecordParams} from '@/components/admin/admin-records'
+import {SupportTicketsPanel} from '@/components/admin/support-tickets-panel'
+export default async function AdminSupportPage({searchParams}:{searchParams:Promise<RecordParams>}){const params=await searchParams;const result=await getAdminRecords('support',params);if(result.error)throw new Error(result.error);const data=result.data,ids=[...new Set(data.rows.map((r:any)=>r.user_id))];const users=ids.length?await createAdminClient().from('users').select('id,full_name,role').in('id',ids):{data:[],error:null};if(users.error)throw new Error('Support user details could not load.');const map=new Map((users.data??[]).map(r=>[r.id,r]));return <><div className="px-5"><RecordFilters kind="support" params={params} statuses={['open','closed']}/><RecordPager count={data.count} page={data.page} params={params}/></div><SupportTicketsPanel key={JSON.stringify(params)} initialTickets={data.rows.map((r:any)=>({...r,user_name:map.get(r.user_id)?.full_name??'User',user_role:map.get(r.user_id)?.role??'customer'}))}/><div className="px-5"><RecordPager count={data.count} page={data.page} params={params}/></div></>}

@@ -1,11 +1,13 @@
 "use server"
 
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 async function getCallerRole(userId: string): Promise<string | null> {
   const admin = createAdminClient()
   const { data } = await admin.from("users").select("role").eq("id", userId).maybeSingle()
+  if(data?.role==="admin"&&!(await getAdminActor("support")))return null
   return data?.role ?? null
 }
 

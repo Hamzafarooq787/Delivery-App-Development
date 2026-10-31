@@ -1,3 +1,4 @@
+import {getAdminActor} from "@/lib/admin-access"
 import { AutomaticPayoutsControl } from "@/components/admin/automatic-payouts-control";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -9,6 +10,7 @@ export default async function AdminPayoutsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  if(!(await getAdminActor("finance")))return <p className="p-6 text-white">Finance permission is required.</p>
   const db = await createClient();
   const {
     data: { user },

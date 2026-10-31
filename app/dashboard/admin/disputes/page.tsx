@@ -1,15 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin"
-import { DisputesPanel } from "@/components/admin/disputes-panel"
-
-export default async function AdminDisputesPage() {
-  const admin = createAdminClient()
-
-  const { data: disputes, count, error } = await admin
-    .from("disputes")
-    .select("id, status, issue, created_at, raised_by, delivery_id", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .limit(50)
-
-  if (error) throw new Error("Disputes could not load. Please retry.")
-  return <DisputesPanel disputes={disputes ?? []} total={count ?? 0} />
-}
+import {getAdminRecords} from '@/app/actions/admin-operations'
+import {DisputesPanel} from '@/components/admin/disputes-panel'
+import {RecordFilters,RecordPager,type RecordParams} from '@/components/admin/admin-records'
+export default async function AdminDisputesPage({searchParams}:{searchParams:Promise<RecordParams>}){const params=await searchParams;const r=await getAdminRecords('disputes',params);if(r.error)throw new Error(r.error);const d=r.data;return <><div className="px-5"><RecordFilters kind="disputes" params={params} statuses={['open','resolved','rejected']}/><RecordPager count={d.count} page={d.page} params={params}/></div><DisputesPanel key={JSON.stringify(params)} disputes={d.rows} total={d.count}/></>}

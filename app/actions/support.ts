@@ -7,6 +7,8 @@
  */
 "use server"
 
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -27,7 +29,7 @@ async function requireAdmin(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  return data?.role === "admin" ? user.id : null
+  return (await getAdminActor("support"))?.id ?? null
 }
 
 export async function adminGetSupportTickets(): Promise<{ data: AdminSupportTicket[]; error?: string }> {
@@ -71,6 +73,7 @@ export async function adminSetTicketStatus(
   ticketId: string,
   status: "open" | "closed"
 ): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("support","adminSetTicketStatus",ticketId,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   if (!["open","closed"].includes(status)) return {error:"Choose Open or Resolved."}
 
@@ -86,4 +89,6 @@ export async function adminSetTicketStatus(
   revalidatePath("/dashboard/driver/support")
   revalidatePath("/dashboard/customer/support")
   return { success: true }
+
+ })
 }

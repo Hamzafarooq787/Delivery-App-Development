@@ -1,3 +1,8 @@
+import {getOperationalSettings,getIntegrationHealth,getStaffList,getFailedDispatches} from "@/app/actions/admin-operations"
+import {FailedDispatches} from "@/components/admin/failed-dispatches"
+import {StaffAccessPanel} from "@/components/admin/staff-access-panel"
+import {OperationsSettingsForm} from "@/components/admin/operations-settings-form"
+import {IntegrationHealthPanel} from "@/components/admin/integration-health-panel"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { SettingsTabsClient } from "./settings-tabs-client"
@@ -23,6 +28,7 @@ export default async function AdminSettingsPage() {
     ? { service_enabled: bfmRow.enabled ?? bfmRow.service_enabled ?? false, max_purchase_amount: Number(bfmRow.max_purchase_amount ?? 50) }
     : { service_enabled: false, max_purchase_amount: 50 }
 
+  const [operations, health, staff, dispatches] = await Promise.all([getOperationalSettings(),getIntegrationHealth(),getStaffList(),getFailedDispatches()])
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
       {/* Header */}
@@ -33,6 +39,10 @@ export default async function AdminSettingsPage() {
         </p>
       </div>
 
+      <div className="mb-6"><OperationsSettingsForm initial={operations}/></div>
+      <IntegrationHealthPanel initial={health}/>
+      <StaffAccessPanel initial={staff}/>
+      <FailedDispatches initial={dispatches}/>
       <SettingsTabsClient adminProfile={adminProfile} initialBfmSettings={initialBfmSettings} />
     </div>
   )

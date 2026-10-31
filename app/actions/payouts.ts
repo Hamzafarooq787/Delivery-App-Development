@@ -1,4 +1,6 @@
 "use server";
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -13,7 +15,7 @@ async function adminActor() {
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
-  return data?.role === "admin" ? user.id : null;
+  return (await getAdminActor("finance"))?.id ?? null;
 }
 async function requireAdmin() {
   return Boolean(await adminActor());
@@ -58,16 +60,28 @@ async function review(id: string, status: string, reference?: string) {
   return { success: true };
 }
 export async function approveDriverPayout(id: string) {
+ return runAdminMutation("finance","approveDriverPayout",id,async()=>{
   return review(id, "approved");
+
+ })
 }
 export async function rejectDriverPayout(id: string) {
+ return runAdminMutation("finance","rejectDriverPayout",id,async()=>{
   return review(id, "rejected");
+
+ })
 }
 export async function completeDriverPayout(id: string, reference?: string) {
+ return runAdminMutation("finance","completeDriverPayout",id,async()=>{
   return review(id, "paid", reference);
+
+ })
 }
 export async function markPayoutPaid(id: string, reference?: string) {
+ return runAdminMutation("finance","markPayoutPaid",id,async()=>{
   return review(id, "paid", reference);
+
+ })
 }
 export async function markAllPayoutsPaid() {
   return {
@@ -76,8 +90,11 @@ export async function markAllPayoutsPaid() {
   };
 }
 export async function adminProcessDriverPayout(id: string) {
+ return runAdminMutation("finance","adminProcessDriverPayout",id,async()=>{
   if (!(await adminActor())) return { error: "Not authorized" };
   return reserve(id);
+
+ })
 }
 export async function getDriverPayoutDetails(driverId: string) {
   if (!(await requireAdmin()))

@@ -10,6 +10,8 @@
  */
 "use server"
 
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -67,7 +69,7 @@ async function requireAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
   const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  return data?.role === "admin"
+  return !!(await getAdminActor("marketing"))
 }
 
 // ── Admin: audience ──────────────────────────────────────────────────────────
@@ -167,6 +169,7 @@ export type CreateCampaignInput = {
 export async function adminCreateAndSendCampaign(
   input: CreateCampaignInput
 ): Promise<{ success?: boolean; error?: string; campaignId?: string }> {
+ return runAdminMutation("marketing","adminCreateAndSendCampaign",input,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !(await requireAdmin())) return { error: "Not authorized" }
@@ -237,6 +240,8 @@ export async function adminCreateAndSendCampaign(
 
   revalidatePath("/dashboard/admin/marketing")
   return { success: true, campaignId: campaign.id }
+
+ })
 }
 
 // ── Admin: re-engagement settings ───────────────────────────────────────────
@@ -261,6 +266,7 @@ export async function adminGetReengagementSettings(): Promise<{ data: Reengageme
 export async function adminUpdateReengagementSettings(
   input: ReengagementSettings
 ): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("marketing","adminUpdateReengagementSettings",input,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !(await requireAdmin())) return { error: "Not authorized" }
@@ -287,4 +293,6 @@ export async function adminUpdateReengagementSettings(
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/marketing")
   return { success: true }
+
+ })
 }

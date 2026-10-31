@@ -1,4 +1,6 @@
 "use server"
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
 
@@ -67,11 +69,12 @@ export async function getShoppingBookingSettings() {
 }
 
 export async function updateBfmSettings(settings: Partial<BfmSettings>): Promise<{ error?: string }> {
+ return runAdminMutation("settings","updateBfmSettings",settings,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
   const { data: profile } = await createAdminClient().from("users").select("role").eq("id", user.id).single()
-  if (profile?.role !== "admin") return { error: "Unauthorised" }
+  if (!(await getAdminActor("settings"))) return { error: "Unauthorised" }
 
   if (settings.enabled !== undefined && typeof settings.enabled !== "boolean") return { error: "Invalid service setting" }
   if (settings.max_purchase_amount !== undefined && (!Number.isFinite(settings.max_purchase_amount) || settings.max_purchase_amount <= 0 || settings.max_purchase_amount > 100)) return { error: "Shopping limit must be between £0.01 and £100" }
@@ -84,6 +87,8 @@ export async function updateBfmSettings(settings: Partial<BfmSettings>): Promise
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/settings")
   return {}
+
+ })
 }
 
 // ── Customer: Create shopping request ────────────────────────────────────────
@@ -130,6 +135,7 @@ export async function createShoppingRequest(
 
   // Get delivery quote (shop → customer delivery)
   const quoteResult = await getDeliveryQuote({
+    serviceType: "buy_for_me",
     pickupLat: params.shop_lat,
     pickupLng: params.shop_lng,
     deliveryLat: params.delivery_lat,
@@ -529,7 +535,7 @@ export async function getShoppingItems(deliveryId: string) {
   if (delivery.customer_id !== user.id && delivery.driver_id !== user.id) {
     // Check admin
     const { data: profile } = await admin.from("users").select("role").eq("id", user.id).single()
-    if (profile?.role !== "admin") return { data: [] as ShoppingItemRow[], error: "Unauthorised" }
+    if (!(await getAdminActor("operations"))) return { data: [] as ShoppingItemRow[], error: "Unauthorised" }
   }
 
   const { data, error } = await admin
@@ -615,6 +621,7 @@ export async function getShoppingQuote(
   if (!bfm.enabled) return { error: "Buy for Me is currently unavailable." }
 
   const quoteResult = await getDeliveryQuote({
+    serviceType: "buy_for_me",
     pickupLat: params.shop_lat,
     pickupLng: params.shop_lng,
     deliveryLat: params.delivery_lat,

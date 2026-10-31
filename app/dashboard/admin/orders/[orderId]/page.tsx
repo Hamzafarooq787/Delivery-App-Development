@@ -1,3 +1,6 @@
+import {getAdminActor} from "@/lib/admin-access"
+import {OrderRecoveryPanel} from "@/components/admin/order-recovery-panel"
+import {OrderConversation} from "@/components/admin/order-conversation"
 import { orderMediaUrl } from '@/lib/order-media'
 import {ShoppingItemsHistory} from "@/components/admin/shopping-items-history"
 import { OrderPaymentPanel } from "@/components/admin/order-payment-panel"
@@ -24,11 +27,14 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default async function AdminOrderDetailPage({
-  params,
+  params, searchParams,
 }: {
   params: Promise<{ orderId: string }>
+  searchParams: Promise<{messages?:string}>
 }) {
+  const actor=await getAdminActor("any");if(!actor||!actor.owner&&!actor.scopes.some((s:string)=>["operations","support","finance"].includes(s)))notFound()
   const { orderId } = await params
+  const messagePage=Math.max(1,Math.trunc(Number((await searchParams).messages)||1))
   const admin = createAdminClient()
 
   const { data: order, error } = await admin
@@ -188,7 +194,7 @@ export default async function AdminOrderDetailPage({
           </div>
 
           {order.service_type === "buy_for_me" && <ShoppingItemsHistory orderId={orderId} />}
-          {order.collection_wait&&<section className="rounded-xl border border-white/15 bg-[var(--brand-panel)] p-4 text-white"><h3 className="font-bold">Collection waiting request</h3><p>Status: {order.collection_wait.status}</p>{order.collection_wait.amount!=null&&<p>Requested £{Number(order.collection_wait.amount).toFixed(2)} at £{Number(order.collection_wait.rate).toFixed(2)} per minute after 5 free minutes.</p>}<p className="text-sm">Customer approval records consent for review. This feature has not taken a payment or changed driver earnings.</p></section>}
+          {order.collection_wait&&<section className="rounded-xl border border-white/15 bg-[var(--brand-panel)] p-4 text-white"><h3 className="font-bold">Collection waiting request</h3><p>Status: {order.collection_wait.status}</p>{order.collection_wait.amount!=null&&<p>Requested £{Number(order.collection_wait.amount).toFixed(2)} at £{Number(order.collection_wait.rate).toFixed(2)} per minute after 5 free minutes.</p>}<p className="text-sm">Approval alone does not take payment. A separate paid checkout records the waiting charge; earnings follow delivery completion.</p></section>}
           {cardPayment && <OrderPaymentPanel id={orderId} amount={cardPayment.amount} status={cardPayment.status} refunds={cardPayment.refund_jobs??[]} />}
       {order.service_type === "buy_for_me" && <ShoppingFundingPanel id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
           {/* Buy for Me Details */}
@@ -448,6 +454,8 @@ export default async function AdminOrderDetailPage({
             </div>
           )}
 
+          <OrderRecoveryPanel id={order.id} record={order.recovery_case} canResolve={actor.owner||actor.scopes.includes("finance")}/>
+          <OrderConversation id={order.id} page={messagePage}/>
           {/* Admin Actions */}
           <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
@@ -455,6 +463,8 @@ export default async function AdminOrderDetailPage({
               <h3 className="text-sm font-bold text-white font-headline">Admin Actions</h3>
             </div>
             <OrderActionsPanel
+              paymentMethod={order.payment_method??"wallet"}
+              shoppingStage={order.bfm_stage}
               orderId={order.id}
               orderStatus={order.status}
               currentDriverId={order.driver_id ?? null}

@@ -8,6 +8,7 @@
  */
 "use server"
 
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -18,7 +19,7 @@ async function requireAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
   const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  return data?.role === "admin"
+  return !!(await getAdminActor("operations"))
 }
 
 export type DriverVehicle = {

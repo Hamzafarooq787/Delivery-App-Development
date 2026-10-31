@@ -12,6 +12,8 @@
  */
 "use server"
 
+import { runAdminMutation } from "@/lib/admin-access"
+import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -164,7 +166,7 @@ async function requireAdmin(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
   const { data } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  return data?.role === "admin"
+  return !!(await getAdminActor("settings"))
 }
 
 export async function adminGetPromoCodes(): Promise<{ data: PromoCode[]; error?: string }> {
@@ -190,6 +192,7 @@ export type PromoCodeInput = {
 }
 
 export async function adminCreatePromoCode(input: PromoCodeInput): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("settings","adminCreatePromoCode",input,async()=>{
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !(await requireAdmin())) return { error: "Not authorized" }
@@ -217,9 +220,12 @@ export async function adminCreatePromoCode(input: PromoCodeInput): Promise<{ suc
   if (error) return { error: error.code === "23505" ? "A promo code with this code already exists" : error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true }
+
+ })
 }
 
 export async function adminUpdatePromoCode(id: string, input: PromoCodeInput): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("settings","adminUpdatePromoCode",id,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
 
   const code = input.code.trim().toUpperCase()
@@ -244,15 +250,20 @@ export async function adminUpdatePromoCode(id: string, input: PromoCodeInput): P
   if (error) return { error: error.code === "23505" ? "A promo code with this code already exists" : error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true }
+
+ })
 }
 
 export async function adminDeletePromoCode(id: string): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("settings","adminDeletePromoCode",id,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   const admin = createAdminClient()
   const { error } = await admin.from("promo_codes").delete().eq("id", id)
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true }
+
+ })
 }
 
 // ── Admin: automatic discounts ──────────────────────────────────────────────────
@@ -266,6 +277,7 @@ export async function adminGetAutomaticDiscounts(): Promise<{ data: AutomaticDis
 }
 
 export async function adminUpdateAutomaticDiscount(discount: AutomaticDiscount): Promise<{ success?: boolean; error?: string }> {
+ return runAdminMutation("settings","adminUpdateAutomaticDiscount",discount,async()=>{
   if (!(await requireAdmin())) return { error: "Not authorized" }
   if (!discount.discount_value || discount.discount_value <= 0) return { error: "Discount value must be greater than 0" }
   if (discount.type === "loyalty" && (!discount.loyalty_order_threshold || discount.loyalty_order_threshold <= 0)) {
@@ -285,4 +297,6 @@ export async function adminUpdateAutomaticDiscount(discount: AutomaticDiscount):
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/promotions")
   return { success: true }
+
+ })
 }

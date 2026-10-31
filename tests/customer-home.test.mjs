@@ -6,7 +6,7 @@ import ts from 'typescript'
 import React from 'react'
 import { renderToString } from 'react-dom/server'
 import * as jsxRuntime from 'react/jsx-runtime'
-function compile(file,imports){const exports={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports,require:n=>{if(n in imports)return imports[n];throw Error(n)},console,Promise,Number});return exports}
+function compile(file,imports){const exports={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports,require:n=>{if(n==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(n==='@/lib/integration-health')return{recordHealth:async()=>{}};if(n in imports)return imports[n];throw Error(n)},console,Promise,Number});return exports}
 function fixture({user={id:'customer-1',email:'customer@example.test'},enabled=true,failSettings=false,failWallet=false}={}){
  const reads=[];const pending=[];
  const db={from(table){const q={select:()=>q,eq(key,id){reads.push([table,key,id]);return q},not:()=>q,order:()=>q,limit:()=>q,maybeSingle:()=>q,then(resolve,reject){pending.push(()=>{if(table==='wallet_balances'&&failWallet){reject(Error('offline'));return}resolve({data:table==='users'?{full_name:'Customer'}:table==='wallet_balances'?{balance:'12.50'}:[{tracking_number:'GD123',status:'accepted'}],error:null})})}};return q}};

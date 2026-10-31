@@ -15,7 +15,7 @@ async function database(){const db=await oldDatabase();await db.exec(`
  create table notifications(id uuid default gen_random_uuid(),user_id uuid,title text,body text,action_url text,created_at timestamptz default now());
  create table surge_pricing_settings(id boolean primary key,booking_pricing jsonb);insert into surge_pricing_settings values(true,'{"waitingPerMinute":1.2}');
  `);await db.exec(migration);return db}
-function compile(file,imports,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:n=>{if(n in imports)return imports[n];throw Error('Unmocked '+n)},console,Number,Math,Date,Intl,...extra});return exports}
+function compile(file,imports,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:n=>{if(n==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(n==='@/lib/integration-health')return{recordHealth:async()=>{}};if(n in imports)return imports[n];throw Error('Unmocked '+n)},console,Number,Math,Date,Intl,...extra});return exports}
 const compliance=compile('lib/driver-compliance.ts',{})
 test('Required documents match bicycle/motor vehicles and reject missing or expired insurance',()=>{
  assert.deepEqual(Array.from(compliance.requiredDriverDocuments([{vehicle_type:'bicycle'}])),['identity','selfie'])

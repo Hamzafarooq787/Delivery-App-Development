@@ -7,6 +7,7 @@ import { SWRegister } from '@/components/pwa/sw-register'
 import { IconGuard } from '@/components/pwa/icon-guard'
 import { MATERIAL_ICON_NAMES } from '@/lib/material-icon-names'
 import { BrandProvider } from '@/components/shared/brand-provider'
+import { INVITE_REDIRECT_BOOTSTRAP } from '@/lib/invite-redirect'
 import { CUSTOMER_VIEWPORT_BOOTSTRAP } from '@/lib/customer-viewport'
 import './globals.css'
 import './brand.css'
@@ -62,6 +63,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="dark" data-brand="orange" className={`dark ${manrope.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: INVITE_REDIRECT_BOOTSTRAP }} />
         {/* Anti-flash: apply saved theme before first paint */}
         <script
           dangerouslySetInnerHTML={{

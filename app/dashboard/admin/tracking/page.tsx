@@ -1,3 +1,5 @@
+import {getAdminActor} from "@/lib/admin-access"
+import {RecordPager} from "@/components/admin/admin-records"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { AdminLiveTrackingBoard, type TrackedDelivery } from "@/components/admin/live-tracking-board"
 
@@ -6,16 +8,18 @@ export const dynamic = "force-dynamic"
 // Statuses where a driver is on the job and broadcasting a live location.
 const LIVE_STATUSES = ["accepted", "collected", "in_transit", "picked_up"]
 
-export default async function AdminLiveTrackingPage() {
+export default async function AdminLiveTrackingPage({searchParams}:{searchParams:Promise<{page?:string}>}) {
+  const params=await searchParams,page=Math.max(1,Math.trunc(Number(params.page)||1))
+  if(!(await getAdminActor("operations")))return <p className="p-6 text-white">Operations permission is required.</p>
   const admin = createAdminClient()
 
-  const { data: deliveries, error } = await admin
+  const { data: deliveries, error, count } = await admin
     .from("delivery_requests")
     .select(
-      "id, tracking_number, status, service_type, bfm_stage, driver_id, customer_id, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, created_at",
+      "id, tracking_number, status, service_type, bfm_stage, driver_id, customer_id, pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng, created_at", {count:"exact"}
     )
     .in("status", LIVE_STATUSES)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false }).order("id").range((page-1)*50,page*50-1)
 
   if(error)throw new Error("Unable to load live deliveries. Please retry.")
   const rows = deliveries ?? []
@@ -47,6 +51,7 @@ export default async function AdminLiveTrackingPage() {
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
+      <RecordPager count={count??0} page={page} params={params}/>
       <div className="mb-6 md:mb-8">
         <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-white">Live Tracking</h2>
         <p className="text-[var(--color-on-surface-variant)] mt-1 text-sm">

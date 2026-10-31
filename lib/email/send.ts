@@ -1,3 +1,7 @@
+import "server-only"
+import {randomUUID} from "node:crypto"
+import {recordDispatchFailure} from "@/lib/dispatch-failures"
+import {recordHealth} from "@/lib/integration-health"
 /**
  * lib/email/send.ts
  * ─────────────────────────────────────────────────────────────────────────────
@@ -41,12 +45,13 @@ function getResend(): Resend {
  * (missing config, invalid recipient, Resend API error) so bulk-send
  * callers can log a per-recipient failure and keep going.
  */
-export async function sendEmail({
+export async function retryEmailDelivery({
   to,
   subject,
   html,
-  text,
+  text, deliveryKey,
 }: {
+  deliveryKey:string
   to: string
   subject: string
   html: string
@@ -64,7 +69,7 @@ export async function sendEmail({
       subject,
       html,
       text,
-    })
+    },{idempotencyKey:deliveryKey})
     if (error) {
       console.error("[Email] sendEmail failed:", error)
       return { error: error.message ?? "Failed to send email." }
@@ -106,3 +111,5 @@ export function marketingEmailHtml({
     </div>
   `
 }
+
+export async function sendEmail(input:{to:string;subject:string;html:string;text?:string}){const deliveryKey=randomUUID();const result=await retryEmailDelivery({...input,deliveryKey});if('error' in result){await recordDispatchFailure('email',null,{...input,deliveryKey},deliveryKey);await recordHealth('email',false,'Email provider did not confirm delivery')}else await recordHealth('email',true,'Email provider accepted delivery');return result}

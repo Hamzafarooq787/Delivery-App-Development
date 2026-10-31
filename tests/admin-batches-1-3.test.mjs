@@ -31,8 +31,8 @@ async function database(){
  try { await db.exec(migration) } catch (error) { await db.close(); throw error }
  return db
 }
-function compile(file,imports={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,require:n=>{if(n in imports)return imports[n];throw Error('Unmocked '+n)},Number,Math,Date,Intl});return exports}
-function action(file,name,vars){const source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);const node=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name.text===name);const code=node.getText(source).replace(/^export /,'');return vm.runInNewContext(ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2020}}).outputText+';'+name,vars)}
+function compile(file,imports={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,require:n=>{if(n==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(n==='@/lib/integration-health')return{recordHealth:async()=>{}};if(n in imports)return imports[n];throw Error('Unmocked '+n)},Number,Math,Date,Intl});return exports}
+function action(file,name,vars){const source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);const node=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name.text===name);const code=node.getText(source).replace(/^export /,'');return vm.runInNewContext(ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2020}}).outputText+';'+name,{runAdminMutation:async(_scope,_event,_entity,work)=>work(),...vars})}
 const validation=compile('lib/admin-pricing-validation.ts',{zod:{z}})
 const pricing=compile('lib/pricing.ts')
 const validSurge={master_enabled:true,demand_enabled:true,demand_threshold_ratio:1.5,demand_multiplier:1.3,traffic_enabled:true,traffic_threshold_ratio:1.4,traffic_multiplier:1.25,max_total_multiplier:2}
@@ -152,14 +152,14 @@ test('Switch action returns a useful failure without redirecting when the atomic
 test('Marketing includes driver-mode customer identities while preserving individual consent and activity',async()=>{
  const now=new Date().toISOString(),old='2020-01-01T00:00:00Z'
  const rows=[{id:driver,full_name:'Dual account',created_at:old,marketing_email_opt_in:false,marketing_push_opt_in:true},{id:customer,full_name:'Customer',created_at:old,marketing_email_opt_in:true,marketing_push_opt_in:false}]
- const admin={from:table=>{const q={select:()=>q,in:()=>q,order:()=>q,then:resolve=>Promise.resolve({data:table==='admin_customer_accounts'?rows:table==='users'?rows:[{customer_id:driver,created_at:now}]}).then(resolve)};assert.ok(['admin_customer_accounts','users','delivery_requests'].includes(table));return q},auth:{admin:{listUsers:async()=>({data:{users:[{id:driver,email:'driver@example.test'},{id:customer,email:'customer@example.test'}]}})}}}
- const segments=compile('lib/marketing/segments.ts')
+ const admin={rpc:async()=>({data:{[driver]:now,[customer]:old}}),from:table=>{const q={select:()=>q,eq:()=>q,in:()=>q,order:()=>q,range:()=>q,then:resolve=>Promise.resolve({data:table==='admin_customer_accounts'?rows:table==='users'?rows:[{customer_id:driver,created_at:now}]}).then(resolve)};assert.ok(['admin_customer_accounts','users','delivery_requests'].includes(table));return q},auth:{admin:{listUsers:async()=>({data:{users:[{id:driver,email:'driver@example.test'},{id:customer,email:'customer@example.test'}]}})}}}
+ const segments=compile('lib/marketing/segments.ts',{'@/lib/auth-directory':{allAuthUsers:async admin=>admin.auth.admin.listUsers({page:1,perPage:1000})}})
  const all=await segments.resolveMarketingRecipients(admin,'all');assert.equal(all.length,2);assert.equal(all[0].marketing_email_opt_in,false);assert.equal(all[0].marketing_push_opt_in,true)
  const inactive=await segments.resolveMarketingRecipients(admin,'inactive',30);assert.equal(inactive.length,1);assert.equal(inactive[0].id,customer)
 })
 test('An unavailable customer identity query is reported instead of becoming an empty marketing audience',async()=>{
- const segments=compile('lib/marketing/segments.ts')
- await assert.rejects(segments.resolveMarketingRecipients({from:()=>({select:async()=>({data:null,error:{message:'unavailable'}})})},'all'),/Customer audience could not load/)
+ const segments=compile('lib/marketing/segments.ts',{'@/lib/auth-directory':{allAuthUsers:async admin=>admin.auth.admin.listUsers({page:1,perPage:1000})}})
+ await assert.rejects(segments.resolveMarketingRecipients({from:()=>{const q={select:()=>q,eq:()=>q,order:()=>q,range:async()=>({data:null,error:{message:'unavailable'}})};return q}},'all'),/Customer audience could not load/)
 })
 test('Busy-period creation returns the real database ID and a missing update cannot report success',async()=>{
  const form={label:'Evening',day_of_week:null,start_time:'17:00',end_time:'19:00',multiplier:1.3,active:true}
