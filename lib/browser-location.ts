@@ -16,11 +16,17 @@ export function locationIssue(error: unknown, userAgent = navigator.userAgent): 
   return { message: error instanceof Error ? error.message : 'Location is unavailable. Try again or enter an address.' }
 }
 
+let pendingLocation: Promise<GeolocationPosition> | null = null
+
 export function requestBrowserLocation(): Promise<GeolocationPosition> {
+  // The automatic step request and either address button share an in-flight
+  // request, so one browser permission dialog serves all waiting callers.
+  if (pendingLocation) return pendingLocation
   if (!window.isSecureContext) return Promise.reject(new Error('Open GoDrop using HTTPS to use your location.'))
   if (!navigator.geolocation) return Promise.reject(new Error('This browser does not support location. Please enter an address.'))
-  // Start inside the user's click, not an automatic permission prompt on mount.
-  return new Promise((resolve, reject) => {
+  // Call the native API synchronously from Continue or Use my location. An
+  // asynchronous permission pre-check can lose the browser's user activation.
+  const request = new Promise<GeolocationPosition>((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(resolve, error => {
       // A slow indoor GPS fix is not a permission denial. Retry once with the
       // network-assisted setting; never retry a denied permission automatically.
@@ -30,4 +36,7 @@ export function requestBrowserLocation(): Promise<GeolocationPosition> {
       })
     }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 })
   })
+  pendingLocation = request
+  void request.then(() => { pendingLocation = null }, () => { pendingLocation = null })
+  return request
 }
