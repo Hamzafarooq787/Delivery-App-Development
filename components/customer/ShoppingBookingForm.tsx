@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Camera, Pencil, ShoppingBag } from 'lucide-react'
-import { getBookingPricing } from '@/app/actions/booking-settings'
-import { getBfmSettings, getShoppingQuote, type BfmSettings, type ShoppingItem, type ShoppingQuote } from '@/app/actions/shopping'
+import { getShoppingBookingSettings, getShoppingQuote, type BfmSettings, type ShoppingItem, type ShoppingQuote } from '@/app/actions/shopping'
 import { startOrderCheckout } from '@/app/actions/order-checkout'
 import { DEFAULT_BOOKING_PRICING } from '@/lib/booking-pricing'
 import { requestBrowserLocation, locationIssue, type LocationIssue } from '@/lib/browser-location'
@@ -91,7 +90,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   })
   useEffect(() => {
     let active = true
-    void Promise.all([getBookingPricing(), getBfmSettings()]).then(([pricing, bfm]) => {
+    void getShoppingBookingSettings().then(([pricing, bfm]) => {
       if (active) { setLimits(pricing); setSettings(bfm); setSettingsError('') }
     }).catch(() => { if (active) setSettingsError('Shopping settings could not load. Close this form and try again.') })
     return () => { active = false }

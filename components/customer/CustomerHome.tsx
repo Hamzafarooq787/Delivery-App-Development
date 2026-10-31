@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import {
@@ -12,87 +12,30 @@ import {
   Wallet,
   CircleHelp,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { getWalletBalance } from '@/app/actions/wallet'
-import { getBfmSettings } from '@/app/actions/shopping'
+import type { CustomerHomeData } from '@/lib/customer-home-data'
 import { useVisibleViewport } from '@/hooks/use-visible-viewport'
 import { ServiceIllustration } from './ServiceIllustration'
 import styles from './CustomerHome.module.css'
 import { CustomerHeader, CustomerBottomNavigation } from './CustomerNavigation'
 import navStyles from './CustomerNavigation.module.css'
+const loadShoppingModal = () => import('./NewShoppingRequestModal').then((m) => m.NewShoppingRequestModal)
+function preloadShoppingModal() { void loadShoppingModal().catch(() => {}) }
 const ShoppingModal = dynamic(
-  () =>
-    import('./NewShoppingRequestModal').then((m) => m.NewShoppingRequestModal),
+  loadShoppingModal,
   { ssr: false },
 )
 
-export default function CustomerHome() {
+export default function CustomerHome({ initialData }: { initialData: CustomerHomeData }) {
   const screenRef = useVisibleViewport()
-  const supabase = useMemo(() => createClient(), [])
-  const [profile, setProfile] = useState({ id: '', name: '', email: '' })
-  const [balance, setBalance] = useState<number | null>(null)
-  const [delivery, setDelivery] = useState<{
-    tracking_number: string | null
-    status: string | null
-  } | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState(false)
-  const [shoppingEnabled, setShoppingEnabled] = useState(false)
+  const { profile, balance, delivery, loadError, shoppingEnabled } = initialData
   const [shopping, setShopping] = useState(false)
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-        if (!user) return
-        const [person, deliveries, wallet, settings] = await Promise.all([
-          supabase
-            .from('users')
-            .select('full_name')
-            .eq('id', user.id)
-            .maybeSingle(),
-          supabase
-            .from('delivery_requests')
-            .select('tracking_number,status')
-            .eq('customer_id', user.id)
-            .not('status', 'in', '("delivered","cancelled")')
-            .order('created_at', { ascending: false })
-            .limit(1),
-          getWalletBalance().catch(() => ({ balance: null })),
-          getBfmSettings().catch(() => ({ enabled: false })),
-        ])
-        if (cancelled) return
-        setProfile({
-          id: user.id,
-          name: person.data?.full_name || '',
-          email: user.email || '',
-        })
-        setDelivery(deliveries.data?.[0] ?? null)
-        setLoadError(!!deliveries.error)
-        setBalance(wallet.balance)
-        setShoppingEnabled(settings.enabled !== false)
-      } catch {
-        if (!cancelled) setLoadError(true)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [supabase])
   // Layout owns the modal and draft-resume flow. A single event opens it once.
   function book(focus?: 'pickup' | 'delivery') {
     document.dispatchEvent(
       new CustomEvent('open-new-delivery', { detail: { focus } }),
     )
   }
-  const deliveryLabel = loading
-    ? 'Loading your deliveries…'
-    : loadError
+  const deliveryLabel = loadError
       ? 'View your deliveries'
       : delivery
         ? `${delivery.tracking_number || 'Active delivery'} · ${(delivery.status || 'requested').replaceAll('_', ' ')}`
@@ -144,8 +87,8 @@ export default function CustomerHome() {
             <div className={styles.serviceIcon}>
               <ShoppingBag size={27} aria-hidden />
             </div>
-            {!shoppingEnabled && (
-              <span className={styles.comingSoon}>Coming soon</span>
+            {shoppingEnabled === false && (
+              <span className={styles.comingSoon}>Temporarily unavailable</span>
             )}
             <div className={styles.serviceCopy}>
               <h3 id="shopping-heading">Buy for Me</h3>
@@ -153,9 +96,11 @@ export default function CustomerHome() {
                 We shop for it, so you don&apos;t have to. Tell us what you need
                 and we&apos;ll take care of the rest.
               </p>
-              {shoppingEnabled && (
+              {shoppingEnabled !== false && (
                 <button
                   className={styles.shoppingButton}
+                  onPointerEnter={preloadShoppingModal}
+                  onFocus={preloadShoppingModal}
                   onClick={() => setShopping(true)}
                 >
                   Start shopping <ArrowRight size={18} aria-hidden />
@@ -178,7 +123,7 @@ export default function CustomerHome() {
             <strong>Your deliveries</strong>
             <small>
               {deliveryLabel}
-              {!loading && !loadError && !delivery && (
+              {!loadError && !delivery && (
                 <>
                   <br />
                   Book your first delivery to get started.
@@ -239,12 +184,12 @@ export default function CustomerHome() {
               <small>Send anything, anywhere.</small>
             </span>
           </button>
-          <button disabled={!shoppingEnabled} onClick={() => setShopping(true)}>
+          <button onPointerEnter={preloadShoppingModal} onFocus={preloadShoppingModal} disabled={shoppingEnabled === false} onClick={() => setShopping(true)}>
             <ShoppingBag aria-hidden />
             <span>
               <strong>Buy for Me</strong>
               <small>
-                {shoppingEnabled ? 'We shop for you.' : 'Coming soon'}
+                {shoppingEnabled === false ? 'Temporarily unavailable' : 'We shop for you.'}
               </small>
             </span>
           </button>
