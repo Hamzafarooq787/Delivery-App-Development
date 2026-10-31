@@ -14,11 +14,11 @@ export type BookingPricing = {
   weatherFee: number
   serviceRadiusMiles: number
 }
-export const DEFAULT_BOOKING_PRICING: BookingPricing = { maxShoppingProducts:5, maxQuantityPerProduct:10, maxShoppingWeightKg:15, maxShoppingDimensionCm:60, commissionPercent: 20, minimumDriverEarnings: 4.49, baseFare: 4.49, includedMiles: 2, perMile: 1.2, shoppingFee: 3.99, largeFee: 0, vanFee: 0, weatherFee: 0, serviceRadiusMiles: 0 }
+export const DEFAULT_BOOKING_PRICING: BookingPricing = { maxShoppingProducts:15, maxQuantityPerProduct:10, maxShoppingWeightKg:15, maxShoppingDimensionCm:60, commissionPercent: 20, minimumDriverEarnings: 4.49, baseFare: 4.49, includedMiles: 2, perMile: 1.2, shoppingFee: 3.99, largeFee: 0, vanFee: 0, weatherFee: 0, serviceRadiusMiles: 0 }
 export function validateBookingPricing(value: unknown): value is BookingPricing {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
-  return Object.keys(DEFAULT_BOOKING_PRICING).every(k => typeof v[k] === 'number' && Number.isFinite(v[k]) && (v[k] as number) >= 0 && (v[k] as number) <= 500) && ['baseFare','perMile','shoppingFee','largeFee','vanFee','weatherFee','minimumDriverEarnings'].every(k=>Math.abs(Math.round(Number(v[k])*100)-Number(v[k])*100)<1e-7) && (v.baseFare as number) > 0 && (v.commissionPercent as number) <= 100 && Number.isInteger(v.maxShoppingProducts) && (v.maxShoppingProducts as number)>=1 && (v.maxShoppingProducts as number)<=5 && Number.isInteger(v.maxQuantityPerProduct) && (v.maxQuantityPerProduct as number)>=1 && (v.maxQuantityPerProduct as number)<=99 && (v.maxShoppingWeightKg as number)>0 && (v.maxShoppingDimensionCm as number)>0
+  return Object.keys(DEFAULT_BOOKING_PRICING).every(k => typeof v[k] === 'number' && Number.isFinite(v[k]) && (v[k] as number) >= 0 && (v[k] as number) <= 500) && ['baseFare','perMile','shoppingFee','largeFee','vanFee','weatherFee','minimumDriverEarnings'].every(k=>Math.abs(Math.round(Number(v[k])*100)-Number(v[k])*100)<1e-7) && (v.baseFare as number) > 0 && (v.commissionPercent as number) <= 100 && Number.isInteger(v.maxShoppingProducts) && (v.maxShoppingProducts as number)>=1 && (v.maxShoppingProducts as number)<=50 && Number.isInteger(v.maxQuantityPerProduct) && (v.maxQuantityPerProduct as number)>=1 && (v.maxQuantityPerProduct as number)<=99 && (v.maxShoppingWeightKg as number)>0 && (v.maxShoppingDimensionCm as number)>0
 }
 export function calculateDeliveryFare(miles: number, config: BookingPricing, size = 'small'): number {
   if (!Number.isFinite(miles) || miles < 0 || !validateBookingPricing(config)) throw new Error('Invalid pricing input')

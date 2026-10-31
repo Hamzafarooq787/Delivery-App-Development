@@ -5,7 +5,7 @@ export function normalizeBfmSettings(row: Record<string, unknown>) {
   return { enabled: row.enabled === true || (row.enabled == null && row.service_enabled === true), max_purchase_amount: maximum, service_fee_percentage: fee }
 }
 
-export function validateShoppingItems(items: unknown, limits={maxShoppingProducts:5,maxQuantityPerProduct:10}): string | null {
+export function validateShoppingItems(items: unknown, limits={maxShoppingProducts:15,maxQuantityPerProduct:10}): string | null {
   if (!Array.isArray(items) || items.length < 1 || items.length > limits.maxShoppingProducts) return `Add between 1 and ${limits.maxShoppingProducts} different products.`
   for (const item of items) {
     if (!item || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 200) return 'Enter a valid name for each product.'

@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {stripTypeScriptTypes} from 'node:module';import {PGlite} from '@electric-sql/pglite';
 const checks=vm.runInNewContext(stripTypeScriptTypes(fs.readFileSync('lib/shopping-validation.ts','utf8')).replace(/export /g,'')+';({validateShoppingItems,normalizeBfmSettings})');
 const item={name:'Milk',quantity:2,estimated_price:1.5,substitution_preference:'contact_me'};
-test('reject invalid shopping input and normalize enabled settings',()=>{assert.equal(checks.validateShoppingItems([item]),null);for(const v of [[],Array(6).fill(item),[{...item,quantity:-1}],[{...item,quantity:1.5}],[{...item,estimated_price:NaN}],[{...item,estimated_price:-1}]])assert.ok(checks.validateShoppingItems(v));assert.equal(checks.normalizeBfmSettings({service_enabled:true,max_purchase_amount:50,service_fee_percentage:10}).enabled,true);assert.equal(checks.normalizeBfmSettings({enabled:false,service_enabled:true,max_purchase_amount:50,service_fee_percentage:10}).enabled,false)});
+test('reject invalid shopping input and normalize enabled settings',()=>{assert.equal(checks.validateShoppingItems([item]),null);for(const v of [[],Array(16).fill(item),[{...item,quantity:-1}],[{...item,quantity:1.5}],[{...item,estimated_price:NaN}],[{...item,estimated_price:-1}]])assert.ok(checks.validateShoppingItems(v));assert.equal(checks.normalizeBfmSettings({service_enabled:true,max_purchase_amount:50,service_fee_percentage:10}).enabled,true);assert.equal(checks.normalizeBfmSettings({enabled:false,service_enabled:true,max_purchase_amount:50,service_fee_percentage:10}).enabled,false)});
 const fixture=`create role anon;create role authenticated;create role service_role;create schema auth;create function auth.uid() returns uuid language sql as 'select null::uuid';create schema storage;create table storage.buckets(id text,public boolean);create table storage.objects(name text,bucket_id text);create function storage.foldername(text) returns text[] language sql as 'select string_to_array($1,''/'')';create table users(id uuid,role text);
 create table delivery_requests(id uuid primary key default gen_random_uuid(),customer_id uuid,driver_id uuid,tracking_number text,status text,pickup_address text,pickup_lat numeric,pickup_lng numeric,delivery_address text,delivery_lat numeric,delivery_lng numeric,package_size text,price numeric,base_price numeric,is_safe_confirmed boolean,cancelled_by text);
 create table wallet_balances(user_id uuid primary key,balance numeric,updated_at timestamptz);create table wallet_transactions(user_id uuid,type text,amount numeric,description text,delivery_id uuid);create table payments(delivery_id uuid,amount numeric,status text);
@@ -28,6 +28,13 @@ test('purchase-completed action cannot bypass receipt settlement',async()=>{cons
 test('completed order does not reveal current driver location',async()=>{const s=actions('app/actions/tracking.ts',['getDriverLocationForDelivery'],{user:{id:'customer'},rows:{delivery_requests:{customer_id:'customer',driver_id:'driver',status:'delivered'}}});assert.equal((await s.api.getDriverLocationForDelivery('job')).data.location,null);assert.equal(s.calls.some(c=>c.table==='driver_locations'),false)});
 
 const pricingChecks=vm.runInNewContext(stripTypeScriptTypes(fs.readFileSync('lib/booking-pricing.ts','utf8')).replace(/export /g,'')+';({DEFAULT_BOOKING_PRICING,calculateDeliveryFare,inServiceArea,validateBookingPricing})');
+test('Shopping defaults accept fifteen products and retain a bounded configurable cap',()=>{
+ assert.equal(pricingChecks.DEFAULT_BOOKING_PRICING.maxShoppingProducts,15)
+ assert.equal(checks.validateShoppingItems(Array.from({length:15},(_,n)=>({...item,name:`Item ${n+1}`}))),null)
+ assert.ok(checks.validateShoppingItems(Array.from({length:16},(_,n)=>({...item,name:`Item ${n+1}`}))))
+ assert.equal(pricingChecks.validateBookingPricing({...pricingChecks.DEFAULT_BOOKING_PRICING,maxShoppingProducts:50}),true)
+ assert.equal(pricingChecks.validateBookingPricing({...pricingChecks.DEFAULT_BOOKING_PRICING,maxShoppingProducts:51}),false)
+})
 test('Manchester introduction fares preserve fractional mileage and surcharges',()=>{
  const config=pricingChecks.DEFAULT_BOOKING_PRICING;
  for(const [miles,price] of [[0,4.49],[2,4.49],[3,5.69],[4,6.89],[5,8.09],[6,9.29],[8,11.69],[10,14.09],[2.25,4.79],[2.004,4.49],[2.006,4.50]]) assert.equal(pricingChecks.calculateDeliveryFare(miles,config),price);
@@ -149,6 +156,33 @@ test('PostgreSQL: card checkout, cancellation/refund idempotency, atomic OTP ear
  const administrator='00000000-0000-4000-8000-000000000003';await db.query("insert into users values($1,'admin')",[administrator]);await db.query('select save_booking_pricing($1,$2)',[administrator,{...config,minimumDriverEarnings:5}]);
  assert.equal((await db.query('select booking_pricing_history from surge_pricing_settings')).rows[0].booking_pricing_history.length,1);
  assert.equal(Number((await db.query('select driver_earning_quote from delivery_requests where id=$1',[second.id])).rows[0].driver_earning_quote),8);
+ // Revised checkout does not reserve Issuing money before customer payment.
+ await db.exec(fs.readFileSync('supabase/pending-shopping-checkout-products.sql','utf8'));
+ assert.equal((await db.query('select booking_pricing from surge_pricing_settings')).rows[0].booking_pricing.maxShoppingProducts,15);
+ const beforeCount=Number((await db.query('select count(*) from delivery_requests')).rows[0].count);
+ const zeroFunds=await reserve(51,draft,0);assert.equal(await reserve(51,draft,null),zeroFunds);
+ assert.equal(Number((await db.query('select count(*) from delivery_requests')).rows[0].count),beforeCount,'unpaid checkout stays out of dispatch');
+ const fifteen={...draft,shopping_items:Array.from({length:15},(_,n)=>({...item,name:`Product ${n+1}`,quantity:1,estimated_price:null}))};
+ const p15=await reserve(52,fifteen,null);await db.query("update payments set stripe_session_id='cs_15' where id=$1",[p15]);
+ const job15=(await db.query("select finalize_direct_checkout($1,'cs_15','pi_15',60) r",[p15])).rows[0].r;
+ assert.equal(Number((await db.query('select count(*) from shopping_items where delivery_id=$1',[job15.id])).rows[0].count),15);
+ assert.equal((await db.query("select has_function_privilege('authenticated','reserve_company_shopping_card(uuid,uuid,text,numeric)','execute') allowed")).rows[0].allowed,false);
+ await assert.rejects(()=>db.query('select reserve_company_shopping_card($1,$2,$3,100)',[job15.id,customer,'ic_test15']));
+ await db.query("update delivery_requests set driver_id=$2,status='accepted' where id=$1",[job15.id,driver]);
+ await assert.rejects(()=>db.query('select reserve_company_shopping_card($1,$2,$3,49)',[job15.id,administrator,'ic_test15']));
+ assert.equal((await db.query('select company_card_reference from delivery_requests where id=$1',[job15.id])).rows[0].company_card_reference,null);
+ await db.query('select reserve_company_shopping_card($1,$2,$3,50)',[job15.id,administrator,'ic_test15']);
+ await db.query("update payments set stripe_session_id='cs_51' where id=$1",[zeroFunds]);
+ const other=(await db.query("select finalize_direct_checkout($1,'cs_51','pi_51',60) r",[zeroFunds])).rows[0].r;
+ await db.query("update delivery_requests set driver_id=$2,status='accepted' where id=$1",[other.id,driver]);
+ await assert.rejects(()=>db.query('select reserve_company_shopping_card($1,$2,$3,50)',[other.id,administrator,'ic_test51']));
+ await db.query('select reserve_company_shopping_card($1,$2,$3,100)',[other.id,administrator,'ic_test51']);
+ await db.query('select reserve_company_shopping_card($1,$2,$3,100)',[other.id,administrator,'ic_test51']);
+ await assert.rejects(()=>db.query('select prepare_company_purchase($1,$2)',[other.id,driver]),'card reservation alone never permits purchases');
+ await db.query('update wallet_balances set balance=200 where user_id=$1',[customer]);
+ const legacy=(await db.query('select book_shopping_order_atomic($1,$2,$3) r',[customer,'00000000-0000-4000-8000-000000000053',JSON.stringify({...order,shopping_items:fifteen.shopping_items})])).rows[0].r;
+ assert.equal(Number((await db.query('select count(*) from shopping_items where delivery_id=$1',[legacy.id])).rows[0].count),15);
+ await assert.rejects(()=>db.query('select book_shopping_order_atomic($1,$2,$3)',[customer,'00000000-0000-4000-8000-000000000054',JSON.stringify({...order,shopping_items:[...fifteen.shopping_items,item]})]));
  await db.close();
 });
 

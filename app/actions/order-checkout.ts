@@ -99,7 +99,6 @@ export async function startOrderCheckout(
     let draft: Record<string, unknown>;
     let amount: number;
     let itemsHold = 0;
-    let companyFunds: number | null = null;
     if (input.type === "delivery") {
       const p = input.order;
       if (!p.pickup_address?.trim() || !p.delivery_address?.trim())
@@ -158,11 +157,6 @@ export async function startOrderCheckout(
         (sum, i) => sum + (i.estimated_price ?? 0) * i.quantity,
         0,
       );
-      const businessBalance = await getStripe().balance.retrieve();
-      const available =
-        businessBalance.issuing?.available.find((b) => b.currency === "gbp")
-          ?.amount ?? 0;
-      companyFunds = available / 100;
       const bfm = await getBfmSettings();
       if (!bfm.enabled || estimated > bfm.max_purchase_amount)
         return {
@@ -227,18 +221,13 @@ export async function startOrderCheckout(
       p_key: input.requestKey,
       p_amount: amount,
       p_draft: draft,
-      p_funds_available: companyFunds,
+      p_funds_available: null,
     });
     if (insertError) {
       if (insertError.message?.includes("discount_"))
         return {
           error:
             "This discount has already been reserved or is no longer available. Resume the existing checkout or review a fresh quote.",
-        };
-      if (insertError.message?.includes("company_purchase_capacity"))
-        return {
-          error:
-            "Company shopping funds are currently allocated to other orders. Please retry later; no payment has been taken.",
         };
       throw insertError;
     }

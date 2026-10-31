@@ -26,7 +26,7 @@ const NOTIFICATION_TEMPLATES = [
 ]
 
 const PRICING_FIELDS = [
-  {key:"maxShoppingProducts",label:"Maximum different shopping products (1–5)",placeholder:"5"},
+  {key:"maxShoppingProducts",label:"Maximum different shopping products (15–50)",placeholder:"15"},
   {key:"maxQuantityPerProduct",label:"Maximum quantity per product",placeholder:"10"},
   {key:"maxShoppingWeightKg",label:"Maximum shopping weight (kg)",placeholder:"15"},
   {key:"maxShoppingDimensionCm",label:"Maximum package dimension (cm)",placeholder:"60"},

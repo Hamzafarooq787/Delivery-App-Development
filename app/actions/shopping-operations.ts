@@ -74,19 +74,17 @@ export async function fundShoppingCard(deliveryId: string, cardId: string) {
         error:
           "Company Issuing balance is insufficient. Fund it from the business bank account first.",
       };
-    const { data: reserved, error: reserveError } = await admin
-      .from("delivery_requests")
-      .update({ company_card_reference: cardId })
-      .eq("id", deliveryId)
-      .eq("status", job.status)
-      .eq("driver_id", job.driver_id)
-      .or(`company_card_reference.is.null,company_card_reference.eq.${cardId}`)
-      .select("id")
-      .maybeSingle();
+    // Customer checkout is independent of company liquidity. Reserve actual
+    // purchase-card capacity here, under a database lock, before enabling it.
+    const { data: reserved, error: reserveError } = await admin.rpc("reserve_company_shopping_card", {
+      p_id: deliveryId, p_actor: user.id, p_card: cardId, p_available: available / 100,
+    });
     if (reserveError || !reserved)
       return {
         error:
-          "Card is assigned to another order, or this order changed. Refresh and retry.",
+          reserveError?.message?.includes("company_purchase_capacity")
+            ? "Other company cards have reserved these funds. Add funds to the business Issuing balance, then retry. The customer booking is retained."
+            : "Card is assigned to another order, or this order changed. Refresh and retry.",
       };
     await stripe.issuing.cards.update(cardId, {
       status: "inactive",

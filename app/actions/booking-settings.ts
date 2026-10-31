@@ -16,6 +16,7 @@ export async function saveBookingPricing(config: BookingPricing) {
   const { data: caller } = await admin.from('users').select('role').eq('id', user.id).maybeSingle()
   if (caller?.role !== 'admin') return { error: 'Not authorized' }
   if (!validateBookingPricing(config)) return { error: 'Enter valid non-negative prices and a positive base fare (maximum 500).' }
+  if (config.maxShoppingProducts < 15) return { error: 'Allow at least 15 different shopping products (maximum 50).' }
   const { error } = await admin.rpc('save_booking_pricing',{p_actor:user.id,p_config:config})
   if (error) return { error: 'Could not save pricing settings.' }
   revalidatePath('/dashboard/admin/settings')
