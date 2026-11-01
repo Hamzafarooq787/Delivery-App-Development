@@ -17,6 +17,7 @@
  */
 "use server"
 
+import { integrationBudget } from "@/lib/integration-access"
 import { bookingAvailability } from "@/lib/booking-availability"
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
@@ -73,6 +74,8 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
   let config: BookingPricing
   try { config = await getBookingPricing() } catch { return { error: "Pricing settings unavailable. Please retry." } }
   if (!inServiceArea(params.pickupLat, params.pickupLng, config.serviceRadiusMiles) || !inServiceArea(params.deliveryLat, params.deliveryLng, config.serviceRadiusMiles)) return { error: "Both addresses must be within our service area. Contact support for coverage." }
+  const budget = await integrationBudget(user.id,"maps")
+  if (budget) return {error:budget.error}
   const route = await fetchRouteServer(
     { lat: params.pickupLat, lng: params.pickupLng },
     { lat: params.deliveryLat, lng: params.deliveryLng }
@@ -139,7 +142,7 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
     data: {
       consentToken: issueQuoteConsent(user.id, deliveryScope(params), finalPrice),
       distanceMiles: route.distance_miles,
-      durationMin: route.duration_min,
+      durationMin: Math.ceil(route.duration_min),
       priceLines: fareBreakdown(route.distance_miles,config,params.packageSize),
       basePrice,
       surgeMultiplier,

@@ -1,5 +1,6 @@
 "use client"
 
+import { chatWindow } from "@/lib/chat-history"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { MessageSquare, Send, X, Loader2 } from "lucide-react"
@@ -52,13 +53,15 @@ export function LiveChat() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updated }),
+        body: JSON.stringify({ messages: chatWindow(updated) }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
         setError(data.error ?? "Something went wrong. Please try again.")
+        setMessages(previous => previous.slice(0,-1))
+        setInput(trimmed)
         return
       }
 
@@ -68,6 +71,8 @@ export function LiveChat() {
       ])
     } catch {
       setError("Network error. Please check your connection and try again.")
+      setMessages(previous => previous.slice(0,-1))
+      setInput(trimmed)
     } finally {
       setLoading(false)
     }
@@ -152,6 +157,7 @@ export function LiveChat() {
             <div className="px-4 py-3 border-t border-border bg-card">
               <div className="flex items-end gap-2">
                 <textarea
+                  maxLength={4000}
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}

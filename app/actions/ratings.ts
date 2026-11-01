@@ -50,50 +50,9 @@ export async function submitRating(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  if (!Number.isInteger(input.score) || input.score < 1 || input.score > 5) {
-    return { error: "Rating must be between 1 and 5 stars." }
-  }
-
-  const admin = createAdminClient()
-
-  const { data: delivery, error: deliveryError } = await admin
-    .from("delivery_requests")
-    .select("id, status, customer_id, driver_id")
-    .eq("id", input.deliveryId)
-    .single()
-
-  if (deliveryError || !delivery) return { error: "Delivery not found" }
-  if (delivery.status !== "delivered") return { error: "This delivery hasn't been completed yet." }
-
-  let raterRole: "customer" | "driver"
-  let ratedId: string
-
-  if (delivery.customer_id === user.id) {
-    if (!delivery.driver_id) return { error: "No driver was assigned to this delivery." }
-    raterRole = "customer"
-    ratedId = delivery.driver_id
-  } else if (delivery.driver_id === user.id) {
-    if (!delivery.customer_id) return { error: "No customer found for this delivery." }
-    raterRole = "driver"
-    ratedId = delivery.customer_id
-  } else {
-    return { error: "You weren't part of this delivery." }
-  }
-
-  const { error } = await admin.from("ratings").insert({
-    delivery_id: input.deliveryId,
-    rater_id: user.id,
-    rated_id: ratedId,
-    rater_role: raterRole,
-    score: input.score,
-    comment: input.comment?.trim() || null,
-    // status defaults to 'pending' — an admin has to approve it before the
-    // other party can see it.
-  })
-
-  if (error) {
-    return { error: error.code === "23505" ? "You've already rated this delivery." : error.message }
-  }
+  if (!input || !Number.isInteger(input.score) || input.score < 1 || input.score > 5 || typeof input.deliveryId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.deliveryId) || input.comment !== undefined && (typeof input.comment !== "string" || input.comment.length > 2000)) return {error:"Choose 1–5 stars and a comment of up to 2,000 characters."}
+  const {error} = await createAdminClient().rpc("submit_delivery_rating",{p_actor:user.id,p_delivery:input.deliveryId,p_score:input.score,p_comment:input.comment?.trim() || null})
+  if(error)return {error:error.code === "23505" ? "You've already rated this delivery." : "This completed delivery cannot be rated by your account. Please refresh or contact support."}
 
   revalidatePath("/dashboard/customer/tracking")
   revalidatePath(`/dashboard/driver/jobs/${input.deliveryId}`)
@@ -125,11 +84,9 @@ export async function getMyRatingForDelivery(deliveryId: string): Promise<{ data
  * affect what other people see.
  */
 export async function getRatingSummary(userId: string): Promise<{ average: number | null; count: number }> {
-  const admin = createAdminClient()
-  const { data } = await admin.from("ratings").select("score").eq("rated_id", userId).eq("status", "approved")
-  if (!data || data.length === 0) return { average: null, count: 0 }
-  const sum = data.reduce((acc, r) => acc + r.score, 0)
-  return { average: Math.round((sum / data.length) * 100) / 100, count: data.length }
+  if(typeof userId !== "string" || !/^[0-9a-f-]{36}$/i.test(userId))return {average:null,count:0}
+  const {data,error}=await createAdminClient().rpc("approved_rating_summary",{p_user:userId})
+  return error || !data ? {average:null,count:0} : {average:data.average,count:Number(data.count)}
 }
 
 /** Both ratings (if any) for a delivery — RLS lets admins see either direction, any status. */
@@ -150,6 +107,7 @@ async function requireAdmin(): Promise<boolean> {
 }
 
 export async function adminGetPendingReviewCount(): Promise<number> {
+  if (!(await getAdminActor("support"))) return 0
   const admin = createAdminClient()
   const { count } = await admin.from("ratings").select("id", { count: "exact", head: true }).eq("status", "pending")
   return count ?? 0

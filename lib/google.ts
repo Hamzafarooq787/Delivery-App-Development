@@ -79,6 +79,7 @@ export async function googleReverseGeocode(lat: number, lng: number): Promise<st
 export async function googleDetectCountryCode(lat: number, lng: number): Promise<string | null> {
   const res = await fetch(`/api/google/geocode?latlng=${lat},${lng}&result_type=country`)
   const data = await res.json()
+  assertGoogleResponse(res, data)
   const country = data.results?.[0]?.address_components?.find(
     (c: any) => c.types.includes('country')
   )
@@ -91,10 +92,12 @@ export async function fetchRoute(from: LngLat, to: LngLat): Promise<RouteResult 
       `/api/google/directions?origin=${from.lat},${from.lng}&destination=${to.lat},${to.lng}`
     )
     const data = await res.json()
+    assertGoogleResponse(res, data)
     const route = data.routes?.[0]
     if (!route) return null
     const leg = route.legs?.[0]
-    const distance_km = (leg?.distance?.value ?? 0) / 1000
+    if (!leg || !Number.isFinite(leg.distance?.value) || leg.distance.value < 0 || !Number.isFinite(leg.duration?.value) || leg.duration.value < 0 || typeof route.overview_polyline?.points !== "string") return null
+    const distance_km = leg.distance.value / 1000
     const coords = decodePoly(route.overview_polyline.points)
     return {
       distance_km,

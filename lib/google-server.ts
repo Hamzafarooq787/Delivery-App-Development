@@ -38,13 +38,14 @@ export async function fetchRouteServer(
       `?origin=${from.lat},${from.lng}&destination=${to.lat},${to.lng}` +
       `&departure_time=now&key=${key}`
 
-    const res = await fetch(url)
+    const res = await fetch(url, {signal:AbortSignal.timeout(10000),cache:"no-store"})
+    if (!res.ok) { await recordHealth("maps",false,"Directions provider unavailable"); return null }
     const data = await res.json()
     const route = data.routes?.[0]
     if (!route) { await recordHealth("maps",false,"Route could not be calculated"); return null }
 
     const leg = route.legs?.[0]
-    if (!leg?.distance?.value || !leg?.duration?.value) return null
+    if (!leg || !Number.isFinite(leg.distance?.value) || leg.distance.value < 0 || !Number.isFinite(leg.duration?.value) || leg.duration.value < 0) return null
 
     const distance_km = leg.distance.value / 1000
 
@@ -52,13 +53,13 @@ export async function fetchRouteServer(
     return {
       distance_km,
       distance_miles: distance_km / 1.609344,
-      duration_min: Math.round(leg.duration.value / 60),
-      duration_in_traffic_min: leg.duration_in_traffic?.value
-        ? Math.round(leg.duration_in_traffic.value / 60)
+      duration_min: leg.duration.value / 60,
+      duration_in_traffic_min: Number.isFinite(leg.duration_in_traffic?.value) && leg.duration_in_traffic.value >= 0
+        ? leg.duration_in_traffic.value / 60
         : null,
     }
   } catch (error) {
-    console.error("[google-server] fetchRouteServer failed:", error)
+    await recordHealth("maps",false,"Directions request failed or timed out")
     return null
   }
 }
