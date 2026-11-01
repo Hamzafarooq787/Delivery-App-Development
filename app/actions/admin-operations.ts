@@ -44,3 +44,15 @@ export async function resolveRecoveryCancellation(id:string,reason:string,return
  const result=await db.rpc('resolve_recovery_cancellation',{p_actor:actor.id,p_id:id,p_reason:reason,p_return_confirmed:true,p_card_reference:order.company_card_reference??null});if(result.error)return{error:'Cancellation could not be completed. Refresh the case before retrying. A verified company card may already be closed.'};const {processOrderRefunds}=await import('@/lib/payments/direct');await processOrderRefunds(id).catch(()=>{});revalidatePath(`/dashboard/admin/orders/${id}`);revalidatePath('/dashboard/driver','layout');return{success:true}
  }catch{return{error:'The company card or merchant return could not be verified. No cancellation was confirmed.'}}
 }
+
+export async function getOrderRecovery(id:string){
+ const session=await createClient();const {data:{user}}=await session.auth.getUser();if(!user)return{error:'Please sign in.'}
+ const db=createAdminClient();const {data:o,error}=await db.from('delivery_requests').select('customer_id,driver_id,status,pickup_address,recovery_case').eq('id',id).maybeSingle();if(error||!o||o.customer_id!==user.id&&o.driver_id!==user.id)return{error:'Recovery information is unavailable.'}
+ const record=o.recovery_case;if(!record||record.status!=='open')return{data:null}
+ const instructions:Record<string,string>={return_to_pickup:'Support has requested a return to the collection address. Do not continue to the original destination. Contact support to arrange a safe return.',verification_hold:'This delivery is paused for a driver clearance review. Contact support and do not continue driving or purchasing for this job.',legacy_assignment_review:'Support is reviewing multiple existing assignments. Confirm your current job with support before changing an assignment.',open:'Support is reviewing this delivery. Contact support for help.'}
+ return{data:{action:String(record.action),instruction:instructions[record.action]??instructions.open,version:String(record.at),acknowledged:!!record.driver_acknowledged_at,canAcknowledge:o.driver_id===user.id,returnAddress:o.driver_id===user.id&&record.action==='return_to_pickup'?o.pickup_address:null}}
+}
+export async function acknowledgeOrderRecovery(id:string,version:string){
+ const session=await createClient();const {data:{user}}=await session.auth.getUser();if(!user)return{error:'Please sign in.'}
+ const {error}=await createAdminClient().rpc('acknowledge_order_recovery',{p_actor:user.id,p_id:id,p_version:version});if(error)return{error:'Instructions changed or this job is unavailable. Refresh before acknowledging.'};revalidatePath(`/dashboard/admin/orders/${id}`);return{success:true}
+}

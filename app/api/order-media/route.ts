@@ -1,3 +1,4 @@
+import {getAdminActor} from '@/lib/admin-access'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { parseOrderPhoto } from '@/lib/order-media'
@@ -10,6 +11,10 @@ export async function GET(request: Request) {
     const photo = parseOrderPhoto(new URL(request.url).searchParams.get('url'))
     if (!photo) return new Response('Invalid image', { status: 400, headers })
     const db = createAdminClient()
+    const actorProfile=await db.from('users').select('role,account_status').eq('id',user.id).maybeSingle()
+    if(actorProfile.error||actorProfile.data?.account_status!=='active')return new Response('Forbidden',{status:403})
+    if(actorProfile.data.role==='admin'){const actor=await getAdminActor('any');if(!actor||!actor.owner&&!['operations', 'support'].some(scope=>actor.scopes.includes(scope)))return new Response('Forbidden',{status:403})}
+
     if (photo.path.split('/')[0] !== user.id) {
       const { data: allowed, error } = await db.rpc('can_read_order_photo', { p_user: user.id, p_url: photo.url })
       if (error || allowed !== true) return new Response('Not found', { status: 404, headers })

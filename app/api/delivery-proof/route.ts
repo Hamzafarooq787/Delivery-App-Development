@@ -1,3 +1,4 @@
+import {getAdminActor} from '@/lib/admin-access'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -9,6 +10,10 @@ export async function GET(request: Request) {
   const id = search.get('id'), kind = search.get('kind')
   if (!id || !['pickup','delivery'].includes(kind ?? '')) return new Response('Invalid proof', { status: 400 })
   const admin = createAdminClient()
+  const actorProfile=await admin.from('users').select('role,account_status').eq('id',user.id).maybeSingle()
+  if(actorProfile.error||actorProfile.data?.account_status!=='active')return new Response('Forbidden',{status:403})
+  if(actorProfile.data.role==='admin'){const actor=await getAdminActor('any');if(!actor||!actor.owner&&!['operations', 'support'].some(scope=>actor.scopes.includes(scope)))return new Response('Forbidden',{status:403})}
+
   const { data: order } = await admin.from('delivery_requests').select('customer_id,driver_id,parcel_image_url,delivered_image_url').eq('id',id).maybeSingle()
   if (!order) return new Response('Not found', { status: 404 })
   if (user.id !== order.customer_id && user.id !== order.driver_id) {

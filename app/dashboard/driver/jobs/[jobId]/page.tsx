@@ -30,13 +30,14 @@ export default async function JobDetailPage({
 
   if (error || !job) notFound()
 
-  const [customerRes, logsRes] = await Promise.all([
+  const [customerRes, logsRes,profileRes] = await Promise.all([
     getDriverCustomerContact(jobId).then(data=>({data})),
     supabase
       .from("delivery_status_logs")
       .select("status, created_at")
       .eq("delivery_id", jobId)
       .order("created_at", { ascending: true }),
+    supabase.from("driver_profiles").select("status").eq("id",user?.id??"").maybeSingle(),
   ])
 
   const customer = customerRes.data
@@ -59,6 +60,7 @@ export default async function JobDetailPage({
 
   return (
     <><DriverRefresh/><DriverJobView
+      canOperate={profileRes.data?.status==="approved"&&!(job.recovery_case?.status==="open"&&["return_to_pickup","verification_hold"].includes(job.recovery_case?.action))}
       job={job}
       customer={customer}
       timelineSteps={timelineSteps}
