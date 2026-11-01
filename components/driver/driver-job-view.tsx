@@ -1,4 +1,5 @@
 "use client"
+import { OrderRecoveryInstructions } from "@/components/shared/order-recovery-instructions"
 import { CustomerThread } from "@/components/shared/customer-thread"
 import { driverEarning } from '@/lib/driver-earnings'
 import { CollectionWaiting } from './collection-waiting'
@@ -71,13 +72,14 @@ type Customer = { full_name: string | null; phone: string | null; email: string 
 type TimelineStep = { label: string; status: "completed" | "active" | "upcoming"; time?: string }
 
 type Props = {
+  canOperate?:boolean
   job: Job
   customer: Customer
   timelineSteps: TimelineStep[]
   userId: string
 }
 
-export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
+export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=true }: Props) {
   const [showParcelAuth, setShowParcelAuth] = useState(false)
   const [showOtpModal, setShowOtpModal] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -119,9 +121,11 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
     return (parts[0][0] + parts[1][0]).toUpperCase()
   }
 
+  if(!canOperate)return <div className="p-4 text-white"><h1 className="text-xl font-bold">Delivery paused for support</h1><p>Your existing job is retained. Contact support to arrange a safe return or handover.</p><OrderRecoveryInstructions id={job.id} driver/><CustomerThread kind="order" id={job.id}/></div>
+
   if (job.service_type === "buy_for_me") {
     return (
-      <BfmShoppingWorkflow
+      <><OrderRecoveryInstructions id={job.id} driver/><BfmShoppingWorkflow
         job={{
           id: job.id,
           shop_instructions:job.shop_instructions,delivery_instructions:job.delivery_instructions,
@@ -140,12 +144,13 @@ export function DriverJobView({ job, customer, timelineSteps, userId }: Props) {
           receipt_url: job.receipt_url ?? null,
         }}
         userId={userId}
-      />
+      /></>
     )
   }
 
   return (
     <div className="min-h-screen bg-[var(--brand-bg)] pb-[12rem] lg:pb-28">
+      <OrderRecoveryInstructions id={job.id} driver/>
       {/* Top bar */}
       <div className="sticky top-0 z-20 bg-[var(--brand-bg)]/95 backdrop-blur-sm border-b border-[var(--color-outline-variant)]/15 px-4 py-3 flex items-center gap-3">
         <Link href="/dashboard/driver/active-jobs" className="flex items-center gap-1.5 text-[var(--color-on-surface-variant)] hover:text-white transition-colors text-sm font-bold">

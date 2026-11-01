@@ -58,6 +58,8 @@ export async function sendCustomerThread(kind:'order'|'support',id:string,key:st
    if(data?.created&&data.recipient&&data.url)after(async()=>{await notifyUser({userId:data.recipient,title:'New delivery message',body:'A new message is waiting in your order conversation.',url:data.url,tag:`order-message-${key}`})})
    return {success:true}
  }
+ const {data:caller,error:callerError}=await admin.from('users').select('role,account_status').eq('id',user.id).maybeSingle()
+ if(callerError||!caller||caller.account_status!=='active'||caller.role==='admin'&&!(await getAdminActor('support')))return {error:'Support permission and required MFA are needed.'}
  const {error}=await admin.rpc('append_customer_thread',{p_kind:kind,p_id:id,p_actor:user.id,p_key:key,p_body:body.trim()})
  return error?{error:'Message could not be sent. Please retry.'}:{success:true}
 }

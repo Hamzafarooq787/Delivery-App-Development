@@ -12,6 +12,7 @@ test('Order photos reject foreign hosts, traversal and references owned by anoth
 function imageRoute(user,allowed=false) {
  let signed=0,rpc=0
  const db={
+  from:()=>{const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:{role:"customer",account_status:"active"},error:null})};return q},
   rpc:async(name,p)=>{rpc++;assert.equal(name,'can_read_order_photo');assert.equal(p.p_user,user.id);return{data:allowed}},
   storage:{from:bucket=>{
    assert.equal(bucket,'delivery-item-photos')

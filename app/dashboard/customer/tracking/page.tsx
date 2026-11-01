@@ -1,4 +1,5 @@
 'use client'
+import {OrderRecoveryInstructions} from "@/components/shared/order-recovery-instructions"
 import { orderMediaUrl } from '@/lib/order-media'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
@@ -497,6 +498,7 @@ function TrackingPageInner() {
             </div>
           )}
 
+          {shipment&&<OrderRecoveryInstructions id={shipment.id}/>}
           {/* ── Parcel photo (shown after collected + when delivered) ── */}
           {shipment?.parcel_image_url && (
             <div className="mx-4 my-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0">

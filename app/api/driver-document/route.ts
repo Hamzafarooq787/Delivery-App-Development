@@ -1,3 +1,4 @@
+import {getAdminActor} from '@/lib/admin-access'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -8,6 +9,10 @@ export async function GET(request: Request) {
   const id = new URL(request.url).searchParams.get('id')
   if (!id) return new Response('Missing document', { status: 400 })
   const admin = createAdminClient()
+  const actorProfile=await admin.from('users').select('role,account_status').eq('id',user.id).maybeSingle()
+  if(actorProfile.error||actorProfile.data?.account_status!=='active')return new Response('Forbidden',{status:403})
+  if(actorProfile.data.role==='admin'){const actor=await getAdminActor('any');if(!actor||!actor.owner&&!['operations'].some(scope=>actor.scopes.includes(scope)))return new Response('Forbidden',{status:403})}
+
   const { data: doc } = await admin.from('driver_documents').select('driver_id,file_url').eq('id', id).maybeSingle()
   if (!doc) return new Response('Not found', { status: 404 })
   if (doc.driver_id !== user.id) {

@@ -21,6 +21,7 @@ interface DriverLayoutClientProps {
   user: { full_name: string; email: string }
   isOnline: boolean
   driverStatus: string
+  hasActiveJobs?:boolean
   hasDocuments: boolean
   submittedAt?: string|null
   userId: string
@@ -37,6 +38,7 @@ export function DriverLayoutClient({
   isOnline,
   driverStatus,
   hasDocuments,
+  hasActiveJobs=false,
   submittedAt,
   userId,
 }: DriverLayoutClientProps) {
@@ -47,11 +49,11 @@ export function DriverLayoutClient({
   const isLocked = !isApproved
   const isMapDashboard = isApproved && pathname === '/dashboard/driver'
   const showOnboarding =
-    isLocked && !ALLOWED_WHEN_LOCKED.some((p) => pathname.startsWith(p))
+    isLocked && !(hasActiveJobs&&(pathname.startsWith('/dashboard/driver/jobs/')||pathname==='/dashboard/driver/active-jobs')) && !ALLOWED_WHEN_LOCKED.some((p) => pathname.startsWith(p))
 
   return (
     <DriverTrackingSelection>
-    {isLocked&&<DriverRefresh/>}
+    <DriverRefresh/>
     <div
       className={`flex h-screen overflow-hidden bg-[var(--brand-bg)] ${isMapDashboard ? styles.dashboardRoot : ''}`}
     >
@@ -159,7 +161,7 @@ export function DriverLayoutClient({
               hasDocuments={!!submittedAt}
             />
           ) : (
-            children
+            <>{isLocked&&hasActiveJobs&&<div role="alert" className="m-4 rounded-xl border border-orange-400/40 p-4 text-white">Your driver clearance needs review. Your existing jobs remain accessible for support and safe handover. Do not continue driving or shopping. <Link href="/dashboard/driver/active-jobs" className="underline">View existing jobs</Link></div>}{children}</>
           )}
         </main>
         <DriverBottomNav
