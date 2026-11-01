@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getAppOrigin } from "@/lib/get-app-origin"
+import { ensureVerifiedProfile } from "@/lib/auth-profile"
 import { redirect } from "next/navigation"
 
 /**
@@ -40,6 +41,8 @@ export async function addSecondaryRole(newRole: "customer" | "driver") {
 
   if (!["customer", "driver"].includes(newRole)) return { error: "Invalid role" }
   const admin = createAdminClient()
+  const account = await admin.from("users").select("role,account_status").eq("id", user.id).single()
+  if (account.error || account.data?.account_status !== "active" || account.data.role === "admin") return { error: "Account unavailable" }
 
   if (newRole === "driver") {
     const { error } = await admin
@@ -67,35 +70,8 @@ export async function ensureOAuthUserProfile(): Promise<{ role: string; error?: 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { role: "customer", error: "Not authenticated" }
 
-  // Check if profile already exists (returning user)
-  const { data: existing } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  if (existing) return { role: existing.role }
-
-  // New OAuth user — create profile row
-  const admin = createAdminClient()
-  const meta = user.user_metadata ?? {}
-  const full_name =
-    meta.full_name || meta.name ||
-    [meta.given_name, meta.family_name].filter(Boolean).join(" ") ||
-    user.email?.split("@")[0] || "User"
-
-  const role = "customer" // OAuth users default to customer
-
-  await admin.from("users").upsert(
-    { id: user.id, full_name, role, email: user.email },
-    { onConflict: "id" }
-  )
-  await admin.from("customer_profiles").upsert(
-    { id: user.id },
-    { onConflict: "id" }
-  )
-
-  return { role }
+  try { return { role: await ensureVerifiedProfile(user) } }
+  catch { return { role: "customer", error: "Your profile could not be loaded. Please retry." } }
 }
 
 export async function signIn(formData: FormData) {
@@ -109,17 +85,11 @@ export async function signIn(formData: FormData) {
     return { error: error.message }
   }
 
-  // Fetch role and redirect based on it
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Sign in failed. Please try again." }
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  const role = profile?.role || "customer"
+  let role: string
+  try { role = await ensureVerifiedProfile(user) }
+  catch { await supabase.auth.signOut(); return { error: "Your account could not be loaded. Please retry or contact support." } }
 
   if (role === "admin") redirect("/dashboard/admin")
   if (role === "driver") redirect("/dashboard/driver")
@@ -140,7 +110,7 @@ export async function signUp(formData: FormData) {
 
   const origin = await getAppOrigin()
 
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -150,31 +120,14 @@ export async function signUp(formData: FormData) {
       // path) leaves an unexchanged ?code= sitting in the address bar and
       // the user never gets signed in.
       emailRedirectTo: `${origin}/auth/callback?role=${role}`,
-      data: { full_name, role, phone },
+      data: { full_name, role, phone, address },
     },
   })
 
   if (error) return { error: error.message }
 
-  if (data.user) {
-    const admin = createAdminClient()
-
-    await admin
-      .from("users")
-      .upsert({ id: data.user.id, full_name, role, phone }, { onConflict: "id" })
-
-    if (role === "driver") {
-      await admin
-        .from("driver_profiles")
-        .upsert({ id: data.user.id, status: "pending" }, { onConflict: "id" })
-    }
-
-    if (role === "customer") {
-      await admin
-        .from("customer_profiles")
-        .upsert({ id: data.user.id, default_address: address }, { onConflict: "id" })
-    }
-  }
+  // Auth's INSERT trigger initializes new profiles atomically. A duplicate
+  // signup may return an obfuscated user; it must never update public records.
 
   return { success: true }
 }
@@ -190,13 +143,10 @@ export async function signInAsDriver(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Sign in failed. Please try again." }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  if (profile?.role !== "driver") {
+  let role: string
+  try { role = await ensureVerifiedProfile(user) }
+  catch { await supabase.auth.signOut(); return { error: "Your account could not be loaded. Please retry or contact support." } }
+  if (role !== "driver") {
     await supabase.auth.signOut()
     return { error: "No driver account found for this email address." }
   }
@@ -218,7 +168,7 @@ export async function forgotPassword(formData: FormData) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     // Same fix as signUp() above — must be this app's own page, not
     // Supabase's project URL.
-    redirectTo: `${origin}/reset-password`,
+    redirectTo: `${origin}/auth/callback?type=recovery`,
   })
 
   if (error) return { error: error.message }
@@ -232,5 +182,6 @@ export async function resetPassword(formData: FormData) {
   const { error } = await supabase.auth.updateUser({ password })
   if (error) return { error: error.message }
 
-  redirect("/login")
+  await supabase.auth.signOut()
+  redirect("/login?reset=success")
 }

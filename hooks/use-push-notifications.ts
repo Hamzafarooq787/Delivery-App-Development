@@ -238,7 +238,7 @@ export function usePushNotifications({
           const err = await res.json().catch(() => ({}))
           console.error("[FCM] Token save failed:", err)
         } else {
-          console.log("[FCM] Token saved for user:", userId)
+          try { localStorage.setItem("godrop-device-token", fcmToken) } catch {}
         }
       } catch (error) {
         console.error("[FCM] Token save error:", error)

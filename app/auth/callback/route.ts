@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { ensureVerifiedProfile } from "@/lib/auth-profile"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 /**
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin   // e.g. https://your-app.vercel.app
   const code   = requestUrl.searchParams.get("code")
   // Role passed by the signup page via redirectTo URL — used only for new users
-  const signupRole = requestUrl.searchParams.get("role") as "customer" | "driver" | null
+  const requestedRole = requestUrl.searchParams.get("role")
+  const signupRole = requestedRole === "driver" || requestedRole === "customer" ? requestedRole : null
   // Set when this code came from a password-recovery email (forgotPassword())
   // that got rescued through here by proxy.ts's stranded-code handling — see
   // below. Distinct from a normal sign-in/OAuth code.
@@ -60,76 +62,18 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=no_user`)
   }
 
-  // 4. Check if a public.users row already exists (returning user)
-  const { data: existing } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle()
-
-  const admin = createAdminClient()
-
-  // 5. First-time OAuth user — create profile rows via admin client (bypasses RLS)
-  if (!existing) {
-    const meta = user.user_metadata ?? {}
-    const full_name =
-      meta.full_name ||
-      meta.name ||
-      [meta.given_name, meta.family_name].filter(Boolean).join(" ") ||
-      user.email?.split("@")[0] ||
-      "User"
-
-    // Use the role passed from the signup page; fall back to "customer"
-    const role = signupRole === "driver" ? "driver" : "customer"
-
-    await admin.from("users").upsert(
-      { id: user.id, full_name, role, email: user.email },
-      { onConflict: "id" }
-    )
-    if (role === "driver") {
-      await admin.from("driver_profiles").upsert(
-        { id: user.id, status: "pending" }, { onConflict: "id" }
-      )
-    } else {
-      await admin.from("customer_profiles").upsert(
-        { id: user.id }, { onConflict: "id" }
-      )
+  try {
+    const role = await ensureVerifiedProfile(user, signupRole ?? "customer")
+    if (signupRole && signupRole !== role && role !== "admin") {
+      const db = createAdminClient()
+      const result = await db.from(signupRole === "driver" ? "driver_profiles" : "customer_profiles")
+        .upsert(signupRole === "driver" ? {id:user.id,status:"pending"} : {id:user.id},{onConflict:"id",ignoreDuplicates:true})
+      if (result.error) throw new Error("Profile unavailable")
+      return NextResponse.redirect(`${origin}/auth/account-linked?existing=${role}&added=${signupRole}`)
     }
-
-    if (role === "driver") return NextResponse.redirect(`${origin}/dashboard/driver`)
-    return NextResponse.redirect(`${origin}/dashboard/customer`)
+    return NextResponse.redirect(`${origin}/dashboard/${role}`)
+  } catch {
+    await supabase.auth.signOut()
+    return NextResponse.redirect(`${origin}/login?error=profile_unavailable`)
   }
-
-  // 6. Returning user — check for role conflict (same Google account, different signup role)
-  const existingRole = existing.role as "customer" | "driver" | "admin"
-
-  if (signupRole && signupRole !== existingRole && existingRole !== "admin") {
-    // Auto-add the secondary profile — existing profile data stays untouched
-    if (signupRole === "driver") {
-      const { data: driverRow } = await supabase
-        .from("driver_profiles").select("id").eq("id", user.id).maybeSingle()
-      if (!driverRow) {
-        await admin.from("driver_profiles").upsert(
-          { id: user.id, status: "pending" }, { onConflict: "id" }
-        )
-      }
-    } else {
-      const { data: customerRow } = await supabase
-        .from("customer_profiles").select("id").eq("id", user.id).maybeSingle()
-      if (!customerRow) {
-        await admin.from("customer_profiles").upsert(
-          { id: user.id }, { onConflict: "id" }
-        )
-      }
-    }
-    // Show the user a confirmation page explaining what happened
-    return NextResponse.redirect(
-      `${origin}/auth/account-linked?existing=${existingRole}&added=${signupRole}`
-    )
-  }
-
-  // 7. Normal returning login — redirect to existing role's dashboard
-  if (existingRole === "admin")  return NextResponse.redirect(`${origin}/dashboard/admin`)
-  if (existingRole === "driver") return NextResponse.redirect(`${origin}/dashboard/driver`)
-  return NextResponse.redirect(`${origin}/dashboard/customer`)
 }

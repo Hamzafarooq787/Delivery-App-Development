@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { claimDevice, validDeviceToken } from "@/lib/notifications/devices"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -32,46 +33,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { token, deviceType } = body as { token?: string; deviceType?: string }
 
-    if (!token || typeof token !== "string" || token.length < 10) {
-      return NextResponse.json({ error: "Invalid FCM token" }, { status: 400 })
-    }
-
-    // Use admin client to bypass RLS — the route is already auth-gated
-    const admin = createAdminClient()
-
-    // ── Prevent cross-account token leakage on shared devices ────────────────
-    // If this FCM token was previously registered under a DIFFERENT user (e.g.
-    // user A logged out, user B logged in on the same browser), delete the old
-    // row first so user A stops receiving user B's notifications.
-    await admin
-      .from("user_notification_tokens")
-      .delete()
-      .eq("fcm_token", token)
-      .neq("user_id", user.id)
-
-    // Upsert the token for the current user — idempotent for same user/device
-    const { error } = await admin
-      .from("user_notification_tokens")
-      .upsert(
-        {
-          user_id: user.id,
-          fcm_token: token,
-          device_type: (deviceType ?? "web") as "web" | "mobile" | "desktop",
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id,fcm_token",
-          ignoreDuplicates: false, // Always update updated_at on refresh
-        }
-      )
-
-    if (error) {
-      console.error("[API/token] Upsert error:", error)
-      return NextResponse.json({ error: "Failed to save token" }, { status: 500 })
-    }
+    const result = await claimDevice(user.id, token, deviceType ?? "web")
+    if (result.error) return NextResponse.json(result,{status:400})
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof SyntaxError) return NextResponse.json({error:"Invalid JSON"},{status:400})
     console.error("[API/token] POST error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
@@ -91,9 +58,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => ({}))
+    const body = await req.json()
     const { token } = body as { token?: string }
 
+    if (token !== undefined && !validDeviceToken(token)) return NextResponse.json({error:"Invalid device token"},{status:400})
     const admin = createAdminClient()
 
     let query = admin
@@ -116,6 +84,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof SyntaxError) return NextResponse.json({error:"Invalid JSON"},{status:400})
     console.error("[API/token] DELETE error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
