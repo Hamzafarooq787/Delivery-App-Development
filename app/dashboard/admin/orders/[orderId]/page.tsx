@@ -1,3 +1,4 @@
+import {timelineTime} from '@/lib/timeline-time'
 import {getAdminActor} from "@/lib/admin-access"
 import {OrderRecoveryPanel} from "@/components/admin/order-recovery-panel"
 import {OrderConversation} from "@/components/admin/order-conversation"
@@ -54,7 +55,7 @@ export default async function AdminOrderDetailPage({
       : Promise.resolve({ data: null }),
     admin
       .from("delivery_status_logs")
-      .select("status, created_at")
+      .select("status, created_at, occurred_at_known")
       .eq("delivery_id", orderId)
       .order("created_at", { ascending: true }),
     getDeliveryRatings(orderId),
@@ -67,13 +68,13 @@ export default async function AdminOrderDetailPage({
 
   const customer = customerRes.data
   const driver = driverRes.data
-  const logs: { status: string; created_at: string }[] = logsRes.data ?? []
+  const logs: { status: string; created_at: string;occurred_at_known?:boolean }[] = logsRes.data ?? []
   const ratings = ratingsRes.data
   const drivers = (driversRes.data ?? []) as { id: string; full_name: string }[]
   const customerRating = ratings.find((r) => r.rater_role === "customer")
   const driverRating   = ratings.find((r) => r.rater_role === "driver")
 
-  const {data:cardPayment}=await admin.from('payments').select('amount,status,refund_jobs').eq('delivery_id',orderId).eq('payment_method','stripe').maybeSingle()
+  const {data:cardPayments,error:paymentError}=await admin.from('payments').select('id,purpose,amount,status,refund_jobs').or(`delivery_id.eq.${orderId},related_delivery_id.eq.${orderId}`).eq('payment_method','stripe').order('created_at');if(paymentError)throw new Error('Order payment records could not load.')
   const currentIdx = STATUS_ORDER.indexOf(order.status)
 
   return (
@@ -194,8 +195,9 @@ export default async function AdminOrderDetailPage({
           </div>
 
           {order.service_type === "buy_for_me" && <ShoppingItemsHistory orderId={orderId} />}
+          {order.collection_wait_history?.length>0&&<details className="rounded-xl border border-white/15 p-4"><summary>Previous waiting timers</summary>{order.collection_wait_history.map((w:any,i:number)=><p key={i}>Closed on reassignment · {w.status.replaceAll("_"," ")} · {w.amount==null?"No amount agreed":`£${Number(w.amount).toFixed(2)}`}</p>)}</details>}
           {order.collection_wait&&<section className="rounded-xl border border-white/15 bg-[var(--brand-panel)] p-4 text-white"><h3 className="font-bold">Collection waiting request</h3><p>Status: {order.collection_wait.status}</p>{order.collection_wait.amount!=null&&<p>Requested £{Number(order.collection_wait.amount).toFixed(2)} at £{Number(order.collection_wait.rate).toFixed(2)} per minute after 5 free minutes.</p>}<p className="text-sm">Approval alone does not take payment. A separate paid checkout records the waiting charge; earnings follow delivery completion.</p></section>}
-          {cardPayment && <OrderPaymentPanel id={orderId} amount={cardPayment.amount} status={cardPayment.status} refunds={cardPayment.refund_jobs??[]} />}
+          {cardPayments?.map(p=><OrderPaymentPanel key={p.id} id={orderId} paymentId={p.id} purpose={p.purpose} amount={p.amount} status={p.status} refunds={p.refund_jobs??[]} />)}
       {order.service_type === "buy_for_me" && <ShoppingFundingPanel id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
           {/* Buy for Me Details */}
           {order.service_type === "buy_for_me" && (
@@ -346,10 +348,7 @@ export default async function AdminOrderDetailPage({
                       </p>
                       {log && (
                         <p className="text-[11px] text-[var(--color-on-surface-variant)] mt-0.5">
-                          {new Date(log.created_at).toLocaleString("en-US", {
-                            month: "short", day: "numeric",
-                            hour: "2-digit", minute: "2-digit",
-                          })}
+                          {log.occurred_at_known===false?"Time unavailable — historical record":timelineTime(log.created_at)}
                         </p>
                       )}
                     </div>

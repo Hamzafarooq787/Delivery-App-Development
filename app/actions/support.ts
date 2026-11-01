@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache"
 
 export type AdminSupportTicket = {
   id: string
+  admin_unread?:number
   subject: string
   message: string
   status: "open" | "closed"
@@ -78,12 +79,12 @@ export async function adminSetTicketStatus(
   if (!["open","closed"].includes(status)) return {error:"Choose Open or Resolved."}
 
   const admin = createAdminClient()
-  const { error } = await admin
+  const {data:changed,error} = await admin
     .from("support_tickets")
     .update({ status })
-    .eq("id", ticketId)
+    .eq("id", ticketId).select("id").maybeSingle()
 
-  if (error) return { error: error.message }
+  if (error||!changed) return { error: "This support request is unavailable. Refresh before retrying." }
 
   revalidatePath("/dashboard/admin/support")
   revalidatePath("/dashboard/driver/support")

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   retryOrderRefunds,
   adminRefundCardOrder,
+  adminRefundWaitingPayment,
 } from "@/app/actions/order-checkout";
 type Refund = {
   key: string;
@@ -15,9 +16,9 @@ export function OrderPaymentPanel({
   id,
   amount,
   status,
-  refunds,
+  refunds,paymentId,purpose,
 }: {
-  id: string;
+  id: string;paymentId?:string;purpose?:string;
   amount: number;
   status: string;
   refunds: Refund[];
@@ -30,7 +31,7 @@ export function OrderPaymentPanel({
   const router = useRouter();
   return (
     <section className="rounded-xl border border-white/10 p-5 text-white space-y-3">
-      <h2 className="font-bold">Card payment and refunds</h2>
+      <h2 className="font-bold">{purpose==='collection_wait'?'Waiting payment and refunds':'Booking payment and refunds'}</h2>
       <p>
         Customer payment: £{Number(amount).toFixed(2)} · {status}
       </p>
@@ -98,8 +99,8 @@ export function OrderPaymentPanel({
             setBusy(true);
             requestKey.current ??= crypto.randomUUID();
             try {
-              const result = await adminRefundCardOrder(
-                id,
+              const result = await (purpose==='collection_wait'&&paymentId?adminRefundWaitingPayment:adminRefundCardOrder)(
+                purpose==='collection_wait'&&paymentId?paymentId:id,
                 Number(refundAmount),
                 reason,
                 requestKey.current,

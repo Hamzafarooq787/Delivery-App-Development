@@ -100,6 +100,7 @@ export function SupportPanel({
 }) {
   const [tickets, setTickets] = useState<SupportTicket[]>(initialTickets)
   const [page,setPage]=useState(1),[total,setTotal]=useState(initialCount),[selected,setSelected]=useState<string|null>(null),[listError,setListError]=useState(''),[loading,startLoad]=useTransition()
+  useEffect(()=>{const ticket=new URLSearchParams(window.location.search).get('ticket');if(ticket&&/^[0-9a-f-]{36}$/i.test(ticket))setSelected(ticket)},[])
   const request=useRef(0)
   function load(next:number){const version=++request.current;startLoad(async()=>{try{const r=await getDriverTickets(next);if(version!==request.current)return;if(r.error)setListError(r.error);else{setTickets(r.data);setTotal(r.count);setPage(next);setListError('')}}catch{setListError('Could not load support requests. Please retry.')}})}
   useEffect(()=>{const timer=setInterval(()=>{if(!document.hidden)load(page)},30000);return()=>clearInterval(timer)},[page])
@@ -170,7 +171,7 @@ export function SupportPanel({
                       #{t.id.slice(0, 8).toUpperCase()}
                     </td>
                     <td className="px-5 py-3.5 text-sm text-white max-w-xs">
-                      <button onClick={()=>setSelected(t.id)} className="block truncate text-left underline" title={t.subject}>{t.subject}</button>
+                      <button onClick={()=>setSelected(t.id)} className="block truncate text-left underline" title={t.subject}>{t.subject}{!!t.customer_unread&&<span> · {t.customer_unread} unread</span>}</button>
                     </td>
                     <td className="px-5 py-3.5"><TicketStatusBadge status={t.status} /></td>
                     <td className="px-5 py-3.5 text-xs text-[var(--color-on-surface-variant)] whitespace-nowrap">

@@ -1,7 +1,7 @@
 'use server'
 import { getAdminActor } from "@/lib/admin-access"
 import { after } from 'next/server'
-import { notifyUser } from '@/lib/notifications/internal'
+import { notifyUser,notifySupportUpdate } from '@/lib/notifications/internal'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { validateProfile } from '@/lib/customer-validation'
@@ -32,12 +32,13 @@ export async function getSavedAddresses(){
 export async function getCustomerThread(kind:'order'|'support',id:string,before?:string){
  const user=await identity();if(!user||!['order','support'].includes(kind)||!uuid.test(id))return {error:'Please sign in to view this conversation.'}
  const admin=createAdminClient()
- const {data:row,error}=await admin.from(kind==='order'?'delivery_requests':'support_tickets').select(kind==='order'?'customer_id,driver_id,status,order_messages':'user_id,status,message,replies').eq('id',id).maybeSingle()
+ const {data:row,error}=await admin.from(kind==='order'?'delivery_requests':'support_tickets').select(kind==='order'?'customer_id,driver_id,status,order_messages':'user_id,status,message,replies,customer_unread,admin_unread').eq('id',id).maybeSingle()
  if(error||!row)return {error:'Conversation unavailable.'}
  const record=row as unknown as Record<string,any>
  let allowed=kind==='order'?(record.customer_id===user.id||record.driver_id===user.id):record.user_id===user.id
  if(!allowed&&kind==='support'){const {data:profile}=await admin.from('users').select('role').eq('id',user.id).maybeSingle();allowed=!!(await getAdminActor('support'))}
  if(!allowed)return {error:'Conversation unavailable.'}
+ if(kind==='support'){const read=await admin.rpc('mark_support_read',{p_actor:user.id,p_id:id,p_seen:(record.replies??[]).length});if(read.error)return {error:'Conversation read status could not save. Please retry.'}}
  const all=(kind==='order'?record.order_messages:record.replies) as ThreadMessage[]??[]
  const end=before?all.findIndex(m=>m.id===before):all.length
  const last=end<0?all.length:end
@@ -60,6 +61,7 @@ export async function sendCustomerThread(kind:'order'|'support',id:string,key:st
  }
  const {data:caller,error:callerError}=await admin.from('users').select('role,account_status').eq('id',user.id).maybeSingle()
  if(callerError||!caller||caller.account_status!=='active'||caller.role==='admin'&&!(await getAdminActor('support')))return {error:'Support permission and required MFA are needed.'}
- const {error}=await admin.rpc('append_customer_thread',{p_kind:kind,p_id:id,p_actor:user.id,p_key:key,p_body:body.trim()})
+ const {data,error}=await admin.rpc('send_support_message',{p_id:id,p_actor:user.id,p_key:key,p_body:body.trim()})
+ if(!error&&data?.created)after(async()=>{await notifySupportUpdate(id,user.id,key)})
  return error?{error:'Message could not be sent. Please retry.'}:{success:true}
 }

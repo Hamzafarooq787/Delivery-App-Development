@@ -205,28 +205,15 @@ async function notifyDriversOfNewShoppingJob(
   shopAddress: string
 ): Promise<void> {
   const admin = createAdminClient()
-  const { data: drivers } = await admin
-    .from("driver_profiles")
-    .select("id")
-    .eq("status", "approved")
-    .eq("is_online", true)
-
-  if (!drivers?.length) return
-
-  // BFM jobs can be done by any vehicle (medium capacity)
-  const { data: vehicles } = await admin
-    .from("driver_vehicles")
-    .select("driver_id")
-    .in("driver_id", drivers.map((d) => d.id))
-
-  const driverIds = [...new Set((vehicles ?? []).map((v) => v.driver_id))]
-  if (!driverIds.length) return
-
+  const {data:eligible,error}=await admin.rpc('eligible_delivery_drivers',{p_id:deliveryId})
+  if(error)throw error
+  const driverIds:string[]=eligible??[]
+  if(!driverIds.length)return
   await notifyMultipleUsers({
     userIds: driverIds,
     title: "🛍️ New shopping job available!",
     body: `Shop from ${shopName} — ${shopAddress.slice(0, 50)}`,
-    url: "/dashboard/driver/jobs/available",
+    url: `/dashboard/driver/jobs/available?job=${deliveryId}`,
     tag: `bfm-new-${deliveryId}`,
     data: { deliveryId },
   })

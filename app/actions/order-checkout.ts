@@ -1,4 +1,5 @@
 "use server";
+import {revalidatePath} from "next/cache"
 import { getAdminActor } from "@/lib/admin-access"
 import { createHash } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
@@ -488,7 +489,7 @@ export async function getPendingOrderCheckouts() {
   if (!user) return [];
   const { data } = await createAdminClient()
     .from("payments")
-    .select("id,booking_draft")
+    .select("id,booking_draft").eq("purpose","booking")
     .eq("customer_id", user.id)
     .eq("payment_method", "stripe")
     .eq("status", "pending")
@@ -548,4 +549,11 @@ export async function adminRefundCardOrder(
     /* Recorded and retried by reconciliation. */
   }
   return { success: true };
+}
+
+export async function adminRefundWaitingPayment(paymentId:string,amount:number,reason:string,key:string){
+ const actor=await getAdminActor('finance');if(!actor)return{error:'Finance permission and required MFA are needed.'}
+ if(!Number.isFinite(amount)||amount<=0||typeof reason!=='string'||reason.trim().length<3||reason.length>500||!/^[0-9a-f-]{36}$/i.test(key))return{error:'Enter a valid amount and review reason.'}
+ const result=await createAdminClient().rpc('queue_waiting_refund',{p_actor:actor.id,p_payment:paymentId,p_amount:Math.round(amount*100)/100,p_reason:reason.trim(),p_key:key});if(result.error)return{error:'Refund could not be queued. Check the remaining amount and payment state.'}
+ try{await processOrderRefunds(result.data)}catch{/* The durable queue remains visible and retryable. */}revalidatePath(`/dashboard/admin/orders/${result.data}`);revalidatePath('/dashboard/customer/payments');return{success:true}
 }

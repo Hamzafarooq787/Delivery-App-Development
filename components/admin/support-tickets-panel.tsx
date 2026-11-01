@@ -6,8 +6,9 @@
  */
 "use client"
 
+import {useRouter} from "next/navigation"
 import { useState, useTransition, useEffect } from "react"
-import { adminGetSupportTickets, adminSetTicketStatus, type AdminSupportTicket } from "@/app/actions/support"
+import { adminSetTicketStatus, type AdminSupportTicket } from "@/app/actions/support"
 
 import { CustomerThread } from "@/components/shared/customer-thread"
 
@@ -28,13 +29,16 @@ function RoleBadge({ role }: { role: string }) {
   )
 }
 
-export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminSupportTicket[] }) {
+export function SupportTicketsPanel({ initialTickets,initialExpanded=null }: { initialTickets: AdminSupportTicket[];initialExpanded?:string|null }) {
   const [tickets, setTickets] = useState(initialTickets)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(initialExpanded)
   const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initialExpanded)
 
-  useEffect(() => { let alive = true, busy = false; const refresh = async () => { if (busy || document.visibilityState !== 'visible') return; busy = true; try { const r = await adminGetSupportTickets(); if (alive) { if (r.error) setError(r.error); else setTickets(r.data) } } catch { if (alive) setError('Could not refresh tickets.') } finally { busy = false } }; const timer = setInterval(refresh,15000); window.addEventListener('focus',refresh); return () => { alive=false;clearInterval(timer);window.removeEventListener('focus',refresh) } }, [])
+  const router=useRouter()
+  useEffect(()=>setTickets(initialTickets),[initialTickets])
+  useEffect(()=>{const refresh=()=>{if(!document.hidden)router.refresh()};const timer=setInterval(refresh,15000);window.addEventListener('focus',refresh);return()=>{clearInterval(timer);window.removeEventListener('focus',refresh)}},[router])
+
   const openCount = tickets.filter((t) => t.status === "open").length
 
   function toggleStatus(ticket: AdminSupportTicket) {
@@ -54,7 +58,7 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
       <div className="mb-8 md:mb-10">
         <h2 className="text-2xl md:text-4xl font-extrabold font-headline tracking-tighter text-white">Support Tickets</h2>
         <p className="text-[var(--color-on-surface-variant)] mt-1">
-          {openCount} open · {tickets.length} total
+          {openCount} open on this page · {tickets.length} shown
         </p>
       </div>
 
@@ -84,7 +88,7 @@ export function SupportTicketsPanel({ initialTickets }: { initialTickets: AdminS
                   >
                     <span className={`w-2 h-2 rounded-full shrink-0 ${isOpen ? "bg-[var(--brand-strong)] animate-pulse" : "bg-[#6ee7b7]"}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-white truncate">{t.subject}</p>
+                      <p className="text-sm font-bold text-white truncate">{t.subject}{!!t.admin_unread&&<span className="ml-2 text-[var(--brand-soft)]">{t.admin_unread} unread</span>}</p>
                       <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5 flex items-center gap-2">
                         <span>{t.user_name}</span>
                         <RoleBadge role={t.user_role} />
