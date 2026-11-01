@@ -1,68 +1,26 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { integrationIdentity,integrationBudget } from "@/lib/integration-access"
+import {validChatMessages} from "@/lib/chat-history"
 
-const client = new Anthropic()
-
-export async function POST(req: NextRequest) {
-  try {
-    // Require a session — this calls a paid API on every request, and was
-    // previously reachable by anyone on the internet with no auth or limit.
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated." }, { status: 401 })
-    }
-
-    const body = await req.json()
-    const { messages } = body
-
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json(
-        { error: "Messages array is required and must be non-empty." },
-        { status: 400 }
-      )
-    }
-
-    for (const msg of messages) {
-      if (!msg.content || typeof msg.content !== "string" || msg.content.trim() === "") {
-        return NextResponse.json(
-          { error: "Each message must have non-empty text content." },
-          { status: 400 }
-        )
-      }
-    }
-
-    const anthropicMessages: Anthropic.MessageParam[] = messages.map(
-      (msg: { role: "user" | "assistant"; content: string }) => ({
-        role: msg.role,
-        content: msg.content.trim(),
-      })
-    )
-
-    const response = await client.messages.create({
-      model: "claude-opus-4-7",
-      max_tokens: 1024,
-      system:
-        "You are a helpful support assistant for a delivery app. Help drivers with questions about deliveries, payouts, verification, and account issues. Be concise and friendly.",
-      messages: anthropicMessages,
-    })
-
-    const textBlock = response.content.find((b) => b.type === "text")
-    const reply = textBlock && textBlock.type === "text" ? textBlock.text : ""
-
-    return NextResponse.json({ reply })
-  } catch (error) {
-    if (error instanceof Anthropic.BadRequestError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    if (error instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json({ error: "API authentication failed." }, { status: 401 })
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      return NextResponse.json({ error: "Rate limit reached. Please try again later." }, { status: 429 })
-    }
-    console.error("Chat API error:", error)
-    return NextResponse.json({ error: "An unexpected error occurred." }, { status: 500 })
-  }
+export async function POST(req:NextRequest) {
+ const access=await integrationIdentity()
+ if("error" in access)return NextResponse.json({error:access.error},{status:access.status})
+ let body
+ try{body=await req.json()}catch{return NextResponse.json({error:"Invalid chat request."},{status:400})}
+ const messages=body?.messages
+ if(!validChatMessages(messages))return NextResponse.json({error:"Send a message of up to 4,000 characters with a short recent conversation."},{status:400})
+ const key=process.env.ANTHROPIC_API_KEY
+ if(!key)return NextResponse.json({error:"AI assistance is unavailable. Please use the support request form."},{status:503})
+ const budget=await integrationBudget(access.userId,"chat")
+ if(budget)return NextResponse.json({error:budget.error},{status:budget.status,headers:budget.status===429?{"Retry-After":"60"}:{}})
+ try{
+  const client=new Anthropic({apiKey:key,timeout:15000,maxRetries:0})
+  const response=await client.messages.create({model:"claude-opus-4-7",max_tokens:1024,system:"You are a support assistant for GoDrop. Give concise guidance about deliveries, payouts, verification and accounts. You cannot access, change, confirm or invent customer orders, balances, refunds, payouts or account records. Refer account-specific questions to the in-app support request form.",messages:messages.map(m=>({role:m.role,content:m.content.trim()}))})
+  const reply=response.content.filter(b=>b.type==="text").map(b=>b.text).join("\n").trim()
+  if(!reply)return NextResponse.json({error:"No reply was received. Please retry or contact support."},{status:502})
+  return NextResponse.json({reply})
+ }catch(error){
+  return NextResponse.json({error:"AI assistance is temporarily unavailable. Please retry or use the support request form."},{status:error instanceof Anthropic.RateLimitError?429:503})
+ }
 }

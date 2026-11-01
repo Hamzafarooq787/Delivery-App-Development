@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { googleProxy } from "@/lib/google-proxy";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 export async function GET(req: NextRequest) {
@@ -8,6 +9,14 @@ export async function GET(req: NextRequest) {
   const [lat, lng] = raw.split(",").map(Number);
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180)
     return NextResponse.json({ error: "Invalid coordinates" }, { status: 400 });
+  const type = req.nextUrl.searchParams.get("result_type");
+  if (
+    type &&
+    !["street_address", "postal_code", "premise", "route", "country"].includes(
+      type,
+    )
+  )
+    return NextResponse.json({ error: "Invalid result type" }, { status: 400 });
   const key = process.env.GOOGLE_MAPS_KEY;
   if (!key)
     return NextResponse.json(
@@ -32,27 +41,8 @@ export async function GET(req: NextRequest) {
       { error: "Please wait before trying again" },
       { status: 429, headers: { "Retry-After": "60" } },
     );
-  const type = req.nextUrl.searchParams.get("result_type");
-  if (
-    type &&
-    !["street_address", "postal_code", "premise", "route", "country"].includes(
-      type,
-    )
-  )
-    return NextResponse.json({ error: "Invalid result type" }, { status: 400 });
   const params = new URLSearchParams({ latlng: raw, key });
   if (type) params.set("result_type", type);
-  try {
-    const r = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?${params}`,
-      { signal: AbortSignal.timeout(8000) },
-    );
-    if (!r.ok) throw new Error();
-    return NextResponse.json(await r.json());
-  } catch {
-    return NextResponse.json(
-      { error: "Location lookup failed. Please retry." },
-      { status: 502 },
-    );
-  }
+  const result = await googleProxy("geocode/json",params);
+  return "error" in result ? NextResponse.json({error:result.error},{status:result.status}) : NextResponse.json(result.data);
 }
