@@ -43,7 +43,7 @@ export async function getCustomerThread(kind:'order'|'support',id:string,before?
  const end=before?all.findIndex(m=>m.id===before):all.length
  const last=end<0?all.length:end
  let contact:{name:string;phone:string|null}|null=null
- if(kind==='order'&&record.driver_id&&['accepted','collected','in_transit'].includes(record.status)){
+ if(kind==='order'&&record.driver_id&&['accepted','collected','picked_up','in_transit'].includes(record.status)){
  const other=record.customer_id===user.id?record.driver_id:record.customer_id
  const {data:p}=await admin.from('users').select('full_name,phone').eq('id',other).maybeSingle()
  contact={name:p?.full_name||'Your delivery contact',phone:p?.phone&&/^\+?[\d\s()-]{7,25}$/.test(p.phone)?p.phone.replace(/[^+\d]/g,''):null}

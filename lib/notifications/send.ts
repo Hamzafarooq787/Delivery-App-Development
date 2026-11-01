@@ -85,12 +85,12 @@ async function sendPushNotificationRaw({
 
   const db=createAdminClient()
   const [u,d]=await Promise.all([
-    db.from("users").select("service_push_enabled,marketing_push_opt_in").eq("id",userId).maybeSingle(),
+    db.from("users").select("service_push_enabled,marketing_push_opt_in,role,account_status").eq("id",userId).maybeSingle(),
     db.from("driver_profiles").select("notifications_enabled,delivery_alerts").eq("id",userId).maybeSingle()
   ])
   const promotion=notification.tag?.includes("marketing")||notification.tag?.includes("reengagement")
   const newJob=(notification.tag?.startsWith("new-delivery")||notification.tag?.startsWith("bfm-new"))
-  if(u.error||d.error||!u.data||u.data.service_push_enabled===false||d.data?.notifications_enabled===false||(newJob&&d.data?.delivery_alerts===false)||(promotion&&!u.data.marketing_push_opt_in))return {successCount:0,failureCount:0,failedTokens:[]}
+  if(u.error||d.error||!u.data||u.data.account_status!=="active"||u.data.service_push_enabled===false||(u.data.role==="driver"&&d.data?.notifications_enabled===false)||(newJob&&d.data?.delivery_alerts===false)||(promotion&&!u.data.marketing_push_opt_in))return {successCount:0,failureCount:0,failedTokens:[]}
   const config=await db.from("surge_pricing_settings").select("notification_settings").eq("id",1).single()
   if(config.error)return {successCount:0,failureCount:0,failedTokens:[]}
   const template=Object.entries(config.data.notification_settings??{}).filter(([key])=>notification.tag===key||notification.tag?.startsWith(key+"-")).sort((a,b)=>b[0].length-a[0].length)[0]?.[1] as {enabled?:boolean;title?:string}|undefined

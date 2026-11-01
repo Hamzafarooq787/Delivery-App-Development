@@ -19,22 +19,12 @@ export function TestPushButton() {
   const handleClick = async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/notifications/debug?send=1")
+      const res = await fetch("/api/notifications/send", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({test:true})})
       const data = await res.json()
 
-      if (data?.testSend?.successCount > 0) {
-        toast.info("Test push sent! Toast should appear above this message shortly.", {
-          duration: 10_000,
-        })
-      } else if (data?.testSend?.successCount === 0) {
-        toast.warning("Push sent but FCM reported 0 successes — token may be stale. Try reloading.", {
-          duration: 8_000,
-        })
-      } else if (typeof data?.testSend === "string" && data.testSend.startsWith("SKIPPED")) {
-        toast.error(`Debug: ${data.testSend}`, { duration: 8_000 })
-      } else {
-        toast.success("Push dispatched via FCM", { duration: 6_000 })
-      }
+      if (!res.ok) toast.error(data.error ?? "Could not send test notification.")
+      else if (data.successCount > 0) toast.success("Test notification sent.")
+      else toast.warning("No device received the test. Check notification permission and your notification settings.")
     } catch {
       toast.error("Failed to reach debug endpoint", { duration: 6_000 })
     } finally {

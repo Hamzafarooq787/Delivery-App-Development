@@ -8,19 +8,13 @@
  * Key exports:
  *   saveDeviceToken()    — persist an FCM token after it's generated client-side
  *   removeDeviceToken()  — delete token(s) on logout / opt-out
- *   notifyUser()         — send a push to ONE user (all their devices)
- *   notifyMultipleUsers() — broadcast to MANY users
+ * Sending utilities live in the server-only lib/notifications/send module.
  */
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { isPackageSize, VEHICLE_CAPABILITIES, type VehicleType } from "@/lib/vehicles"
-import {
-  sendPushNotification,
-  sendPushNotificationToMultipleUsers,
-} from "@/lib/notifications/send"
-import type { MulticastResult, UserNotificationResult } from "@/lib/notifications/types"
+import { claimDevice, validDeviceToken } from "@/lib/notifications/devices"
 
 // ── Token management ──────────────────────────────────────────────────────────
 
@@ -41,25 +35,7 @@ export async function saveDeviceToken(
   } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const admin = createAdminClient()
-  const { error } = await admin
-    .from("user_notification_tokens")
-    .upsert(
-      {
-        user_id: user.id,
-        fcm_token: token,
-        device_type: deviceType,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,fcm_token" }
-    )
-
-  if (error) {
-    console.error("[Actions/notifications] saveDeviceToken:", error)
-    return { error: error.message }
-  }
-
-  return { success: true }
+  return claimDevice(user.id, token, deviceType)
 }
 
 /**
@@ -74,6 +50,7 @@ export async function removeDeviceToken(token?: string) {
   } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  if (token !== undefined && !validDeviceToken(token)) return { error: "Invalid device token" }
   const admin = createAdminClient()
   let query = admin
     .from("user_notification_tokens")
