@@ -15,13 +15,14 @@ This audit builds on the customer, driver, admin and cross-panel wiring repairs 
 | Notification APIs | Any admin could use a generic cross-account send endpoint without scoped admin/MFA checks; arbitrary payloads were accepted; diagnostics performed send/purge operations on GET and exposed token prefixes and internal diagnostics. | Public POST only permits a fixed self-test, with a database-backed 60-second cooldown. Operational sends remain in verified workflows; campaigns remain in scoped consent-aware admin actions. Diagnostics require settings access through the existing MFA-aware guard, return safe counts/configuration booleans, and never mutate on GET. |
 | Notification preferences | Inactive accounts could still be targeted; an old driver profile's disabled preferences could suppress a user's customer notifications. | Inactive-account sends are skipped. Driver-specific settings apply in driver mode; service and marketing consent checks remain enforced. |
 | Customer / driver messaging | Legacy `picked_up` orders were active for tracking but excluded from customer contact and database message permissions. | Both the contact action and thread RPC accept this active status. Participant/assignment checks remain intact. |
+| Maps / reverse geocoding | The live rate-limit RPC compared a boolean settings ID to integer 1, causing the API to return service-unavailable before the provider lookup; its minute reset also discarded unrelated rate buckets. The older test fixture incorrectly used an integer ID. | The RPC uses the real boolean ID, keeps unrelated buckets on minute turnover, and rejects null keys. The old fixture now matches production, with additional quota and interleaved geocode/push-cooldown tests. |
 | Public home | Buy for Me was still described as Coming soon despite its booking flow being implemented. | Obsolete copy and register-interest CTA are replaced with shopping copy; booking continues to enforce live operational settings and service-area checks. |
 
 No form redesign, price changes, new customer tables, artificial orders or financial transactions were introduced.
 
 ## Verification
 
-- Existing regression coverage plus 14 new executable tests: 213 distinct tests.
+- Existing regression coverage plus 16 new executable tests: 215 distinct tests.
 - New tests execute the migration against isolated PGlite schemas and exercise Auth trigger initialization, admin-role rejection, device ownership transfer and uniqueness, inactive accounts, malformed tokens, grants, rate limiting, legacy-status chat permissions, profile read failures, driver approval preservation, administrator preservation, API recipient restrictions, read-only diagnostics and duplicate signup responses.
 - Full optimized Next.js build and TypeScript checks pass.
 - Icon validation passes for all 172 referenced icon names.

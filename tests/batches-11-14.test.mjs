@@ -49,8 +49,9 @@ test("Payout claims, rollback, reject/retry, payment reference and aggregated re
  create table payments(delivery_id uuid,refund_jobs jsonb,created_at timestamp default now());
  create table wallet_transactions(id uuid primary key default gen_random_uuid(),user_id uuid,delivery_id uuid,type text,amount numeric,description text);
  create table wallet_balances(user_id uuid primary key,balance numeric,updated_at timestamptz);
- create table surge_pricing_settings(id int primary key);insert into surge_pricing_settings values(1);`);
+ create table surge_pricing_settings(id boolean primary key);insert into surge_pricing_settings values(true);`);
   await db.exec(fs.readFileSync("supabase/pending-batches-11-14.sql", "utf8"));
+  await db.exec(fs.readFileSync("supabase/migrations/20261101070414_public_geocode_boolean_key.sql", "utf8"));
   const driver = "00000000-0000-4000-8000-000000000001",
     admin = "00000000-0000-4000-8000-000000000002",
     job = "00000000-0000-4000-8000-000000000003";
