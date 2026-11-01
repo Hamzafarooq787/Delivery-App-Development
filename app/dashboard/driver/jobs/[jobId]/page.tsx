@@ -1,3 +1,4 @@
+import {timelineTime} from '@/lib/timeline-time'
 import { createClient } from "@/lib/supabase/server"
 import { getDriverCustomerContact } from "@/app/actions/driver-operations"
 import { DriverRefresh } from "@/components/driver/driver-refresh"
@@ -34,14 +35,14 @@ export default async function JobDetailPage({
     getDriverCustomerContact(jobId).then(data=>({data})),
     supabase
       .from("delivery_status_logs")
-      .select("status, created_at")
+      .select("status, created_at, occurred_at_known")
       .eq("delivery_id", jobId)
       .order("created_at", { ascending: true }),
     supabase.from("driver_profiles").select("status").eq("id",user?.id??"").maybeSingle(),
   ])
 
   const customer = customerRes.data
-  const logs: { status: string; created_at: string }[] = logsRes.data ?? []
+  const logs: { status: string; created_at: string;occurred_at_known?:boolean }[] = logsRes.data ?? []
   const currentIdx = STATUS_ORDER.indexOf(job.status)
 
   const timelineSteps = STATUS_ORDER.filter((s) => s !== "requested").map((s) => {
@@ -52,9 +53,9 @@ export default async function JobDetailPage({
     return {
       label: STATUS_LABELS[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
       status,
-      time: log
-        ? new Date(log.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-        : undefined,
+      time: log&&log.occurred_at_known!==false
+        ? timelineTime(log.created_at,true)
+        : log?"Time unavailable":undefined,
     }
   })
 

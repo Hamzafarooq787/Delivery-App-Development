@@ -12,6 +12,7 @@ import {
 import {
   createSupportTicket,
   getMyTickets,
+  getMySupportTicket,
   type SupportTicket,
 } from '@/app/actions/driver'
 import {
@@ -68,6 +69,7 @@ export default function CustomerSupport({
     const timer = setInterval(refresh, 15000); window.addEventListener('focus', refresh)
     return () => { alive = false; clearInterval(timer); window.removeEventListener('focus', refresh) }
   }, [])
+  useEffect(()=>{let alive=true;const ticket=new URLSearchParams(window.location.search).get('ticket');if(ticket)void getMySupportTicket(ticket).then(r=>{if(alive){if(r.data)setSelected(r.data);else setError(r.error??'Support request unavailable.')}}).catch(()=>{if(alive)setError('Support request could not load.')});return()=>{alive=false}},[])
   function open() {
     setError('')
     setCreating(true)
@@ -150,7 +152,7 @@ export default function CustomerSupport({
                       {t.status === 'closed' ? 'Resolved' : 'Open'}
                     </span>
                   </div>
-                  <h3>{t.subject}</h3>
+                  <h3>{t.subject}{!!t.customer_unread&&<span> · {t.customer_unread} unread</span>}</h3>
                   <p>{t.message}</p>
                   <p>{shortDate(t.created_at)}</p>
                   <button

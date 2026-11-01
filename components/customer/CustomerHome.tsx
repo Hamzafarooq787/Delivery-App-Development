@@ -30,12 +30,13 @@ const ShoppingModal = dynamic(
 export default function CustomerHome({ initialData }: { initialData: CustomerHomeData }) {
   const screenRef = useVisibleViewport()
   const [snapshot,setSnapshot]=useState(initialData)
-  const { profile, balance, delivery, loadError, shoppingEnabled } = snapshot
+  const { profile, balance, delivery, loadError, shoppingEnabled,deliveryEnabled,deliveryReason,shoppingReason } = snapshot
   useCustomerLiveRefresh(async()=>{const data=await getCustomerHomeSnapshot();if(data&&!data.loadError)setSnapshot(data)},'delivery_requests,wallet_balances,users')
   useEffect(()=>setSnapshot(initialData),[initialData])
   const [shopping, setShopping] = useState(false)
   // Layout owns the modal and draft-resume flow. A single event opens it once.
   function book(focus?: 'pickup' | 'delivery') {
+    if(deliveryEnabled===false)return
     document.dispatchEvent(
       new CustomEvent('open-new-delivery', { detail: { focus } }),
     )
@@ -77,8 +78,8 @@ export default function CustomerHome({ initialData }: { initialData: CustomerHom
                 Send anything, anywhere. We collect from you and deliver it
                 safely.
               </p>
-              <button onClick={() => book()}>
-                Book a delivery <ArrowRight size={18} aria-hidden />
+              <button disabled={deliveryEnabled===false} onClick={() => book()}>
+                {deliveryEnabled===false?'Temporarily unavailable':'Book a delivery'} <ArrowRight size={18} aria-hidden />
               </button>
             </div>
             <div className={styles.serviceArt}>
@@ -93,7 +94,7 @@ export default function CustomerHome({ initialData }: { initialData: CustomerHom
               <ShoppingBag size={27} aria-hidden />
             </div>
             {shoppingEnabled === false && (
-              <span className={styles.comingSoon}>Temporarily unavailable</span>
+              <span className={styles.comingSoon}>{shoppingReason??'Temporarily unavailable'}</span>
             )}
             <div className={styles.serviceCopy}>
               <h3 id="shopping-heading">Buy for Me</h3>
@@ -182,19 +183,19 @@ export default function CustomerHome({ initialData }: { initialData: CustomerHom
           <span>Fast, reliable deliveries and shopping.</span>
         </div>
         <div className={styles.services} aria-label="Choose a service">
-          <button className={styles.selectedService} onClick={() => book()}>
+          <button disabled={deliveryEnabled===false} className={styles.selectedService} onClick={() => book()}>
             <Box aria-hidden />
             <span>
               <strong>Collect &amp; Deliver</strong>
-              <small>Send anything, anywhere.</small>
+              <small>{deliveryEnabled===false?deliveryReason??'Temporarily unavailable':'Send anything, anywhere.'}</small>
             </span>
           </button>
-          <button onPointerEnter={preloadShoppingModal} onFocus={preloadShoppingModal} disabled={shoppingEnabled === false} onClick={() => setShopping(true)}>
+          <button onPointerEnter={preloadShoppingModal} onFocus={preloadShoppingModal} disabled={shoppingEnabled === false} onClick={() => {if(shoppingEnabled!==false)setShopping(true)}}>
             <ShoppingBag aria-hidden />
             <span>
               <strong>Buy for Me</strong>
               <small>
-                {shoppingEnabled === false ? 'Temporarily unavailable' : 'We shop for you.'}
+                {shoppingEnabled === false ? shoppingReason??'Temporarily unavailable' : 'We shop for you.'}
               </small>
             </span>
           </button>
@@ -209,7 +210,7 @@ export default function CustomerHome({ initialData }: { initialData: CustomerHom
             <Box className={styles.parcel} aria-hidden />
           </div>
           <div className={styles.addresses}>
-            <button onClick={() => book('pickup')}>
+            <button disabled={deliveryEnabled===false} onClick={() => book('pickup')}>
               <MapPin aria-hidden />
               <span>
                 <strong>Pickup address</strong>
@@ -217,7 +218,7 @@ export default function CustomerHome({ initialData }: { initialData: CustomerHom
               </span>
               <ChevronRight aria-hidden />
             </button>
-            <button onClick={() => book('delivery')}>
+            <button disabled={deliveryEnabled===false} onClick={() => book('delivery')}>
               <MapPin aria-hidden />
               <span>
                 <strong>Delivery address</strong>
@@ -226,7 +227,7 @@ export default function CustomerHome({ initialData }: { initialData: CustomerHom
               <ChevronRight aria-hidden />
             </button>
           </div>
-          <button className={styles.continue} onClick={() => book()}>
+          <button disabled={deliveryEnabled===false} className={styles.continue} onClick={() => book()}>
             Continue booking <ArrowRight size={20} aria-hidden />
           </button>
         </section>

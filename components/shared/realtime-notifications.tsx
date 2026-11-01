@@ -15,6 +15,7 @@ type Notif = {
   body: string
   at: number
   read: boolean
+  entity_type?:string|null
   action_url?:string|null
 }
 
@@ -79,7 +80,9 @@ function getClickAction(
   router: ReturnType<typeof useRouter>,
   closePanel: () => void,
   actionUrl?:string|null,
+  unavailable=false,
 ) {
+  if(unavailable)return null
   function go(path: string) { closePanel(); router.push(path) }
   function event(name: string) { closePanel(); window.dispatchEvent(new CustomEvent(name)) }
 
@@ -203,14 +206,14 @@ export function RealtimeNotifications({ role, userId, icon }: Props) {
     let alive=true
     const refresh=()=>{const revision=noticeRevision.current;return Promise.resolve(supabase
       .from("notifications")
-      .select("id, title, body, read, created_at, action_url")
+      .select("id, title, body, read, created_at, action_url, entity_type")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(50))
       .then(({ data }) => {
         if (!data || !alive || revision!==noticeRevision.current) return
         setNotifs(data.map((r) => ({
-          id: r.id, title: r.title, body: r.body, action_url:r.action_url,
+          id: r.id, title: r.title, body: r.body, action_url:r.action_url,entity_type:r.entity_type,
           at: new Date(r.created_at).getTime(), read: r.read,
         })))
       }).catch(()=>{})}
@@ -236,7 +239,7 @@ export function RealtimeNotifications({ role, userId, icon }: Props) {
             const row = payload.new as any
             if (!row || !alive) return
             noticeRevision.current++
-            const n: Notif = { id: row.id, title: row.title, body: row.body, action_url:row.action_url, at: new Date(row.created_at).getTime(), read: false }
+            const n: Notif = { id: row.id, title: row.title, body: row.body, action_url:row.action_url,entity_type:row.entity_type, at: new Date(row.created_at).getTime(), read: false }
             setNotifs((prev) => prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50))
             showBrowserNotification(n.title, n.body)
             playNotificationSound()
@@ -276,7 +279,7 @@ export function RealtimeNotifications({ role, userId, icon }: Props) {
                 { duration: 8000 }
               )
             } else {
-              toast(n.title, { description: n.body, duration: 6000, icon: toastIcon(n.title), closeButton: true, ...(notificationDestination(n.action_url,role)?{action:{label:"Open order",onClick:()=>router.push(notificationDestination(n.action_url,role)!)}}:{}) })
+              toast(n.title, { description: n.body, duration: 6000, icon: toastIcon(n.title), closeButton: true, ...(notificationDestination(n.action_url,role)?{action:{label:n.action_url?.includes("/support")?"Open support":"Open order",onClick:()=>router.push(notificationDestination(n.action_url,role)!)}}:{}) })
             }
           })
         .subscribe((_, err) => { if (err) console.error("[notif] subscription error", err) })
@@ -436,8 +439,8 @@ export function RealtimeNotifications({ role, userId, icon }: Props) {
               <div className="px-3 space-y-1">
                 {notifs.map((n) => {
                   const s      = notifStyle(n.title)
-                  const action = getClickAction(n.title, role, router, closePanel,n.action_url)
-                  const hint   = notificationDestination(n.action_url,role)?"Open order conversation →":actionLabel(n.title, role)
+                  const action = getClickAction(n.title, role, router, closePanel,n.action_url,n.entity_type==='unavailable_order')
+                  const hint   = n.entity_type==='unavailable_order'?"This order is no longer available":notificationDestination(n.action_url,role)?n.action_url?.includes("/support")?"Open support conversation →":n.action_url?.includes("/jobs/available")?"Review available job →":"Open order →":actionLabel(n.title, role)
                   const clickable = action !== null
 
                   return (

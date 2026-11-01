@@ -4,7 +4,7 @@ import {getAppOrigin} from "@/lib/get-app-origin"
 import {allAuthUsers} from "@/lib/auth-directory"
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
-import { driverDocumentValid, requiredDriverDocuments } from '@/lib/driver-compliance'
+import { driverDocumentValid, requiredDriverDocuments,driverComplianceReady } from '@/lib/driver-compliance'
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
 
@@ -182,10 +182,11 @@ export async function submitSupportTicket(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  const subject=String(formData.get("subject")??"").trim(),message=String(formData.get("message")??"").trim()
+  if(!subject||subject.length>180||!message||message.length>4000)return {error:"Enter a subject and message within the allowed lengths."}
   const { error } = await supabase.from("support_tickets").insert({
     user_id: user.id,
-    subject: formData.get("subject") as string,
-    message: formData.get("message") as string,
+    subject,message,
     status: "open",
   })
 
@@ -195,7 +196,7 @@ export async function submitSupportTicket(formData: FormData) {
 
 // ── Driver actions ────────────────────────────────────────────────────────────
 
-export async function getAvailableDeliveries(page=1,search="") {
+export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated", data: [] }
@@ -235,7 +236,7 @@ export async function getAvailableDeliveries(page=1,search="") {
     if(vehicleResult.error||documents.error)return {error:'Driver details could not load. Please retry.',data:[]}
     const vehicles=vehicleResult.data
     const required=requiredDriverDocuments(vehicles??[])
-    if(documents.data?.some(doc=>required.includes(doc.document_type)&&!driverDocumentValid(doc)))return {error:'A required document has expired. Upload a current copy on the Verification page.',data:[]}
+    if(!driverComplianceReady(vehicles??[],documents.data??[])||documents.data?.some(doc=>required.includes(doc.document_type)&&!driverDocumentValid(doc)))return {error:'A required document has expired. Upload a current copy on the Verification page.',data:[]}
     const types = (vehicles ?? []).map((v) => v.vehicle_type as VehicleType)
     allowedSizes = unionCapabilities(types)
     if (!allowedSizes.length) return { error: "Register a suitable vehicle before viewing jobs.", data: [] }
@@ -255,6 +256,7 @@ export async function getAvailableDeliveries(page=1,search="") {
     ? query.or(`package_size.is.null,package_size.in.(${allowedSizes.join(",")})`)
     : query.is("package_size", null)
 
+  if(jobId){if(!/^[0-9a-f-]{36}$/i.test(jobId))return {data:[],count:0,error:'This job link is invalid.'};query=query.eq('id',jobId)}
   const safeSearch=search.replace(/[^\p{L}\p{N}\s-]/gu," ").trim().slice(0,80)
   if(safeSearch)query=query.or(`pickup_address.ilike.%${safeSearch}%,delivery_address.ilike.%${safeSearch}%,tracking_number.ilike.%${safeSearch}%`)
   const offset=(Math.max(1,Math.min(Math.trunc(page)||1,1000000))-1)*20
@@ -325,8 +327,8 @@ export async function acceptDelivery(deliveryId: string) {
     ? "Finish your active delivery before accepting another job."
     : error.message.includes("driver_not_approved")
       ? "Your account needs approval before accepting jobs."
-      : error.message.includes("driver_documents_expired")
-        ? "A required document has expired. Update your verification documents."
+      : (error.message.includes("driver_documents_expired")||error.message.includes("driver_documents_incomplete"))
+        ? "A required verification document is missing or expired. Update your verification documents."
       : "This job could not be accepted. Refresh and try again." }
   if (!updatedDelivery) return { error: "This job was already accepted by another driver." }
 

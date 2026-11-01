@@ -1,4 +1,5 @@
 'use client'
+import {timelineTime} from '@/lib/timeline-time'
 import {OrderRecoveryInstructions} from "@/components/shared/order-recovery-instructions"
 import { orderMediaUrl } from '@/lib/order-media'
 
@@ -33,14 +34,7 @@ const STATUS_ORDER = [
   'delivered',
 ]
 
-function formatLogTime(iso: string) {
-  const d = new Date(iso)
-  return (
-    d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
-    ' · ' +
-    d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-  )
-}
+function formatLogTime(iso:string){return timelineTime(iso)}
 
 type Driver = { full_name: string | null } | null
 
@@ -88,17 +82,17 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
 
 function buildSteps(
   status: string,
-  logs: { status: string; created_at: string }[],
+  logs: { status: string; created_at: string;occurred_at_known?:boolean }[],
   createdAt: string,
 ) {
   const cur = STATUS_ORDER.indexOf(status.toLowerCase())
   const isDelivered = status === 'delivered'
   return STATUS_ORDER.map((st, i) => {
     const log = logs.find((l) => l.status === st)
-    const timestamp = log?.created_at ?? (st === 'requested' ? createdAt : null)
+    const timestamp = (log?.occurred_at_known===false?null:log?.created_at) ?? (st === 'requested' ? createdAt : null)
     return {
       label: st.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-      detail: timestamp ? formatLogTime(timestamp) : '',
+      detail: log?.occurred_at_known===false?'Time unavailable':timestamp ? formatLogTime(timestamp) : '',
       // When delivered, ALL steps are done (including the last one)
       done: isDelivered ? true : cur !== -1 && i < cur,
       active: isDelivered ? false : i === cur,
@@ -183,7 +177,7 @@ function TrackingPageInner() {
 
       const { data: logs } = await supabase
         .from('delivery_status_logs')
-        .select('status, created_at')
+        .select('status, created_at, occurred_at_known')
         .eq('delivery_id', data.id)
         .order('created_at', { ascending: true })
       if (!cancelled)
@@ -218,7 +212,7 @@ function TrackingPageInner() {
       const request=++version
       if(!alive||!updated)return
       setShipment((prev:any)=>prev?.id===updated.id?{...prev,...updated}:prev)
-      const {data:logs,error}=await supabase.from('delivery_status_logs').select('status, created_at').eq('delivery_id',updated.id).order('created_at',{ascending:true})
+      const {data:logs,error}=await supabase.from('delivery_status_logs').select('status, created_at, occurred_at_known').eq('delivery_id',updated.id).order('created_at',{ascending:true})
       if(!alive||request!==version)return
       if(!error)setSteps(buildSteps(updated.status,logs??[],updated.created_at??shipment.created_at))
       if(updated.driver_id!==knownDriver){

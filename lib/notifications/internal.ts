@@ -67,34 +67,9 @@ export async function notifyDriversOfNewDelivery(
 ): Promise<void> {
   try {
     const admin = createAdminClient()
-    const { data: onlineDrivers } = await admin
-      .from("driver_profiles")
-      .select("id")
-      .eq("status", "approved")
-      .eq("is_online", true)
-
-    if (!onlineDrivers || onlineDrivers.length === 0) {
-      console.log("[Notify] notifyDriversOfNewDelivery: no online/approved drivers")
-      return
-    }
-
-    let driverIds = onlineDrivers.map((d: { id: string }) => d.id)
-
-    // Job matching: narrow to drivers whose vehicle(s) can carry this size.
-    if (packageSize && isPackageSize(packageSize)) {
-      const { data: vehicles } = await admin
-        .from("driver_vehicles")
-        .select("driver_id, vehicle_type")
-        .in("driver_id", driverIds)
-
-      const matchingIds = new Set<string>()
-      for (const v of vehicles ?? []) {
-        const caps = VEHICLE_CAPABILITIES[v.vehicle_type as VehicleType] ?? []
-        if (caps.includes(packageSize)) matchingIds.add(v.driver_id)
-      }
-      driverIds = driverIds.filter((id) => matchingIds.has(id))
-    }
-
+    const {data:eligible,error}=await admin.rpc('eligible_delivery_drivers',{p_id:deliveryId})
+    if(error)throw error
+    const driverIds:string[]=eligible??[]
     if (driverIds.length === 0) {
       console.log("[Notify] notifyDriversOfNewDelivery: no online drivers with a matching vehicle")
       return
@@ -107,7 +82,7 @@ export async function notifyDriversOfNewDelivery(
       notification: {
         title: "📦 New delivery available!",
         body: `Pickup: ${pickupAddress.slice(0, 60)}`,
-        url: "/dashboard/driver",
+        url: `/dashboard/driver/jobs/available?job=${deliveryId}`,
         tag: `new-delivery-${deliveryId}`,
         data: { deliveryId },
       },
@@ -127,7 +102,7 @@ export async function notifyDriversOfNewDelivery(
  *   userIds: onlineDriverIds,
  *   title: "New delivery available!",
  *   body: "Open the app to accept.",
- *   url: "/dashboard/driver",
+ *   url: `/dashboard/driver/jobs/available?job=${deliveryId}`,
  *   tag: "new-delivery",
  * })
  */
@@ -155,4 +130,11 @@ export async function notifyMultipleUsers({
     console.error("[Actions/notifications] notifyMultipleUsers:", error)
     return []
   }
+}
+
+/** Push is a supplement to the transactional in-app support notice. */
+export async function notifySupportUpdate(ticketId:string,senderId:string,key:string){
+ const db=createAdminClient();const [ticket,sender]=await Promise.all([db.from('support_tickets').select('user_id').eq('id',ticketId).maybeSingle(),db.from('users').select('role').eq('id',senderId).maybeSingle()]);if(!ticket.data||!sender.data)return
+ if(sender.data.role==='admin'){const recipient=await db.from('users').select('role').eq('id',ticket.data.user_id).maybeSingle();await notifyUser({userId:ticket.data.user_id,title:'Support Reply',body:'A reply is waiting in your support request.',url:`/dashboard/${recipient.data?.role==='driver'?'driver':'customer'}/support?ticket=${ticketId}`,tag:`support-${key}`})}
+ else {const staff=await db.from('users').select('id,admin_access').eq('role','admin').eq('account_status','active');const ids=(staff.data??[]).filter(u=>u.admin_access?.owner||u.admin_access?.scopes?.includes('support')).map(u=>u.id);await notifyMultipleUsers({userIds:ids,title:'Support request update',body:'A customer or driver needs a support response.',url:`/dashboard/admin/support?ticket=${ticketId}`,tag:`support-${key}`})}
 }

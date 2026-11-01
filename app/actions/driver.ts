@@ -2,10 +2,13 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import {after} from "next/server"
+import {notifySupportUpdate} from "@/lib/notifications/internal"
 import { revalidatePath } from "next/cache"
 
 export type SupportTicket = {
   id: string
+  customer_unread?:number
   subject: string
   message: string
   status: "open" | "closed"
@@ -20,7 +23,7 @@ export async function getMyTickets(): Promise<{ data: SupportTicket[]; error?: s
   const admin = createAdminClient()
   const { data, error } = await admin
     .from("support_tickets")
-    .select("id, subject, message, status, created_at")
+    .select("id, subject, message, status, created_at, customer_unread")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
 
@@ -43,11 +46,12 @@ export async function createSupportTicket(formData: FormData) {
     subject,
     message,
     status: "open",
-  }).select("id,subject,message,status,created_at").single()
+  }).select("id,subject,message,status,created_at,customer_unread").single()
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/driver/support")
   revalidatePath("/dashboard/customer/support")
+  after(async()=>{await notifySupportUpdate(data.id,user.id,data.id)})
   return { success: true, data: data as SupportTicket }
 }
 
@@ -142,6 +146,8 @@ export async function getDriverTickets(page=1){
  const db=await createClient();const {data:{user}}=await db.auth.getUser()
  if(!user)return {data:[] as SupportTicket[],count:0,error:'Please sign in again.'}
  const offset=(Math.max(1,Math.min(Math.trunc(page)||1,1000000))-1)*20
- const {data,error,count}=await createAdminClient().from('support_tickets').select('id,subject,message,status,created_at',{count:'exact'}).eq('user_id',user.id).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+19)
+ const {data,error,count}=await createAdminClient().from('support_tickets').select('id,subject,message,status,created_at,customer_unread',{count:'exact'}).eq('user_id',user.id).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+19)
  return {data:(data??[]) as SupportTicket[],count:count??0,error:error?'Could not load support requests. Please retry.':undefined}
 }
+
+export async function getMySupportTicket(id:string){const session=await createClient();const {data:{user}}=await session.auth.getUser();if(!user||!/^[0-9a-f-]{36}$/i.test(id))return{error:'Support request unavailable.'};const {data,error}=await createAdminClient().from('support_tickets').select('id,subject,message,status,created_at,customer_unread').eq('id',id).eq('user_id',user.id).maybeSingle();return error||!data?{error:'Support request unavailable.'}:{data:data as SupportTicket}}

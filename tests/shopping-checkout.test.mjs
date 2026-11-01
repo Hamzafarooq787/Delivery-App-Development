@@ -8,7 +8,7 @@ import * as nodeCrypto from 'node:crypto'
 function compile(file, imports, extra = {}) {
   const exports = {}
   const code = ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText
-  vm.runInNewContext(code,{exports,require:name=>{if(name==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(name==='@/lib/integration-health')return{recordHealth:async()=>{}};if(name in imports)return imports[name];throw Error('Unmocked import '+name)},console,Date,Number,JSON,Math,Error,Buffer,crypto:nodeCrypto.webcrypto,...extra})
+  vm.runInNewContext(code,{exports,require:name=>{if(name==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(name==='@/lib/integration-health')return{recordHealth:async()=>{}};if(name in imports)return imports[name];if(name==='next/cache')return{revalidatePath:()=>{}};throw Error('Unmocked import '+name)},console,Date,Number,JSON,Math,Error,Buffer,crypto:nodeCrypto.webcrypto,...extra})
   return exports
 }
 function fixture() {
