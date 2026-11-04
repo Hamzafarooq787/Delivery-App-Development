@@ -74,6 +74,7 @@ export default async function AdminOrderDetailPage({
       .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle(),
   ])
 
+  const parcelSize: string = order.package_size ?? ""
   const customer = customerRes.data
   const driver = driverRes.data
   const logs: { status: string; created_at: string;occurred_at_known?:boolean }[] = logsRes.data ?? []
@@ -125,7 +126,7 @@ export default async function AdminOrderDetailPage({
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Item Description</p>
                 <p className="text-white font-medium">{order.item_description ?? "—"}</p>
-                {order.package_size && isPackageSize(order.package_size) && <p className="text-sm text-white/70">{PACKAGE_SIZE_INFO[order.package_size].label}</p>}
+                {isPackageSize(parcelSize) && <p className="text-sm text-white/70">{PACKAGE_SIZE_INFO[parcelSize].label}</p>}
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Declared Value</p>
