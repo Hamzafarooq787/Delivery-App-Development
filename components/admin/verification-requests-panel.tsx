@@ -207,6 +207,7 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white truncate">{driver.full_name}</p>
+            {!!driver.changed_fields?.length && <p className="text-xs text-[var(--brand-soft)]">Re-verification · Changed fields: {driver.changed_fields.join(", ")}</p>}
             <p className="text-xs text-[var(--color-on-surface-variant)] truncate">{driver.email}</p>
           </div>
           <div className="hidden sm:grid grid-cols-3 gap-3 text-right shrink-0">

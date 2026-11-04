@@ -159,19 +159,19 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
             return (
               <div
                 key={job.id}
-                className="bg-[var(--brand-panel)] backdrop-blur-xl border border-[var(--color-outline-variant)]/10 rounded-xl p-6 flex flex-col md:flex-row gap-6 hover:bg-[var(--brand-panel)] transition-all duration-300"
+                className="bg-[var(--brand-panel)] backdrop-blur-xl border border-[var(--color-outline-variant)]/10 rounded-xl p-3 sm:p-6 min-w-0 flex flex-col md:flex-row gap-6 hover:bg-[var(--brand-panel)] transition-all duration-300"
               >
-                <div className="flex-1 space-y-5">
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-[var(--color-surface-container-highest)] flex items-center justify-center">
+                <div className="min-w-0 flex-1 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="shrink-0 w-10 h-10 rounded-lg bg-[var(--color-surface-container-highest)] flex items-center justify-center">
                         <span className="material-symbols-outlined text-[var(--brand-soft)]">
                           {job.service_type === "buy_for_me" ? "shopping_bag" : "inventory_2"}
                         </span>
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-bold text-white truncate"><button type="button" className="text-left underline decoration-white/40" aria-expanded={previewId===job.id} onClick={()=>setPreviewId(id=>id===job.id?null:job.id)}>
+                          <h3 className="text-base font-bold text-white break-words min-w-0"><button type="button" className="text-left underline decoration-white/40 break-words [overflow-wrap:anywhere]" aria-expanded={previewId===job.id} onClick={()=>setPreviewId(id=>id===job.id?null:job.id)}>
                             {job.service_type === "buy_for_me"
                               ? (job.shop_name || "Shopping request")
                               : (job.item_description || "Delivery request")}
@@ -193,7 +193,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                       </div>
                     </div>
                     {price && (
-                      <div className="text-right shrink-0">
+                      <div className="text-left sm:text-right min-w-0 sm:max-w-[40%]">
                         <span className="text-2xl font-black text-[var(--brand-soft)] font-headline tracking-tighter">{price}</span>
                         <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold">Your earnings</p>
                         <p className="text-xs">{job.distance_miles != null ? `${Number(job.distance_miles).toFixed(1)} driving miles` : "Driving distance not recorded"}{job.duration_min != null ? ` · approx. ${Math.round(job.duration_min)} min` : ""}</p>
@@ -256,7 +256,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                     <p><strong>Your earnings:</strong> {price??"Not quoted"}</p>
                   </div>}
                   <AcceptJobButton deliveryId={job.id} />
-                  <button type="button" onClick={()=>setSkipped(current=>[...current,job.id])} className="text-sm text-white/70 hover:underline">Decline for now</button>
+                  <button type="button" onClick={()=>setSkipped(current=>[...current,job.id])} className="min-h-11 rounded-lg border border-white/20 px-3 text-sm text-white hover:bg-white/10">Decline for now</button>
                 </div>
               </div>
             )

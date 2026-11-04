@@ -702,8 +702,8 @@ function AvailabilityCard({ isOnline: initial }: { isOnline: boolean }) {
 function SafetyCard() {
   const links = [
     { icon: "cancel",          label: "Cancel Active Job",  color: "text-[#ff6e84]", hover: "hover:bg-[#ff6e84]/10", href: "/dashboard/driver/active-jobs" },
-    { icon: "report",          label: "Report Incident",    color: "text-[var(--color-secondary)]", hover: "hover:bg-[var(--color-secondary)]/10", href: "/dashboard/driver/support" },
-    { icon: "contact_support", label: "Live Dispatch Chat", color: "text-[var(--brand-soft)]", hover: "hover:bg-[var(--brand-strong)]/10", href: "/dashboard/driver/support" },
+    { icon: "report",          label: "Report Incident",    color: "text-[var(--color-secondary)]", hover: "hover:bg-[var(--color-secondary)]/10", href: "/dashboard/driver/support/incident" },
+    { icon: "contact_support", label: "Live Dispatch Chat", color: "text-[var(--brand-soft)]", hover: "hover:bg-[var(--brand-strong)]/10", href: "/dashboard/driver/support?chat=1" },
   ]
   return (
     <div className="bg-[var(--brand-panel)] rounded-xl p-5 md:p-8 border border-[var(--color-outline-variant)]/5">

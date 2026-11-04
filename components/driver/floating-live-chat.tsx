@@ -80,6 +80,7 @@ export function FloatingLiveChat() {
   // Open chat when notification is clicked
   useEffect(() => {
     function onOpenChat() { setOpen(true) }
+    if (new URLSearchParams(window.location.search).get("chat")==="1") onOpenChat()
     window.addEventListener("open-driver-chat", onOpenChat)
     return () => window.removeEventListener("open-driver-chat", onOpenChat)
   }, [])

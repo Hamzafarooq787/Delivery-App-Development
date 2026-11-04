@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { adminApproveRating, adminRejectRating, type PendingRating } from "@/app/actions/ratings"
 
@@ -19,7 +20,7 @@ function Stars({ score }: { score: number }) {
   )
 }
 
-function ReviewCard({ rating, onResolved }: { rating: PendingRating; onResolved: (id: string) => void }) {
+function ReviewCard({ rating, onResolved }: { rating: PendingRating; onResolved: (id: string, status: "approved"|"rejected") => void }) {
   const [isPending, startTransition] = useTransition()
   const [action, setAction] = useState<"approve" | "reject" | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +31,7 @@ function ReviewCard({ rating, onResolved }: { rating: PendingRating; onResolved:
     startTransition(async () => {
       const result = type === "approve" ? await adminApproveRating(rating.id) : await adminRejectRating(rating.id)
       if (result.error) { setError(result.error); setAction(null); return }
-      onResolved(rating.id)
+      onResolved(rating.id, type === "approve" ? "approved" : "rejected")
     })
   }
 
@@ -84,7 +85,8 @@ function ReviewCard({ rating, onResolved }: { rating: PendingRating; onResolved:
   )
 }
 
-export function ReviewsPanel({ initialRatings }: { initialRatings: PendingRating[] }) {
+export function ReviewsPanel({ initialRatings, filter }: { initialRatings: PendingRating[]; filter?: string }) {
+  const router=useRouter()
   const [ratings, setRatings] = useState(initialRatings)
 
   return (
@@ -111,7 +113,7 @@ export function ReviewsPanel({ initialRatings }: { initialRatings: PendingRating
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {ratings.map((r) => (
-            <ReviewCard key={r.id} rating={r} onResolved={(id) => setRatings((prev) => prev.filter((x) => x.id !== id))} />
+            <ReviewCard key={r.id} rating={r} onResolved={(id,status) => {setRatings(prev => filter === "pending" ? prev.filter(x=>x.id!==id) : prev.map(x=>x.id===id?{...x,status,moderated_at:new Date().toISOString()}:x));router.refresh()}} />
           ))}
         </div>
       )}

@@ -71,6 +71,7 @@ export function CustomerThread({kind,id,activeAssignment=false}:{kind:'order'|'s
     </div>}
     {open&&<>
       <p className="text-xs text-gray-400">{data?.status?.replaceAll('_',' ')??'Loading conversation…'}</p>
+      {data?.hasIncidentPhoto&&<a className="underline" target="_blank" rel="noreferrer" href={`/api/support/incident-photo?id=${encodeURIComponent(id)}`}>View incident photo</a>}
       {data?.original&&<p className="rounded-xl bg-white/5 p-3 whitespace-pre-wrap break-words">{data.original}</p>}
       {data?.hasEarlier&&<button className={s.textButton} type="button" disabled={earlier} onClick={()=>void loadEarlier()}>{earlier?'Loading…':'Load earlier messages'}</button>}
       <div className="max-h-64 overflow-y-auto space-y-2" aria-live="polite">

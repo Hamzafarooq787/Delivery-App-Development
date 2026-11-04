@@ -30,13 +30,13 @@ export async function getSavedAddresses(){
  if(authError && (authError.name==="AuthRetryableFetchError"||(authError.status??0)>=500))return {error:"Saved addresses are temporarily unavailable. Please retry.",data:[]}
  const user=identity?.claims.sub?{id:identity.claims.sub}:null
  if(!user)return {error:"Please sign in to load saved addresses. Your draft will be kept.",data:[]}
- const {data,error}=await createAdminClient().from('addresses').select('id,address,lat,lng,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100)
+ const {data,error}=await createAdminClient().from('addresses').select('id,address,label,lat,lng,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100)
  return error?{error:'Could not load saved addresses.',data:[]}:{data:data??[]}
 }
 export async function getCustomerThread(kind:'order'|'support',id:string,before?:string){
  const user=await identity();if(!user||!['order','support'].includes(kind)||!uuid.test(id))return {error:'Please sign in to view this conversation.'}
  const admin=createAdminClient()
- const {data:row,error}=await admin.from(kind==='order'?'delivery_requests':'support_tickets').select(kind==='order'?'customer_id,driver_id,status,order_messages':'user_id,status,message,replies,customer_unread,admin_unread').eq('id',id).maybeSingle()
+ const {data:row,error}=await admin.from(kind==='order'?'delivery_requests':'support_tickets').select(kind==='order'?'customer_id,driver_id,status,order_messages':'user_id,status,message,replies,customer_unread,admin_unread,incident_photo_key').eq('id',id).maybeSingle()
  if(error||!row)return {error:'Conversation unavailable.'}
  const record=row as unknown as Record<string,any>
  let allowed=kind==='order'?(record.customer_id===user.id||record.driver_id===user.id):record.user_id===user.id
@@ -52,7 +52,7 @@ export async function getCustomerThread(kind:'order'|'support',id:string,before?
  const {data:p}=await admin.from('users').select('full_name,phone').eq('id',other).maybeSingle()
  contact={name:p?.full_name||'Your delivery contact',phone:p?.phone&&/^\+?[\d\s()-]{7,25}$/.test(p.phone)?p.phone.replace(/[^+\d]/g,''):null}
  }
- return {data:{messages:all.slice(Math.max(0,last-50),last),hasEarlier:last>50,status:record.status,original:record.message as string|undefined,contact,contactLabel:record.driver_id===user.id?'customer':'driver',canSend:kind==='support'||!!contact,userId:user.id}}
+ return {data:{messages:all.slice(Math.max(0,last-50),last),hasEarlier:last>50,status:record.status,original:record.message as string|undefined,hasIncidentPhoto:kind==="support"&&!!record.incident_photo_key,contact,contactLabel:record.driver_id===user.id?'customer':'driver',canSend:kind==='support'||!!contact,userId:user.id}}
 }
 export async function sendCustomerThread(kind:'order'|'support',id:string,key:string,body:string){
  const user=await identity();if(!user||!uuid.test(id)||!uuid.test(key)||!['order','support'].includes(kind)||typeof body!=='string'||!body.trim()||body.trim().length>4000)return {error:'Enter a message of 1–4,000 characters.'}

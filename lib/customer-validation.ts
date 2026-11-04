@@ -1,3 +1,5 @@
+import { normaliseUKPhone } from "./uk-phone"
+
 export function validCoordinates(lat:unknown,lng:unknown):boolean {
  return typeof lat==='number'&&typeof lng==='number'&&Number.isFinite(lat)&&Number.isFinite(lng)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180
 }
@@ -6,5 +8,5 @@ export function validateProfile(name:unknown,phone:unknown):{error:string}|{full
  if(typeof phone!=='string')return {error:'Enter a valid phone number.'}
  const clean=phone.trim().replace(/[\s()-]/g,'')
  if(clean&&!/^\+?\d{7,15}$/.test(clean))return {error:'Enter a valid phone number, including the country code if outside the UK.'}
- return {full_name:name.trim().replace(/\s+/g,' '),phone:clean||null}
+ return {full_name:name.trim().replace(/\s+/g,' '),phone:(normaliseUKPhone(clean) ?? (clean.startsWith('00') ? '+'+clean.slice(2) : clean)) || null}
 }

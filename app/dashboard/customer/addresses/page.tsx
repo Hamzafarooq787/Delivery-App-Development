@@ -17,6 +17,7 @@ import styles from '@/components/customer/CustomerPages.module.css'
 
 type AddressRow = {
   id: string
+  label: string | null
   address: string
   lat: number | null
   lng: number | null
@@ -40,6 +41,7 @@ export default function AddressesPage() {
   // Form state for add / edit
   const [formOpen, setFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [label,setLabel]=useState('')
   const [addressInput, setAddressInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -63,7 +65,7 @@ export default function AddressesPage() {
       setUserId(user.id)
       const { data, error } = await supabase
         .from('addresses')
-        .select('id,address,lat,lng,created_at')
+        .select('id,address,label,lat,lng,created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       if (cancelled) return
@@ -87,6 +89,7 @@ export default function AddressesPage() {
   function openAddForm() {
     gpsVersion.current++; setLocating(false); setCoords(null)
     setEditingId(null)
+    setLabel('')
     setAddressInput('')
     setErrorMsg(null)
     setFormOpen(true)
@@ -95,6 +98,7 @@ export default function AddressesPage() {
   function openEditForm(addr: AddressRow) {
     gpsVersion.current++; setLocating(false); setCoords(addr.lat!=null&&addr.lng!=null?{lat:Number(addr.lat),lng:Number(addr.lng)}:null)
     setEditingId(addr.id)
+    setLabel(addr.label ?? '')
     setAddressInput(addr.address ?? '')
     setErrorMsg(null)
     setFormOpen(true)
@@ -104,6 +108,7 @@ export default function AddressesPage() {
     gpsVersion.current++; setLocating(false); setCoords(null)
     setFormOpen(false)
     setEditingId(null)
+    setLabel('')
     setAddressInput('')
     setErrorMsg(null)
   }
@@ -124,10 +129,10 @@ export default function AddressesPage() {
     if (editingId) {
       const { data, error } = await supabase
         .from('addresses')
-        .update({ address: trimmed, ...coords })
+        .update({ address: trimmed, label: label.trim() || null, ...coords })
         .eq('id', editingId)
         .eq('user_id', userId)
-        .select('id,address,lat,lng,created_at')
+        .select('id,address,label,lat,lng,created_at')
         .single()
       setSaving(false)
       if (error) {
@@ -142,8 +147,8 @@ export default function AddressesPage() {
     } else {
       const { data, error } = await supabase
         .from('addresses')
-        .insert({ user_id: userId, address: trimmed, ...coords })
-        .select('id,address,lat,lng,created_at')
+        .insert({ user_id: userId, address: trimmed, label: label.trim() || null, ...coords })
+        .select('id,address,label,lat,lng,created_at')
         .single()
       setSaving(false)
       if (error) {
@@ -259,7 +264,7 @@ export default function AddressesPage() {
                       <Home size={23} aria-hidden />
                     </span>
                     <div>
-                      <h2>Saved address</h2>
+                      <h2>{addr.label || 'Saved address'}</h2>
                       <p>{shortDate(addr.created_at)}</p>
                     </div>
                   </div>
@@ -346,6 +351,7 @@ export default function AddressesPage() {
           }}
         >
           <form onSubmit={handleSubmit}>
+            <label className="block mb-3">Address label (optional)<input className="block w-full rounded-lg border border-white/20 bg-[var(--brand-panel)] p-3" value={label} onChange={event=>setLabel(event.target.value)} maxLength={60} placeholder="Home, Work or your own label" /></label>
             <ShoppingAddressField label="Saved address" value={addressInput} onChange={v=>{gpsVersion.current++;setLocating(false);setAddressInput(v);setCoords(null)}} onSelect={p=>{gpsVersion.current++;setLocating(false);setAddressInput(p.address);setCoords({lat:p.lat,lng:p.lng})}} />
             {errorMsg && (
               <p className={styles.error} role="alert">

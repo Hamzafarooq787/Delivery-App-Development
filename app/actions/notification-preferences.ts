@@ -23,11 +23,11 @@ export async function saveServicePushPreference(enabled: boolean) {
     data: { user },
   } = await db.auth.getUser();
   if (!user) return { error: "Not authenticated" };
-  const { error } = await createAdminClient()
+  const { data, error } = await createAdminClient()
     .from("users")
     .update({ service_push_enabled: enabled })
-    .eq("id", user.id);
+    .eq("id", user.id).select("service_push_enabled").single();
   return error
     ? { error: "Unable to save notification preference" }
-    : { success: true };
+    : data.service_push_enabled === enabled ? { success: true } : { error: "The saved preference did not change. Please try again." };
 }
