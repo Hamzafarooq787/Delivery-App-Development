@@ -7,6 +7,7 @@ import Link from "next/link"
 import { normaliseUKMobile, UK_MOBILE_ERROR } from "@/lib/uk-phone"
 import { shortRequest } from "@/lib/short-request"
 import { LocateFixed, LoaderCircle } from "lucide-react"
+import { ResendSignupEmail } from "@/components/auth/resend-signup-email"
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons"
 import { googleReverseGeocode } from "@/lib/google"
 
@@ -30,6 +31,7 @@ function SignupForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const resendOnly = searchParams.get("resend") === "1"
 
   async function detectAddress() {
     if (!("geolocation" in navigator)) return
@@ -70,14 +72,15 @@ function SignupForm() {
         return await response.json()
       })(), 14500)
       if (!result.success) {
-        setError(result.error || "We could not confirm your signup. Check your inbox before trying again.")
+        if (result.error) setError(result.error)
+        else setSuccess(true)
       } else if (result.next === "driver" || result.next === "customer") {
         window.location.assign(result.next === "driver" ? "/dashboard/driver" : "/dashboard/customer")
       } else {
         setSuccess(true)
       }
     } catch {
-      setError("We could not confirm your signup. Check your inbox before trying again.")
+      setSuccess(true)
     } finally {
       setLoading(false)
     }
@@ -102,17 +105,17 @@ function SignupForm() {
 
         {/* Card */}
         <div className="glass-card rounded-2xl border border-[#262626] p-8">
-          {success ? (
+          {success || resendOnly ? (
             <div className="flex flex-col items-center text-center gap-4 py-4">
               <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
                 <span className="material-symbols-outlined text-[var(--color-primary)] text-3xl">mark_email_read</span>
               </div>
-              <h2 className="font-headline text-xl font-bold text-white">Check your inbox</h2>
-              <p className="text-[#adaaaa] text-sm leading-relaxed">
-                If a confirmation link was sent to{" "}
-                <span className="text-white font-medium">{email}</span>, open it in this browser to activate your account. If you already have an account, sign in below.
-              </p>
-              {role === "driver" && (
+              <h2 className="font-headline text-xl font-bold text-white">{resendOnly ? "Request a new confirmation link" : "Check your email to confirm your account"}</h2>
+              {!resendOnly && <p className="text-[#adaaaa] text-sm leading-relaxed">
+                Look for a confirmation link at <span className="text-white font-medium">{email}</span>. If it does not arrive, check spam or request a new link. If you already confirmed your email, sign in below.
+              </p>}
+              <ResendSignupEmail knownEmail={resendOnly ? undefined : email} />
+              {!resendOnly && role === "driver" && (
                 <p className="text-[var(--color-secondary)] text-xs leading-relaxed bg-[var(--color-secondary)]/10 border border-[var(--color-secondary)]/20 rounded-xl px-4 py-3">
                   Your driver account will be reviewed by an admin before you can accept jobs.
                 </p>
