@@ -1,3 +1,7 @@
+import type { Metadata } from "next"
+
+export const metadata: Metadata = { title: "Prohibited Items | GoDrop" }
+
 import { AlertTriangle } from "lucide-react"
 
 const categories = [

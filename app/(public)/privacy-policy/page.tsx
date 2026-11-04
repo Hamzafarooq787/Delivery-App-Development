@@ -1,3 +1,7 @@
+import type { Metadata } from "next"
+
+export const metadata: Metadata = { title: "Privacy Policy | GoDrop" }
+
 const sections = [
   {
     title: "Information We Collect",

@@ -2,13 +2,17 @@ import {getAdminActor,auditAdmin} from "@/lib/admin-access"
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { readBrandTheme, writeBrandTheme } from '@/lib/brand-settings'
+import { shortRequest } from '@/lib/short-request'
 import { isBrandTheme } from '@/lib/brand-theme'
 export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
-    return Response.json({ brand: await readBrandTheme() }, { headers: { 'Cache-Control': 'no-store' } })
+    return Response.json({ brand: await shortRequest(readBrandTheme(), 1800) }, { headers: {
+      'Cache-Control': 'public, max-age=30',
+      'Vercel-CDN-Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300, stale-if-error=3600',
+    } })
   } catch {
-    return Response.json({ error: 'Theme is temporarily unavailable' }, { status: 503 })
+    return Response.json({ error: 'Theme is temporarily unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
   }
 }
 export async function POST(request: Request) {

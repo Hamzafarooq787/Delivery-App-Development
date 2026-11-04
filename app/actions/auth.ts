@@ -98,40 +98,46 @@ export async function signIn(formData: FormData) {
 }
 
 export async function signUp(formData: FormData) {
-  const supabase = await createClient()
-  const email = formData.get("email") as string
-  const password = formData.get("password") as string
-  const full_name = `${formData.get("first_name")} ${formData.get("last_name")}`.trim()
-  // Never trust the submitted role beyond this allowlist — 'admin' (or
-  // anything else) must never be reachable through public signup.
-  const requestedRole = formData.get("role") as string
-  const role = requestedRole === "driver" ? "driver" : "customer"
+  const email = String(formData.get("email") ?? "").trim()
+  const password = String(formData.get("password") ?? "")
+  const full_name = [formData.get("first_name"), formData.get("last_name")].join(" ").trim()
+  const role = formData.get("role") === "driver" ? "driver" : "customer"
   const phone = normaliseUKMobile(formData.get("phone"))
   if (!phone) return { error: UK_MOBILE_ERROR }
-  const address = (formData.get("address") as string) || null
-
-  const origin = await getAppOrigin()
-
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      // Must point at this app's own callback route, which exchanges the
-      // PKCE code for a session — NOT Supabase's project URL. Pointing at
-      // the Supabase domain (or the bare app origin with no /auth/callback
-      // path) leaves an unexchanged ?code= sitting in the address bar and
-      // the user never gets signed in.
-      emailRedirectTo: `${origin}/auth/callback?role=${role}`,
-      data: { full_name, role, phone, address },
-    },
-  })
-
-  if (error) return { error: error.message }
-
-  // Auth's INSERT trigger initializes new profiles atomically. A duplicate
-  // signup may return an obfuscated user; it must never update public records.
-
-  return { success: true }
+  if (!full_name || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8 || password.length > 256) {
+    return { error: "Enter your name, a valid email address and a password of at least 8 characters." }
+  }
+  const address = String(formData.get("address") ?? "").trim().slice(0, 1000) || null
+  const deadline = AbortSignal.timeout(10000)
+  const unavailable = "We could not confirm your signup. Check your inbox before trying again."
+  try {
+    const supabase = await createClient((input, options) => fetch(input, {
+      ...options,
+      signal: options?.signal ? AbortSignal.any([deadline, options.signal]) : deadline,
+    }))
+    const origin = await getAppOrigin()
+    const { data, error } = await supabase.auth.signUp({
+      email, password,
+      options: {
+        emailRedirectTo: `${origin}/auth/callback?role=${role}`,
+        data: { full_name: full_name.slice(0, 160), role, phone, address },
+      },
+    })
+    if (error) {
+      if (error.status === 429) return { error: "Too many signup attempts. Wait a few minutes and try again." }
+      if (error.code === "email_address_not_authorized") return { error: "We could not send confirmation to this email address. Please contact GoDrop support." }
+      if (error.code === "weak_password") return { error: "Choose a stronger password and try again." }
+      if (error.code === "email_address_invalid") return { error: "Enter a valid email address and try again." }
+      if (error.code === "user_already_exists") return { success: true as const, next: "email" as const }
+      return { error: unavailable }
+    }
+    // The Auth insert trigger creates the role profile, including a pending
+    // driver. Never write profiles from an unverified or obfuscated response.
+    if (!data?.user) return { error: unavailable }
+    return { success: true as const, next: data.session ? (role === "driver" ? "driver" : "customer") : "email" }
+  } catch {
+    return { error: unavailable }
+  }
 }
 
 export async function signInAsDriver(formData: FormData) {

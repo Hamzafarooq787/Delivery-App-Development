@@ -1,3 +1,7 @@
+import type { Metadata } from "next"
+
+export const metadata: Metadata = { title: "Terms of Service | GoDrop" }
+
 const sections = [
   {
     title: "Acceptance of Terms",
