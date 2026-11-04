@@ -98,6 +98,7 @@ export function SupportPanel({
   subtitle?: string
   showChatHint?: boolean
 }) {
+  useEffect(()=>{if(new URLSearchParams(window.location.search).get('chat')==='1') window.dispatchEvent(new Event('open-driver-chat'))},[])
   const [tickets, setTickets] = useState<SupportTicket[]>(initialTickets)
   const [page,setPage]=useState(1),[total,setTotal]=useState(initialCount),[selected,setSelected]=useState<string|null>(null),[listError,setListError]=useState(''),[loading,startLoad]=useTransition()
   useEffect(()=>{const ticket=new URLSearchParams(window.location.search).get('ticket');if(ticket&&/^[0-9a-f-]{36}$/i.test(ticket))setSelected(ticket)},[])

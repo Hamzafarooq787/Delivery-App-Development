@@ -1,3 +1,4 @@
+import { isConnectWebhookConfigured } from "@/lib/stripe/connect-status"
 import {getAdminActor} from "@/lib/admin-access"
 import { AutomaticPayoutsControl } from "@/components/admin/automatic-payouts-control";
 import { createClient } from "@/lib/supabase/server";
@@ -28,10 +29,9 @@ export default async function AdminPayoutsPage({
   if (settings.error) throw new Error("Payout settings could not load.");
   return (
     <>
-      <AutomaticPayoutsControl enabled={settings.data.automatic_payouts} webhookConfigured={Boolean(process.env.STRIPE_CONNECT_WEBHOOK_SECRET)} />
+      <AutomaticPayoutsControl enabled={settings.data.automatic_payouts} webhookConfigured={isConnectWebhookConfigured()} />
       <p className="px-8 pt-4 text-white text-sm">
-        Weekly payout requests reserve earnings. Manual payments require a bank reference; Stripe payments are reconciled automatically. Totals cover all
-        records; lists show up to 100 per page.
+        Approving reserves the payout for processing. For manual payouts, send the bank payment outside GoDrop, then use Mark Paid with the actual bank reference. Stripe Connect requires an eligible connected account and automatic payouts enabled; GoDrop reconciles the provider status.
       </p>
       <AdminPayoutsPanel {...data} />
       <nav className="flex gap-6 px-8 pb-6 text-white">

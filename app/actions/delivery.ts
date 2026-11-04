@@ -1024,6 +1024,7 @@ export type PendingVerificationDriver = {
   phone: string
   vehicles: DriverVehicle[]
   submitted_at: string
+  changed_fields?: string[]
   documents: { media_kind?: "image"|"pdf"|"unknown"; id:string; document_type: string; file_url: string; expires_on?:string|null; review_status?:"pending"|"approved"|"rejected"; review_reason?:string|null }[]
 }
 
@@ -1033,7 +1034,7 @@ export async function adminGetPendingVerifications(page=1): Promise<{ data: Pend
 
   const { data: profiles, error: profilesErr } = await admin
     .from("driver_profiles")
-    .select("id, created_at,verification_submitted_at")
+    .select("id, created_at,verification_submitted_at,review_changed_fields")
     .eq("status", "pending").not("verification_submitted_at","is",null)
     .order("created_at", { ascending: false }).order("id").range((Math.max(1,page)-1)*50,Math.max(1,page)*50-1)
 
@@ -1078,6 +1079,7 @@ export async function adminGetPendingVerifications(page=1): Promise<{ data: Pend
       phone: u?.phone ?? "",
       vehicles: vehiclesMap.get(p.id) ?? [],
       submitted_at: p.verification_submitted_at ?? "",
+      changed_fields: p.review_changed_fields ?? [],
       documents: docsMap.get(p.id) ?? [],
     }
   })

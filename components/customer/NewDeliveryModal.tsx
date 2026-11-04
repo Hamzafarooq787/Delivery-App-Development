@@ -659,7 +659,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
           <button aria-label="Close booking" disabled={submitting} onClick={onClose}>×</button>
         </header>
         <div className={styles.progress} aria-hidden="true"><div style={{width: `${step / 3 * 100}%`}} /></div>
-        <div ref={bodyRef} className={styles.body}>
+        <div ref={bodyRef} className={styles.body} data-step={step}>
+          {stepError && <p role="alert" className={styles.stepError}>{stepError}</p>}
           <h2 id="booking-title" tabIndex={-1}>{['What are you sending?', 'Where should we collect and deliver?', 'Check your order'][step - 1]}</h2>
           {step === 1 && <div className={styles.packageStep}>
             <div className={styles.sizes}>          {/* Package size — determines which drivers (by vehicle) get matched */}
@@ -929,7 +930,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
           </div>}
         </div>
         <footer className={styles.footer}>
-          {stepError && <p role="alert">{stepError}</p>}
           {step === 3 && missingReason && <p role="status">{missingReason}</p>}
           <div className={styles.actions}>
             <button disabled={submitting || addingFunds} onClick={() => step === 1 ? onClose() : goTo(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button>

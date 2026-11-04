@@ -22,7 +22,7 @@ const navItems = [
   { label: "Support", href: "/dashboard/driver/support", icon: "headset_mic" },
 ]
 
-const UNLOCKED_ROUTES = ["/dashboard/driver/verification", "/dashboard/driver/support"]
+const UNLOCKED_ROUTES = ["/dashboard/driver/verification", "/dashboard/driver/support", "/dashboard/driver/earnings", "/dashboard/driver/payouts", "/dashboard/driver/settings", "/dashboard/driver/profile"]
 
 interface DriverSidebarProps {
   onClose?: () => void

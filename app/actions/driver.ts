@@ -49,8 +49,6 @@ export async function createSupportTicket(formData: FormData) {
   }).select("id,subject,message,status,created_at,customer_unread").single()
 
   if (error) return { error: error.message }
-  revalidatePath("/dashboard/driver/support")
-  revalidatePath("/dashboard/customer/support")
   after(async()=>{await notifySupportUpdate(data.id,user.id,data.id)})
   return { success: true, data: data as SupportTicket }
 }

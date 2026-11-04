@@ -152,7 +152,8 @@ export function VerificationPanel({
 
   function handleFileChange(docType: DocType, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (file) handleUpload(docType, file)
+    if (file && (driverStatus !== "approved" || window.confirm("Replacing a document requires a new review. Finish any active delivery first. New jobs pause until approval; earnings and support stay available. Continue?"))) handleUpload(docType, file)
+    e.target.value = ""
     e.target.value = ""
   }
 

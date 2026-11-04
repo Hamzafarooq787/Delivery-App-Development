@@ -64,6 +64,9 @@ function VehicleFormModal({
   }
 
   function handleSave() {
+    const normalize = (s:string) => s.replace(/\s+/g,"").toUpperCase()
+    const needsReview = !editingId || initial.vehicle_type!==form.vehicle_type || normalize(initial.registration_number)!==normalize(form.registration_number) || initial.driving_licence_details.trim()!==form.driving_licence_details.trim() || initial.insurance_details.trim()!==form.insurance_details.trim()
+    if (needsReview && !window.confirm("This change can require a new verification review. Finish any active delivery first. New jobs will be paused until approval; earnings and support stay available. Continue?")) return
     setError(null)
     startTransition(async () => {
       const result = editingId

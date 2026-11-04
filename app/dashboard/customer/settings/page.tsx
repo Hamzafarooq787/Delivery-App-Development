@@ -155,8 +155,17 @@ export default function SettingsPage() {
   useEffect(()=>{let alive=true;getServicePushPreference().then(r=>{if(!alive)return;if(r.error)setSaveMessage({type:'error',text:r.error});else setNotifPrefs({email:false,sms:false,push:r.enabled??true})}).catch(()=>{if(alive)setSaveMessage({type:'error',text:'Could not load notification preferences.'})});return()=>{alive=false}},[])
   async function toggleNotif(key:keyof NotifPrefs){
     if(key!=='push'||saving)return;setSaving(true);
-    const next=!notifPrefs.push;let r;try{r=await saveServicePushPreference(next)}catch{r={error:'Unable to save preference'}}finally{setSaving(false)}
-    if(r.error)setSaveMessage({type:'error',text:r.error});else setNotifPrefs(p=>({...p,push:next}));
+    const next=!notifPrefs.push;setSaveMessage(null)
+    try {
+      if(next && typeof Notification === 'undefined') {setSaveMessage({type:'error',text:'Push notifications are not supported in this browser.'});return}
+      if(next && (Notification.permission==='default' ? await Notification.requestPermission() : Notification.permission)!=='granted') {
+        setSaveMessage({type:'error',text:'Notifications are blocked in your browser settings. Open the site controls next to the address bar, allow Notifications for GoDrop, then try again.'});return
+      }
+      const result=await saveServicePushPreference(next)
+      if(result.error)setSaveMessage({type:'error',text:result.error})
+      else {setNotifPrefs(p=>({...p,push:next}));setSaveMessage({type:'success',text:'Notification preference saved.'})}
+    } catch {setSaveMessage({type:'error',text:'Unable to save notification preference. Please try again.'})}
+    finally {setSaving(false)}
   }
 
   async function handleSaveProfile() {

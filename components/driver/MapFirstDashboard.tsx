@@ -76,6 +76,7 @@ export function MapFirstDashboard({
   activeJobs,
   todayEarnings,
   completedToday,
+  rating,
   initialOnline,
   dataError,
 }: {
@@ -83,6 +84,7 @@ export function MapFirstDashboard({
   activeJobs: DashboardJob[]
   todayEarnings: number
   completedToday: number
+  rating?: {average:number|null;count:number}
   initialOnline: boolean
   dataError?: string
 }) {
@@ -274,6 +276,7 @@ export function MapFirstDashboard({
             </div>
             <div>
               <strong>{completedToday}</strong>
+              {rating?.average != null && <small className="block">{Number(rating.average).toFixed(1)} / 5 · {rating.count} approved ratings</small>}
               <span>completed</span>
             </div>
           </div>

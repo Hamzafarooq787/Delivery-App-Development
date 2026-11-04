@@ -30,6 +30,10 @@ interface DriverLayoutClientProps {
 const ALLOWED_WHEN_LOCKED = [
   '/dashboard/driver/verification',
   '/dashboard/driver/support',
+  '/dashboard/driver/earnings',
+  '/dashboard/driver/payouts',
+  '/dashboard/driver/settings',
+  '/dashboard/driver/profile',
 ]
 
 export function DriverLayoutClient({

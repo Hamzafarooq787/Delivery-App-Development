@@ -1,3 +1,4 @@
+import { getRatingSummary } from "@/app/actions/ratings"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { ProfileForm } from "@/components/driver/profile-form"
@@ -21,6 +22,7 @@ export default async function DriverProfilePage() {
     }
   }
 
+  const rating = user ? await getRatingSummary(user.id) : null
   const initials = profile.full_name
     ? profile.full_name.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase()
     : "DR"
@@ -44,6 +46,7 @@ export default async function DriverProfilePage() {
               <p className="text-xs text-[var(--color-on-surface-variant)] mt-0.5 truncate">{profile.email}</p>
             </div>
           </div>
+          <p className="mb-4 text-sm text-white">{rating?.average != null ? `Rating: ${Number(rating.average).toFixed(1)} / 5 (${rating.count} approved)` : "No approved ratings yet"}</p>
           <p className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest mb-4">Personal Info</p>
           <ProfileForm fullName={profile.full_name} phone={profile.phone} />
         </div>

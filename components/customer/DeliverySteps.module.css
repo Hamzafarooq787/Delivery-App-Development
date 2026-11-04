@@ -48,3 +48,6 @@
 }
 
 .reviewParcel[data-size=small] svg{transform:scale(.76)}.reviewParcel[data-size=large] svg{transform:scale(1.06)}
+
+.stepError{position:static;margin:0 0 12px;color:var(--brand-soft);font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+@media(max-width:600px){.body[data-step="2"],.body[data-step="3"]{padding-bottom:calc(36px + env(safe-area-inset-bottom));scroll-padding-bottom:36px}.footer{position:relative;flex:0 0 auto}}
