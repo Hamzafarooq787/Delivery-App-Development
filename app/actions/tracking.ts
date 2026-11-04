@@ -25,11 +25,11 @@ export async function updateMyLocation(input: {
   delivery_id?: string | null
   measured_at?: string
 }) {
-  const supabase = await createClient()
+  const supabase = await createClient((input, options)=>fetch(input,{...options,signal:AbortSignal.timeout(4000)}))
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const admin = createAdminClient()
+  const admin = createAdminClient((input, options)=>fetch(input,{...options,signal:AbortSignal.timeout(4000)}))
   if (!Number.isFinite(input.lat) || !Number.isFinite(input.lng) || Math.abs(input.lat) > 90 || Math.abs(input.lng) > 180) return { error: "Invalid coordinates" }
   const { data: profile } = await admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle()
   if (profile?.status !== "approved") return { error: "Approved driver required" }

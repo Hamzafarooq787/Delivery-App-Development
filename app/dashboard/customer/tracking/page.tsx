@@ -3,9 +3,8 @@ import {timelineTime} from '@/lib/timeline-time'
 import {OrderRecoveryInstructions} from "@/components/shared/order-recovery-instructions"
 import { orderMediaUrl } from '@/lib/order-media'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import {openNewCustomerOrder} from '@/components/customer/CustomerNavigation'
@@ -13,12 +12,10 @@ import { CustomerLocationBroadcaster } from '@/components/tracking/customer-loca
 import { CollectionWaiting } from '@/components/driver/collection-waiting'
 import { CustomerThread } from '@/components/shared/customer-thread'
 import { CustomerShoppingOrder } from '@/components/customer/CustomerShoppingOrder'
-import { getDriverNamesByIds } from '@/app/actions/driver'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
 import { getDeliveryOtp } from '@/app/actions/delivery'
 import {
   getMyRatingForDelivery,
-  getRatingSummary,
   type Rating,
 } from '@/app/actions/ratings'
 import { RatingPrompt } from '@/components/shared/rating-prompt'
@@ -36,7 +33,7 @@ const STATUS_ORDER = [
 
 function formatLogTime(iso:string){return timelineTime(iso)}
 
-type Driver = { full_name: string | null } | null
+type Driver = { full_name: string | null; vehicle?: {vehicle_type:string;make?:string;model?:string;colour?:string} | null } | null
 
 function driverInitials(d: Driver) {
   const n = d?.full_name?.trim()
@@ -121,115 +118,38 @@ function TrackingPageInner() {
     count: number
   }>({ average: null, count: 0 })
   const [userId, setUserId] = useState('')
-  const supabase = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
   const requestedId = searchParams.get('id')
 
-  // ── Initial load ────────────────────────────────────────────────────────────
   useEffect(() => {
-    let cancelled = false
-    async function load() {
-      setLoading(true); setLoadError(''); setShipment(null); setDriver(null); setOtp(null); setMyRating(null); setEta(null)
+    let alive=true,busy=false,knownStatus="",knownId=""
+    const refresh=async(initial=false)=>{
+      if(busy)return
+      busy=true
       try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (cancelled) return
-      if (!user) throw new Error('Please sign in to view tracking.')
-      setUserId(user.id)
-
-      // Always select parcel_image_url so we can show it when delivered
-      let q = supabase
-        .from('delivery_requests')
-        .select(
-          'id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls,price,base_price,surge_multiplier,discount_amount,promo_code,service_type,bfm_stage',
-        )
-        .eq('customer_id', user.id)
-
-      if (requestedId) {
-        // Specific order — show regardless of status (active OR delivered OR cancelled)
-        q = q.eq('id', requestedId)
-      } else {
-        // No ID — prefer active, fallback to most recent delivered
-        q = q
-          .in('status', [
-            'requested',
-            'accepted',
-            'collected',
-            'in_transit',
-            'delivered',
-          ])
-          .order('created_at', { ascending: false })
-          .limit(1)
-      }
-
-      const { data, error } = await q.maybeSingle()
-      if (cancelled) return
-      if (error) throw error
-      if (!data) {
-        setShipment(null)
-        setDriver(null)
-        return
-      }
-
-      if (!cancelled) applyShipment(data)
-
-      const { data: logs } = await supabase
-        .from('delivery_status_logs')
-        .select('status, created_at, occurred_at_known')
-        .eq('delivery_id', data.id)
-        .order('created_at', { ascending: true })
-      if (!cancelled)
-        setSteps(buildSteps(data.status, logs ?? [], data.created_at))
-
-      if (data.driver_id) {
-        const names = await getDriverNamesByIds([data.driver_id])
-        if (!cancelled) setDriver({ full_name: names[data.driver_id] ?? 'Your driver' } as Driver)
-
-        const summary = await getRatingSummary(data.driver_id)
-        if (!cancelled) setDriverRating(summary)
-      }
-
-      const { data: code } = await getDeliveryOtp(data.id)
-      if (!cancelled) setOtp(code)
-
-      if (data.status === 'delivered') {
-        const { data: rating } = await getMyRatingForDelivery(data.id)
-        if (!cancelled) setMyRating(rating)
-      }
-      } catch { if (!cancelled) setLoadError('Could not load tracking. Please try again.') } finally { if (!cancelled) setLoading(false) }
+        const url="/api/customer/tracking-driver"+(requestedId?"?id="+encodeURIComponent(requestedId):"")
+        const res=await fetch(url,{signal:AbortSignal.timeout(14000),cache:"no-store"})
+        if(!res.ok)throw Error()
+        const next=await res.json()
+        if(!alive)return
+        setUserId(next.user);setShipment(next.order);setLoadError("")
+        setDriver(next.driver??null);setDriverRating(next.rating??{average:null,count:0})
+        if(next.order){
+          setSteps(buildSteps(next.order.status,next.logs??[],next.order.created_at))
+          if(next.order.id!==knownId){knownId=next.order.id;setOtp(null);setEta(null);setMyRating(null)}
+          if(initial||next.order.status!==knownStatus) {
+            knownStatus=next.order.status
+            void getDeliveryOtp(next.order.id).then(({data})=>{if(alive&&knownId===next.order.id)setOtp(data)}).catch(()=>{})
+            if(next.order.status==="delivered")void getMyRatingForDelivery(next.order.id).then(({data})=>{if(alive&&knownId===next.order.id)setMyRating(data)}).catch(()=>{})
+          }
+        }
+      }catch{if(alive)setLoadError(initial?"Could not load tracking. Please try again.":"Tracking updates are delayed.")}
+      finally{busy=false;if(alive)setLoading(false)}
     }
-    void load()
-    return () => { cancelled = true }
-  }, [supabase, requestedId, revision])
-
-  // Realtime plus a visible-page fallback if the socket is unavailable.
-  useEffect(() => {
-    if (!shipment?.id) return
-    let alive=true,busy=false,version=0,knownDriver=shipment.driver_id,knownStatus=shipment.status
-    const receive=async(updated:any)=>{
-      const request=++version
-      if(!alive||!updated)return
-      setShipment((prev:any)=>prev?.id===updated.id?{...prev,...updated}:prev)
-      const {data:logs,error}=await supabase.from('delivery_status_logs').select('status, created_at, occurred_at_known').eq('delivery_id',updated.id).order('created_at',{ascending:true})
-      if(!alive||request!==version)return
-      if(!error)setSteps(buildSteps(updated.status,logs??[],updated.created_at??shipment.created_at))
-      if(updated.driver_id!==knownDriver){
-        knownDriver=updated.driver_id;setDriver(null);setDriverRating({average:null,count:0});setEta(null)
-        if(updated.driver_id){const [names,summary]=await Promise.all([getDriverNamesByIds([updated.driver_id]),getRatingSummary(updated.driver_id)]);if(!alive||request!==version)return;setDriver({full_name:names[updated.driver_id]??'Your driver'});setDriverRating(summary)}
-      }
-      if(updated.status==='delivered'&&knownStatus!=='delivered'){const {data:rating}=await getMyRatingForDelivery(updated.id);if(alive&&request===version)setMyRating(rating)}
-      knownStatus=updated.status
-    }
-    const refresh=async()=>{if(busy||document.visibilityState!=='visible')return;busy=true;try{const {data,error}=await supabase.from('delivery_requests').select('id,tracking_number,status,pickup_address,delivery_address,driver_id,created_at,pickup_lat,pickup_lng,delivery_lat,delivery_lng,parcel_image_url,delivered_image_url,item_description,item_photo_urls,price,base_price,surge_multiplier,discount_amount,promo_code,service_type,bfm_stage').eq('id',shipment.id).eq('customer_id',userId).maybeSingle();if(alive){if(error)setLoadError('Tracking updates are delayed. Please try again.');else if(data){setLoadError('');await receive(data)}}}catch{if(alive)setLoadError('Tracking updates are delayed. Please try again.')}finally{busy=false}}
-    const channel=supabase.channel(`tracking-delivery-${shipment.id}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'delivery_requests',filter:`id=eq.${shipment.id}`},payload=>{void receive(payload.new).catch(()=>{if(alive)setLoadError('Could not refresh tracking details. Please try again.')})}).subscribe()
-    const timer=setInterval(refresh,20000);window.addEventListener('focus',refresh)
-    return()=>{alive=false;version++;clearInterval(timer);window.removeEventListener('focus',refresh);void supabase.removeChannel(channel)}
-  },[supabase,shipment?.id,userId])
-
-  function applyShipment(data: any) {
-    setShipment(data)
-  }
+    setLoading(true);setLoadError("");void refresh(true)
+    const timer=setInterval(()=>{if(document.visibilityState==="visible")void refresh()},12000)
+    return()=>{alive=false;clearInterval(timer)}
+  },[requestedId,revision])
 
   const statusCfg = STATUS_COLORS[shipment?.status] ?? STATUS_COLORS.requested
   const isDelivered = shipment?.status === 'delivered'
@@ -431,7 +351,7 @@ function TrackingPageInner() {
                   {eta?.destination ? 'Estimated delivery' : 'Driver arrival'}
                 </p>
                 <p className="text-3xl font-black font-headline text-white tracking-tighter">
-                  {eta ? `${eta.minutes} min` : '—'}
+                  {eta ? `${eta.minutes} min` : 'Waiting for GPS'}
                 </p>
                 <p className="text-xs text-[#adaaaa]/60 mt-0.5">
                   {eta ? (eta.destination ? 'Estimated delivery · traffic may vary' : 'Driver reaches pickup · traffic may vary') : shipment?.driver_id ? 'Waiting for a current route estimate' : 'Awaiting driver'}
@@ -601,7 +521,7 @@ function TrackingPageInner() {
           <div className="border-t border-[#494847]/20 px-5 py-4 md:shrink-0 bg-[#0e0e0e]">
             <div className="flex items-center gap-3.5 mb-4">
               <div className="w-12 h-12 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] font-bold font-headline text-base shrink-0">
-                {driverInitials(driver)}
+                {driver ? driverInitials(driver) : '–'}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-white truncate">
@@ -610,6 +530,7 @@ function TrackingPageInner() {
                       ? 'Driver assigned'
                       : 'Awaiting driver')}
                 </p>
+                {driver?.vehicle && <p className="text-xs text-[#adaaaa]">{[driver.vehicle.vehicle_type,driver.vehicle.make,driver.vehicle.model,driver.vehicle.colour].filter(Boolean).join(" · ")}</p>}
                 <div className="flex items-center gap-1 mt-0.5">
                   <span
                     className="material-symbols-outlined text-sm text-yellow-400"
@@ -620,7 +541,7 @@ function TrackingPageInner() {
                   <span className="text-sm font-bold text-white">
                     {driverRating.average != null
                       ? driverRating.average.toFixed(2)
-                      : 'New'}
+                      : 'No ratings yet'}
                   </span>
                   {driverRating.count > 0 && (
                     <span className="text-xs text-[#adaaaa] ml-1">
@@ -631,8 +552,8 @@ function TrackingPageInner() {
                 </div>
               </div>
             </div>
-            {shipment?.id && ['accepted','collected','in_transit'].includes(shipment.status) && <CustomerLocationBroadcaster key={shipment.id} deliveryId={shipment.id} orderLabel={shipment.tracking_number??shipment.id.slice(0,8)} />}
-            {shipment?.id && <><CustomerThread kind="order" id={shipment.id} /><CollectionWaiting id={shipment.id}/></>}
+            {shipment?.id && ['accepted','collected','picked_up','in_transit'].includes(shipment.status) && <CustomerLocationBroadcaster key={shipment.id} deliveryId={shipment.id} orderLabel={shipment.tracking_number??shipment.id.slice(0,8)} />}
+            {shipment?.id && <><CustomerThread kind="order" id={shipment.id} activeAssignment={!!shipment.driver_id&&["accepted","collected","picked_up","in_transit"].includes(shipment.status)} /><CollectionWaiting id={shipment.id}/></>}
 
           </div>
         </aside>

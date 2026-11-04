@@ -18,7 +18,7 @@ export async function proxy(request: NextRequest) {
     "/", "/pricing", "/privacy-policy", "/terms", "/prohibited-items",
     "/how-it-works", "/our-fleet", "/contact", "/offline",
     "/firebase-messaging-sw.js", "/api/brand-theme", "/api/auth/signup",
-    "/api/customer/shipments", "/api/driver-document", "/auth/callback", "/auth/confirm", "/api/auth/resend", "/track",
+    "/api/customer/shipments", "/api/driver-document", "/api/driver/pickup-photo", "/api/customer/tracking-driver", "/api/tracking/positions", "/auth/callback", "/auth/confirm", "/api/auth/resend", "/track",
   ].includes(pathname) || pathname.startsWith("/track/") || pathname.startsWith("/api/google/") || pathname.startsWith("/api/stripe/") ||
       (pathname === "/login" && request.nextUrl.searchParams.has("error"))) return NextResponse.next({request})
 

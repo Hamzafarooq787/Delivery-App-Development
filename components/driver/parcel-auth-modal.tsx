@@ -1,9 +1,9 @@
 "use client"
 
-import { useRef, useState, useMemo } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { createClient } from "@/lib/supabase/client"
+import { shortRequest } from "@/lib/short-request"
 import { markParcelCollected } from "@/app/actions/delivery"
 import { compressImage } from "@/lib/image-compress"
 
@@ -26,14 +26,20 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>("Uploading…")
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadKey = useRef<string>("")
+  const uploadedPhoto = useRef<string | null>(null)
+  const [error,setError]=useState("")
   const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      const blob = await compressImage(file)
+      const blob = await compressImage(file,800,0.64)
+      if(blob.size>350000)throw new Error("Choose a smaller photo.")
+      uploadKey.current=crypto.randomUUID()
+      uploadedPhoto.current=null
+      setError("")
       setCompressedBlob(blob)
       setPreviewUrl(URL.createObjectURL(blob))
       setStep("preview")
@@ -43,40 +49,31 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
   }
 
   async function handleConfirm() {
-    if (!compressedBlob) return
+    if (!compressedBlob || uploading) return
     setUploading(true)
-
+    setError("")
     try {
-      // Step 1: get current user id for the storage path
-      setUploadProgress("Preparing upload…")
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { toast.error("Not authenticated"); setUploading(false); return }
-
-      // Step 2: upload directly from browser → Supabase Storage (no server relay)
-      setUploadProgress("Uploading photo…")
-      const path = `${user.id}/parcel-${deliveryId}-${Date.now()}.jpg`
-      const file = new File([compressedBlob], "parcel.jpg", { type: "image/jpeg" })
-      const { error: uploadError } = await supabase.storage
-        .from("driver-documents")
-        .upload(path, file, { contentType: "image/jpeg", upsert: true })
-
-      if (uploadError) { toast.error(uploadError.message); setUploading(false); return }
-
-      const { data: { publicUrl } } = supabase.storage.from("driver-documents").getPublicUrl(path)
-
-      // Step 3: lightweight server action — just the DB update + revalidate
-      setUploadProgress("Saving…")
-      const result = await markParcelCollected(deliveryId, publicUrl)
-      if (result.error) { toast.error(result.error); setUploading(false); return }
-
-      toast.success("Parcel authenticated! Status updated to Collected.")
+      if (!uploadedPhoto.current) {
+        setUploadProgress("Uploading photo…")
+        const form=new FormData()
+        form.set("id",deliveryId);form.set("key",uploadKey.current)
+        form.set("photo",compressedBlob,"parcel.jpg")
+        const response=await fetch("/api/driver/pickup-photo",{method:"POST",body:form,signal:AbortSignal.timeout(16000)})
+        const result=await response.json()
+        if(!response.ok || !result.url)throw new Error(result.error??"Upload failed. Retry the same photo.")
+        uploadedPhoto.current=result.url
+      }
+      setUploadProgress("Saving Collected status…")
+      const result=await shortRequest(markParcelCollected(deliveryId,uploadedPhoto.current!),12500)
+      if(result.error)throw new Error(result.error)
+      toast.success("Parcel marked Collected.")
       onClose()
       router.refresh()
-    } catch {
-      toast.error("Upload failed. Please check your connection and try again.")
-    } finally {
-      setUploading(false)
-    }
+    } catch (err) {
+      setError(uploadedPhoto.current
+        ? `Photo uploaded. Retry saving the status. ${err instanceof Error && err.message!=="Request timed out" ? err.message : ""}`
+        : err instanceof Error && err.name==="Error" ? err.message : "Photo upload timed out. Retry with the same photo.")
+    } finally {setUploading(false)}
   }
 
   return (
@@ -102,6 +99,7 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
 
         <div className="overflow-y-auto flex-1 px-5 py-5">
 
+          {error&&<p role="alert" className="mb-3 text-sm text-red-300">{error}</p>}
           {/* STEP 1 — Warning */}
           {step === "warning" && (
             <div className="space-y-4">
@@ -172,6 +170,10 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
                   <span className="material-symbols-outlined text-base">camera_alt</span>
                   Open Camera
                 </button>
+                <label className="cursor-pointer rounded-lg border border-white/20 px-4 py-2 text-sm text-white">
+                  Choose photo file
+                  <input type="file" accept="image/*" onChange={handleFileChange} className="sr-only"/>
+                </label>
               </div>
               <p className="text-[10px] text-[var(--color-outline-variant)] text-center">Image is automatically compressed for faster upload</p>
             </div>
@@ -230,7 +232,7 @@ export function ParcelAuthModal({ deliveryId, onClose }: Props) {
                 className="flex-1 py-2.5 rounded-xl bg-[#6ee7b7] text-[var(--brand-bg)] font-bold text-sm hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">verified</span>
-                {uploading ? uploadProgress : "Confirm & Mark Collected"}
+                {uploading ? uploadProgress : uploadedPhoto.current ? "Retry save status" : "Confirm & Mark Collected"}
               </button>
             </>
           )}

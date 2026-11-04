@@ -15,9 +15,13 @@ export function DriverActiveTracking({ userId }: { userId: string }) {
     let sequence=0
     const refresh = async () => {
       const request=++sequence
-      const { data, error } = await client.from('delivery_requests').select('id').eq('driver_id', userId).in('status', ['accepted', 'collected', 'picked_up', 'in_transit']).order('created_at').limit(20)
+      let data: {id:string}[] | undefined
+      try {
+        const response=await fetch("/api/tracking/positions",{signal:AbortSignal.timeout(8500)})
+        if(!response.ok)return
+        data=(await response.json()).jobs
+      } catch { return }
       if (!alive||request!==sequence) return
-      if (error) return // Keep the current watch during transient connectivity loss.
       // Existing multi-job assignments remain accessible. Track the displayed job,
       // but validate any UI selection against the driver's actual active rows.
       setJobId(data?.find(job => path.includes(job.id))?.id ??
