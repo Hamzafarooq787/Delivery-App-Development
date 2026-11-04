@@ -146,3 +146,10 @@ test('OAuth callback never replays a single-use code and redirects upstream 522 
  assert.equal(await GET({url:'https://godrop.uk/auth/callback'}),'https://godrop.uk/login?error=missing_oauth_code')
  assert.equal(exchanges,1)
 })
+test('OAuth error pages safely handle unusual codes and never echo them into the page',()=>{
+ const {oauthErrorMessage}=load('lib/oauth-error-message.ts')
+ assert.match(oauthErrorMessage('oauth_unavailable'),/temporarily unavailable/)
+ const fallback=oauthErrorMessage('oauth_failed')
+ for(const code of ['__proto__','constructor','%','<provider error>'])assert.equal(oauthErrorMessage(code),fallback)
+ assert.equal(oauthErrorMessage(null),null)
+})
