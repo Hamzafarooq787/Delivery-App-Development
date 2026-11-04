@@ -2,6 +2,7 @@
 
 import { BrandLogo } from '@/components/shared/brand-logo'
 import { Suspense, useState } from "react"
+import { oauthErrorMessage } from "@/lib/oauth-error-message"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "@/app/actions/auth"
@@ -15,21 +16,10 @@ export default function LoginPage() {
   )
 }
 
-const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  missing_oauth_code: "OAuth sign-in failed: no authorisation code received. Please try again.",
-  no_user: "Could not retrieve your account after sign-in. Please try again.",
-  oauth_unavailable: "Sign-in is temporarily unavailable. Start again using the Google sign-in button.",
-  profile_unavailable: "We could not load your account. Please try signing in again.",
-  oauth_failed: "OAuth sign-in failed. Please try again.",
-}
-
 function LoginPageContent() {
   const searchParams = useSearchParams()
   const resetSuccess = searchParams.get("reset") === "success"
-  const oauthError = searchParams.get("error")
-  const oauthErrorMsg = oauthError
-    ? (OAUTH_ERROR_MESSAGES[oauthError] ?? OAUTH_ERROR_MESSAGES.oauth_failed)
-    : null
+  const oauthErrorMsg = oauthErrorMessage(searchParams.get("error"))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(oauthErrorMsg)
 
