@@ -109,7 +109,7 @@ export function VerificationPanel({
   const totalSteps = configs.length + 1
   const completedSteps = uploadedCount + (hasVehicle ? 1 : 0)
   const pct =
-    driverStatus === "approved" ? 100 : Math.round((completedSteps / totalSteps) * 66) + (driverStatus === "rejected" ? 0 : completedSteps > 0 ? 10 : 0)
+    Math.round((completedSteps / totalSteps) * 100)
 
   async function handleUpload(docType: DocType, file: File) {
     setUploadError(null)

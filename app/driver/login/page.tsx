@@ -1,6 +1,7 @@
 "use client"
 
 import { BrandLogo } from '@/components/shared/brand-logo'
+import { shortRequest } from "@/lib/short-request"
 import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -23,9 +24,12 @@ function DriverLoginContent() {
   async function handleLogin(formData: FormData) {
     setLoading(true)
     setError(null)
-    const result = await signInAsDriver(formData)
-    if (result?.error) {
-      setError(result.error)
+    try {
+      const result = await shortRequest(signInAsDriver(formData), 14000)
+      if (result?.error) setError(result.error)
+    } catch {
+      setError("Sign-in is taking too long. Please try again.")
+    } finally {
       setLoading(false)
     }
   }

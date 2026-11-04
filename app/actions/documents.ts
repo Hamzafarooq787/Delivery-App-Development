@@ -1,5 +1,8 @@
 "use server"
+import { getDashboardUser } from "@/lib/dashboard-user"
 
+import { driverDocumentKind } from "@/lib/driver-document-media"
+import { boundedFetch } from "@/lib/short-request"
 import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -8,6 +11,7 @@ import { driverComplianceReady } from "@/lib/driver-compliance"
 
 export type DriverDocument = {
   id: string
+  media_kind?: "image" | "pdf" | "unknown"
   document_type: string
   file_url: string
   created_at: string
@@ -18,11 +22,10 @@ export type DriverDocument = {
 }
 
 export async function getMyDocuments(): Promise<{ data: DriverDocument[]; error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getDashboardUser()
   if (!user) return { data: [], error: "Not authenticated" }
 
-  const admin = createAdminClient()
+  const admin = createAdminClient(boundedFetch(3500))
   const { data, error } = await admin
     .from("driver_documents")
     .select("id, document_type, file_url, created_at, expires_on,review_status,review_reason,reviewed_at")
@@ -30,7 +33,7 @@ export async function getMyDocuments(): Promise<{ data: DriverDocument[]; error?
     .order("created_at", { ascending: false })
 
   if (error) return { data: [], error: error.message }
-  return { data: ((data ?? []) as DriverDocument[]).map(d => ({ ...d, file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` })) }
+  return { data: ((data ?? []) as DriverDocument[]).map(d => ({ ...d, media_kind: driverDocumentKind(d.file_url), file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` })) }
 }
 
 export async function recordDriverDocument(documentType: string, fileUrl: string, expiresOn?: string) {
@@ -91,20 +94,14 @@ export async function submitForReview() {
 }
 
 export async function getDriverDocumentsById(driverId: string): Promise<DriverDocument[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-  const admin = createAdminClient()
-  if (user.id !== driverId) {
-    const { data: caller } = await admin.from("users").select("role").eq("id", user.id).maybeSingle()
-    if (!(await getAdminActor("operations"))) return []
-  }
+  if (!(await getAdminActor("operations"))) return []
+  const admin = createAdminClient(boundedFetch(3500))
   const { data } = await admin
     .from("driver_documents")
     .select("id, document_type, file_url, created_at, expires_on,review_status,review_reason,reviewed_at")
     .eq("driver_id", driverId)
     .order("created_at", { ascending: false })
-  return ((data ?? []) as DriverDocument[]).map(d => ({ ...d, file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` }))
+  return ((data ?? []) as DriverDocument[]).map(d => ({ ...d, media_kind: driverDocumentKind(d.file_url), file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` }))
 }
 
 async function documentExists(admin:ReturnType<typeof createAdminClient>,owner:string,url:string):Promise<boolean>{

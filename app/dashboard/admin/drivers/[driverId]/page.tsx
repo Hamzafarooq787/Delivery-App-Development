@@ -1,9 +1,10 @@
 import {ukDate} from "@/lib/admin-operations"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { adminApproveDriver, adminRejectDriver, adminGetDriverById } from "@/app/actions/delivery"
+import { adminRejectDriver, adminGetDriverById } from "@/app/actions/delivery"
 import { getDriverDocumentsById } from "@/app/actions/documents"
 import { adminGetDriverVehicles } from "@/app/actions/vehicles"
+import { ApproveDriverButton } from "@/components/admin/approve-driver-button"
 import { DriverDocumentsPanel } from "@/components/admin/driver-documents-panel"
 import { VEHICLE_INFO } from "@/lib/vehicles"
 
@@ -54,13 +55,6 @@ export default async function AdminDriverDetailPage({
 
   const initials = driver.full_name
     .split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase() || "DR"
-
-  async function approve() {
-    "use server"
-    const result = await adminApproveDriver(driverId)
-    if (result.error) redirect(`/dashboard/admin/drivers/${driverId}?review=approval-failed`)
-    redirect(`/dashboard/admin/drivers/${driverId}`)
-  }
 
   async function reject(formData:FormData) {
     "use server"
@@ -134,10 +128,10 @@ export default async function AdminDriverDetailPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {vehicles.map((v) => (
                   <div key={v.id} className="flex items-start gap-2.5 bg-[var(--brand-bg)] border border-[var(--color-outline-variant)]/15 rounded-lg px-3 py-2.5">
-                    <span className="text-base shrink-0">{VEHICLE_INFO[v.vehicle_type].emoji}</span>
+                    <span className="text-base shrink-0">{VEHICLE_INFO[v.vehicle_type]?.emoji}</span>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-white truncate">
-                        {VEHICLE_INFO[v.vehicle_type].label}
+                        {VEHICLE_INFO[v.vehicle_type]?.label ?? v.vehicle_type}
                         {(v.make || v.model) && <span className="text-[var(--color-on-surface-variant)] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
                       </p>
                       <p className="text-[10px] text-[var(--color-on-surface-variant)] truncate">
@@ -173,16 +167,7 @@ export default async function AdminDriverDetailPage({
               </p>
             )}
             <div className="flex flex-col gap-2">
-              <form action={approve}>
-                <button
-                  type="submit"
-                  disabled={driver.status === "approved"}
-                  className="w-full py-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 font-bold text-sm hover:bg-green-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-sm">check_circle</span>
-                  Approve Driver
-                </button>
-              </form>
+              <ApproveDriverButton driverId={driverId} name={driver.full_name} documentIds={documents.map(doc=>doc.id)} disabled={driver.status !== "pending"}/>
               <form action={reject}>
                 <label className="block text-xs text-white">Rejection reason<input name="reason" required minLength={5} maxLength={500} className="block w-full my-2 rounded bg-black/20 p-2"/></label>
                 <button

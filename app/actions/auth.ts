@@ -76,25 +76,45 @@ export async function ensureOAuthUserProfile(): Promise<{ role: string; error?: 
   catch { return { role: "customer", error: "Your profile could not be loaded. Please retry." } }
 }
 
-export async function signIn(formData: FormData) {
-  const supabase = await createClient()
-  const email = formData.get("email") as string
-  const password = formData.get("password") as string
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Sign in failed. Please try again." }
+async function passwordSignIn(formData: FormData, driverOnly = false) {
+  const email = String(formData.get("email") ?? "").trim()
+  const password = String(formData.get("password") ?? "")
+  if (!email || !password) return { error: "Enter your email and password." }
+  const deadline = AbortSignal.timeout(11000)
+  const fetchBeforeDeadline: typeof fetch = (input, options) => fetch(input, {
+    ...options, signal: options?.signal ? AbortSignal.any([deadline, options.signal]) : deadline,
+  })
+  const supabase = await createClient(fetchBeforeDeadline)
   let role: string
-  try { role = await ensureVerifiedProfile(user) }
-  catch { await supabase.auth.signOut(); return { error: "Your account could not be loaded. Please retry or contact support." } }
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return { error: deadline.aborted || error.name === "AuthRetryableFetchError"
+      ? "Sign-in is taking too long. Please try again." : error.message }
+    if (!data.user || !data.session) return { error: "Sign in failed. Please try again." }
 
-  if (role === "admin") redirect("/dashboard/admin")
-  if (role === "driver") redirect("/dashboard/driver")
+    const db = createAdminClient(fetchBeforeDeadline)
+    const existing = await db.from("users").select("role,account_status").eq("id",data.user.id).maybeSingle()
+    if (existing.error) throw existing.error
+    if (existing.data && (existing.data.account_status !== "active" || !["admin","driver","customer"].includes(existing.data.role))) {
+      throw new Error("Account unavailable")
+    }
+    role = existing.data?.role ?? await ensureVerifiedProfile(data.user, "customer", db)
+    if (driverOnly && role !== "driver") {
+      await supabase.auth.signOut({scope:"local"})
+      return { error: "No driver account found for this email address." }
+    }
+  } catch {
+    await supabase.auth.signOut({scope:"local"}).catch(() => {})
+    return { error: "Your account could not be loaded. Please retry or contact support." }
+  }
+  return { role }
+}
+
+export async function signIn(formData: FormData) {
+  const result = await passwordSignIn(formData)
+  if (result.error) return { error: result.error }
+  if (result.role === "admin") redirect("/dashboard/admin")
+  if (result.role === "driver") redirect("/dashboard/driver")
   redirect("/dashboard/customer")
 }
 
@@ -143,24 +163,8 @@ export async function signUp(formData: FormData) {
 }
 
 export async function signInAsDriver(formData: FormData) {
-  const supabase = await createClient()
-  const email = formData.get("email") as string
-  const password = formData.get("password") as string
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) return { error: error.message }
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Sign in failed. Please try again." }
-
-  let role: string
-  try { role = await ensureVerifiedProfile(user) }
-  catch { await supabase.auth.signOut(); return { error: "Your account could not be loaded. Please retry or contact support." } }
-  if (role !== "driver") {
-    await supabase.auth.signOut()
-    return { error: "No driver account found for this email address." }
-  }
-
+  const result = await passwordSignIn(formData, true)
+  if (result.error) return { error: result.error }
   redirect("/dashboard/driver")
 }
 

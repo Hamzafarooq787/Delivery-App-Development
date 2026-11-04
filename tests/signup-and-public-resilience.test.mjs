@@ -179,3 +179,28 @@ test('Previously sent signup links with missing verifiers reach email guidance; 
   assert.match((await GET(new Request('https://godrop.uk/auth/callback?code=old&role=driver'))).headers.get('location'),/confirmation=check/)
   assert.match((await GET(new Request('https://godrop.uk/auth/callback?code=old'))).headers.get('location'),/error=oauth_failed/)
 })
+
+test('Password login uses the user from the verified sign-in response and reads an existing profile once',async()=>{
+  let reads=0
+  const {signIn}=compile('app/actions/auth.ts',{
+    '@/lib/signup-email':signupEmail,
+    '@/lib/supabase/server':{createClient:async()=>({auth:{
+      signInWithPassword:async()=>({data:{user:{id:'driver'},session:{}},error:null}),
+      getUser:()=>{throw Error('duplicate auth request')},
+    }})},
+    '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>{
+      reads++;return {data:{role:'driver',account_status:'active'},error:null}
+    }})})})})},
+    '@/lib/auth-profile':{ensureVerifiedProfile:()=>{throw Error('existing profile must not be rewritten')}},
+    'next/navigation':{redirect:path=>{throw Error(path)}},
+  })
+  await assert.rejects(signIn(signupForm()),/\/dashboard\/driver/)
+  assert.equal(reads,1)
+})
+
+test('Private document URLs keep original image or PDF type without exposing a storage path',()=>{
+  const {driverDocumentKind}=compile('lib/driver-document-media.ts',{})
+  assert.equal(driverDocumentKind('https://store.example/driver/private/identity.PNG?ignore=true'),'image')
+  assert.equal(driverDocumentKind('https://store.example/driver/private/insurance.pdf'),'pdf')
+  assert.equal(driverDocumentKind('/api/driver-document?id=opaque'),'unknown')
+})

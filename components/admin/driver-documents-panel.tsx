@@ -23,7 +23,7 @@ function fmtDate(v: string) {
 
 export function DriverDocumentsPanel({ documents,vehicles=[] }: { documents: DriverDocument[];vehicles?:{vehicle_type:string}[] }) {
   const router=useRouter();const [pending,start]=useTransition();const [message,setMessage]=useState("")
-  const [previewDoc, setPreviewDoc] = useState<{ document_type: string; file_url: string } | null>(null)
+  const [previewDoc, setPreviewDoc] = useState<DriverDocument | null>(null)
 
   if (documents.length === 0) {
     return (
@@ -84,7 +84,7 @@ export function DriverDocumentsPanel({ documents,vehicles=[] }: { documents: Dri
                     <span className="text-xs text-white">{doc.review_status??"pending"}{doc.review_reason?` · ${doc.review_reason}`:""}</span>
                     {(["approved","rejected"] as const).map(status=><button key={status} disabled={pending} className="text-xs underline text-white" onClick={()=>{const reason=status==="rejected"?window.prompt("Rejection reason:"):"Document reviewed";if(reason===null)return;start(async()=>{const result=await reviewDocument(doc.id,status,reason);setMessage(result.error??"Review saved.");router.refresh()})}}>{status==="approved"?"Approve":"Reject"}</button>)}
                     <button
-                      onClick={() => setPreviewDoc({ document_type: doc.document_type, file_url: doc.file_url })}
+                      onClick={() => setPreviewDoc(doc)}
                       className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-surface-container-highest)] border border-[var(--color-outline-variant)]/20 text-[var(--color-on-surface-variant)] hover:text-white hover:border-[var(--brand-strong)]/30 rounded-lg text-xs font-semibold transition-all"
                     >
                       <span className="material-symbols-outlined text-sm">visibility</span>

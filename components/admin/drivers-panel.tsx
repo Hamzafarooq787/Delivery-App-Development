@@ -4,6 +4,8 @@ import {ukDate} from "@/lib/admin-operations"
 import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
+import { adminGetDriverVehicles, type DriverVehicle } from "@/app/actions/vehicles"
+import { shortRequest } from "@/lib/short-request"
 import { getDriverDocumentsById } from "@/app/actions/documents"
 import { AddDriverModal } from "@/components/admin/add-driver-modal"
 import { DocumentPreviewModal } from "@/components/admin/document-preview-modal"
@@ -20,17 +22,13 @@ export type DriverRow = {
   status: "pending" | "approved" | "rejected"
 }
 
-type Doc = { document_type: string; file_url: string }
+type Doc = Pick<DriverDocument,"document_type"|"file_url"|"media_kind">
 
 const DOC_CONFIGS = [
   { type: "identity",             label: "Identity",     icon: "badge",   color: "text-[var(--brand-soft)]", bg: "bg-[var(--brand-strong)]/10" },
   { type: "insurance",            label: "Insurance",    icon: "shield",  color: "text-[var(--color-secondary)]", bg: "bg-[var(--color-secondary)]/10" },
   { type: "vehicle_registration", label: "Vehicle Reg.", icon: "commute", color: "text-[var(--brand-soft)]", bg: "bg-[var(--brand-strong)]/10" },
 ]
-
-function isImage(url: string) {
-  return /\.(jpe?g|png|webp|gif|bmp)(\?|$)/i.test(url)
-}
 
 function getInitials(name: string) {
   const parts = name.trim().split(" ")
@@ -47,11 +45,11 @@ function StatusPill({ status }: { status: "pending" | "approved" | "rejected" })
 
 function DocPreviewCard({ doc, onOpen }: { doc: DriverDocument; onOpen: (d: Doc) => void }) {
   const cfg = DOC_CONFIGS.find((c) => c.type === doc.document_type)
-  const img = isImage(doc.file_url)
+  const img = doc.media_kind === "image"
 
   return (
     <div
-      onClick={() => onOpen({ document_type: doc.document_type, file_url: doc.file_url })}
+      onClick={() => onOpen(doc)}
       className="rounded-xl border border-[var(--color-outline-variant)]/15 bg-[var(--brand-bg)] overflow-hidden cursor-pointer hover:border-[var(--brand-strong)]/30 transition-all group"
     >
       {/* Thumbnail */}
@@ -60,7 +58,7 @@ function DocPreviewCard({ doc, onOpen }: { doc: DriverDocument; onOpen: (d: Doc)
           /* eslint-disable-next-line @next/next/no-img-element */
           <img loading="lazy" decoding="async" src={doc.file_url} alt={cfg?.label ?? doc.document_type} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
-          <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)]">picture_as_pdf</span>
+          <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)]">{doc.media_kind === "pdf" ? "picture_as_pdf" : "description"}</span>
         )}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
           <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl drop-shadow">zoom_in</span>
@@ -71,6 +69,7 @@ function DocPreviewCard({ doc, onOpen }: { doc: DriverDocument; onOpen: (d: Doc)
         <span className={`material-symbols-outlined text-xs ${cfg?.color ?? "text-[var(--color-on-surface-variant)]"}`}>{cfg?.icon ?? "description"}</span>
         <p className={`text-[9px] font-bold uppercase tracking-wider truncate ${cfg?.color ?? "text-[var(--color-on-surface-variant)]"}`}>{cfg?.label ?? doc.document_type}</p>
       </div>
+      <p className="px-2 pb-2 text-[10px] text-gray-300">{doc.expires_on ? `Expires ${ukDate(doc.expires_on)}` : "No expiry"} · {doc.review_status ?? "pending"}</p>
     </div>
   )
 }
@@ -82,6 +81,8 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
   const [isPending, startTransition] = useTransition()
   const [showAddModal, setShowAddModal] = useState(false)
   const [documents, setDocuments] = useState<DriverDocument[]>([])
+  const [vehicles, setVehicles] = useState<DriverVehicle[]>([])
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [loadingDocs, setLoadingDocs] = useState(false)
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -97,24 +98,36 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
   const pendingCount = drivers.filter((d) => d.status === "pending").length
   const selected = filtered.find((d) => d.id === selectedId) ?? filtered[0] ?? null
 
-  // Fetch documents whenever selected driver changes
   useEffect(() => {
-    if (!selected) { setDocuments([]); return }
+    if (!selected) return
+    let active = true
+    setDocuments([])
+    setVehicles([])
+    setDetailId(null)
     setLoadingDocs(true)
-    getDriverDocumentsById(selected.id).then((docs) => {
-      setDocuments(docs)
-      setLoadingDocs(false)
-    })
+    shortRequest(Promise.all([getDriverDocumentsById(selected.id), adminGetDriverVehicles(selected.id)]), 8000)
+      .then(([docs, fleet]) => {
+        if (!active) return
+        setDocuments(docs)
+        setVehicles(fleet)
+        setDetailId(selected.id)
+      })
+      .catch(() => { if (active) setActionError("Driver details could not load. Refresh to retry.") })
+      .finally(() => { if (active) setLoadingDocs(false) })
+    return () => { active = false }
   }, [selected?.id])
 
   function handleApprove() {
-    if (!selected || isPending) return
+    if (!selected || isPending || detailId !== selected.id || !documents.length) return
+    if (!window.confirm(`Approve ${selected.full_name}? Confirm that you reviewed all ${documents.length} displayed documents. Pending documents will be marked approved.`)) return
     setActionError(null)
     startTransition(async () => {
-      const result = await adminApproveDriver(selected.id)
-      if (result.error) { setActionError(result.error); return }
-      setSelectedId(null)
-      router.refresh()
+      try {
+        const result = await adminApproveDriver(selected.id, documents.map(d => d.id))
+        if (result.error) { setActionError(result.error); return }
+        setSelectedId(null)
+        router.refresh()
+      } catch { setActionError("Approval could not be checked. Refresh before retrying.") }
     })
   }
 
@@ -263,10 +276,14 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                   </div>
                 </div>
 
+                {vehicles.length > 0 && <div className="mb-4 text-xs text-gray-300">
+                  <p className="mb-1 font-bold text-white">Registered vehicles</p>
+                  {vehicles.map(v => <p key={v.id}>{[v.registration_number, v.vehicle_type, v.colour, v.make, v.model].filter(Boolean).join(" · ")}</p>)}
+                </div>}
                 {/* Documents */}
                 <div className="mb-5">
                   <p className="text-[9px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-3">
-                    Verified Documents
+                    Submitted Documents
                     {documents.length > 0 && <span className="ml-1.5 text-[var(--brand-soft)]">({documents.length})</span>}
                   </p>
                   {loadingDocs ? (
@@ -311,7 +328,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                   </button>
                   <button
                     onClick={handleApprove}
-                    disabled={isPending || selected.status === "approved"}
+                    disabled={isPending || selected.status !== "pending" || detailId !== selected.id || !documents.length}
                     className="flex-1 py-2.5 rounded-xl bg-[var(--brand-strong)] text-[var(--brand-ink)] font-bold text-xs hover:bg-[var(--color-primary-fixed-dim)] shadow-[0_0_12px_rgba(var(--brand-rgb),0.2)] transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
                   >
                     <span className="material-symbols-outlined text-sm">check_circle</span>

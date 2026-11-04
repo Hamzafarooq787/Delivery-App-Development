@@ -1,4 +1,5 @@
 "use server"
+import { driverDocumentKind } from "@/lib/driver-document-media"
 import {randomInt} from "node:crypto"
 import {getAppOrigin} from "@/lib/get-app-origin"
 import {allAuthUsers} from "@/lib/auth-directory"
@@ -824,21 +825,28 @@ export async function adminCreateDriver(formData: FormData) {
  })
 }
 
-export async function adminApproveDriver(driverId: string) {
- return runAdminMutation("operations","adminApproveDriver",driverId,async()=>{
-  if (!(await requireAdmin())) return { error: "Not authorized" }
+export async function adminApproveDriver(driverId: string, documentIds: string[]) {
+  const actor = await getAdminActor("operations")
+  if (!actor) return { error: "Not authorized" }
+  const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
+  if (!uuid.test(driverId) || !Array.isArray(documentIds) || !documentIds.length || documentIds.length > 20 || documentIds.some(id => typeof id !== "string" || !uuid.test(id))) {
+    return { error: "Open the application and review the documents before confirming approval." }
+  }
   const admin = createAdminClient()
-
-  const session=await createClient();const {data:{user}}=await session.auth.getUser()
-  const { error } = await admin.rpc('admin_review_driver',{p_driver:driverId,p_actor:user!.id,p_decision:'approved',p_reason:'Application and required documents reviewed'})
-
-  if (error) return { error: "Driver approval could not be saved. Check that the application was submitted and all required documents are current." }
+  const { error } = await admin.rpc("admin_confirm_driver_approval", { p_driver: driverId, p_actor: actor.id, p_documents: documentIds })
+  if (error) {
+    const messages: Record<string,string> = {
+      valid_submitted_documents_required: "The driver must submit a current application before you can approve it.",
+      driver_documents_changed: "The documents changed. Refresh the application and review the current files.",
+      driver_document_rejected: "A document was rejected. Review the replacement before approving the application.",
+      driver_documents_invalid: "A required document is missing or expired.",
+    }
+    return { error: messages[error.message] ?? "Approval could not be saved. Refresh the application before retrying." }
+  }
   revalidatePath("/dashboard/admin/drivers")
   revalidatePath(`/dashboard/admin/drivers/${driverId}`)
   revalidatePath("/dashboard/admin/verification")
   return { success: true }
-
- })
 }
 
 export async function adminRejectDriver(driverId: string, reason?: string) {
@@ -922,16 +930,14 @@ export async function adminGetCustomers() {
 }
 
 export async function adminGetDriverById(driverId: string) {
-  if (!(await requireAdmin())) return { error: "Not authorized", data: null }
   const actor=await getAdminActor("operations");if(!actor)return{data:null,error:"Not authorised."}
   const admin = createAdminClient()
 
-  const [userRes, profileRes, earningsRes, jobsRes, authUserRes] = await Promise.all([
-    admin.from("users").select("id, full_name, phone, created_at").eq("id", driverId).single(),
+  const [userRes, profileRes, earningsRes, jobsRes] = await Promise.all([
+    admin.from("users").select("id, full_name, phone, email, created_at").eq("id", driverId).single(),
     admin.from("driver_profiles").select("status, created_at").eq("id", driverId).single(),
     admin.rpc("admin_driver_totals",{p_actor:actor.id,p_driver:driverId}),
     admin.from("delivery_requests").select("id", { count: "exact", head: true }).eq("driver_id", driverId).eq("status", "delivered"),
-    admin.auth.admin.getUserById(driverId),
   ])
 
   if (earningsRes.error || jobsRes.error) return {data:null,error:"Driver totals could not load."}
@@ -941,7 +947,7 @@ export async function adminGetDriverById(driverId: string) {
     data: {
       id: userRes.data.id,
       full_name: userRes.data.full_name ?? "Unknown Driver",
-      email: authUserRes.data?.user?.email ?? "",
+      email: userRes.data.email ?? "",
       phone: userRes.data.phone ?? null,
       created_at: userRes.data.created_at,
       status: (profileRes.data?.status ?? "pending") as "pending" | "approved" | "rejected",
@@ -1017,7 +1023,7 @@ export type PendingVerificationDriver = {
   phone: string
   vehicles: DriverVehicle[]
   submitted_at: string
-  documents: { id:string; document_type: string; file_url: string; expires_on?:string|null; review_status?:"pending"|"approved"|"rejected"; review_reason?:string|null }[]
+  documents: { media_kind?: "image"|"pdf"|"unknown"; id:string; document_type: string; file_url: string; expires_on?:string|null; review_status?:"pending"|"approved"|"rejected"; review_reason?:string|null }[]
 }
 
 export async function adminGetPendingVerifications(page=1): Promise<{ data: PendingVerificationDriver[]; error?: string }> {
@@ -1051,7 +1057,7 @@ export async function adminGetPendingVerifications(page=1): Promise<{ data: Pend
   const docsMap = new Map<string, PendingVerificationDriver["documents"]>()
   for (const doc of docsRes.data ?? []) {
     const arr = docsMap.get(doc.driver_id) ?? []
-    arr.push({ id:doc.id,review_status:doc.review_status,review_reason:doc.review_reason,document_type: doc.document_type,expires_on:doc.expires_on, file_url: `/api/driver-document?id=${encodeURIComponent(doc.id)}` })
+    arr.push({ id:doc.id,review_status:doc.review_status,review_reason:doc.review_reason,document_type: doc.document_type,expires_on:doc.expires_on, media_kind: driverDocumentKind(doc.file_url), file_url: `/api/driver-document?id=${encodeURIComponent(doc.id)}` })
     docsMap.set(doc.driver_id, arr)
   }
   const vehiclesMap = new Map<string, DriverVehicle[]>()

@@ -7,6 +7,8 @@
  * capabilities across ALL of a driver's vehicles.
  */
 "use server"
+import { boundedFetch } from "@/lib/short-request"
+import { getDashboardUser } from "@/lib/dashboard-user"
 
 import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server"
@@ -61,11 +63,10 @@ function refreshVehicleReview() {
 // ── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getMyVehicles(): Promise<{ data: DriverVehicle[]; error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getDashboardUser()
   if (!user) return { data: [], error: "Not authenticated" }
 
-  const admin = createAdminClient()
+  const admin = createAdminClient(boundedFetch(3500))
   const { data, error } = await admin
     .from("driver_vehicles")
     .select(VEHICLE_COLUMNS)
@@ -77,7 +78,7 @@ export async function getMyVehicles(): Promise<{ data: DriverVehicle[]; error?: 
 }
 
 export async function adminGetDriverVehicles(driverId: string): Promise<DriverVehicle[]> {
-  if (!(await requireAdmin())) return []
+  if (!(await getAdminActor("operations"))) return []
   const admin = createAdminClient()
   const { data } = await admin
     .from("driver_vehicles")
