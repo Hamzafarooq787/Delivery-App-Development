@@ -1,4 +1,6 @@
 "use server";
+
+import {isPreciseDeliveryAddress,PRECISE_DELIVERY_ADDRESS_ERROR} from "@/lib/precise-delivery-address"
 import {revalidatePath} from "next/cache"
 import { getAdminActor } from "@/lib/admin-access"
 import { createHash } from "node:crypto";
@@ -111,6 +113,7 @@ export async function startOrderCheckout(
       const p = input.order;
       if (!p.pickup_address?.trim() || !p.delivery_address?.trim())
         return { error: "Select both addresses." };
+      if (!isPreciseDeliveryAddress(p.delivery_address)) return {error:PRECISE_DELIVERY_ADDRESS_ERROR};
       const scope = {
         pickupLat: p.pickup_lat,
         pickupLng: p.pickup_lng,

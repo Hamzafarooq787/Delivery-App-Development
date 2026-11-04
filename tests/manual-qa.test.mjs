@@ -11,10 +11,10 @@ const tracking=load('lib/public-tracking.ts')
 test('Shipment lists and details use the exact primary order-to-payment foreign key',()=>{
  const {SHIPMENT_COLUMNS}=load('lib/shipment-query.ts')
  assert.match(SHIPMENT_COLUMNS,/payments!payments_delivery_id_fkey\(amount,payment_method,refund_jobs\)/)
- const source=read('components/customer/CustomerShipments.tsx')
- assert.equal(source.match(/\bSHIPMENT_COLUMNS\b/g).length,3)
- assert.match(source,/\.eq\('customer_id',\s*user\.id\)/)
- assert.match(source,/\.eq\('customer_id',userId\)/)
+ const source=read('app/api/customer/shipments/route.ts')
+ assert.match(source,/select\(SHIPMENT_COLUMNS/)
+ assert.match(source,/\.eq\("customer_id",user\.id\)/)
+ assert.match(source,/base\.eq\("id",id\)/)
 })
 test('Review uses selected size, rejects stale quote inputs, and sends the same size to checkout',()=>{
  const source=read('components/customer/NewDeliveryModal.tsx')
@@ -92,7 +92,7 @@ test('Public tracking entry points are real forms and links, and old fleet links
 test('Order test flag is permission-gated and only appends audit metadata for terminal orders',async()=>{
  const events=[];let scope=false,status='delivered',reads=0
  const {setOrderTestRecord}=load('app/actions/order-test-record.ts',{
-  'next/cache':{revalidatePath:()=>{}},
+  '@/lib/short-request':load('lib/short-request.ts',{}, {setTimeout,clearTimeout}),
   '@/lib/admin-access':{getAdminActor:async s=>{assert.equal(s,'operations');return scope?{id:'admin'}:null},auditAdmin:async(...args)=>events.push(args)},
   '@/lib/supabase/admin':{createAdminClient:()=>({from:t=>{reads++;assert.equal(t,'delivery_requests');return{select:()=>({eq:()=>({maybeSingle:async()=>({data:{id:'x',status}})})})}}})},
  })
@@ -232,4 +232,56 @@ test('Admin declares its own title and old cached admin documents are retired',(
  const adminBranch=worker.split('// Admin pages depend')[1].split('// Navigations:')[0]
  assert.match(adminBranch,/fetch\(request\)/)
  assert.doesNotMatch(adminBranch,/caches.match\(request\)|cache.put/)
+})
+
+test('Shipment API bounds upstream auth and reads only the verified customer, regardless of URL input',async()=>{
+ const columns=load('lib/shipment-query.ts'), filters=[]
+ const q={select:()=>q,eq:(k,v)=>{filters.push([k,v]);return q},abortSignal:s=>{assert.ok(s);return q},in:()=>q,order:()=>q,range:async()=>({data:[{id:'owned'}],count:1,error:null})}
+ let mode='ok'
+ const {GET}=load('app/api/customer/shipments/route.ts',{
+  '@/lib/shipment-query':columns,
+  '@/lib/supabase/server':{createClient:async custom=>{
+   assert.equal(typeof custom,'function')
+   return {auth:{getUser:async()=>mode==='timeout'?{data:{user:null},error:{name:'AuthRetryableFetchError'}}:mode==='signed-out'?{data:{user:null}}:{data:{user:{id:'owner'}}}},from:()=>q}
+  }},
+ },{Response})
+ const req=new Request('https://godrop.uk/api/customer/shipments?history=1&customer_id=other')
+ const good=await GET(req)
+ assert.equal(good.status,200)
+ assert.equal(good.headers.get('cache-control'),'private, no-store')
+ assert.deepEqual(filters,[['customer_id','owner']])
+ assert.equal((await good.json()).rows[0].id,'owned')
+ mode='timeout';assert.equal((await GET(req)).status,504)
+ mode='signed-out';assert.equal((await GET(req)).status,401)
+})
+test('An SDK promise that never settles releases the UI deadline, and shipment failure does not display an empty state',async()=>{
+ const {shortRequest}=load('lib/short-request.ts',{}, {setTimeout,clearTimeout})
+ await assert.rejects(shortRequest(new Promise(()=>{}),8),/Request timed out/)
+ const ui=read('components/customer/CustomerShipments.tsx')
+ assert.match(ui,/error && !rows.length \? null/)
+ assert.match(ui,/AbortSignal.timeout\(2850\)/)
+ assert.match(ui,/setLoading\(false\)[\s\S]*getDriverNamesByIds/)
+})
+test('A UK postcode district or street alone is not a delivery address',()=>{
+ const {isPreciseDeliveryAddress}=load('lib/precise-delivery-address.ts')
+ for(const bad of ['Birmingham B1, UK','Birmingham, B1 1AA, UK','Downing Street, London SW1A 2AA','52.4797, -1.9025',null])assert.equal(isPreciseDeliveryAddress(bad),false,String(bad))
+ for(const good of ['10 Downing Street, London SW1A 2AA, UK','1 New Street, Birmingham B2 4AA','Buckingham Palace, London SW1A 1AA'])assert.equal(isPreciseDeliveryAddress(good),true,good)
+ assert.match(read('app/actions/order-checkout.ts'),/isPreciseDeliveryAddress\(p.delivery_address\)/)
+ assert.match(read('app/api/google/place/route.ts'),/geometry,formatted_address/)
+})
+test('A prepaid £50 shopping balance with £1.85 spent returns £48.15 through the idempotent card refund worker',async()=>{
+ const jobs=[{key:'unused-shopping',amount:48.15,state:'queued'}], creates=[], recorded=[]
+ const q={select:()=>q,or:()=>q,eq:async()=>({data:[{id:'payment',stripe_payment_intent:'pi_mock',refund_jobs:jobs}]})}
+ const {processOrderRefunds}=load('lib/payments/direct.ts',{
+  'server-only':{},'@/lib/notifications/internal':{},
+  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>q,rpc:async(name,args)=>{recorded.push({name,args});jobs[0].state='succeeded';return {error:null}}})},
+  '@/lib/stripe/server':{getStripe:()=>({refunds:{list:async function*(){},create:async(params,options)=>{creates.push({params,options});return {id:'re_mock',status:'succeeded'}}}})},
+ })
+ await processOrderRefunds('order')
+ await processOrderRefunds('order')
+ assert.equal(creates.length,1)
+ assert.equal(creates[0].params.amount,4815)
+ assert.equal(creates[0].options.idempotencyKey,'refund:payment:unused-shopping')
+ assert.equal(recorded[0].name,'record_order_refund')
+ assert.equal(recorded[0].args.p_state,'succeeded')
 })

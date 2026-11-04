@@ -1,3 +1,4 @@
+import { boundedFetch, shortRequest } from "@/lib/short-request"
 import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
@@ -8,7 +9,7 @@ import { AdminLayoutClient } from "./layout-client"
 export const metadata: Metadata = { title: "GoDrop Admin" }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
+  const supabase = await createClient(boundedFetch(2800))
   const { data: { user: authUser } } = await supabase.auth.getUser()
   if (!authUser) redirect("/login")
 
@@ -28,8 +29,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const [pendingVerifications, pendingReviews] = await Promise.all([
-    adminGetPendingVerificationCount(),
-    adminGetPendingReviewCount(),
+    shortRequest(adminGetPendingVerificationCount(),2400).catch(()=>0),
+    shortRequest(adminGetPendingReviewCount(),2400).catch(()=>0),
   ])
 
   return (

@@ -24,6 +24,7 @@ import { createWalletTopUpSession } from '@/app/actions/payments'
 import { getWalletBalance } from '@/app/actions/wallet'
 import { getDeliveryQuote, type DeliveryQuote } from '@/app/actions/pricing'
 import { createClient } from '@/lib/supabase/client'
+import { isPreciseDeliveryAddress, PRECISE_DELIVERY_ADDRESS_ERROR } from '@/lib/precise-delivery-address'
 import { createAddressRequest } from '@/lib/address-request'
 import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
 import { formatPrice } from '@/lib/pricing'
@@ -131,7 +132,9 @@ function AddressInput({
     setOpen(false); setSuggestions([]); setSelecting(true); setSearchError('')
     const coords = await googlePlaceCoords(s.placeId, signal).catch(() => null)
     if (signal.aborted) return
-    onSelect(s.text, coords)
+    const address = coords?.address ?? s.text
+    localValue.current = address
+    onSelect(address, coords ? {lat:coords.lat,lng:coords.lng} : null)
     setSelecting(false)
     if (coords) inputRef.current?.blur()
     else setSearchError('Could not select this address. Please try again.')
@@ -250,6 +253,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     if (step === 2 && (gpsPickupLoading || gpsDestLoading || liveLocationLoading)) { setStepError('Please wait while we find your location.'); return }
     if (step === 2 && (!pickupValue || !pickupCoords)) { setStepError('Choose a pickup address from the suggestions.'); return }
     if (step === 2 && (!deliveryValue || !deliveryCoords)) { setStepError('Choose a delivery address or use your live location.'); return }
+    if (step === 2 && !isPreciseDeliveryAddress(deliveryValue)) { setStepError(PRECISE_DELIVERY_ADDRESS_ERROR); return }
     goTo(step + 1)
   }
   useEffect(() => {
@@ -553,6 +557,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     if (submitting || success) return
     if (!pickupValue || !pickupCoords) { toast.error('Select a pickup address from the suggestions list.'); return }
     if ((!deliveryValue || !deliveryCoords) && !liveLocationActive) { toast.error('Select a delivery address from the suggestions list, or use live location.'); return }
+    if (!isPreciseDeliveryAddress(deliveryValue)) { toast.error(PRECISE_DELIVERY_ADDRESS_ERROR); return }
     if (!packageSize) { toast.error('Select a package size.'); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
     if (quoteError) { toast.error(quoteError); return }
@@ -842,7 +847,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           <div className={styles.price}>
             {quote && <div><span>Driving distance</span><strong>{quote.distanceMiles.toFixed(3)} miles</strong></div>}
             <div><span>Delivery subtotal</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
-            {quote && <PriceBreakdown lines={quote.priceLines}/>}
+            {quote && <PriceBreakdown lines={quote.priceLines.some(line => /^(Large item|Van) surcharge$/.test(line.label)) ? quote.priceLines : [...quote.priceLines,{label:"Parcel size fee",amount:0}]}/>}
             {quote && quote.surgeMultiplier > 1 && <div><span>Surge ({quote.surgeMultiplier}×)</span><strong>+£{formatPrice(quote.surgedPrice - quote.basePrice)}</strong></div>}
             {quote && quote.discountAmount > 0 && <div><span>{quote.discountLabel}</span><strong>−£{formatPrice(quote.discountAmount)}</strong></div>}
             <div><span>Total</span><strong>{quoteLoading ? 'Calculating…' : price !== null ? `£${formatPrice(price)}` : '—'}</strong></div>
