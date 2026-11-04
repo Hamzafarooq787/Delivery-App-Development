@@ -13,20 +13,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { data: { user: authUser } } = await supabase.auth.getUser()
   if (!authUser) redirect("/login")
 
-  // Defense-in-depth alongside the middleware's role check — never render
-  // any admin page for a non-admin session.
-  const { data: roleRow } = await supabase.from("users").select("role").eq("id", authUser.id).maybeSingle()
+  const { data: roleRow } = await supabase.from("users").select("role,full_name").eq("id", authUser.id).maybeSingle()
   if (roleRow?.role !== "admin") redirect("/login")
-
-  const profile = { full_name: "", email: authUser?.email ?? "" }
-  if (authUser) {
-    const { data } = await supabase
-      .from("users")
-      .select("full_name")
-      .eq("id", authUser.id)
-      .single()
-    profile.full_name = data?.full_name ?? ""
-  }
+  const profile = { full_name: roleRow.full_name ?? "", email: authUser.email ?? "" }
 
   const [pendingVerifications, pendingReviews] = await Promise.all([
     shortRequest(adminGetPendingVerificationCount(),2400).catch(()=>0),

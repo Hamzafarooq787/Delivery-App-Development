@@ -1,4 +1,5 @@
 import 'server-only'
+import { boundedFetch } from '@/lib/short-request'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_BRAND, isBrandTheme, type BrandTheme } from '@/lib/brand-theme'
 // Private storage: no client upload policies. Only the authenticated admin
@@ -6,7 +7,7 @@ import { DEFAULT_BRAND, isBrandTheme, type BrandTheme } from '@/lib/brand-theme'
 const BUCKET = 'godrop-brand-settings'
 const FILE = 'theme.json'
 export async function readBrandTheme(): Promise<BrandTheme> {
-  const admin = createAdminClient()
+  const admin = createAdminClient(boundedFetch(1600))
   const { data, error } = await admin.storage.from(BUCKET).download(FILE)
   if (error) {
     if (['404', '400'].includes(String(error.statusCode))) return DEFAULT_BRAND

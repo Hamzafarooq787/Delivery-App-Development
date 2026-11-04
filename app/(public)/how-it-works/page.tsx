@@ -94,7 +94,7 @@ export default function HowItWorksPage() {
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-full bg-[var(--color-secondary)]/20 flex items-center justify-center text-[var(--color-secondary)]"><Route aria-hidden className="h-6 w-6" /></div>
                 <div>
-                  <p className="text-xs text-[var(--color-secondary)] font-bold uppercase tracking-widest">Active Routing</p>
+                  <p className="text-xs text-[var(--color-secondary)] font-bold uppercase tracking-widest">Delivery updates</p>
                   <p className="text-white font-headline font-medium">Planning your collection and delivery route.</p>
                 </div>
               </div>

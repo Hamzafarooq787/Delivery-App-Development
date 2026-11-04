@@ -5,7 +5,8 @@ import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { normaliseUKMobile, UK_MOBILE_ERROR } from "@/lib/uk-phone"
-import { signUp } from "@/app/actions/auth"
+import { shortRequest } from "@/lib/short-request"
+import { LocateFixed, LoaderCircle } from "lucide-react"
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons"
 import { googleReverseGeocode } from "@/lib/google"
 
@@ -52,25 +53,34 @@ function SignupForm() {
     setError(null)
 
     const formData = new FormData()
-    const parts = name.trim().split(" ")
+    const parts = name.trim().split(/\s+/)
     formData.set("first_name", parts[0] ?? name)
-    formData.set("last_name", parts.slice(1).join(" ") || (parts[0] ?? ""))
+    formData.set("last_name", parts.slice(1).join(" "))
     formData.set("email", email)
     formData.set("password", password)
     formData.set("role", role)
     formData.set("phone", phone)
     formData.set("address", address)
 
-    const result = await signUp(formData)
-
-    if (result?.error) {
-      setError(result.error)
+    try {
+      const result = await shortRequest((async () => {
+        const response = await fetch("/api/auth/signup", {
+          method: "POST", body: formData, signal: AbortSignal.timeout(14000),
+        })
+        return await response.json()
+      })(), 14500)
+      if (!result.success) {
+        setError(result.error || "We could not confirm your signup. Check your inbox before trying again.")
+      } else if (result.next === "driver" || result.next === "customer") {
+        window.location.assign(result.next === "driver" ? "/dashboard/driver" : "/dashboard/customer")
+      } else {
+        setSuccess(true)
+      }
+    } catch {
+      setError("We could not confirm your signup. Check your inbox before trying again.")
+    } finally {
       setLoading(false)
-      return
     }
-
-    setSuccess(true)
-    setLoading(false)
   }
 
   return (
@@ -99,8 +109,8 @@ function SignupForm() {
               </div>
               <h2 className="font-headline text-xl font-bold text-white">Check your inbox</h2>
               <p className="text-[#adaaaa] text-sm leading-relaxed">
-                We sent a confirmation link to{" "}
-                <span className="text-white font-medium">{email}</span>. Click it to activate your account.
+                If a confirmation link was sent to{" "}
+                <span className="text-white font-medium">{email}</span>, open it in this browser to activate your account. If you already have an account, sign in below.
               </p>
               {role === "driver" && (
                 <p className="text-[var(--color-secondary)] text-xs leading-relaxed bg-[var(--color-secondary)]/10 border border-[var(--color-secondary)]/20 rounded-xl px-4 py-3">
@@ -126,6 +136,7 @@ function SignupForm() {
                     key={r}
                     type="button"
                     onClick={() => setRole(r)}
+                    disabled={loading}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all ${
                       role === r
                         ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
@@ -157,7 +168,7 @@ function SignupForm() {
               </div>
 
               {error && (
-                <div className="mb-6 flex items-center gap-2 bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] text-sm rounded-xl px-4 py-3">
+                <div role="alert" className="mb-6 flex items-center gap-2 bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] text-sm rounded-xl px-4 py-3">
                   <span className="material-symbols-outlined text-[18px]">error</span>
                   {error}
                 </div>
@@ -228,10 +239,8 @@ function SignupForm() {
                           disabled={detectingAddress}
                           className="flex items-center gap-1 text-[10px] font-bold text-[var(--color-primary)] hover:text-white transition-colors disabled:opacity-50"
                         >
-                          <span className="material-symbols-outlined text-sm">
-                            {detectingAddress ? "hourglass_empty" : "my_location"}
-                          </span>
-                          {detectingAddress ? "Detecting…" : "📍 Detect"}
+                          {detectingAddress ? <LoaderCircle size={14} className="animate-spin" aria-hidden /> : <LocateFixed size={14} aria-hidden />}
+                          {detectingAddress ? "Detecting…" : "Detect"}
                         </button>
                       </div>
                       <div className="relative">

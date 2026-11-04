@@ -58,7 +58,7 @@ function DocPreviewCard({ doc, onOpen }: { doc: DriverDocument; onOpen: (d: Doc)
       <div className="h-[90px] relative flex items-center justify-center overflow-hidden">
         {img ? (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={doc.file_url} alt={cfg?.label ?? doc.document_type} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <img loading="lazy" decoding="async" src={doc.file_url} alt={cfg?.label ?? doc.document_type} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
           <span className="material-symbols-outlined text-4xl text-[var(--color-outline-variant)]">picture_as_pdf</span>
         )}

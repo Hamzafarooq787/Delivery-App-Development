@@ -68,11 +68,8 @@ const messaging = firebase.messaging();
 
 // ── PWA Cache ─────────────────────────────────────────────────────────────────
 // Bump the version string whenever you change the precache list.
-const CACHE_NAME = "godrop-cache-v3";
+const CACHE_NAME = "godrop-cache-v4";
 const PRECACHE_ASSETS = [
-  "/",
-  "/login",
-  "/signup",
   "/offline",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -83,18 +80,17 @@ self.addEventListener("install", (event) => {
   console.log("[FCM-SW] Installing — scope:", self.registration.scope);
   // skipWaiting() so this SW activates immediately, replacing sw.js or the old
   // FCM SW at the narrow scope without waiting for tabs to close.
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
       // Use allSettled so one 404 does not block the rest of the precache.
-      Promise.allSettled(PRECACHE_ASSETS.map((url) => cache.add(url))).then((results) => {
+      Promise.allSettled(PRECACHE_ASSETS.map((url) => cache.add(new Request(url, { signal: AbortSignal.timeout(4000) })))).then((results) => {
         results.forEach((r, i) => {
           if (r.status === "rejected") {
             console.warn("[FCM-SW] Precache miss:", PRECACHE_ASSETS[i], r.reason?.message ?? r.reason);
           }
         });
       })
-    )
+    ).then(() => self.skipWaiting())
   );
 });
 
@@ -109,7 +105,7 @@ self.addEventListener("activate", (event) => {
       caches.keys().then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key !== CACHE_NAME)
+            .filter((key) => key !== CACHE_NAME && (key.startsWith("godrop-cache-") || key === "kv-cache-v1"))
             .map((key) => {
               console.log("[FCM-SW] Deleting stale cache:", key);
               return caches.delete(key);
@@ -137,43 +133,28 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Admin pages depend on the current session and deployment. Never serve a cached admin document.
-  if (request.mode === "navigate" && (url.pathname === "/dashboard/admin" || url.pathname.startsWith("/dashboard/admin/"))) {
-    event.respondWith(fetch(request).catch(() => caches.match("/offline").then((cached) => cached || Response.error())));
-    return;
-  }
-
-  // Navigations: network-first, fall back to cache then /offline
+  // Let the browser handle online navigations, including slow or failed
+  // responses. Never cache signed-in documents or replace them with offline HTML.
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match("/offline"))
-        )
-    );
+    if (self.navigator.onLine === false) {
+      event.respondWith(caches.match("/offline").then((cached) => cached || fetch(request)));
+    }
     return;
   }
 
-  // Static assets: cache-first
-  if (url.pathname.match(/\\.(js|css|png|jpg|jpeg|svg|ico|woff|woff2|ttf)$/)) {
-    event.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ||
-          fetch(request).then((response) => {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-            return response;
-          })
-      )
-    );
+  // Only immutable build files are safe to cache here. Never store a failed
+  // response, auth redirect, private image or HTML under a static asset URL.
+  if (url.pathname.startsWith("/_next/static/") && !request.headers.has("range")) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME).catch(() => null);
+      const cached = await cache?.match(request).catch(() => null);
+      if (cached) return cached;
+      const response = await fetch(request);
+      if (cache && response.ok && !response.redirected && !response.headers.get("Content-Type")?.includes("text/html")) {
+        await cache.put(request, response.clone()).catch(() => {});
+      }
+      return response;
+    })());
   }
 });
 

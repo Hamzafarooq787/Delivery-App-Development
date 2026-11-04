@@ -228,10 +228,8 @@ test('Admin declares its own title and old cached admin documents are retired',(
  assert.match(read('app/dashboard/admin/layout.tsx'),/title: "GoDrop Admin"/)
  assert.doesNotMatch(read('app/layout.tsx'),/Go Drop|Premium Logistics/)
  const worker=read('app/firebase-messaging-sw.js/route.ts')
- assert.match(worker,/godrop-cache-v3/)
- const adminBranch=worker.split('// Admin pages depend')[1].split('// Navigations:')[0]
- assert.match(adminBranch,/fetch\(request\)/)
- assert.doesNotMatch(adminBranch,/caches.match\(request\)|cache.put/)
+ assert.match(worker,/godrop-cache-v4/)
+ assert.match(worker,/key\.startsWith\("godrop-cache-"\)/)
 })
 
 test('Shipment API bounds upstream auth and reads only the verified customer, regardless of URL input',async()=>{
