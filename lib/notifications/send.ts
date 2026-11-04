@@ -1,3 +1,4 @@
+import { notificationWebLink } from "@/lib/notification-destination"
 import {recordDispatchFailure} from "@/lib/dispatch-failures"
 import {recordHealth} from "@/lib/integration-health"
 /**
@@ -140,7 +141,7 @@ async function sendPushNotificationRaw({
           timestamp: Date.now(),
         },
         fcmOptions: {
-          link: notification.url ?? "/", // URL opened on notification click
+          link: notificationWebLink(notification.url), // URL opened on notification click
         },
         headers: {
           Urgency: "high",               // Deliver immediately, even on battery saver

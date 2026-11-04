@@ -10,3 +10,11 @@ export function notificationDestination(value:unknown,role:'customer'|'driver'|'
  const prefix=role==='driver'?'/dashboard/driver/jobs/':role==='admin'?'/dashboard/admin/orders/':null
  return prefix&&!url.search&&url.pathname.startsWith(prefix)&&uuid.test(url.pathname.slice(prefix.length))?value:null
 }
+
+/** FCM requires an absolute HTTPS click URL. Keep push targets on GoDrop. */
+export function notificationWebLink(value: unknown): string {
+  const origin = 'https://godrop.uk'
+  if(typeof value!=='string'||!value.startsWith('/')||value.startsWith('//')||value.includes('\\')) return origin+'/'
+  const target = new URL(value, origin)
+  return target.origin === origin ? target.href : origin+'/'
+}

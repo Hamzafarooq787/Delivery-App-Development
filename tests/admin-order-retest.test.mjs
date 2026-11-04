@@ -30,3 +30,10 @@ test('Van-size stays compatible with the persisted bulky key and van-only matchi
  assert.equal(unionCapabilities(['bicycle','motorcycle','car']).includes('bulky'),false)
  assert.equal(unionCapabilities(['van']).includes('bulky'),true)
 })
+test('Web push gets an HTTPS click URL without allowing external destinations',()=>{
+  const exports={}
+  vm.runInNewContext(ts.transpileModule(readFileSync('lib/notification-destination.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,URL})
+  assert.equal(exports.notificationWebLink('/dashboard/driver/jobs/123'),'https://godrop.uk/dashboard/driver/jobs/123')
+  assert.equal(exports.notificationWebLink('//other.example/'),'https://godrop.uk/')
+  assert.equal(exports.notificationWebLink('https://other.example/'),'https://godrop.uk/')
+})
