@@ -1,4 +1,5 @@
 'use client'
+import { canRequestDriverLocation, rememberDriverLocationDenial } from "@/lib/driver-location-permission"
 import { useDriverTrackingSelection } from '@/components/tracking/driver-tracking-selection'
 
 import { driverEarning } from "@/lib/driver-earnings"
@@ -105,7 +106,7 @@ export function MapFirstDashboard({
     failed?: boolean
   } | null>(null)
   const [location, setLocation] = useState<MapPoint | null>(null)
-  const [locationStatus, setLocationStatus] = useState('Finding your location…')
+  const [locationStatus, setLocationStatus] = useState('Use location to centre the map')
   const [locationRequest, setLocationRequest] = useState(0)
   const [recenter, setRecenter] = useState(0)
   const dialog = useRef<HTMLDialogElement>(null)
@@ -124,19 +125,6 @@ export function MapFirstDashboard({
     routeResult && job && routeResult.id === job.id ? routeResult.route : null
   const routeFailed =
     routeResult && job && routeResult.id === job.id && routeResult.failed
-
-  useEffect(() => {
-    // Refresh only server-owned data; never invent or locally claim jobs.
-    const refresh = () => {
-      if (document.visibilityState === 'visible') router.refresh()
-    }
-    const timer = window.setInterval(refresh, 30000)
-    window.addEventListener('focus', refresh)
-    return () => {
-      clearInterval(timer)
-      window.removeEventListener('focus', refresh)
-    }
-  }, [router])
 
   useEffect(() => {
     if (!job?.pickup_address || !job.delivery_address) return
@@ -181,22 +169,33 @@ export function MapFirstDashboard({
       queueMicrotask(() => setLocationStatus('Location not supported'))
       return
     }
-    const watch = navigator.geolocation.watchPosition(
-      (pos) => {
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        setLocationStatus('Live location · centre map')
-      },
-      (error) => {
-        setLocationStatus(
-          error.code === 1
-            ? 'Location blocked · check browser settings'
-            : 'Location unavailable · retry',
-        )
-        setLocation(null)
-      },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 },
-    )
-    return () => navigator.geolocation.clearWatch(watch)
+    let disposed = false
+    let watch: number | undefined
+    void canRequestDriverLocation(locationRequest > 0).then(allowed => {
+      if (disposed) return
+      if (!allowed) {
+        if (locationRequest > 0) setLocationStatus('Location unavailable · enable it in browser settings')
+        return
+      }
+      watch = navigator.geolocation.watchPosition(
+        pos => {
+          if (disposed) return
+          setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          setLocationStatus('Live location · centre map')
+        },
+        error => {
+          if (disposed) return
+          if (error.code === 1) {
+            rememberDriverLocationDenial()
+            if (watch !== undefined) navigator.geolocation.clearWatch(watch)
+          }
+          setLocationStatus(error.code === 1 ? 'Location blocked · check browser settings' : 'Location unavailable · retry')
+          setLocation(null)
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
+      )
+    })
+    return () => { disposed = true; if (watch !== undefined) navigator.geolocation.clearWatch(watch) }
   }, [locationRequest])
 
   function locate() {

@@ -1,7 +1,6 @@
 import {timelineTime} from '@/lib/timeline-time'
 import { createClient } from "@/lib/supabase/server"
 import { getDriverCustomerContact } from "@/app/actions/driver-operations"
-import { DriverRefresh } from "@/components/driver/driver-refresh"
 import { notFound } from "next/navigation"
 import { DriverJobView } from "@/components/driver/driver-job-view"
 
@@ -60,7 +59,7 @@ export default async function JobDetailPage({
   })
 
   return (
-    <><DriverRefresh/><DriverJobView
+    <><DriverJobView
       canOperate={profileRes.data?.status==="approved"&&!(job.recovery_case?.status==="open"&&["return_to_pickup","verification_hold"].includes(job.recovery_case?.action))}
       job={job}
       customer={customer}

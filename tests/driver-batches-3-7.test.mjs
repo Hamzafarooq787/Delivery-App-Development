@@ -122,6 +122,7 @@ test('Finance and bank status actions use the signed-in driver; unready accounts
   const capability={status:state==='ready'?'active':'pending'}
   const stripe={v2:{core:{accounts:{retrieve:async()=>({configuration:{recipient:{capabilities:{stripe_balance:{stripe_transfers:capability,payouts:capability}}}}})}}}}
   const api=compile('app/actions/driver-operations.ts',{
+   '@/lib/dashboard-user':{getDashboardUser:async()=>({id:driver})},'@/lib/short-request':{boundedFetch:()=>fetch},
    '@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:driver}}})}})},
    '@/lib/supabase/admin':{createAdminClient:()=>admin},
    'next/cache':{},'@/lib/stripe/server':{getStripe:()=>stripe}
@@ -149,6 +150,9 @@ test('Verification component shows draft state and enables submission only for a
  const bike=render(documents.slice(0,2),'bicycle')
  assert.ok(!label(bike).includes('Insurance Policy'))
  assert.ok(nodes(bike).some(n=>n.type==='button'&&label(n).includes('Submit for Review')))
+ const approved=api.VerificationPanel({driverStatus:'approved',documents,vehicles:[{vehicle_type:'car'}],userId:driver,submittedAt:'2026-11-04T10:00:00Z'})
+ assert.ok(label(approved).includes('Your documents are approved.'))
+ assert.ok(!label(approved).includes('Documents submitted for review.'))
 })
 
 test('Support creation returns the stored ticket ID and scopes it to the signed-in user',async()=>{

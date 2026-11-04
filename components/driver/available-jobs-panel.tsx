@@ -1,5 +1,6 @@
 "use client"
 
+import { canRequestDriverLocation, rememberDriverLocationDenial } from "@/lib/driver-location-permission"
 import { driverEarning } from "@/lib/driver-earnings"
 import { useState, useMemo, useEffect } from "react"
 import { AcceptJobButton } from "@/components/driver/accept-job-button"
@@ -55,11 +56,16 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
   const [driverGps, setDriverGps] = useState<{ lat: number; lng: number } | null>(null)
 
   useEffect(() => {
-    if (!("geolocation" in navigator)) return
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setDriverGps({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {}
-    )
+    let active = true
+    if (navigator.geolocation) void canRequestDriverLocation(false).then(allowed => {
+      if (!active || !allowed) return
+      navigator.geolocation.getCurrentPosition(
+        pos => { if (active) setDriverGps({ lat: pos.coords.latitude, lng: pos.coords.longitude }) },
+        error => { if (error.code === 1) rememberDriverLocationDenial() },
+        { maximumAge: 30000, timeout: 8000 },
+      )
+    })
+    return () => { active = false }
   }, [])
 
   const filtered = useMemo(() => {

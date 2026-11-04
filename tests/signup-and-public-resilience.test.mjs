@@ -204,3 +204,36 @@ test('Private document URLs keep original image or PDF type without exposing a s
   assert.equal(driverDocumentKind('https://store.example/driver/private/insurance.pdf'),'pdf')
   assert.equal(driverDocumentKind('/api/driver-document?id=opaque'),'unknown')
 })
+
+test('Driver location prompts at most once per tab and recovers when permission is granted in settings',async()=>{
+  let state='prompt'
+  const entries=new Map()
+  const storage={getItem:key=>entries.get(key),setItem:(key,value)=>entries.set(key,value)}
+  const permissions={query:async()=>({state})}
+  const open=()=>compile('lib/driver-location-permission.ts',{},{
+    navigator:{permissions},sessionStorage:storage,
+  })
+  const first=open()
+  assert.equal(await first.canRequestDriverLocation(false),false)
+  assert.equal(await first.canRequestDriverLocation(true),true)
+  first.rememberDriverLocationDenial()
+  assert.equal(await first.canRequestDriverLocation(true),false)
+  assert.equal(await open().canRequestDriverLocation(true),false)
+  state='denied'
+  assert.equal(await open().canRequestDriverLocation(true),false)
+  state='granted'
+  assert.equal(await open().canRequestDriverLocation(false),true)
+})
+
+test('Booking, shipment history, admin payments and driver earnings select their exact FK relationships',()=>{
+  const source=fs.readFileSync('app/actions/delivery.ts','utf8')
+  const block=(name)=>source.split('export async function '+name+'(')[1].split('export async function ')[0]
+  assert.match(block('getAvailableDeliveries'),/payments!payments_delivery_id_fkey!inner\(status\)/)
+  assert.match(block('getAvailableDeliveries'),/\.eq\("payments\.status", "paid"\)/)
+  assert.match(block('getAvailableDeliveries'),/\.eq\("payments\.purpose", "booking"\)/)
+  assert.match(fs.readFileSync('lib/shipment-query.ts','utf8'),/payments!payments_delivery_id_fkey\(/)
+  assert.match(block('adminGetPayments'),/delivery_requests!payments_delivery_id_fkey\(tracking_number\)/)
+  assert.match(block('adminGetPayments'),/related_delivery:delivery_requests!payments_related_delivery_id_fkey\(tracking_number\)/)
+  assert.match(block('getDriverEarnings'),/delivery_requests!driver_earnings_delivery_id_fkey\(/)
+  assert.match(block('getDriverEarnings'),/recovery_delivery:delivery_requests!driver_earnings_recovery_delivery_id_fkey\(/)
+})
