@@ -21,11 +21,7 @@ function fmtDate(v: string) {
   return ukDate(v)
 }
 
-function isImage(url: string) {
-  return /\.(jpe?g|png|webp|gif|bmp)(\?|$)/i.test(url)
-}
-
-type Doc = { id:string; document_type: string; file_url: string; expires_on?:string|null; review_status?:DocStatus; review_reason?:string|null }
+type Doc = { media_kind?: "image"|"pdf"|"unknown"; id:string; document_type: string; file_url: string; expires_on?:string|null; review_status?:DocStatus; review_reason?:string|null }
 type DocStatus = "pending" | "approved" | "rejected"
 
 function DocumentCard({
@@ -40,7 +36,7 @@ function DocumentCard({
   onReject: () => void
 }) {
   const uploaded = !!doc
-  const img = doc ? isImage(doc.file_url) : false
+  const img = doc?.media_kind === "image"
 
   const borderClass =
     status === "approved" ? "border-green-500/40" :
@@ -187,11 +183,12 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
   function handleAction(type: "approve" | "reject") {
     const reason=type==="reject"?window.prompt("Reason for rejecting this application:"):null
     if(type==="reject"&&reason===null)return
+    if(type==="approve"&&!window.confirm(`Approve ${driver.full_name}? Confirm you reviewed all displayed documents.`))return
     setAction(type)
     setError(null)
     startTransition(async () => {
       const result = type === "approve"
-        ? await adminApproveDriver(driver.id)
+        ? await adminApproveDriver(driver.id, driver.documents.map(doc=>doc.id))
         : await adminRejectDriver(driver.id,reason??undefined)
       if (result.error) { setError(result.error); setAction(null); return }
       onRemove(driver.id)

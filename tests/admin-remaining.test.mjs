@@ -47,3 +47,28 @@ function driverCreation(existingRole){const writes=[],invites=[];const db={from:
 test('Adding an existing driver preserves the active customer mode and prior verification',async()=>{const f=driverCreation('customer');assert.equal((await f.create(f.form)).success,true);assert.equal(f.invites.length,0);assert.equal(f.writes.length,1);assert.equal(f.writes[0].table,'driver_profiles');assert.equal(f.writes[0].options.ignoreDuplicates,true)})
 test('Driver creation cannot convert an administrator; a new account gets a password invitation',async()=>{const protectedAccount=driverCreation('admin');assert.ok((await protectedAccount.create(protectedAccount.form)).error);assert.equal(protectedAccount.writes.length,0);const fresh=driverCreation(null);assert.equal((await fresh.create(fresh.form)).success,true);assert.equal(fresh.invites[0].options.redirectTo,'https://godrop.uk/auth/callback');assert.equal(fresh.writes.find(w=>w.table==='users').value.role,'driver')})
 test('Invitation rescue preserves same-origin fragments without intercepting other auth flows',()=>{const script=compile('lib/invite-redirect.ts').INVITE_REDIRECT_BOOTSTRAP;for(const path of ['/','/login','/auth/callback']){let redirected;vm.runInNewContext(script,{URL,URLSearchParams,location:{pathname:path,origin:'https://godrop.uk',hash:'#type=invite&access_token=fake-access&refresh_token=fake-refresh',replace:url=>redirected=url}});assert.ok(redirected.startsWith('https://godrop.uk/auth/invite#'));assert.ok(redirected.includes('refresh_token=fake-refresh'))}let changed=false;vm.runInNewContext(script,{URL,URLSearchParams,location:{pathname:'/',origin:'https://godrop.uk',hash:'#type=recovery&access_token=fake&refresh_token=fake',replace:()=>changed=true}});assert.equal(changed,false)})
+
+test('Confirmed driver approval preserves submission, checks the displayed documents, and audits atomically',async()=>{
+ const db=await database()
+ try {
+  await db.exec(fs.readFileSync('supabase/migrations/20261104165000_driver_review_confirmation.sql','utf8'))
+  await db.exec('create trigger qa_driver_document_change before update on driver_documents for each row execute function review_driver_compliance_change()')
+  await db.query("insert into driver_vehicles(driver_id,vehicle_type) values($1,'car')",[driver])
+  const docs=(await db.query("insert into driver_documents(driver_id,document_type,file_url,expires_on) select $1,type,type,case when type='selfie' then null else current_date+365 end from unnest(array['identity','selfie','insurance','vehicle_registration']) type returning id",[driver])).rows.map(d=>d.id)
+  await db.query("update driver_profiles set status='pending',verification_submitted_at=now() where id=$1",[driver])
+  const approval=(actor,ids)=>db.query('select admin_confirm_driver_approval($1,$2,$3::uuid[])',[actor,driver,ids])
+  await assert.rejects(approval(finance,docs),/admin_required/)
+  await assert.rejects(approval(admin,docs.slice(1)),/driver_documents_changed/)
+  await db.query("select review_driver_document($1,$2,'rejected','Unreadable file')",[admin,docs[0]])
+  await assert.rejects(approval(admin,docs),/driver_document_rejected/)
+  await db.query("select review_driver_document($1,$2,'approved','Reviewed current file')",[admin,docs[0]])
+  assert.ok((await db.query('select verification_submitted_at from driver_profiles where id=$1',[driver])).rows[0].verification_submitted_at)
+  await approval(admin,docs)
+  assert.equal((await db.query('select status from driver_profiles where id=$1',[driver])).rows[0].status,'approved')
+  assert.equal((await db.query("select count(*) n from driver_documents where driver_id=$1 and review_status='approved' and reviewed_by=$2",[driver,admin])).rows[0].n,4)
+  assert.equal((await db.query("select count(*) n from admin_audit_log where event='driver_approved' and entity=$1",[driver])).rows[0].n,1)
+  assert.equal((await db.query("select has_function_privilege('authenticated','admin_confirm_driver_approval(uuid,uuid,uuid[])','execute') allowed")).rows[0].allowed,false)
+  await db.query("update driver_documents set file_url='replacement' where id=$1",[docs[0]])
+  assert.equal((await db.query('select verification_submitted_at from driver_profiles where id=$1',[driver])).rows[0].verification_submitted_at,null)
+ } finally {await db.close()}
+})

@@ -1,6 +1,7 @@
 "use client"
 
 import { BrandLogo } from '@/components/shared/brand-logo'
+import { shortRequest } from "@/lib/short-request"
 import { Suspense, useState } from "react"
 import { oauthErrorMessage } from "@/lib/oauth-error-message"
 import { useSearchParams } from "next/navigation"
@@ -28,13 +29,14 @@ function LoginPageContent() {
     setLoading(true)
     setError(null)
 
-    const result = await signIn(formData)
-
-    if (result?.error) {
-      setError(result.error)
+    try {
+      const result = await shortRequest(signIn(formData), 14000)
+      if (result?.error) setError(result.error)
+    } catch {
+      setError("Sign-in is taking too long. Please try again.")
+    } finally {
       setLoading(false)
     }
-    // On success the server action redirects, no need to reset loading
   }
 
   return (
