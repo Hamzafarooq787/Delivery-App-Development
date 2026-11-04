@@ -18,6 +18,7 @@ export default function LoginPage() {
 
 function LoginPageContent() {
   const searchParams = useSearchParams()
+  const confirmation = searchParams.get("confirmation")
   const resetSuccess = searchParams.get("reset") === "success"
   const oauthErrorMsg = oauthErrorMessage(searchParams.get("error"))
   const [loading, setLoading] = useState(false)
@@ -58,6 +59,15 @@ function LoginPageContent() {
           <h2 className="font-headline text-xl font-bold text-white mb-1">Welcome back</h2>
           <p className="text-[#adaaaa] text-sm mb-8">Sign in to your account to continue</p>
 
+          {confirmation && ["confirmed", "check", "expired"].includes(confirmation) && !error && (
+            <div role="status" className="mb-6 rounded-xl border border-[#333] px-4 py-3 text-sm text-white">
+              {confirmation === "confirmed" ? "Email confirmed. Please sign in." : confirmation === "expired"
+                ? "This confirmation link is invalid, expired, or already used. If you already confirmed your email, sign in."
+                : "If you’ve confirmed your email, sign in to continue. Otherwise, request a new confirmation link."}
+              {confirmation !== "confirmed" && <Link href="/signup?resend=1" className="mt-2 block text-[var(--color-primary)] underline">Resend confirmation email</Link>}
+            </div>
+          )}
+
           {resetSuccess && !error && (
             <div className="mb-6 flex items-center gap-2 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-sm rounded-xl px-4 py-3">
               <span className="material-symbols-outlined text-[18px]">check_circle</span>
@@ -68,7 +78,9 @@ function LoginPageContent() {
           {error && (
             <div className="mb-6 flex items-center gap-2 bg-[#ff6e84]/10 border border-[#ff6e84]/20 text-[#ff6e84] text-sm rounded-xl px-4 py-3">
               <span className="material-symbols-outlined text-[18px]">error</span>
-              {error}
+              <div>{error}
+                {/email not confirmed/i.test(error) && <Link href="/signup?resend=1" className="mt-1 block underline">Resend confirmation email</Link>}
+              </div>
             </div>
           )}
 

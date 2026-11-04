@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { getAppOrigin } from "@/lib/get-app-origin"
 import { normaliseUKMobile, UK_MOBILE_ERROR } from "@/lib/uk-phone"
 import { ensureVerifiedProfile } from "@/lib/auth-profile"
+import { signupEmailPending, signupEmailRequested, signupEmailAddress } from "@/lib/signup-email"
 import { redirect } from "next/navigation"
 
 /**
@@ -98,18 +99,18 @@ export async function signIn(formData: FormData) {
 }
 
 export async function signUp(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim()
+  const email = signupEmailAddress(formData.get("email"))
   const password = String(formData.get("password") ?? "")
   const full_name = [formData.get("first_name"), formData.get("last_name")].join(" ").trim()
   const role = formData.get("role") === "driver" ? "driver" : "customer"
   const phone = normaliseUKMobile(formData.get("phone"))
   if (!phone) return { error: UK_MOBILE_ERROR }
-  if (!full_name || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8 || password.length > 256) {
+  if (!full_name || !email || password.length < 8 || password.length > 256) {
     return { error: "Enter your name, a valid email address and a password of at least 8 characters." }
   }
   const address = String(formData.get("address") ?? "").trim().slice(0, 1000) || null
   const deadline = AbortSignal.timeout(10000)
-  const unavailable = "We could not confirm your signup. Check your inbox before trying again."
+
   try {
     const supabase = await createClient((input, options) => fetch(input, {
       ...options,
@@ -119,7 +120,7 @@ export async function signUp(formData: FormData) {
     const { data, error } = await supabase.auth.signUp({
       email, password,
       options: {
-        emailRedirectTo: `${origin}/auth/callback?role=${role}`,
+        emailRedirectTo: `${origin}/auth/confirm`,
         data: { full_name: full_name.slice(0, 160), role, phone, address },
       },
     })
@@ -128,15 +129,16 @@ export async function signUp(formData: FormData) {
       if (error.code === "email_address_not_authorized") return { error: "We could not send confirmation to this email address. Please contact GoDrop support." }
       if (error.code === "weak_password") return { error: "Choose a stronger password and try again." }
       if (error.code === "email_address_invalid") return { error: "Enter a valid email address and try again." }
-      if (error.code === "user_already_exists") return { success: true as const, next: "email" as const }
-      return { error: unavailable }
+      if (error.code === "user_already_exists") return signupEmailRequested
+      if ((error.status ?? 0) >= 500 || error.name === "AuthRetryableFetchError" || deadline.aborted) return signupEmailRequested
+      return { error: "Signup could not be completed. Please try again or contact support." }
     }
     // The Auth insert trigger creates the role profile, including a pending
     // driver. Never write profiles from an unverified or obfuscated response.
-    if (!data?.user) return { error: unavailable }
-    return { success: true as const, next: data.session ? (role === "driver" ? "driver" : "customer") : "email" }
+    if (!data?.user || data.user.identities?.length === 0) return signupEmailRequested
+    return data.session ? { success: true as const, next: role } : signupEmailPending
   } catch {
-    return { error: unavailable }
+    return signupEmailRequested
   }
 }
 
