@@ -6,14 +6,21 @@ import type { NextRequest } from "next/server"
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  // The callback owns its code exchange. Avoid an unrelated session refresh before it.
-  if (pathname === "/api/customer/shipments" || pathname === "/auth/callback" || pathname === "/track" || pathname.startsWith("/track/") ||
-      (pathname === "/login" && request.nextUrl.searchParams.has("error"))) return NextResponse.next({request})
   if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/callback"
     return NextResponse.redirect(url)
   }
+
+  // These routes either have no session dependency or enforce their own
+  // authentication. In particular the public theme must never refresh cookies.
+  if ([
+    "/", "/pricing", "/privacy-policy", "/terms", "/prohibited-items",
+    "/how-it-works", "/our-fleet", "/contact", "/offline",
+    "/firebase-messaging-sw.js", "/api/brand-theme", "/api/auth/signup",
+    "/api/customer/shipments", "/auth/callback", "/track",
+  ].includes(pathname) || pathname.startsWith("/track/") ||
+      (pathname === "/login" && request.nextUrl.searchParams.has("error"))) return NextResponse.next({request})
 
   // Per Supabase SSR docs: this response object is what carries any
   // refreshed session cookies forward. If we return a *different* response
@@ -26,7 +33,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      ...(pathname.startsWith("/dashboard") ? {global:{fetch:boundedFetch(3000)}} : {}),
+      ...(/^\/(dashboard|signup|login|driver\/login)(?:\/|$)/.test(pathname) ? {global:{fetch:boundedFetch(3000)}} : {}),
       cookies: {
         // getAll/setAll (not the deprecated get/set/remove trio) — required
         // for Supabase to correctly read/write session cookies that get

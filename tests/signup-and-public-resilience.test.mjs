@@ -102,3 +102,14 @@ test('Service worker leaves online admin navigations alone and serves fallback o
   self.navigator.onLine=false
   assert.equal(await dispatch('/dashboard/admin/drivers','navigate'),offline)
 })
+
+test('Public theme, signup API and worker do not wait for session refresh in the proxy',async()=>{
+  const next={}
+  const {proxy}=compile('proxy.ts',{
+    'next/server':{NextResponse:{next:()=>next}},
+    '@supabase/ssr':{createServerClient:()=>{throw Error('unexpected session lookup')}},
+  })
+  for (const path of ['/api/brand-theme','/api/auth/signup','/firebase-messaging-sw.js','/privacy-policy']) {
+    assert.equal(await proxy({nextUrl:new URL('https://godrop.uk'+path)}),next)
+  }
+})
