@@ -50,7 +50,7 @@ function LoginPageContent() {
           <Link href="/" className="flex flex-col items-center gap-4">
             <BrandLogo />
           </Link>
-          <p className="text-[#adaaaa] text-sm mt-1">Premium Logistics Platform</p>
+          <p className="text-[#adaaaa] text-sm mt-1">Local collection and delivery</p>
         </div>
 
         {/* Card */}
@@ -160,10 +160,7 @@ function LoginPageContent() {
           </p>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} GoDrop. All rights reserved.
-        </p>
+
       </div>
     </main>
   )

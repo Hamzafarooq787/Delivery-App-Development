@@ -94,7 +94,7 @@ export function LiveTrackingPanel({
     return()=>{alive=false;clearInterval(timer);void supabase.removeChannel(channel)}
   },[supabase,driverId,matchDeliveryId,deliveryId])
 
-  // Customer sharing expires after signal loss, even if a tab-close clear was interrupted.
+  // Customer sharing expires after connection loss, even if a tab-close clear was interrupted.
   useEffect(() => {
     let alive=true,revision=0,expiry:ReturnType<typeof setTimeout>
     setCustomerPos(null)
@@ -114,7 +114,7 @@ export function LiveTrackingPanel({
     return()=>{alive=false;clearTimeout(expiry);clearInterval(timer);void supabase.removeChannel(channel)}
   },[supabase,customerId,deliveryId])
 
-  // Stale detection — 45 seconds before showing "Signal lost"
+  // Stale detection — 45 seconds before showing "Location unavailable"
   useEffect(() => {
     if (!lastUpdate) return
     const remaining = Math.max(0, 45_000 - (Date.now() - lastUpdate))
@@ -132,7 +132,7 @@ export function LiveTrackingPanel({
     : !driverPos
     ? { label: "Acquiring GPS…", color: "bg-amber-400 animate-pulse" }
     : stale
-    ? { label: "Signal lost", color: "bg-red-400" }
+    ? { label: "Location unavailable", color: "bg-red-400" }
     : { label: "Live", color: "bg-green-400 animate-pulse" }
 
   return (

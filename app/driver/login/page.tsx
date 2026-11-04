@@ -47,7 +47,7 @@ function DriverLoginContent() {
               <span className="material-symbols-outlined text-[var(--color-primary)] text-3xl">local_shipping</span>
             </div>
             <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">
-              GO DROP
+              GoDrop
             </h1>
           </Link>
           <div className="mt-2 flex items-center gap-2 px-3 py-1 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-full">
@@ -168,10 +168,6 @@ function DriverLoginContent() {
             Back to Home
           </Link>
         </div>
-
-        <p className="text-center text-xs text-[#494847] mt-4">
-          &copy; {new Date().getFullYear()} GoDrop. All rights reserved.
-        </p>
       </div>
     </main>
   )

@@ -68,7 +68,7 @@ const messaging = firebase.messaging();
 
 // ── PWA Cache ─────────────────────────────────────────────────────────────────
 // Bump the version string whenever you change the precache list.
-const CACHE_NAME = "kv-cache-v2";
+const CACHE_NAME = "godrop-cache-v3";
 const PRECACHE_ASSETS = [
   "/",
   "/login",
@@ -134,6 +134,12 @@ self.addEventListener("fetch", (event) => {
     url.hostname.includes("supabase") ||
     url.pathname === "/firebase-messaging-sw.js"
   ) {
+    return;
+  }
+
+  // Admin pages depend on the current session and deployment. Never serve a cached admin document.
+  if (request.mode === "navigate" && (url.pathname === "/dashboard/admin" || url.pathname.startsWith("/dashboard/admin/"))) {
+    event.respondWith(fetch(request).catch(() => caches.match("/offline").then((cached) => cached || Response.error())));
     return;
   }
 

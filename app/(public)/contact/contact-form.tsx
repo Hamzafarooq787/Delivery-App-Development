@@ -46,7 +46,7 @@ export function ContactForm() {
 
   return (
     <div className="lg:col-span-2 bg-[#1a1919] rounded-3xl p-6 sm:p-8 md:p-12 border border-[#494847]/15">
-      <h2 className="text-2xl font-bold font-headline mb-8">Transmit a Message</h2>
+      <h2 className="text-2xl font-bold font-headline mb-8">Send us a message</h2>
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
@@ -76,7 +76,7 @@ export function ContactForm() {
             name="email"
             type="email"
             required
-            placeholder="ops@yourcompany.com"
+            placeholder="you@example.com"
             className="w-full h-12 bg-black/40 border border-[#494847]/20 rounded-xl px-4 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-colors"
           />
         </div>
@@ -101,7 +101,7 @@ export function ContactForm() {
             name="message"
             rows={6}
             required
-            placeholder="Describe your logistical requirements in detail. The more data you provide, the faster we can mobilize a response."
+            placeholder="How can we help? If you have a booking, include your tracking number."
             className="w-full bg-black/40 border border-[#494847]/20 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#adaaaa]/40 outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/20 transition-colors resize-none"
           />
         </div>

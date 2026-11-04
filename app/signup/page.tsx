@@ -4,6 +4,7 @@ import { BrandLogo } from '@/components/shared/brand-logo'
 import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { normaliseUKMobile, UK_MOBILE_ERROR } from "@/lib/uk-phone"
 import { signUp } from "@/app/actions/auth"
 import { SocialAuthButtons } from "@/components/auth/social-auth-buttons"
 import { googleReverseGeocode } from "@/lib/google"
@@ -21,6 +22,8 @@ function SignupForm() {
   const [password, setPassword] = useState("")
   const [role, setRole] = useState<Role>(() => searchParams.get("role") === "driver" ? "driver" : "customer")
   const [phone, setPhone] = useState("")
+  const [phoneTouched, setPhoneTouched] = useState(false)
+  const phoneError = phoneTouched && !normaliseUKMobile(phone) ? UK_MOBILE_ERROR : null
   const [address, setAddress] = useState("")
   const [detectingAddress, setDetectingAddress] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -43,6 +46,8 @@ function SignupForm() {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
+    setPhoneTouched(true)
+    if (!normaliseUKMobile(phone)) return
     setLoading(true)
     setError(null)
 
@@ -82,7 +87,7 @@ function SignupForm() {
           <Link href="/" className="flex flex-col items-center gap-4">
             <BrandLogo />
           </Link>
-          <p className="text-[#adaaaa] text-sm mt-1">Premium Logistics Platform</p>
+          <p className="text-[#adaaaa] text-sm mt-1">Local collection and delivery</p>
         </div>
 
         {/* Card */}
@@ -180,13 +185,10 @@ function SignupForm() {
                   </div>
                 </div>
 
-                {/* Customer-only fields: Phone and Home Address */}
-                {role === "customer" && (
-                  <>
                     {/* Phone Number */}
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="phone" className="text-xs font-semibold text-[#adaaaa] uppercase tracking-widest">
-                        Phone Number
+                        UK Mobile Number
                       </label>
                       <div className="relative">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-[18px]">
@@ -198,6 +200,9 @@ function SignupForm() {
                           required
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
+                          onBlur={() => setPhoneTouched(true)}
+                          aria-invalid={!!phoneError}
+                          aria-describedby={phoneError ? "phone-error" : undefined}
                           placeholder="+44 7700 900123"
                           autoComplete="tel"
                           maxLength={40}
@@ -206,6 +211,11 @@ function SignupForm() {
                       </div>
                     </div>
 
+                {phoneError && <p id="phone-error" role="alert" className="text-sm text-red-400">{phoneError}</p>}
+
+                {/* Customer-only address */}
+                {role === "customer" && (
+                  <>
                     {/* Home / Default Address */}
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center justify-between">
@@ -317,10 +327,7 @@ function SignupForm() {
           )}
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} GoDrop. All rights reserved.
-        </p>
+
       </div>
     </main>
   )

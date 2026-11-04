@@ -1,79 +1,16 @@
+import Link from "next/link"
+
 export default function Footer() {
-  return (
-    <footer className="px-8 py-20 border-t border-[#494847]/10">
-      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12">
-        <div className="col-span-2">
-          <h2 className="text-2xl font-black font-headline tracking-tighter mb-6">GoDrop</h2>
-          <p className="text-[#adaaaa] max-w-sm mb-8">
-            Redefining the physical movement of assets through technology and precision.
-          </p>
-          <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#262626] flex items-center justify-center hover:bg-[var(--color-primary)] transition-colors cursor-pointer">
-              <span className="material-symbols-outlined text-sm" style={{ fontSize: '18px' }}>
-                language
-              </span>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#262626] flex items-center justify-center hover:bg-[var(--color-primary)] transition-colors cursor-pointer">
-              <span className="material-symbols-outlined text-sm" style={{ fontSize: '18px' }}>
-                alternate_email
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h6 className="font-bold mb-6">Network</h6>
-          <ul className="space-y-4 text-sm text-[#adaaaa]">
-            <li>
-              <a className="hover:text-[var(--color-primary)]" href="/our-fleet">
-                Our Fleet
-              </a>
-            </li>
-            <li>
-              <a className="hover:text-[var(--color-primary)]" href="/pricing">
-                Pricing
-              </a>
-            </li>
-            <li>
-              <a className="hover:text-[var(--color-primary)]" href="/how-it-works">
-                How It Works
-              </a>
-            </li>
-          </ul>
-        </div>
-
-        <div>
-          <h6 className="font-bold mb-6">Support</h6>
-          <ul className="space-y-4 text-sm text-[#adaaaa]">
-            <li>
-              <a className="hover:text-[var(--color-primary)]" href="/contact">
-                Contact Us
-              </a>
-            </li>
-            <li>
-              <a className="hover:text-[var(--color-primary)]" href="/safety">
-                Safety
-              </a>
-            </li>
-            <li>
-              <a className="hover:text-[var(--color-primary)]" href="/prohibited-items">
-                Prohibited Items
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto pt-16 mt-16 border-t border-[#494847]/5 flex flex-col md:flex-row justify-between items-center gap-6">
-        <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold">
-          © {new Date().getFullYear()} GoDrop. All rights reserved.
-        </p>
-        <div className="flex gap-8 text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold">
-          <a href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a>
-          <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
-        </div>
-      </div>
-    </footer>
-  )
+  return <footer className="shrink-0 border-t border-white/10 bg-[#0e0e0e] px-4 py-2 text-center text-xs normal-case text-[#adaaaa]">
+    <p>Local collection and delivery across the UK</p>
+    <nav aria-label="Footer links" className="my-1 flex flex-wrap justify-center gap-x-3 gap-y-1">
+      <Link href="/pricing" className="hover:underline">Pricing</Link>
+      <Link href="/contact" className="hover:underline">Contact</Link>
+      <Link href="/privacy-policy" className="hover:underline">Privacy</Link>
+      <Link href="/terms" className="hover:underline">Terms</Link>
+      <Link href="/safety" className="hover:underline">Safety</Link>
+      <Link href="/prohibited-items" className="hover:underline">Prohibited items</Link>
+    </nav>
+    <p>© {new Date().getFullYear()} GoDrop. All rights reserved.</p>
+  </footer>
 }
-

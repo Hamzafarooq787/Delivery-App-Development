@@ -1,3 +1,4 @@
+import { MapPin, Package, Route, Truck, Bell, CircleCheck, ClipboardList, Map, CreditCard, CircleHelp } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 
@@ -29,7 +30,7 @@ export default function HowItWorksPage() {
             Book a collection, follow your driver’s progress and see when your parcel arrives.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
-            <Link href="/signup" className="w-full sm:w-auto bg-[var(--color-primary)] text-[var(--color-on-primary)] font-headline font-bold px-8 py-4 rounded-lg flex items-center justify-center gap-2 kinetic-glow transition-transform active:scale-95">
+            <Link href="/signup" className="w-full sm:w-auto bg-[var(--color-primary)] text-[var(--color-on-primary)] font-headline font-bold px-8 py-4 rounded-lg flex items-center justify-center gap-2 transition-transform active:scale-95">
               Book a delivery
             </Link>
             <Link href="/track" className="w-full sm:w-auto border border-[#494847] text-white hover:bg-[#201f1f] font-headline font-bold px-8 py-4 rounded-lg transition-colors">
@@ -53,11 +54,11 @@ export default function HowItWorksPage() {
             </p>
             <ul className="space-y-4">
               {[
-                { icon: "📡", title: "Collection details", desc: "Add instructions to help your driver find the right entrance." },
-                { icon: "📊", title: "Parcel size", desc: "Choose the size that fits your parcel." },
+                { Icon: MapPin, title: "Collection details", desc: "Add instructions to help your driver find the right entrance." },
+                { Icon: Package, title: "Parcel size", desc: "Choose the size that fits your parcel." },
               ].map((item) => (
                 <li key={item.title} className="flex items-start gap-3">
-                  <span className="text-[var(--color-primary)] text-xl mt-1">{item.icon}</span>
+                  <span className="text-[var(--color-primary)] text-xl mt-1"><item.Icon aria-hidden className="h-5 w-5" /></span>
                   <div>
                     <h4 className="text-white font-bold">{item.title}</h4>
                     <p className="text-sm text-[#adaaaa]">{item.desc}</p>
@@ -91,7 +92,7 @@ export default function HowItWorksPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-transparent to-transparent" />
             <div className="absolute bottom-6 left-6 right-6 glass-card p-6 rounded-xl border border-[#494847]/15">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-[var(--color-secondary)]/20 flex items-center justify-center text-[var(--color-secondary)]">🔀</div>
+                <div className="h-10 w-10 rounded-full bg-[var(--color-secondary)]/20 flex items-center justify-center text-[var(--color-secondary)]"><Route aria-hidden className="h-6 w-6" /></div>
                 <div>
                   <p className="text-xs text-[var(--color-secondary)] font-bold uppercase tracking-widest">Active Routing</p>
                   <p className="text-white font-headline font-medium">Planning your collection and delivery route.</p>
@@ -109,11 +110,11 @@ export default function HowItWorksPage() {
             </p>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { icon: "⚡", title: "Driver assigned", desc: "Check when a driver accepts your booking." },
-                { icon: "🕸️", title: "Delivery updates", desc: "Follow your parcel from collection to delivery." },
+                { Icon: Truck, title: "Driver assigned", desc: "Check when a driver accepts your booking." },
+                { Icon: Bell, title: "Delivery updates", desc: "Follow your parcel from collection to delivery." },
               ].map((item) => (
                 <div key={item.title} className="p-4 bg-[#1a1919] rounded-lg border border-[#494847]/10">
-                  <span className="text-[var(--color-secondary)] text-xl mb-2 block">{item.icon}</span>
+                  <span className="text-[var(--color-secondary)] text-xl mb-2 block"><item.Icon aria-hidden className="h-5 w-5" /></span>
                   <p className="text-white text-sm font-bold">{item.title}</p>
                   <p className="text-[10px] text-[#adaaaa]">{item.desc}</p>
                 </div>
@@ -134,12 +135,12 @@ export default function HowItWorksPage() {
             </p>
             <div className="space-y-6">
               {[
-                { icon: "✅", title: "Delivery confirmation", desc: "Check when your parcel has been delivered." },
-                { icon: "🧾", title: "Booking history", desc: "Find completed deliveries in your account." },
+                { Icon: CircleCheck, title: "Delivery confirmation", desc: "Check when your parcel has been delivered." },
+                { Icon: ClipboardList, title: "Booking history", desc: "Find completed deliveries in your account." },
               ].map((item) => (
                 <div key={item.title} className="flex items-center gap-4 p-4 bg-[#201f1f] rounded-xl border border-[#494847]/15">
                   <div className="h-12 w-12 rounded bg-[var(--color-primary)]/20 flex items-center justify-center text-xl text-[var(--color-primary)]">
-                    {item.icon}
+                    <item.Icon aria-hidden className="h-5 w-5" />
                   </div>
                   <div>
                     <h4 className="text-white font-bold">{item.title}</h4>
@@ -173,7 +174,7 @@ export default function HowItWorksPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="absolute inset-0 w-full h-full object-cover opacity-20 grayscale group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxY2pI22h6pQ7i3zo3HXqoO9Bt4fxlWH9ph1vJFdsoCHQ6MxvLk5dP_7sFCgpalfHrV5xVE2g0shX8yS3nycQMUBBGOKbh-T2hrRWzxgvVgu9DuDha7pb33I33nP8vBvXqnNlKwBHK_42j1V5wIRSUK8OnvTM71ubJss_VEE_RPK-JP9Xjvr6hOD0L1gmDs_w65KdBDpbOQI_703PUui-B9qDWR3pXnCV7s5Fw31xhEG97mSS8-yANQsi5H6I9_nisH5K3CNqdqw" alt="Shipment tracking" />
               <div className="relative z-10">
-                <span className="text-[var(--color-primary)] text-4xl mb-4 block">📈</span>
+                <span className="text-[var(--color-primary)] text-4xl mb-4 block"><Map aria-hidden className="h-6 w-6" /></span>
                 <h4 className="text-2xl font-headline font-bold text-white mb-2">Track your parcel</h4>
                 <p className="text-[#adaaaa] text-sm max-w-xs">Use your tracking number to check your shipment’s latest status.</p>
               </div>
@@ -183,15 +184,15 @@ export default function HowItWorksPage() {
                 <h4 className="text-xl font-headline font-bold text-white mb-1">Vehicles for different parcels</h4>
                 <p className="text-[#adaaaa] text-xs">Your parcel size helps us match the booking with a suitable driver.</p>
               </div>
-              <span className="text-[var(--color-secondary)] text-5xl opacity-50 group-hover:opacity-100 transition-opacity">📶</span>
+              <span className="text-[var(--color-secondary)] text-5xl opacity-50 group-hover:opacity-100 transition-opacity"><Truck aria-hidden className="h-6 w-6" /></span>
             </div>
             <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/15 flex flex-col items-center text-center justify-center space-y-3 group">
-              <div className="h-12 w-12 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform text-xl">🔒</div>
+              <div className="h-12 w-12 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform text-xl"><CreditCard aria-hidden className="h-6 w-6" /></div>
               <h4 className="font-bold text-sm">Card checkout</h4>
               <p className="text-[10px] text-[#adaaaa]">Review your price and pay by card.</p>
             </div>
             <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/15 flex flex-col items-center text-center justify-center space-y-3 group">
-              <div className="h-12 w-12 rounded-full bg-[var(--color-secondary)]/10 flex items-center justify-center text-[var(--color-secondary)] group-hover:scale-110 transition-transform text-xl">🔄</div>
+              <div className="h-12 w-12 rounded-full bg-[var(--color-secondary)]/10 flex items-center justify-center text-[var(--color-secondary)] group-hover:scale-110 transition-transform text-xl"><CircleHelp aria-hidden className="h-6 w-6" /></div>
               <h4 className="font-bold text-sm">Need help?</h4>
               <p className="text-[10px] text-[#adaaaa]">Contact us if you have a question about a booking.</p>
             </div>
@@ -205,7 +206,7 @@ export default function HowItWorksPage() {
           Ready to <span className="text-[var(--color-primary)]">send a parcel?</span>
         </h2>
         <p className="text-[#adaaaa] text-lg max-w-xl mx-auto mb-12">Create an account to book a collection and delivery.</p>
-        <Link href="/signup" className="inline-block bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold px-10 py-5 rounded-lg kinetic-glow uppercase tracking-widest text-sm transition-all hover:brightness-110 active:scale-95">
+        <Link href="/signup" className="inline-block bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold px-10 py-5 rounded-lg uppercase tracking-widest text-sm transition-all hover:brightness-110 active:scale-95">
           Get started
         </Link>
       </section>

@@ -187,9 +187,9 @@ export function EarningsPanel({ earnings }: { earnings: EarningRow[] }) {
         <div className="lg:col-span-4 space-y-6">
           <h3 className="text-lg font-bold font-headline text-white">Insights</h3>
 
-          {/* Earnings Velocity chart */}
+          {/* Earnings over time chart */}
           <div className="bg-[var(--brand-panel)] p-6 rounded-2xl border border-[var(--color-outline-variant)]/5">
-            <p className="text-[10px] uppercase font-bold tracking-widest text-[var(--color-on-surface-variant)] mb-4">Earnings Velocity</p>
+            <p className="text-[10px] uppercase font-bold tracking-widest text-[var(--color-on-surface-variant)] mb-4">Earnings over time</p>
             <div className="h-32 flex items-end justify-between gap-1 mb-4">
               {[...Array(7)].map((_, i) => {
                 const d = new Date()

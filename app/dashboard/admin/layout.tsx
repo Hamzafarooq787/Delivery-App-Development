@@ -1,8 +1,11 @@
+import type { Metadata } from "next"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { adminGetPendingVerificationCount } from "@/app/actions/delivery"
 import { adminGetPendingReviewCount } from "@/app/actions/ratings"
 import { AdminLayoutClient } from "./layout-client"
+
+export const metadata: Metadata = { title: "GoDrop Admin" }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
