@@ -31,7 +31,7 @@ export const PACKAGE_SIZE_INFO: Record<PackageSize, { label: string; description
   small: { label: "Small", description: "Documents, small parcels, food, lightweight items", minVehicle: "Bicycle or larger" },
   medium: { label: "Medium", description: "Standard boxes, medium parcels, urgent deliveries", minVehicle: "Motorcycle or larger" },
   large: { label: "Large", description: "Most standard deliveries, bigger items", minVehicle: "Car or larger" },
-  bulky: { label: "Bulky", description: "Furniture, large parcels, appliances", minVehicle: "Van only" },
+  bulky: { label: "Van-size", description: "Furniture, large parcels, appliances", minVehicle: "Van only" },
 }
 
 /** Registration, driving licence, and insurance are only required for motor vehicles. */

@@ -421,6 +421,8 @@ export async function cancelCardBooking(
   } catch {
     /* Persistent refund queue is retried by cron/admin. */
   }
+  revalidatePath(`/dashboard/admin/orders/${deliveryId}`);
+  revalidatePath("/dashboard/admin/payments");
   return { success: true, amount: Number(data?.amount ?? 0) };
 }
 
@@ -537,6 +539,8 @@ export async function adminRefundCardOrder(
     !/^[0-9a-f-]{36}$/i.test(requestKey)
   )
     return { error: "Enter a valid refund amount and reason." };
+  const {data:order,error:lookupError}=await admin.from("delivery_requests").select("status").eq("id",deliveryId).maybeSingle();
+  if(lookupError || !order || order.status === "cancelled") return { error: "This order is closed or unavailable. Check its existing refunds." };
   const { error } = await admin.rpc("queue_admin_card_refund", {
     p_id: deliveryId,
     p_actor: user.id,

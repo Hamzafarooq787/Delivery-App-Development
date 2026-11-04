@@ -35,10 +35,10 @@ export async function getDriverBankStatus() {
 
 export async function getDriverCustomerContact(id:string){
   const db=await createClient();const {data:{user}}=await db.auth.getUser();if(!user)return null
-  const admin=createAdminClient();const {data:order}=await admin.from('delivery_requests').select('customer_id,status').eq('id',id).eq('driver_id',user.id).maybeSingle()
+  const admin=createAdminClient();const {data:order}=await admin.from('delivery_requests').select('customer_id,status,recipient_phone').eq('id',id).eq('driver_id',user.id).maybeSingle()
   if(!order||!['accepted','collected','picked_up','in_transit'].includes(order.status))return null
   const {data}=await admin.from('users').select('full_name,phone').eq('id',order.customer_id).maybeSingle()
-  return data?{...data,email:null}:null
+  return data || order.recipient_phone ? {full_name:data?.full_name??null,phone:data?.phone||order.recipient_phone||null,email:null}:null
 }
 
 export async function changeCollectionWait(id:string,action:'start'|'request'|'approve'|'decline'){

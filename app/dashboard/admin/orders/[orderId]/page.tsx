@@ -76,14 +76,15 @@ export default async function AdminOrderDetailPage({
   const customer = customerRes.data
   const driver = driverRes.data
   const logs: { status: string; created_at: string;occurred_at_known?:boolean }[] = logsRes.data ?? []
-  const ratings = ratingsRes.data
+  const ratings = ratingsRes.data ?? []
   const drivers = (driversRes.data ?? []) as { id: string; full_name: string }[]
   const customerRating = ratings.find((r) => r.rater_role === "customer")
   const driverRating   = ratings.find((r) => r.rater_role === "driver")
 
   const {data:cardPayments,error:paymentError}=paymentRes
   const canFlag = (actor.owner || actor.scopes.includes("operations")) && ["delivered","cancelled"].includes(order.status)
-  const currentIdx = STATUS_ORDER.indexOf(order.status)
+  const timelineStatuses = order.status === "cancelled" ? [...STATUS_ORDER.filter(s => s === "requested" || logs.some(log => log.status === s)), "cancelled"] : STATUS_ORDER
+  const currentIdx = timelineStatuses.indexOf(order.status)
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
@@ -207,8 +208,8 @@ export default async function AdminOrderDetailPage({
           {order.collection_wait_history?.length>0&&<details className="rounded-xl border border-white/15 p-4"><summary>Previous waiting timers</summary>{order.collection_wait_history.map((w:any,i:number)=><p key={i}>Closed on reassignment · {w.status.replaceAll("_"," ")} · {w.amount==null?"No amount agreed":`£${Number(w.amount).toFixed(2)}`}</p>)}</details>}
           {order.collection_wait&&<section className="rounded-xl border border-white/15 bg-[var(--brand-panel)] p-4 text-white"><h3 className="font-bold">Collection waiting request</h3><p>Status: {order.collection_wait.status}</p>{order.collection_wait.amount!=null&&<p>Requested £{Number(order.collection_wait.amount).toFixed(2)} at £{Number(order.collection_wait.rate).toFixed(2)} per minute after 5 free minutes.</p>}<p className="text-sm">Approval alone does not take payment. A separate paid checkout records the waiting charge; earnings follow delivery completion.</p></section>}
           {paymentError && <p role="status" className="text-amber-200">Payment details are temporarily unavailable. Reload to retry.</p>}
-          {cardPayments?.map(p=><OrderPaymentPanel key={p.id} id={orderId} paymentId={p.id} purpose={p.purpose} amount={p.amount} status={p.status} refunds={p.refund_jobs??[]} />)}
-      {order.service_type === "buy_for_me" && <ShoppingFundingPanel id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
+          {cardPayments?.map(p=><OrderPaymentPanel key={p.id} id={orderId} paymentId={p.id} purpose={p.purpose} amount={p.amount} status={p.status} closed={order.status === "cancelled"} refunds={p.refund_jobs??[]} />)}
+      {order.service_type === "buy_for_me" && <ShoppingFundingPanel canVerify={actor.owner||actor.scopes.includes("finance")} closed={order.status==="cancelled"} id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
           {/* Buy for Me Details */}
           {order.service_type === "buy_for_me" && (
             <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-secondary)]/15 rounded-xl p-5 md:p-6">
@@ -337,14 +338,14 @@ export default async function AdminOrderDetailPage({
               <h3 className="text-base font-bold text-white font-headline">Order Timeline</h3>
             </div>
             <div className="relative pl-6">
-              {STATUS_ORDER.map((s, idx) => {
+              {timelineStatuses.map((s, idx) => {
                 const log = logs.find((l) => l.status === s)
                 const isDone    = idx < currentIdx
                 const isActive  = idx === currentIdx
                 const isUpcoming = idx > currentIdx
                 return (
                   <div key={s} className="relative mb-6 last:mb-0">
-                    {idx < STATUS_ORDER.length - 1 && (
+                    {idx < timelineStatuses.length - 1 && (
                       <div className={`absolute left-[-17px] top-6 w-0.5 h-full ${isDone ? "bg-[var(--brand-strong)]/40" : "bg-[var(--color-outline-variant)]/20"}`} />
                     )}
                     <div className={`absolute left-[-22px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center

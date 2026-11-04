@@ -172,6 +172,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
         }`}>
           {STATUS_LABELS[job.status] ?? job.status}
         </div>
+
       </div>
 
       <div className="px-4 pt-4 space-y-4">
@@ -426,7 +427,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
             )}
 
             {/* Safety cancel — slim secondary row */}
-            <SafetyCancelButton jobId={job.id} />
+            <SafetyCancelButton jobId={job.id} label="Release job" />
 
           </div>
         </div>

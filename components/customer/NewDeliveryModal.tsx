@@ -950,7 +950,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
               style={{ boxShadow: confirmed ? '0 0 20px rgba(var(--brand-rgb),0.25)' : 'none' }}
             >
               <span className="material-symbols-outlined text-base">bolt</span>
-              {submitting ? 'Requesting…' : price !== null ? `Confirm & Pay £${formatPrice(price)}` : 'Request Delivery'}
+              {submitting ? 'Requesting…' : price !== null ? `Confirm & Pay £${formatPrice(price)}` : 'Confirm & Pay'}
             </button>
           )}
 </>}

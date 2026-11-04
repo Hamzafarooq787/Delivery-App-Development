@@ -4,11 +4,11 @@ import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { validateBookingPricing, type BookingPricing } from '@/lib/booking-pricing'
+import { withParcelPricing, validateBookingPricing, type BookingPricing } from '@/lib/booking-pricing'
 export async function getBookingPricing(): Promise<BookingPricing> {
   const { data, error } = await createAdminClient().from('surge_pricing_settings').select('booking_pricing').eq('id', true).single()
   if (error || !validateBookingPricing(data?.booking_pricing)) throw new Error('Pricing settings are unavailable. Please retry.')
-  return data.booking_pricing
+  return withParcelPricing(data.booking_pricing)
 }
 export async function saveBookingPricing(config: BookingPricing) {
  return runAdminMutation("settings","saveBookingPricing",config,async()=>{

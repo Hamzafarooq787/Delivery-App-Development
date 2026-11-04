@@ -37,8 +37,10 @@ const PRICING_FIELDS = [
   { key: "includedMiles", label: "Included driving miles", placeholder: "2" },
   { key: "perMile", label: "Each additional mile (£)", placeholder: "1.20" },
   { key: "shoppingFee", label: "Fixed shopping service fee (£)", placeholder: "3.99" },
+  { key: "smallFee", label: "Small surcharge (£)", placeholder: "0" },
+  { key: "mediumFee", label: "Medium surcharge (£)", placeholder: "1.50" },
   { key: "largeFee", label: "Large item surcharge (£)", placeholder: "0" },
-  { key: "vanFee", label: "Van surcharge (£)", placeholder: "0" },
+  { key: "vanFee", label: "Van-size surcharge (£)", placeholder: "0" },
   { key: "weatherFee", label: "Current weather surcharge (£)", placeholder: "0" },
   { key: "serviceRadiusMiles", label: "Miles from Manchester (0 = unrestricted)", placeholder: "0" },
 ]
@@ -104,13 +106,13 @@ export function SettingsTabsClient({
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 max-w-5xl">
       {/* Left Nav */}
       <div className="col-span-1 md:col-span-3">
-        <nav className="flex md:flex-col flex-wrap gap-1">
+        <nav className="sticky top-0 z-10 flex md:flex-col overflow-x-auto gap-1 bg-[var(--brand-bg)]">
           {TABS.map((tab) => (
             <button
               key={tab.label}
               type="button"
               onClick={() => setActiveTab(tab.label)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+              className={`shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                 activeTab === tab.label
                   ? "bg-[var(--brand-strong)]/10 text-[var(--brand-soft)]"
                   : "text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--brand-panel)]"

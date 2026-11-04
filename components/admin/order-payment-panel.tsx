@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
+import { paymentDisplayStatus } from "@/lib/payment-display";
 import { useRouter } from "next/navigation";
 import {
   retryOrderRefunds,
@@ -16,11 +17,12 @@ export function OrderPaymentPanel({
   id,
   amount,
   status,
-  refunds,paymentId,purpose,
+  refunds,paymentId,purpose,closed,
 }: {
   id: string;paymentId?:string;purpose?:string;
   amount: number;
   status: string;
+  closed?:boolean;
   refunds: Refund[];
 }) {
   const requestKey = useRef<string | null>(null);
@@ -29,11 +31,12 @@ export function OrderPaymentPanel({
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const router = useRouter();
+  const state=paymentDisplayStatus(status,amount,refunds);
   return (
     <section className="rounded-xl border border-white/10 p-5 text-white space-y-3">
       <h2 className="font-bold">{purpose==='collection_wait'?'Waiting payment and refunds':'Booking payment and refunds'}</h2>
       <p>
-        Customer payment: £{Number(amount).toFixed(2)} · {status}
+        Customer payment: £{Number(amount).toFixed(2)} · {state.replaceAll("_"," ")}
       </p>
       {refunds.length === 0 ? (
         <p>No refund requested.</p>
@@ -65,7 +68,7 @@ export function OrderPaymentPanel({
           Reconcile pending refunds
         </button>
       )}
-      <div className="border-t border-white/10 pt-3">
+      {!closed && state !== "refunded" && status === "paid" && <div className="border-t border-white/10 pt-3">
         <label>
           Refund amount (£)
           <input
@@ -117,7 +120,7 @@ export function OrderPaymentPanel({
         >
           Refund to original card
         </button>
-      </div>
+      </div>}
       <p role="status">{message}</p>
     </section>
   );

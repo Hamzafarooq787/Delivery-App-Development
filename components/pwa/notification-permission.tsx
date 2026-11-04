@@ -83,6 +83,8 @@ export function NotificationPermission({
     if (!isSupported) return
     if (permission === "granted") return
 
+    try { if (localStorage.getItem(DISMISSED_KEY)) return } catch { /* storage unavailable */ }
+
     // For denied: show the banner so the user knows how to fix it
     if (permission === "denied") {
       const timer = setTimeout(() => setVisible(true), 4500)
@@ -115,6 +117,7 @@ export function NotificationPermission({
         duration: 3500,
         position: "top-right",
         closeButton: true,
+        onDismiss: () => { try { localStorage.setItem(DISMISSED_KEY, "1") } catch {} },
       })
     }
   }

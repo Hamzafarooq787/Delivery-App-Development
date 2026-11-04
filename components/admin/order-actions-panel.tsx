@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useRef, useState, useTransition } from "react"
 import { adminCancelOrder, adminIssueRefund } from "@/app/actions/wallet"
 import { AssignDriverDropdown, type DriverOption } from "@/components/admin/assign-driver-dropdown"
@@ -26,6 +27,8 @@ export function OrderActionsPanel({
   paymentMethod: string
   shoppingStage?: string | null
 }) {
+  const router = useRouter()
+  const [closed,setClosed]=useState(false)
   const canCancel = ["requested","accepted"].includes(orderStatus) && !["shopping","purchase_completed","heading_to_customer"].includes(shoppingStage??"")
 
   const refundKey=useRef<string | null>(null)
@@ -49,6 +52,7 @@ export function OrderActionsPanel({
       if (result.error) {
         flash(result.error, false)
       } else {
+        setClosed(true); router.refresh()
         flash(
           result.refunded
             ? `Order cancelled. £${result.refundAmount?.toFixed(2)} refunded to customer.`
@@ -86,7 +90,7 @@ export function OrderActionsPanel({
       )}
 
       {/* Assign Driver */}
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[var(--color-surface-container-high)] rounded-lg border border-[var(--color-outline-variant)]/10">
+      {canCancel && !closed && <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[var(--color-surface-container-high)] rounded-lg border border-[var(--color-outline-variant)]/10">
         <div className="flex items-center gap-2 text-sm text-white">
           <span className="material-symbols-outlined text-sm text-[var(--brand-soft)]">person_add</span>
           Assign Driver
@@ -96,10 +100,10 @@ export function OrderActionsPanel({
           currentDriverId={currentDriverId}
           drivers={drivers}
         />
-      </div>
+      </div>}
 
       {/* Cancel Order */}
-      {canCancel && (
+      {canCancel && !closed && (
         <>
           {showCancelConfirm ? (
             <div className="px-4 py-3 bg-red-500/5 rounded-lg border border-red-500/20 space-y-2">
@@ -139,7 +143,7 @@ export function OrderActionsPanel({
       )}
 
       {/* Issue Refund */}
-      {paymentMethod !== "stripe" && (showRefundInput ? (
+      {!closed && orderStatus !== "cancelled" && paymentMethod !== "stripe" && (showRefundInput ? (
         <div className="px-4 py-3 bg-emerald-500/5 rounded-lg border border-emerald-500/20 space-y-2">
           <p className="text-xs text-emerald-400 font-medium">Enter refund amount (£)</p>
           <input

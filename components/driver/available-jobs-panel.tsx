@@ -51,6 +51,7 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number):
 }
 
 export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
+  const [skipped,setSkipped]=useState<string[]>([])
   const [previewId,setPreviewId]=useState<string|null>(null)
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<SortKey>("newest")
@@ -149,7 +150,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {filtered.map((job) => {
+          {filtered.filter(job=>!skipped.includes(job.id)).map((job) => {
             const price = fmt(driverEarning(job))
             const distanceMiles =
               driverGps && job.pickup_lat != null && job.pickup_lng != null
@@ -195,7 +196,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                       <div className="text-right shrink-0">
                         <span className="text-2xl font-black text-[var(--brand-soft)] font-headline tracking-tighter">{price}</span>
                         <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold">Your earnings</p>
-                        <p className="text-xs">{job.distance_miles != null ? `${Number(job.distance_miles).toFixed(1)} driving miles` : "Distance available in job details"}{job.duration_min != null ? ` · approx. ${Math.round(job.duration_min)} min` : ""}</p>
+                        <p className="text-xs">{job.distance_miles != null ? `${Number(job.distance_miles).toFixed(1)} driving miles` : "Driving distance not recorded"}{job.duration_min != null ? ` · approx. ${Math.round(job.duration_min)} min` : ""}</p>
                       </div>
                     )}
                   </div>
@@ -226,7 +227,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                     {distanceMiles != null && (
                       <div className="flex justify-between items-center">
                         <span className="text-[var(--color-on-surface-variant)]">Distance to pickup</span>
-                        <span className="text-green-400 font-black">{distanceMiles.toFixed(1)} mi</span>
+                        <span className="text-green-400 font-black">{distanceMiles > 500 ? "Location far from pickup" : `${distanceMiles.toFixed(1)} mi`}</span>
                       </div>
                     )}
                     {job.service_type === "buy_for_me" && job.estimated_items_total != null && (
@@ -246,14 +247,16 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                       <span className="text-[var(--brand-soft)] font-bold uppercase">{job.status}</span>
                     </div>
                   </div>
+                  <button type="button" aria-expanded={previewId===job.id} onClick={()=>setPreviewId(id=>id===job.id?null:job.id)} className="rounded-lg border border-white/20 p-2 text-sm text-white">{previewId===job.id?"Hide details":"View details"}</button>
                   {previewId===job.id&&<div className="rounded-lg border border-white/15 p-2 text-xs text-white">
                     <p><strong>Pickup:</strong> {job.pickup_address??"Not provided"}</p>
                     <p><strong>Drop-off:</strong> {job.delivery_address??"Not provided"}</p>
-                    <p><strong>Size:</strong> {job.package_size??"Not specified"}</p>
+                    <p><strong>Size:</strong> {job.package_size && isPackageSize(job.package_size) ? PACKAGE_SIZE_INFO[job.package_size].label : "Not specified"}</p>
                     <p><strong>Driving distance:</strong> {job.distance_miles==null?"Unavailable":`${Number(job.distance_miles).toFixed(1)} miles`}</p>
                     <p><strong>Your earnings:</strong> {price??"Not quoted"}</p>
                   </div>}
                   <AcceptJobButton deliveryId={job.id} />
+                  <button type="button" onClick={()=>setSkipped(current=>[...current,job.id])} className="text-sm text-white/70 hover:underline">Decline for now</button>
                 </div>
               </div>
             )

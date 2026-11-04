@@ -10,6 +10,7 @@ import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import {openNewCustomerOrder} from '@/components/customer/CustomerNavigation'
 import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
 import { CollectionWaiting } from '@/components/driver/collection-waiting'
+import { cancelOrder } from '@/app/actions/wallet'
 import { CustomerThread } from '@/components/shared/customer-thread'
 import { CustomerShoppingOrder } from '@/components/customer/CustomerShoppingOrder'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
@@ -153,11 +154,15 @@ function TrackingPageInner() {
 
   const statusCfg = STATUS_COLORS[shipment?.status] ?? STATUS_COLORS.requested
   const isDelivered = shipment?.status === 'delivered'
+  const isCancelled = shipment?.status === 'cancelled'
+  const [cancelPending,setCancelPending]=useState(false)
+  const [cancelError,setCancelError]=useState('')
+  const canCancel=!!shipment && ['requested','accepted'].includes(shipment.status) && !['shopping','purchase_completed','heading_to_customer'].includes(shipment.bfm_stage??'')
 
   return (
     <>
       <Header onNewDelivery={openNewCustomerOrder} userId={userId} />
-      {loadError && <div role="alert" className="fixed top-24 left-4 right-4 z-50 bg-[#1b1d20] border border-red-400/40 rounded-xl p-4 text-white">{loadError} <button type="button" className="text-[var(--brand-soft)] underline" onClick={() => setRevision(v=>v+1)}>Try again</button></div>}
+      {loadError && !isCancelled && <div role="alert" className="fixed top-24 left-4 right-4 z-50 bg-[#1b1d20] border border-red-400/40 rounded-xl p-4 text-white">{loadError} <button type="button" className="text-[var(--brand-soft)] underline" onClick={() => setRevision(v=>v+1)}>Try again</button></div>}
 
       <main
         className={`${navStyles.trackingContent} overflow-hidden flex flex-col md:flex-row`}
@@ -204,7 +209,7 @@ function TrackingPageInner() {
           <div className="px-5 pt-3 pb-4 border-b border-[#494847]/20 shrink-0">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--color-primary)]">
-                {isDelivered ? 'Delivery Record' : 'Live Tracking'}
+                {isDelivered || isCancelled ? 'Delivery Record' : 'Live Tracking'}
               </p>
               {shipment && (
                 <span
@@ -236,6 +241,17 @@ function TrackingPageInner() {
             )}
           </div>
 
+          {isCancelled && <p className="p-5 text-sm text-white">This order was cancelled. Check Payments for your refund status.</p>}
+          {canCancel && <div className="px-5 py-3"><button type="button" className="rounded-lg border border-red-400/50 px-3 py-2 text-sm text-red-200" disabled={cancelPending} onClick={async()=>{
+            if (!shipment || !window.confirm('Cancel this order? Check Payments for any refund.')) return
+            setCancelPending(true);setCancelError('')
+            try {
+              const result=await cancelOrder(shipment.id)
+              if (!result.success) setCancelError(result.error??'Could not cancel this order.')
+              else {setShipment({...shipment,status:'cancelled'});setRevision(v=>v+1)}
+            } catch {setCancelError('Cancellation could not be confirmed. Refresh before trying again.')}
+            finally {setCancelPending(false)}
+          }}>{cancelPending?'Cancelling…':'Cancel order'}</button>{cancelError&&<p role="alert">{cancelError}</p>}</div>}
           {/* ── Payment breakdown ── */}
           {shipment?.service_type !== 'buy_for_me' && shipment?.price != null && (
             <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0 bg-[#1a1919]">
@@ -344,7 +360,7 @@ function TrackingPageInner() {
             )}
 
           {/* ── ETA / Completion row ── */}
-          {!isDelivered && (
+          {!isDelivered && !isCancelled && (
             <div className="px-5 py-4 border-b border-[#494847]/20 shrink-0 flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#adaaaa] mb-1">
@@ -518,7 +534,7 @@ function TrackingPageInner() {
           </div>
 
           {/* ── Driver Card ── */}
-          <div className="border-t border-[#494847]/20 px-5 py-4 md:shrink-0 bg-[#0e0e0e]">
+          {!isCancelled && <div className="border-t border-[#494847]/20 px-5 py-4 md:shrink-0 bg-[#0e0e0e]">
             <div className="flex items-center gap-3.5 mb-4">
               <div className="w-12 h-12 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] font-bold font-headline text-base shrink-0">
                 {driver ? driverInitials(driver) : '–'}
@@ -555,13 +571,13 @@ function TrackingPageInner() {
             {shipment?.id && ['accepted','collected','picked_up','in_transit'].includes(shipment.status) && <CustomerLocationBroadcaster key={shipment.id} deliveryId={shipment.id} orderLabel={shipment.tracking_number??shipment.id.slice(0,8)} />}
             {shipment?.id && <><CustomerThread kind="order" id={shipment.id} activeAssignment={!!shipment.driver_id&&["accepted","collected","picked_up","in_transit"].includes(shipment.status)} /><CollectionWaiting id={shipment.id}/></>}
 
-          </div>
+          </div>}
         </aside>
 
         {/* ── Map Area ─────────────────────────────────────── */}
-        <div className="order-1 md:order-2 flex-[4] md:flex-1 md:h-full relative bg-[#131313]">
+        <div hidden={isCancelled} className="order-1 md:order-2 flex-[4] md:flex-1 md:h-full relative bg-[#131313]">
           {/* When delivered, just show static pickup→destination route — no live driver marker */}
-          <LiveTrackingPanel
+          {!isCancelled && <LiveTrackingPanel
                 onEta={setEta}
                 centreRequest={centreRequest}
                 mapType={mapType}
@@ -591,7 +607,7 @@ function TrackingPageInner() {
             driverLabel={driver?.full_name ?? 'Driver'}
             height="100%"
             followDriver={false}
-          />
+          />}
 
           {/* Floating tracking chip */}
           {shipment && (
