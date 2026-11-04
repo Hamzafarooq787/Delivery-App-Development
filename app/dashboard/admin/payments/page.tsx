@@ -87,7 +87,7 @@ export default async function AdminPaymentsPage({
       {payouts.data.map((p) => (
         <div key={p.id} className="rounded-xl bg-[var(--brand-panel)] p-4">
           <strong>
-            {money(p.amount)} — {p.status==="pending"&&p.payment_method==="stripe"?"Checkout awaiting confirmation":p.status}
+            {money(p.amount)} — {p.status}
           </strong>
           <p>{p.payment_reference ?? "No confirmed payment reference"}</p>
           <p>
