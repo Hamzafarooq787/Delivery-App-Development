@@ -26,9 +26,9 @@ export async function saveCustomerProfile(name:string,phone:string){
 }
 export async function getSavedAddresses(){
  const client=await createClient()
- const {data,error:authError}=await client.auth.getClaims()
+ const {data:identity,error:authError}=await client.auth.getClaims()
  if(authError && (authError.name==="AuthRetryableFetchError"||(authError.status??0)>=500))return {error:"Saved addresses are temporarily unavailable. Please retry.",data:[]}
- const user=data?.claims.sub?{id:data.claims.sub}:null
+ const user=identity?.claims.sub?{id:identity.claims.sub}:null
  if(!user)return {error:"Please sign in to load saved addresses. Your draft will be kept.",data:[]}
  const {data,error}=await createAdminClient().from('addresses').select('id,address,lat,lng,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100)
  return error?{error:'Could not load saved addresses.',data:[]}:{data:data??[]}
