@@ -80,8 +80,8 @@ export function CustomerShoppingOrder({ orderId }: { orderId: string }) {
         <div><dt>Delivery and shopping service fees</dt><dd>{money(totals.fees)}</dd></div>
         <div><dt>Prepaid shopping funds</dt><dd>{money(totals.prepaid)}</dd></div>
         <div><dt>Original booking charge</dt><dd>{money(totals.charged)}</dd></div>
-        <div><dt>Actual receipt total</dt><dd>{totals.actual == null ? 'Not settled yet' : money(totals.actual)}</dd></div>
-        {totals.unused != null && <div><dt>Unused shopping funds</dt><dd>{money(totals.unused)}</dd></div>}
+        <div><dt>Actual receipt total</dt><dd>{totals.actual == null ? order?.status === 'cancelled' ? 'No receipt recorded before cancellation' : 'Not settled yet' : money(totals.actual)}</dd></div>
+        {order?.status !== "cancelled" && totals.unused != null && <div><dt>Unused shopping funds</dt><dd>{money(totals.unused)}</dd></div>}
         {totals.refunds.map((r,i)=><div key={r.key??i}><dt>{r.key==='unused-shopping' ? 'Unused-funds refund' : 'Refund'} · {r.state.replaceAll('_',' ')}</dt><dd>{money(Number(r.amount))}</dd></div>)}
         <div><dt>{order?.payment_method === 'stripe' ? 'Completed refunds to card' : 'Returned to wallet'}</dt><dd>{money(totals.returned)}</dd></div>
         <div><dt>Charged less completed refunds</dt><dd>{money(totals.retained)}</dd></div>

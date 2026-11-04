@@ -34,7 +34,7 @@ export function NotificationSettingsForm() {
             ]),
           ),
         );
-    });
+    }).catch(() => setMessage("Unable to load notification settings. Reopen this tab to retry."));
   }, []);
   return (
     <div className="rounded-xl bg-[var(--brand-panel)] p-6 space-y-4">

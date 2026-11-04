@@ -21,7 +21,7 @@ export async function getNotificationSettings() {
   const { data, error } = await createAdminClient()
     .from("surge_pricing_settings")
     .select("notification_settings")
-    .eq("id", 1)
+    .eq("id", true)
     .single();
   return error
     ? { error: "Unable to load notification settings" }
@@ -64,7 +64,7 @@ export async function saveNotificationSettings(
         updated_at: new Date().toISOString(),
       },
     })
-    .eq("id", 1)
+    .eq("id", true)
     .select("id")
     .single();
   return error

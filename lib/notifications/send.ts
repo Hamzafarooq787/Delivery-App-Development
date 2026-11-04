@@ -91,7 +91,7 @@ async function sendPushNotificationRaw({
   const promotion=notification.tag?.includes("marketing")||notification.tag?.includes("reengagement")
   const newJob=(notification.tag?.startsWith("new-delivery")||notification.tag?.startsWith("bfm-new"))
   if(u.error||d.error||!u.data||u.data.account_status!=="active"||u.data.service_push_enabled===false||(u.data.role==="driver"&&d.data?.notifications_enabled===false)||(newJob&&d.data?.delivery_alerts===false)||(promotion&&!u.data.marketing_push_opt_in))return {successCount:0,failureCount:0,failedTokens:[]}
-  const config=await db.from("surge_pricing_settings").select("notification_settings").eq("id",1).single()
+  const config=await db.from("surge_pricing_settings").select("notification_settings").eq("id",true).single()
   if(config.error)return {successCount:0,failureCount:0,failedTokens:[]}
   const template=Object.entries(config.data.notification_settings??{}).filter(([key])=>notification.tag===key||notification.tag?.startsWith(key+"-")).sort((a,b)=>b[0].length-a[0].length)[0]?.[1] as {enabled?:boolean;title?:string}|undefined
   if(template?.enabled===false)return {successCount:0,failureCount:0,failedTokens:[]}

@@ -1,3 +1,4 @@
+import { PACKAGE_SIZE_INFO, isPackageSize } from "@/lib/vehicles"
 import { boundedFetch, shortRequest } from "@/lib/short-request"
 import { OrderMediaPreview } from "@/components/admin/order-media-preview"
 import { TestOrderFlag } from "@/components/admin/test-order-flag"
@@ -124,6 +125,7 @@ export default async function AdminOrderDetailPage({
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Item Description</p>
                 <p className="text-white font-medium">{order.item_description ?? "—"}</p>
+                {order.package_size && isPackageSize(order.package_size) && <p className="text-sm text-white/70">{PACKAGE_SIZE_INFO[order.package_size].label}</p>}
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Declared Value</p>

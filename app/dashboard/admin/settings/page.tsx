@@ -39,11 +39,11 @@ export default async function AdminSettingsPage() {
         </p>
       </div>
 
+      <SettingsTabsClient adminProfile={adminProfile} initialBfmSettings={initialBfmSettings} />
       <div className="mb-6"><OperationsSettingsForm initial={operations}/></div>
       <IntegrationHealthPanel initial={health}/>
       <StaffAccessPanel initial={staff}/>
       <FailedDispatches initial={dispatches}/>
-      <SettingsTabsClient adminProfile={adminProfile} initialBfmSettings={initialBfmSettings} />
     </div>
   )
 }

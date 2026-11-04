@@ -74,11 +74,11 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
     const q = search.toLowerCase()
     let list = jobs.filter(
       (j) =>
-        !q ||
+        !skipped.includes(j.id) && (!q ||
         j.pickup_address?.toLowerCase().includes(q) ||
         j.delivery_address?.toLowerCase().includes(q) ||
         j.item_description?.toLowerCase().includes(q) ||
-        j.tracking_number?.toLowerCase().includes(q)
+        j.tracking_number?.toLowerCase().includes(q))
     )
     list = [...list].sort((a, b) => {
       if (sort === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -88,7 +88,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
       return 0
     })
     return list
-  }, [jobs, search, sort])
+  }, [jobs, search, sort, skipped])
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -150,7 +150,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {filtered.filter(job=>!skipped.includes(job.id)).map((job) => {
+          {filtered.map((job) => {
             const price = fmt(driverEarning(job))
             const distanceMiles =
               driverGps && job.pickup_lat != null && job.pickup_lng != null
