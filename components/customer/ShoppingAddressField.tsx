@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useId, type ReactNode } from 'react'
+import { createAddressRequest } from '@/lib/address-request'
 import dynamic from 'next/dynamic'
 import { MapPin } from 'lucide-react'
 import { googlePlacesAutocomplete, googlePlaceCoords, googleReverseGeocode, type PlaceSuggestion } from '@/lib/google'
@@ -18,16 +19,14 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
   const [dropdownHeight, setDropdownHeight] = useState(160)
   const input = useRef<HTMLInputElement>(null)
   const wrapper = useRef<HTMLDivElement>(null)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const sequence = useRef(0)
+  const requests = useRef(createAddressRequest()).current
   const lastTyped = useRef(value)
   useEffect(() => {
     if (value === lastTyped.current) return
-    lastTyped.current = value; sequence.current++
-    if (timer.current) clearTimeout(timer.current)
+    lastTyped.current = value; requests.cancel()
     setSuggestions([]); setBusy(false)
-  }, [value])
-  useEffect(() => () => { pinSequence.current++; sequence.current++; if (timer.current) clearTimeout(timer.current) }, [])
+  }, [value, requests])
+  useEffect(() => () => { pinSequence.current++; requests.cancel() }, [requests])
   useEffect(() => {
     const outside = (event: PointerEvent) => { if (!wrapper.current?.contains(event.target as Node)) setSuggestions([]) }
     document.addEventListener('pointerdown', outside)
@@ -37,29 +36,35 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
   function closePin() { pinSequence.current++; setBusy(false); setPinOpen(false); input.current?.focus() }
   function change(v: string) {
     lastTyped.current = v; onChange(v); setError(''); setBusy(false); setSuggestions([])
-    const request = ++sequence.current
-    if (timer.current) clearTimeout(timer.current)
-    if (v.length < 3) return
-    timer.current = setTimeout(async () => {
-      try { const list = await googlePlacesAutocomplete(v, {}); if (request === sequence.current) { setDropdownHeight(Math.max(44, (window.visualViewport?.height ?? window.innerHeight) - (input.current?.getBoundingClientRect().bottom ?? 0) - 90)); setSuggestions(list ?? []); setError(list.length ? '' : 'No addresses found. Try a postcode and building number.') } }
-      catch (e) { if (request === sequence.current) setError(e instanceof Error ? e.message : 'Address search failed. Please try again.') }
-    }, 350)
+    requests.cancel()
+    if (v.trim().length < 2) return
+    requests.search(async signal => {
+      try {
+        const list = await googlePlacesAutocomplete(v.trim(), {signal})
+        if (signal.aborted || document.activeElement !== input.current) return
+        setDropdownHeight(Math.max(44, (window.visualViewport?.height ?? window.innerHeight) - (input.current?.getBoundingClientRect().bottom ?? 0) - 90))
+        setSuggestions(list)
+        setError(list.length ? '' : 'No addresses found. Try a postcode and building number.')
+      } catch (e) {
+        if (!signal.aborted) setError(e instanceof Error ? e.message : 'Address search failed. Please try again.')
+      }
+    })
   }
   async function choose(s: PlaceSuggestion) {
-    const request = ++sequence.current
-    setBusy(true); setSuggestions([])
+    const signal = requests.start()
+    setBusy(true); setSuggestions([]); setError('')
     try {
-      const coords = await googlePlaceCoords(s.placeId)
-      if (request !== sequence.current) return
+      const coords = await googlePlaceCoords(s.placeId, signal)
+      if (signal.aborted) return
       if (!coords) { setError('Could not find this address. Try another suggestion.'); return }
-      onSelect({ address: s.text, ...coords }); setError(''); input.current?.blur()
-    } catch { if (request === sequence.current) setError('Could not select this address. Please try again.') }
-    finally { if (request === sequence.current) setBusy(false) }
+      onSelect({ address: s.text, ...coords }); input.current?.blur()
+    } catch { if (!signal.aborted) setError('Could not select this address. Please try again.') }
+    finally { if (!signal.aborted) setBusy(false) }
   }
   return <div ref={wrapper} className={styles.field} onKeyDown={e => { if (e.key === 'Escape' && suggestions.length) { e.stopPropagation(); setSuggestions([]) } }}>
     <div className={styles.addressLabel}><label htmlFor={fieldId}>{label}</label>{locationControl}</div>
     <div className={styles.addressInputWrap}><input id={fieldId} ref={input} aria-label={label} value={value} onChange={e => change(e.target.value)} placeholder="Start typing an address…" autoComplete="off" />
-    <button type="button" aria-label={`Choose ${label.toLowerCase()} on map`} title="Choose on map" className={styles.mapPinButton} onClick={() => { sequence.current++; setSuggestions([]); setPin(null); setPinOpen(true); setError('') }}><MapPin size={20} /></button></div>
+    <button type="button" aria-label={`Choose ${label.toLowerCase()} on map`} title="Choose on map" className={styles.mapPinButton} onClick={() => { requests.cancel(); setSuggestions([]); setPin(null); setPinOpen(true); setError('') }}><MapPin size={20} /></button></div>
     {pinOpen && <dialog ref={pinDialog} className={styles.pinDialog} aria-label={`Choose ${label} on map`} onKeyDown={e => e.stopPropagation()} onCancel={e => { e.preventDefault(); closePin() }}>
       <p>Tap the exact entrance, then confirm the address.</p>
       <PinMap height="60dvh" pickup={pin ?? { lat: 53.4808, lng: -2.2426 }} showUserLocation={false} onPick={async point => {
@@ -71,7 +76,7 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
       }} />
       <p>{busy ? 'Checking address…' : pin?.address ?? 'Select a point on the map.'}</p>
       {error && <p role="alert">{error}</p>}
-      <button type="button" disabled={!pin || busy} onClick={() => { if (pin) { sequence.current++; onSelect(pin); closePin() } }}>Use this address</button>
+      <button type="button" disabled={!pin || busy} onClick={() => { if (pin) { requests.cancel(); onSelect(pin); closePin() } }}>Use this address</button>
       <button type="button" onClick={closePin}>Back to address search</button>
     </dialog>}
     {busy && <small>Finding address…</small>}{error && <small role="alert">{error}</small>}

@@ -119,7 +119,7 @@ function AccountLinkedContent() {
         </div>
 
         <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} Go Drop. All rights reserved.
+          &copy; {new Date().getFullYear()} GoDrop. All rights reserved.
         </p>
       </div>
     </main>

@@ -39,14 +39,15 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Go Drop | Premium Logistics',
+  title: 'GoDrop | Collection and Delivery',
+  icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
   description:
-    'Experience precision-engineered delivery solutions. From microscopic components to industrial fleets, we bridge the void with absolute speed.',
+    'Book a collection or delivery, arrange local shopping, or track your shipment with GoDrop.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Go Drop',
+    title: 'GoDrop',
     startupImage: '/icons/icon-512.png',
   },
   formatDetection: { telephone: false },
@@ -88,7 +89,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Go Drop" />
+        <meta name="apple-mobile-web-app-title" content="GoDrop" />
       </head>
       <body className="bg-[#0e0e0e] font-inter text-white overflow-x-hidden antialiased">
         <ThemeProvider>

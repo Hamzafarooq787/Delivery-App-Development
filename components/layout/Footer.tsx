@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="px-8 py-20 border-t border-[#494847]/10">
       <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12">
         <div className="col-span-2">
-          <h2 className="text-2xl font-black font-headline tracking-tighter mb-6">Go Drop</h2>
+          <h2 className="text-2xl font-black font-headline tracking-tighter mb-6">GoDrop</h2>
           <p className="text-[#adaaaa] max-w-sm mb-8">
             Redefining the physical movement of assets through technology and precision.
           </p>
@@ -66,7 +66,7 @@ export default function Footer() {
 
       <div className="max-w-7xl mx-auto pt-16 mt-16 border-t border-[#494847]/5 flex flex-col md:flex-row justify-between items-center gap-6">
         <p className="text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold">
-          © 2024 Go Drop Logistics. All rights reserved.
+          © {new Date().getFullYear()} GoDrop. All rights reserved.
         </p>
         <div className="flex gap-8 text-[10px] uppercase tracking-widest text-[#adaaaa] font-bold">
           <a href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</a>

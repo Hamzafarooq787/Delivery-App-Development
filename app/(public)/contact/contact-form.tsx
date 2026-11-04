@@ -36,9 +36,9 @@ export function ContactForm() {
         <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
           <span className="material-symbols-outlined text-emerald-400 text-3xl">check_circle</span>
         </div>
-        <h2 className="text-2xl font-bold font-headline text-white mb-3">Signal Received</h2>
+        <h2 className="text-2xl font-bold font-headline text-white mb-3">Message sent</h2>
         <p className="text-[#adaaaa] text-sm max-w-sm">
-          Your message has been transmitted. Our team will respond within 2 hours.
+          Thanks for getting in touch. We’ll reply to the email address you provided.
         </p>
       </div>
     )
@@ -113,7 +113,7 @@ export function ContactForm() {
           disabled={pending}
           className="w-full bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(var(--brand-rgb),0.2)] hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest text-sm disabled:opacity-60"
         >
-          {pending ? "Transmitting…" : "Transmit Signal"}
+          {pending ? "Sending…" : "Send message"}
         </button>
       </form>
     </div>

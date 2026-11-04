@@ -23,7 +23,7 @@ export async function getCustomerHomeData(): Promise<CustomerHomeData | null> {
   const [person, deliveries, wallet, settings,operations] = await Promise.allSettled([
     admin.from('users').select('full_name').eq('id', user.id).maybeSingle(),
     admin.from('delivery_requests').select('tracking_number,status').eq('customer_id', user.id)
-      .not('status', 'in', '("delivered","cancelled")').order('created_at', { ascending: false }).limit(1),
+      .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(1),
     admin.from('wallet_balances').select('balance').eq('user_id', user.id).maybeSingle(),
     getBfmSettings(),
     admin.from('surge_pricing_settings').select('operational_settings').eq('id',true).maybeSingle(),

@@ -21,7 +21,7 @@ export async function POST(req:NextRequest) {
  }
  const budget=await integrationBudget(access.userId,"maps")
  if(budget)return NextResponse.json({error:budget.error},{status:budget.status,headers:budget.status===429?{"Retry-After":"60"}:{}})
- const result=await googleProxy("place/autocomplete/json",params)
+ const result=await googleProxy("place/autocomplete/json",params,req.signal)
  if("error" in result)return NextResponse.json({error:result.error},{status:result.status})
  const data=result.data
  return NextResponse.json({suggestions:(data.predictions??[]).map((p:any)=>({placePredictions:{text:{text:p.description},placeId:p.place_id}})),status:data.status})

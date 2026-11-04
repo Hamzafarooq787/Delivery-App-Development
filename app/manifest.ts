@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Go Drop — Premium Logistics",
-    short_name: "Go Drop",
+    name: "GoDrop — Collection and Delivery",
+    short_name: "GoDrop",
     description:
-      "Experience precision-engineered delivery solutions. Real-time tracking, instant dispatch, zero compromise.",
+      "Book and track collections and deliveries with GoDrop.",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",

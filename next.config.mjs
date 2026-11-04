@@ -13,6 +13,9 @@ const nextConfig = {
   serverExternalPackages: ["firebase-admin"],
 
   // ── HTTP response headers ───────────────────────────────────────────────────
+  async redirects() {
+    return [{ source: "/fleet", destination: "/our-fleet", permanent: true }]
+  },
   async headers() {
     return [
       // FCM service worker — served by the dynamic route handler

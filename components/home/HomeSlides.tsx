@@ -175,10 +175,10 @@ export default function HomeSlides() {
           {[1, 2, 3, 5].map(index => <button key={index} aria-current={active === index ? "page" : undefined} onClick={() => go(index, true)}>{names[index]}</button>)}
           <Link href="/signup?role=driver">For drivers</Link>
         </nav>
-        <div className={styles.actions}><Link href="/login">Login</Link><Link className={styles.primary} href="/signup">Book a Delivery <ArrowRight size={17} aria-hidden /></Link></div>
+        <div className={styles.actions}><Link href="/track">Track a shipment</Link><Link href="/login">Login</Link><Link className={styles.primary} href="/signup">Book a Delivery <ArrowRight size={17} aria-hidden /></Link></div>
         <button className={styles.menuButton} onClick={() => setMenuOpen(open => !open)} aria-expanded={menuOpen} aria-controls="home-menu" aria-label={menuOpen ? "Close menu" : "Open menu"}>{menuOpen ? <X /> : <Menu />}</button>
       </header>
-      {menuOpen && <nav id="home-menu" aria-label="Mobile navigation" className={styles.mobileMenu}>{names.map((name, index) => <button key={name} onClick={() => go(index, true)}>{name}</button>)}<Link href="/login">Login</Link><Link href="/signup?role=driver">For drivers</Link></nav>}
+      {menuOpen && <nav id="home-menu" aria-label="Mobile navigation" className={styles.mobileMenu}>{names.map((name, index) => <button key={name} onClick={() => go(index, true)}>{name}</button>)}<Link href="/track">Track a shipment</Link><Link href="/login">Login</Link><Link href="/signup?role=driver">For drivers</Link></nav>}
 
       <div className={styles.viewport} role="region" aria-roledescription="carousel" aria-label="Explore GoDrop">
         <div className={styles.track} style={{ transform: `translateX(-${active * 100}%)` }}>

@@ -112,7 +112,7 @@ function SignupForm() {
           ) : (
             <>
               <h2 className="font-headline text-xl font-bold text-white mb-1">Create account</h2>
-              <p className="text-[#adaaaa] text-sm mb-6">Join Go Drop to get started</p>
+              <p className="text-[#adaaaa] text-sm mb-6">Join GoDrop to get started</p>
 
               {/* Role Toggle */}
               <div className="flex rounded-xl bg-[#1a1919] border border-[#262626] p-1 mb-6">
@@ -198,7 +198,9 @@ function SignupForm() {
                           required
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          placeholder="+92 300 1234567"
+                          placeholder="+44 7700 900123"
+                          autoComplete="tel"
+                          maxLength={40}
                           className="w-full bg-[#1a1919] border border-[#262626] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-[#494847] focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-1 focus:ring-[var(--color-primary)]/30 transition-all"
                         />
                       </div>
@@ -317,7 +319,7 @@ function SignupForm() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} Go Drop. All rights reserved.
+          &copy; {new Date().getFullYear()} GoDrop. All rights reserved.
         </p>
       </div>
     </main>

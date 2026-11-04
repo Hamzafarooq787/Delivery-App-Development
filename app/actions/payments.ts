@@ -68,8 +68,8 @@ export async function createWalletTopUpSession(
             currency: "gbp",
             unit_amount: Math.round(roundedAmount * 100), // pence
             product_data: {
-              name: "Go Drop Wallet Top-Up",
-              description: `Add £${roundedAmount.toFixed(2)} to your Go Drop wallet`,
+              name: "GoDrop Wallet Top-Up",
+              description: `Add £${roundedAmount.toFixed(2)} to your GoDrop wallet`,
             },
           },
           quantity: 1,

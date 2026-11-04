@@ -24,6 +24,7 @@ import { createWalletTopUpSession } from '@/app/actions/payments'
 import { getWalletBalance } from '@/app/actions/wallet'
 import { getDeliveryQuote, type DeliveryQuote } from '@/app/actions/pricing'
 import { createClient } from '@/lib/supabase/client'
+import { createAddressRequest } from '@/lib/address-request'
 import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
 import { formatPrice } from '@/lib/pricing'
 import {
@@ -80,7 +81,14 @@ function AddressInput({
   const [selecting, setSelecting] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requests = useRef(createAddressRequest()).current
+  const localValue = useRef(value)
+  const [searchError, setSearchError] = useState("")
+  useEffect(() => {
+    if (localValue.current === value) return
+    localValue.current = value; requests.cancel(); setSuggestions([]); setOpen(false); setSelecting(false); setSearchError("")
+  }, [value, requests])
+  useEffect(() => () => requests.cancel(), [requests])
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -98,34 +106,35 @@ function AddressInput({
   }
 
   function handleChange(v: string) {
+    localValue.current = v
     onChange(v)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (v.length < 2) { setSuggestions([]); setOpen(false); return }
-    debounceRef.current = setTimeout(async () => {
+    requests.cancel()
+    setSuggestions([]); setOpen(false); setSelecting(false); setSearchError('')
+    if (v.trim().length < 2) return
+    requests.search(async signal => {
       try {
-        const results = await googlePlacesAutocomplete(v, {
-          proximity: proximity ?? undefined,
-          countryCode,
-        })
+        const results = await googlePlacesAutocomplete(v.trim(), { proximity: proximity ?? undefined, countryCode, signal })
+        if (signal.aborted || document.activeElement !== inputRef.current) return
         setSuggestions(results)
-        if (results.length > 0) openDropdown()
-        else setOpen(false)
-      } catch (err) {
-        console.error('[autocomplete] fetch failed:', err)
-        setOpen(false)
+        if (results.length) openDropdown()
+        else setSearchError('No addresses found. Try a postcode and building number.')
+      } catch (error) {
+        if (!signal.aborted) setSearchError(error instanceof Error ? error.message : 'Address search failed. Please retry.')
       }
-    }, 250)
+    })
   }
 
   async function handleSelect(s: PlaceSuggestion) {
+    const signal = requests.start()
+    localValue.current = s.text
     onChange(s.text)
-    setOpen(false)
-    setSuggestions([])
-    setSelecting(true)
-    const coords = await googlePlaceCoords(s.placeId).catch(() => null)
+    setOpen(false); setSuggestions([]); setSelecting(true); setSearchError('')
+    const coords = await googlePlaceCoords(s.placeId, signal).catch(() => null)
+    if (signal.aborted) return
     onSelect(s.text, coords)
     setSelecting(false)
     if (coords) inputRef.current?.blur()
+    else setSearchError('Could not select this address. Please try again.')
   }
 
   return (
@@ -150,6 +159,7 @@ function AddressInput({
           onFocus={() => { if (suggestions.length > 0) openDropdown() }}
           autoComplete="off"
         />
+        {searchError && <small role="status">{searchError}</small>}
         {selecting && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#adaaaa]">Getting location…</span>
         )}
@@ -278,10 +288,12 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   // surge factors, and any discount. This is what actually gets charged;
   // nothing about price is trusted from the client at submission time.
   const checkoutKey = useRef<string | null>(null)
-  const [quote, setQuote] = useState<DeliveryQuote | null>(null)
+  const [quoted, setQuote] = useState<{key:string;value:DeliveryQuote} | null>(null)
+  const [promoCode, setPromoCode] = useState(initialDraft?.promoCode ?? '')
+  const quoteKey = JSON.stringify([pickupCoords, deliveryCoords, packageSize, promoCode.trim()])
+  const quote = quoted?.key === quoteKey ? quoted.value : null
   const [quoteLoading, setQuoteLoading] = useState(false)
   const [quoteError, setQuoteError] = useState<string | null>(null)
-  const [promoCode, setPromoCode] = useState(initialDraft?.promoCode ?? '')
   const [showPromoInput, setShowPromoInput] = useState(false)
 
   useEffect(() => {
@@ -306,7 +318,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
       }).catch(() => ({ error: 'Could not calculate the price. Check your connection and try again.' }))
       if (!current) return
       if ('data' in result) {
-        setQuote(result.data)
+        setQuote({key:quoteKey,value:result.data})
         setQuoteError(null)
       } else {
         setQuote(null)
@@ -315,7 +327,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
       setQuoteLoading(false)
     }, 400)
     return () => { current = false; clearTimeout(timer) }
-  }, [pickupCoords, deliveryCoords, packageSize, promoCode])
+  }, [pickupCoords, deliveryCoords, packageSize, promoCode, quoteKey])
 
   // User's device GPS + detected country
   const [userCoords, setUserCoords] = useState<LatLng | null>(null)
@@ -825,9 +837,10 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           <div className={styles.summary}>
             <div><span>Pickup</span><p>{pickupValue}</p><button onClick={() => goTo(2)}>Edit</button></div>
             <div><span>Delivery</span><p>{deliveryValue}</p><button onClick={() => goTo(2)}>Edit</button></div>
-            <div className={styles.reviewPackage}>{packageSize && <span className={styles.reviewParcel}><PackageIllustration bulky={packageSize === "bulky"}/></span>}<span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
+            <div className={styles.reviewPackage}>{packageSize && <span className={styles.reviewParcel} data-size={packageSize}><PackageIllustration bulky={packageSize === "bulky"}/></span>}<span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
           </div>
           <div className={styles.price}>
+            {quote && <div><span>Driving distance</span><strong>{quote.distanceMiles.toFixed(3)} miles</strong></div>}
             <div><span>Delivery subtotal</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
             {quote && <PriceBreakdown lines={quote.priceLines}/>}
             {quote && quote.surgeMultiplier > 1 && <div><span>Surge ({quote.surgeMultiplier}×)</span><strong>+£{formatPrice(quote.surgedPrice - quote.basePrice)}</strong></div>}

@@ -18,6 +18,8 @@ export default function LoginPage() {
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   missing_oauth_code: "OAuth sign-in failed: no authorisation code received. Please try again.",
   no_user: "Could not retrieve your account after sign-in. Please try again.",
+  oauth_unavailable: "Sign-in is temporarily unavailable. Start again using the Google sign-in button.",
+  profile_unavailable: "We could not load your account. Please try signing in again.",
   oauth_failed: "OAuth sign-in failed. Please try again.",
 }
 
@@ -26,7 +28,7 @@ function LoginPageContent() {
   const resetSuccess = searchParams.get("reset") === "success"
   const oauthError = searchParams.get("error")
   const oauthErrorMsg = oauthError
-    ? (OAUTH_ERROR_MESSAGES[oauthError] ?? decodeURIComponent(oauthError))
+    ? (OAUTH_ERROR_MESSAGES[oauthError] ?? OAUTH_ERROR_MESSAGES.oauth_failed)
     : null
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(oauthErrorMsg)
@@ -170,7 +172,7 @@ function LoginPageContent() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} Go Drop. All rights reserved.
+          &copy; {new Date().getFullYear()} GoDrop. All rights reserved.
         </p>
       </div>
     </main>

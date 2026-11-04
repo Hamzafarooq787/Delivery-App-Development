@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
         notifyUser({
           userId,
           title: "✅ Wallet topped up",
-          body: `£${amount.toFixed(2)} has been added to your Go Drop wallet.`,
+          body: `£${amount.toFixed(2)} has been added to your GoDrop wallet.`,
           url: "/dashboard/customer/wallet",
           tag: `wallet-topup-${session.id}`,
         }).catch((err) => console.error("[Stripe Webhook] Top-up notification failed:", err))

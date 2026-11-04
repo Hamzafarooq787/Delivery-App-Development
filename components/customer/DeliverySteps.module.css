@@ -46,3 +46,5 @@
   .locationStep>.mapCard{grid-column:2;grid-row:1/8;position:sticky;top:0}
   .locationStep .mapCanvas{height:clamp(210px,44dvh,390px)}
 }
+
+.reviewParcel[data-size=small] svg{transform:scale(.76)}.reviewParcel[data-size=large] svg{transform:scale(1.06)}
