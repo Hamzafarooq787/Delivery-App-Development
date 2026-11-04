@@ -53,7 +53,7 @@ begin
  if not godrop_private.admin_has_scope(p_actor,'operations') then raise exception 'admin_required'; end if;
  perform 1 from driver_profiles where id=p_driver and verification_submitted_at is not null for update;
  if not found or not driver_compliance_ready(p_driver) then raise exception 'valid_submitted_documents_required'; end if;
- update driver_profiles set status='approved',is_online=coalesce(review_resume_online,is_online),review_resume_online=null,review_changed_fields='{}' where id=p_driver;
+ update driver_profiles set status='approved',is_online=coalesce(review_resume_online,is_online) and exists(select 1 from users where id=p_driver and role='driver' and account_status='active'),review_resume_online=null,review_changed_fields='{}' where id=p_driver;
 end $function$;
 
 CREATE OR REPLACE FUNCTION public.driver_finance_snapshot(p_driver uuid, p_page integer DEFAULT 1, p_period text DEFAULT 'all'::text, p_payouts boolean DEFAULT false)

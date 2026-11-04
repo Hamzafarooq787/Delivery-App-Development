@@ -10,7 +10,7 @@ async function database(){
  create role anon;create role authenticated;create role service_role;
  create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
  create schema godrop_private;create function godrop_private.admin_has_scope(uuid,text) returns boolean language sql as 'select true';
- create table users(id uuid,role text);
+ create table users(id uuid,role text,account_status text);
  create table addresses(id uuid default gen_random_uuid());
  create table support_tickets(id uuid);
  create table driver_profiles(id uuid primary key,status text,is_online boolean,verification_submitted_at timestamptz);
@@ -21,7 +21,7 @@ async function database(){
  create table payouts(id uuid default gen_random_uuid(),driver_id uuid,status text,amount numeric,processed_at timestamptz,created_at timestamp,payment_reference text,provider jsonb);
  create table driver_earnings(id uuid default gen_random_uuid(),driver_id uuid,delivery_id uuid,source_payment_id uuid,recovery_delivery_id uuid,amount numeric,commission_amount numeric,status text,created_at timestamp);
  create function driver_compliance_ready(uuid) returns boolean language sql as 'select true';
- insert into users values('${id}','driver');
+ insert into users values('${id}','driver','active');
  insert into driver_profiles values('${id}','approved',true,now());
  insert into driver_vehicles values('${id}','car','AB12 XYZ','TEST','Make','Model',null,null);
  insert into driver_documents values('${id}','identity','approved','previous',now());

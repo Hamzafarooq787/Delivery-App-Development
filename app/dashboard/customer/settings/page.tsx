@@ -153,13 +153,21 @@ export default function SettingsPage() {
   }
 
   useEffect(()=>{let alive=true;getServicePushPreference().then(r=>{if(!alive)return;if(r.error)setSaveMessage({type:'error',text:r.error});else setNotifPrefs({email:false,sms:false,push:r.enabled??true})}).catch(()=>{if(alive)setSaveMessage({type:'error',text:'Could not load notification preferences.'})});return()=>{alive=false}},[])
+  const [pushBlocked,setPushBlocked]=useState(false)
+  useEffect(()=>{
+    const read=()=>setPushBlocked(typeof Notification!=="undefined"&&Notification.permission==="denied")
+    read()
+    window.addEventListener("focus",read)
+    return()=>window.removeEventListener("focus",read)
+  },[])
   async function toggleNotif(key:keyof NotifPrefs){
     if(key!=='push'||saving)return;setSaving(true);
     const next=!notifPrefs.push;setSaveMessage(null)
     try {
       if(next && typeof Notification === 'undefined') {setSaveMessage({type:'error',text:'Push notifications are not supported in this browser.'});return}
       if(next && (Notification.permission==='default' ? await Notification.requestPermission() : Notification.permission)!=='granted') {
-        setSaveMessage({type:'error',text:'Notifications are blocked in your browser settings. Open the site controls next to the address bar, allow Notifications for GoDrop, then try again.'});return
+        setPushBlocked(Notification.permission==='denied')
+        setSaveMessage({type:'error',text:'Push is off. Allow notifications in your browser, then try again.'});return
       }
       const result=await saveServicePushPreference(next)
       if(result.error)setSaveMessage({type:'error',text:result.error})
@@ -296,6 +304,7 @@ export default function SettingsPage() {
   const notificationForm = (
     <div className={styles.formPanel}>
       <h2>Notification preferences</h2>
+      {pushBlocked&&<p role="status">Notifications are blocked in your browser settings. Open the site controls next to the address bar, allow Notifications for GoDrop, then try again.</p>}
       {saveMessage && <p role="status">{saveMessage.text}</p>}
       <p className={styles.muted} style={{ fontSize: 12 }}>
         Push preferences apply across your devices. Email and SMS delivery updates are not enabled.
@@ -466,6 +475,7 @@ export default function SettingsPage() {
         <aside className={styles.settingSide}>
           <div className={styles.panel}>
             <h2>Notification preferences</h2>
+      {pushBlocked&&<p role="status">Notifications are blocked in your browser settings. Open the site controls next to the address bar, allow Notifications for GoDrop, then try again.</p>}
       {saveMessage && <p role="status">{saveMessage.text}</p>}
             <div className={styles.switchRow}>
               <div>
