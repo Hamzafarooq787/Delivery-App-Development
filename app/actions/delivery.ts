@@ -1,4 +1,7 @@
 "use server"
+import { getDashboardUser } from "@/lib/dashboard-user"
+import { getDriverActiveJobs, getDriverReadProfile } from "@/lib/driver-read-context"
+import { boundedFetch } from "@/lib/short-request"
 import { driverDocumentKind } from "@/lib/driver-document-media"
 import {randomInt} from "node:crypto"
 import {getAppOrigin} from "@/lib/get-app-origin"
@@ -198,55 +201,39 @@ export async function submitSupportTicket(formData: FormData) {
 // ── Driver actions ────────────────────────────────────────────────────────────
 
 export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getDashboardUser()
   if (!user) return { error: "Not authenticated", data: [] }
 
-  // Use admin client: RLS has no policy allowing drivers to read unassigned delivery_requests
-  const admin = createAdminClient()
-
-  // Driver Identity Verification — only approved drivers can see jobs at
-  // all. This is defense-in-depth alongside the client-side onboarding
-  // gate in DriverLayoutClient, which only hides the UI.
-  if (user) {
-    const [profile, caller] = await Promise.all([
-      admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle(),
-      admin.from("users").select("role").eq("id", user.id).maybeSingle(),
-    ])
-    if (profile.error || caller.error || profile.data?.status !== "approved" || caller.data?.role !== "driver") {
-      return { error: "Your account must be verified before you can view available jobs.", data: [] }
-    }
+  // The service client only returns jobs after checking the signed-in driver's
+  // active account, approval, current documents and vehicle capabilities.
+  const admin = createAdminClient(boundedFetch(3500))
+  const [profile, caller, active, vehicles, documents] = await Promise.all([
+    getDriverReadProfile(user.id),
+    admin.from("users").select("role,account_status").eq("id", user.id).maybeSingle(),
+    getDriverActiveJobs(user.id),
+    admin.from("driver_vehicles").select("vehicle_type").eq("driver_id", user.id),
+    admin.from("driver_documents").select("document_type,expires_on").eq("driver_id", user.id),
+  ])
+  if (profile.error || caller.error || active.error || vehicles.error || documents.error) {
+    return { error: "Available jobs could not load. Please retry.", data: [] }
   }
-
-  const { count: activeCount, error: activeError } = await admin.from("delivery_requests")
-    .select("id", { count: "exact", head: true }).eq("driver_id", user.id)
-    .in("status", ["accepted", "collected", "picked_up", "in_transit"])
-  if (activeError) return { error: "Available jobs could not load. Please retry.", data: [] }
-  if (activeCount) return { error: "Finish your active delivery before accepting another job.", data: [] }
-
-  // Job matching: only show deliveries this driver's vehicles can carry.
-  // Uses the UNION of capabilities across ALL of the driver's registered
-  // vehicles — a driver with both a car and a van is matched to jobs either
-  // one can handle, with no "active vehicle" switch.
-  let allowedSizes: string[] = []
-  if (user) {
-    const [vehicleResult,documents] = await Promise.all([
-      admin.from("driver_vehicles").select("vehicle_type").eq("driver_id",user.id),
-      admin.from("driver_documents").select("document_type,expires_on").eq("driver_id",user.id),
-    ])
-    if(vehicleResult.error||documents.error)return {error:'Driver details could not load. Please retry.',data:[]}
-    const vehicles=vehicleResult.data
-    const required=requiredDriverDocuments(vehicles??[])
-    if(!driverComplianceReady(vehicles??[],documents.data??[])||documents.data?.some(doc=>required.includes(doc.document_type)&&!driverDocumentValid(doc)))return {error:'A required document has expired. Upload a current copy on the Verification page.',data:[]}
-    const types = (vehicles ?? []).map((v) => v.vehicle_type as VehicleType)
-    allowedSizes = unionCapabilities(types)
-    if (!allowedSizes.length) return { error: "Register a suitable vehicle before viewing jobs.", data: [] }
+  if (profile.data?.status !== "approved" || caller.data?.role !== "driver" || caller.data?.account_status !== "active") {
+    return { error: "Your account must be verified before you can view available jobs.", data: [] }
   }
+  if (active.data?.length) return { error: "Finish your active delivery before accepting another job.", data: [] }
+  const required = requiredDriverDocuments(vehicles.data ?? [])
+  if (!driverComplianceReady(vehicles.data ?? [], documents.data ?? []) ||
+      documents.data?.some(doc => required.includes(doc.document_type) && !driverDocumentValid(doc))) {
+    return { error: "Add your vehicle and current documents on the Verification page.", data: [] }
+  }
+  const allowedSizes = unionCapabilities((vehicles.data ?? []).map(v => v.vehicle_type as VehicleType))
+  if (!allowedSizes.length) return { error: "Register a suitable vehicle before viewing jobs.", data: [] }
 
   let query = admin
     .from("delivery_requests")
-    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total, driver_earning_quote, distance_miles, duration_min, shopping_limits, shopping_items(name,quantity,brand_size_variant,notes), payments!inner(status)", {count:"exact"})
+    .select("id, tracking_number, status, pickup_address, delivery_address, item_description, item_value, price, created_at, driver_id, pickup_lat, pickup_lng, package_size, service_type, shop_name, estimated_items_total, driver_earning_quote, distance_miles, duration_min, shopping_limits, shopping_items(name,quantity,brand_size_variant,notes), payments!payments_delivery_id_fkey!inner(status)", {count:"exact"})
     .eq("payments.status", "paid")
+    .eq("payments.purpose", "booking")
     .eq("status", "requested")
     .is("driver_id", null)
     .order("created_at", { ascending: false })
@@ -263,7 +250,7 @@ export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
   const offset=(Math.max(1,Math.min(Math.trunc(page)||1,1000000))-1)*20
   const { data, error, count } = await query.order("id",{ascending:false}).range(offset,offset+19)
 
-  if (error) return { error: error.message, data: [] }
+  if (error) return { error: "Available jobs could not load. Please retry.", data: [] }
   return { data: data ?? [],count:count??0 }
 }
 
@@ -607,11 +594,10 @@ export async function safetyReleaseJob(deliveryId: string, reason: string) {
 }
 
 export async function getDriverDeliveries(statusFilter?: string,page=1,search="") {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getDashboardUser()
   if (!user) return { error: "Not authenticated", data: [] }
 
-  let query = supabase
+  let query = (await createClient(boundedFetch(3500)))
     .from("delivery_requests")
     .select("id,status,tracking_number,pickup_address,delivery_address,item_description,price,driver_earning_quote,created_at,service_type,package_size",{count:"exact"})
     .eq("driver_id", user.id)
@@ -637,7 +623,7 @@ export async function getDriverEarnings() {
 
   const { data, error } = await supabase
     .from("driver_earnings")
-    .select("*, delivery_requests(pickup_address, delivery_address, created_at)")
+    .select("*, delivery_requests!driver_earnings_delivery_id_fkey(pickup_address, delivery_address, created_at), recovery_delivery:delivery_requests!driver_earnings_recovery_delivery_id_fkey(pickup_address, delivery_address, created_at)")
     .eq("driver_id", user.id)
     .order("created_at", { ascending: false })
 
@@ -721,7 +707,7 @@ export async function adminGetPayments() {
 
   const { data, error } = await supabase
     .from("payments")
-    .select("*, delivery_requests(tracking_number)")
+    .select("*, delivery_requests!payments_delivery_id_fkey(tracking_number), related_delivery:delivery_requests!payments_related_delivery_id_fkey(tracking_number)")
     .order("created_at", { ascending: false })
 
   if (error) return { error: error.message, data: [] }
@@ -832,7 +818,7 @@ export async function adminApproveDriver(driverId: string, documentIds: string[]
   if (!uuid.test(driverId) || !Array.isArray(documentIds) || !documentIds.length || documentIds.length > 20 || documentIds.some(id => typeof id !== "string" || !uuid.test(id))) {
     return { error: "Open the application and review the documents before confirming approval." }
   }
-  const admin = createAdminClient()
+  const admin = createAdminClient(boundedFetch(6500))
   const { error } = await admin.rpc("admin_confirm_driver_approval", { p_driver: driverId, p_actor: actor.id, p_documents: documentIds })
   if (error) {
     const messages: Record<string,string> = {
@@ -843,9 +829,6 @@ export async function adminApproveDriver(driverId: string, documentIds: string[]
     }
     return { error: messages[error.message] ?? "Approval could not be saved. Refresh the application before retrying." }
   }
-  revalidatePath("/dashboard/admin/drivers")
-  revalidatePath(`/dashboard/admin/drivers/${driverId}`)
-  revalidatePath("/dashboard/admin/verification")
   return { success: true }
 }
 

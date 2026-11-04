@@ -1,6 +1,7 @@
 "use server"
 import { getDashboardUser } from "@/lib/dashboard-user"
 
+import type { DriverVehicle } from "@/app/actions/vehicles"
 import { driverDocumentKind } from "@/lib/driver-document-media"
 import { boundedFetch } from "@/lib/short-request"
 import { getAdminActor } from "@/lib/admin-access"
@@ -93,15 +94,28 @@ export async function submitForReview() {
   return { success: true }
 }
 
+const documentColumns = "id, document_type, file_url, created_at, expires_on,review_status,review_reason,reviewed_at"
+
+function privateDocuments(rows: DriverDocument[]) {
+  return rows.map(d => ({ ...d, media_kind: driverDocumentKind(d.file_url), file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` }))
+}
+
 export async function getDriverDocumentsById(driverId: string): Promise<DriverDocument[]> {
   if (!(await getAdminActor("operations"))) return []
+  const { data } = await createAdminClient(boundedFetch(3500)).from("driver_documents")
+    .select(documentColumns).eq("driver_id", driverId).order("created_at", { ascending: false })
+  return privateDocuments((data ?? []) as DriverDocument[])
+}
+
+export async function getAdminDriverReviewDetails(driverId: string) {
+  if (!(await getAdminActor("operations"))) return { error: "Driver review permission is required." }
   const admin = createAdminClient(boundedFetch(3500))
-  const { data } = await admin
-    .from("driver_documents")
-    .select("id, document_type, file_url, created_at, expires_on,review_status,review_reason,reviewed_at")
-    .eq("driver_id", driverId)
-    .order("created_at", { ascending: false })
-  return ((data ?? []) as DriverDocument[]).map(d => ({ ...d, media_kind: driverDocumentKind(d.file_url), file_url: `/api/driver-document?id=${encodeURIComponent(d.id)}` }))
+  const [docs, vehicles] = await Promise.all([
+    admin.from("driver_documents").select(documentColumns).eq("driver_id", driverId).order("created_at", { ascending: false }),
+    admin.from("driver_vehicles").select("id,vehicle_type,registration_number,colour,make,model").eq("driver_id", driverId).order("created_at"),
+  ])
+  if (docs.error || vehicles.error) return { error: "Driver details could not load. Refresh to retry." }
+  return { documents: privateDocuments((docs.data ?? []) as DriverDocument[]), vehicles: (vehicles.data ?? []) as Pick<DriverVehicle,"id"|"vehicle_type"|"registration_number"|"colour"|"make"|"model">[] }
 }
 
 async function documentExists(admin:ReturnType<typeof createAdminClient>,owner:string,url:string):Promise<boolean>{

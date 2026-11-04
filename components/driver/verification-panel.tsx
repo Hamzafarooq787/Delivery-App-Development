@@ -194,10 +194,10 @@ export function VerificationPanel({
         </div>
       )}
 
-      {submitted && (
+      {(submitted || driverStatus === "approved") && driverStatus !== "rejected" && (
         <div className="mb-6 flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
           <span className="material-symbols-outlined text-green-400">check_circle</span>
-          <p className="text-green-400 text-sm font-medium">Documents submitted for review. The admin team will verify within 24 hours.</p>
+          <p className="text-green-400 text-sm font-medium">{driverStatus === "approved" ? "Your documents are approved." : "Documents submitted for review. We’ll let you know when the review is complete."}</p>
         </div>
       )}
 

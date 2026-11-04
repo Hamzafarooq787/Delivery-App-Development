@@ -1,4 +1,5 @@
 "use client";
+import { canRequestDriverLocation, rememberDriverLocationDenial } from "@/lib/driver-location-permission"
 import { useEffect, useState } from "react";
 import { updateMyLocation, clearMyLocation } from "@/app/actions/tracking";
 type Props = {
@@ -36,6 +37,7 @@ export function DriverLocationBroadcaster({
     let alive = true,
       watch: number | null = null,
       inFlight = false,
+      resuming = false,
       lastSent = 0,
       wake: WakeLockSentinel | null = null,
       registration: ServiceWorkerRegistration | null = null;
@@ -77,6 +79,7 @@ export function DriverLocationBroadcaster({
       if (!alive) return;
       setStatus(error.code === 1 ? "denied" : "error");
       if (error.code === 1) {
+        rememberDriverLocationDenial()
         post({ type: "STOP" });
         if (watch !== null) navigator.geolocation.clearWatch(watch);
         watch = null;
@@ -119,20 +122,20 @@ export function DriverLocationBroadcaster({
         inFlight = false;
       }
     }
-    function resume() {
-      if (!alive || document.visibilityState !== "visible") return;
+    async function resume() {
+      if (!alive || resuming || document.visibilityState !== "visible") return;
       if (!navigator.onLine) {
         setStatus("offline");
         return;
       }
+      if (watch !== null) { void keepAwake(); return }
+      resuming = true
+      const allowed = await canRequestDriverLocation(true)
+      resuming = false
+      if (!alive || document.visibilityState !== "visible") return
+      if (!allowed) { setStatus("denied"); return }
       void keepAwake();
-      if (watch !== null) navigator.geolocation.clearWatch(watch);
       watch = navigator.geolocation.watchPosition(onPosition, onError, {
-        enableHighAccuracy: true,
-        maximumAge: 1000,
-        timeout: 15000,
-      });
-      navigator.geolocation.getCurrentPosition(onPosition, onError, {
         enableHighAccuracy: true,
         maximumAge: 1000,
         timeout: 15000,
@@ -142,7 +145,7 @@ export function DriverLocationBroadcaster({
       setStatus("offline");
       post({ type: "STOP" });
     }
-    resume();
+    void resume();
     if ("serviceWorker" in navigator)
       void navigator.serviceWorker
         .register("/sw-location.js", { scope: "/sw-location/" })

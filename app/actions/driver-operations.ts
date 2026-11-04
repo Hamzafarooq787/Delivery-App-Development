@@ -1,4 +1,6 @@
 'use server'
+import {getDashboardUser} from '@/lib/dashboard-user'
+import {boundedFetch} from '@/lib/short-request'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
@@ -6,9 +8,9 @@ import { getStripe } from '@/lib/stripe/server'
 import type { DriverFinanceSnapshot } from '@/lib/driver-finance'
 
 export async function getDriverFinance(page=1,period='all',payouts=false):Promise<{data?:DriverFinanceSnapshot;error?:string}> {
-  const db=await createClient();const {data:{user}}=await db.auth.getUser()
+  const user=await getDashboardUser()
   if(!user)return {error:'Please sign in again.'}
-  const {data,error}=await createAdminClient().rpc('driver_finance_snapshot',{p_driver:user.id,p_page:Math.max(1,Math.min(Math.trunc(page)||1,1000000)),p_period:['day','week','month','all'].includes(period)?period:'all',p_payouts:payouts===true})
+  const {data,error}=await createAdminClient(boundedFetch(3500)).rpc('driver_finance_snapshot',{p_driver:user.id,p_page:Math.max(1,Math.min(Math.trunc(page)||1,1000000)),p_period:['day','week','month','all'].includes(period)?period:'all',p_payouts:payouts===true})
   return error?{error:'Earnings could not load. Please retry.'}:{data}
 }
 

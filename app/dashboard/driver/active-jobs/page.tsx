@@ -1,7 +1,6 @@
 import { getDriverDeliveries } from "@/app/actions/delivery"
 import {driverEarning} from '@/lib/driver-earnings'
 import {DriverPageControls} from "@/components/driver/driver-page-controls"
-import {DriverRefresh} from "@/components/driver/driver-refresh"
 import Link from "next/link"
 
 export const dynamic = "force-dynamic"
@@ -41,7 +40,7 @@ export default async function ActiveJobsPage({searchParams}:{searchParams:Promis
   )
 
   return (
-    <div className="pt-2 pb-12 px-2"><DriverRefresh/><DriverPageControls path="/dashboard/driver/active-jobs" page={page} count={count??0} q={q}/>
+    <div className="pt-2 pb-12 px-2"><DriverPageControls path="/dashboard/driver/active-jobs" page={page} count={count??0} q={q}/>
       <div className="mb-8 md:mb-10 flex flex-col gap-4 md:flex-row md:items-end justify-between md:gap-6">
         <div>
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white mb-2 font-headline">

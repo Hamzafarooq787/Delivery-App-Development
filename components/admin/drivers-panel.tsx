@@ -4,9 +4,9 @@ import {ukDate} from "@/lib/admin-operations"
 import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { adminApproveDriver, adminRejectDriver } from "@/app/actions/delivery"
-import { adminGetDriverVehicles, type DriverVehicle } from "@/app/actions/vehicles"
+import { type DriverVehicle } from "@/app/actions/vehicles"
 import { shortRequest } from "@/lib/short-request"
-import { getDriverDocumentsById } from "@/app/actions/documents"
+import { getAdminDriverReviewDetails } from "@/app/actions/documents"
 import { AddDriverModal } from "@/components/admin/add-driver-modal"
 import { DocumentPreviewModal } from "@/components/admin/document-preview-modal"
 import type { DriverDocument } from "@/app/actions/documents"
@@ -81,21 +81,24 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
   const [isPending, startTransition] = useTransition()
   const [showAddModal, setShowAddModal] = useState(false)
   const [documents, setDocuments] = useState<DriverDocument[]>([])
-  const [vehicles, setVehicles] = useState<DriverVehicle[]>([])
+  const [vehicles, setVehicles] = useState<Pick<DriverVehicle,"id"|"vehicle_type"|"registration_number"|"colour"|"make"|"model">[]>([])
   const [detailId, setDetailId] = useState<string | null>(null)
   const [loadingDocs, setLoadingDocs] = useState(false)
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
+  const [approvedIds, setApprovedIds] = useState<string[]>([])
+  useEffect(() => { setApprovedIds([]) }, [drivers])
+
   // Sort: approved first, then by name
-  const sorted = [...drivers].sort((a, b) => {
+  const sorted = drivers.map(d => approvedIds.includes(d.id) ? {...d, status: "approved" as const} : d).sort((a, b) => {
     const order = { approved: 0, pending: 1, rejected: 2 }
     if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status]
     return a.full_name.localeCompare(b.full_name)
   })
 
   const filtered = sorted.filter((d) => d.status === activeTab)
-  const pendingCount = drivers.filter((d) => d.status === "pending").length
+  const pendingCount = sorted.filter((d) => d.status === "pending").length
   const selected = filtered.find((d) => d.id === selectedId) ?? filtered[0] ?? null
 
   useEffect(() => {
@@ -105,11 +108,12 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
     setVehicles([])
     setDetailId(null)
     setLoadingDocs(true)
-    shortRequest(Promise.all([getDriverDocumentsById(selected.id), adminGetDriverVehicles(selected.id)]), 8000)
-      .then(([docs, fleet]) => {
+    shortRequest(getAdminDriverReviewDetails(selected.id), 8000)
+      .then(result => {
         if (!active) return
-        setDocuments(docs)
-        setVehicles(fleet)
+        if (result.error || !result.documents || !result.vehicles) { setActionError(result.error ?? "Driver details could not load."); return }
+        setDocuments(result.documents)
+        setVehicles(result.vehicles)
         setDetailId(selected.id)
       })
       .catch(() => { if (active) setActionError("Driver details could not load. Refresh to retry.") })
@@ -125,8 +129,8 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
       try {
         const result = await adminApproveDriver(selected.id, documents.map(d => d.id))
         if (result.error) { setActionError(result.error); return }
+        setApprovedIds(ids => [...ids, selected.id])
         setSelectedId(null)
-        router.refresh()
       } catch { setActionError("Approval could not be checked. Refresh before retrying.") }
     })
   }
@@ -137,6 +141,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
     startTransition(async () => {
       const result = await adminRejectDriver(selected.id,window.prompt("Reason for rejecting this driver:")??undefined)
       if (result.error) { setActionError(result.error); return }
+      setApprovedIds(ids => ids.filter(id => id !== selected.id))
       setSelectedId(null)
       router.refresh()
     })
