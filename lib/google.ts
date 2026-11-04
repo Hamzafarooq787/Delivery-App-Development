@@ -112,7 +112,7 @@ export async function fetchRoute(from: LngLat, to: LngLat): Promise<RouteResult 
 }
 
 export function assertGoogleResponse(res: Pick<Response, 'ok' | 'status'>, data: { status?: string; error?: unknown }) {
-  if (res.status === 401) throw new Error('Your session expired. Sign in again to search addresses.')
+  if (res.status === 401) throw new Error('Please sign in again to search addresses. Your booking draft will be kept.')
   if (res.status === 429 || data.status === 'OVER_QUERY_LIMIT') throw new Error('Address search is busy. Please retry shortly.')
   if (data.status === 'REQUEST_DENIED') throw new Error('Address search is unavailable. Please contact support.')
   if (!res.ok || data.error || (data.status && !['OK', 'ZERO_RESULTS'].includes(data.status))) throw new Error('Address search failed. Please retry.')

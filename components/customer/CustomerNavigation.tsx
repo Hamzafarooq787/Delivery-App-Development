@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -54,6 +54,8 @@ export function openNewCustomerOrder() {
   document.dispatchEvent(new CustomEvent('open-new-delivery'))
 }
 
+export const CustomerProfileContext = createContext<CustomerNavigationProfile | null>(null)
+
 /** One dashboard-style header for every customer route. */
 export function CustomerHeader({
   profile,
@@ -64,6 +66,7 @@ export function CustomerHeader({
   fixed?: boolean
   initialUserId?: string
 }) {
+  const scopedProfile=useContext(CustomerProfileContext)
   const path = usePathname()
   const client = useMemo(() => createClient(), [])
   const [loaded, setLoaded] = useState<CustomerNavigationProfile>({
@@ -72,7 +75,7 @@ export function CustomerHeader({
     email: '',
   })
   useEffect(() => {
-    if (profile) return
+    if (profile || scopedProfile?.id) return
     let alive = true
     async function load() {
       const {
@@ -95,8 +98,8 @@ export function CustomerHeader({
     return () => {
       alive = false
     }
-  }, [client, profile])
-  const person = profile ?? loaded
+  }, [client, profile, scopedProfile?.id])
+  const person = profile ?? (scopedProfile?.id ? scopedProfile : loaded)
   return (
     <header className={`${s.header} ${fixed ? s.fixedHeader : ''}`}>
       <Link href="/dashboard/customer" aria-label="GoDrop customer home">

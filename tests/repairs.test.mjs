@@ -54,11 +54,11 @@ test('GPS freshness uses measurement time; shopping stays routed to shop until p
 test('address errors distinguish session, quota, denial and zero results',async()=>{
  const code=stripTypeScriptTypes(fs.readFileSync('lib/google.ts','utf8')).replace(/export /g,'');
  const api=vm.runInNewContext(code+';({assertGoogleResponse,googlePlacesAutocomplete})',{fetch:async()=>({ok:false,status:401,json:async()=>({error:'Not authenticated'})}),console});
- assert.throws(()=>api.assertGoogleResponse({status:401,ok:false},{}),/session expired/);
+ assert.throws(()=>api.assertGoogleResponse({status:401,ok:false},{}),/sign in again/i);
  assert.throws(()=>api.assertGoogleResponse({status:429,ok:false},{}),/busy/);
  assert.throws(()=>api.assertGoogleResponse({status:200,ok:true},{status:'REQUEST_DENIED'}),/unavailable/);
  assert.doesNotThrow(()=>api.assertGoogleResponse({status:200,ok:true},{status:'ZERO_RESULTS'}));
- await assert.rejects(()=>api.googlePlacesAutocomplete('Manchester',{}),/session expired/);
+ await assert.rejects(()=>api.googlePlacesAutocomplete('Manchester',{}),/sign in again/i);
 });
 test('unapproved drivers cannot broadcast arbitrary GPS',async()=>{
  const s=actions('app/actions/tracking.ts',['updateMyLocation'],{user:{id:'customer'},rows:{driver_profiles:{status:'pending'}}});

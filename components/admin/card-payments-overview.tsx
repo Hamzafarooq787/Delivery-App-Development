@@ -21,7 +21,7 @@ export async function CardPaymentsOverview() {
       </p>
     );
   const fields = [
-    ["Customer card payments", "customerPayments"],
+    ["Confirmed card payments", "customerPayments"],
     ["Shopping funds (not revenue)", "shoppingFunds"],
     ["Delivery and shopping service fees", "serviceFees"],
     ["Stripe processing costs", "processingFees"],
@@ -35,7 +35,7 @@ export async function CardPaymentsOverview() {
         {fields.map(([label, key]) => (
           <div key={key}>
             <p className="text-xs">{label}</p>
-            <strong>£{Number(data?.[key] ?? 0).toFixed(2)}</strong>
+            <strong>{new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Number(data?.[key] ?? 0))}</strong>
           </div>
         ))}
       </div>
@@ -46,7 +46,7 @@ export async function CardPaymentsOverview() {
         </p>
       )}
       <p className="mt-3 text-xs">
-        Service fees are before driver earnings, refunds and processing costs.
+        Pending checkouts are excluded. Service fees are before driver earnings, refunds and processing costs.
         Shopping funds are tracked separately. Open an order for its refund
         details.
       </p>

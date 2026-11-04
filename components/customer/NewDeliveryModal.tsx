@@ -6,7 +6,6 @@ import { SavedAddressPicker } from './SavedAddressPicker'
 
 import { AddressInstructions } from "@/components/customer/address-instructions"
 import { PriceBreakdown } from "@/components/customer/price-breakdown"
-import { useFreshBookingForm } from "@/hooks/use-fresh-booking-form"
 import styles from './DeliverySteps.module.css'
 import dynamic from 'next/dynamic'
 import { PackageIllustration } from './PackageIllustration'
@@ -34,9 +33,11 @@ import {
   googleReverseGeocode,
   type PlaceSuggestion,
 } from '@/lib/google'
-import { clearDeliveryDraft, saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
+import { addressPostcode, parcelContact } from "@/lib/parcel-contact"
+import { saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
 
 interface NewDeliveryModalProps {
+  ownerId?: string
   onClose: () => void
   /** Pre-fills the form — used when resuming after a wallet top-up. */
   initialDraft?: DeliveryDraft | null
@@ -132,7 +133,20 @@ function AddressInput({
     setOpen(false); setSuggestions([]); setSelecting(true); setSearchError('')
     const coords = await googlePlaceCoords(s.placeId, signal).catch(() => null)
     if (signal.aborted) return
-    const address = coords?.address ?? s.text
+    const chosenPostcode=addressPostcode(s.text), resolvedPostcode=addressPostcode(coords?.address??"")
+    if (coords?.address && chosenPostcode && resolvedPostcode && chosenPostcode!==resolvedPostcode) {
+      if (!window.confirm(`You selected: ${s.text}\nThe map found: ${coords.address}\nUse the map address instead? Cancel to choose another address.`)) {
+        setSelecting(false)
+        setSearchError("The map returned a different postcode. Choose the correct address before continuing.")
+        return
+      }
+      localValue.current=coords.address
+      onSelect(coords.address,{lat:coords.lat,lng:coords.lng})
+      setSelecting(false)
+      inputRef.current?.blur()
+      return
+    }
+    const address = chosenPostcode ? s.text : coords?.address ?? s.text
     localValue.current = address
     onSelect(address, coords ? {lat:coords.lat,lng:coords.lng} : null)
     setSelecting(false)
@@ -193,11 +207,11 @@ function AddressInput({
   )
 }
 
-export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }: NewDeliveryModalProps) {
+export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, ownerId = "" }: NewDeliveryModalProps) {
   const router = useRouter()
-  const [pickupInstructions,setPickupInstructions]=useState("")
-  const [deliveryInstructions,setDeliveryInstructions]=useState("")
-  const [step, setStep] = useState(1)
+  const [pickupInstructions,setPickupInstructions]=useState(initialDraft?.pickupInstructions??"")
+  const [deliveryInstructions,setDeliveryInstructions]=useState(initialDraft?.deliveryInstructions??"")
+  const [step, setStep] = useState(initialDraft?.step === 3 ? 3 : initialDraft?.step === 2 ? 2 : 1)
   const [success, setSuccess] = useState<{ id: string; tracking_number: string } | null>(null)
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
@@ -254,6 +268,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     if (step === 2 && (!pickupValue || !pickupCoords)) { setStepError('Choose a pickup address from the suggestions.'); return }
     if (step === 2 && (!deliveryValue || !deliveryCoords)) { setStepError('Choose a delivery address or use your live location.'); return }
     if (step === 2 && !isPreciseDeliveryAddress(deliveryValue)) { setStepError(PRECISE_DELIVERY_ADDRESS_ERROR); return }
+    if (step === 2 && contact.error) { setStepError(contact.error); return }
     goTo(step + 1)
   }
   useEffect(() => {
@@ -271,7 +286,11 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   const [deliveryCoords, setDeliveryCoords] = useState<LatLng | null>(initialDraft?.deliveryCoords ?? null)
   const [itemDescription, setItemDescription] = useState<string>(initialDraft?.itemDescription ?? '')
   const [itemPhotos, setItemPhotos] = useState<string[]>(initialDraft?.itemPhotos ?? [])
-  useOrderPhotoCleanup(itemPhotos)
+  useOrderPhotoCleanup(itemPhotos, false)
+  const [recipientName,setRecipientName]=useState(initialDraft?.recipientName??"")
+  const [recipientPhone,setRecipientPhone]=useState(initialDraft?.recipientPhone??"")
+  const [collectionTime,setCollectionTime]=useState(initialDraft?.collectionTime??"asap")
+  const contact=parcelContact(recipientName,recipientPhone,collectionTime==="asap" || !collectionTime ? collectionTime : new Date(collectionTime).toJSON())
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [packageSize, setPackageSize] = useState<PackageSize | null>(initialDraft?.packageSize ?? null)
@@ -291,9 +310,13 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
   // Authoritative price quote — computed server-side from distance, live
   // surge factors, and any discount. This is what actually gets charged;
   // nothing about price is trusted from the client at submission time.
-  const checkoutKey = useRef<string | null>(null)
+  const checkoutKey = useRef<string | null>(initialDraft?.checkoutKey??null)
   const [quoted, setQuote] = useState<{key:string;value:DeliveryQuote} | null>(null)
   const [promoCode, setPromoCode] = useState(initialDraft?.promoCode ?? '')
+  const draft = {step,pickupValue,deliveryValue,pickupCoords,deliveryCoords,itemDescription,itemPhotos,packageSize,promoCode,pickupInstructions,deliveryInstructions,recipientName,recipientPhone,collectionTime}
+  useEffect(() => {
+    saveDeliveryDraft(ownerId,{...draft,checkoutKey:checkoutKey.current})
+  }, [ownerId,step,pickupValue,deliveryValue,pickupCoords,deliveryCoords,itemDescription,itemPhotos,packageSize,promoCode,pickupInstructions,deliveryInstructions,recipientName,recipientPhone,collectionTime])
   const quoteKey = JSON.stringify([pickupCoords, deliveryCoords, packageSize, promoCode.trim()])
   const quote = quoted?.key === quoteKey ? quoted.value : null
   const [quoteLoading, setQuoteLoading] = useState(false)
@@ -552,13 +575,13 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     : (!quote && !submitting) ? 'Calculating price…'
     : null
 
-  useFreshBookingForm('delivery')
   async function handleSubmit() {
     if (submitting || success) return
     if (!pickupValue || !pickupCoords) { toast.error('Select a pickup address from the suggestions list.'); return }
     if ((!deliveryValue || !deliveryCoords) && !liveLocationActive) { toast.error('Select a delivery address from the suggestions list, or use live location.'); return }
     if (!isPreciseDeliveryAddress(deliveryValue)) { toast.error(PRECISE_DELIVERY_ADDRESS_ERROR); return }
     if (!packageSize) { toast.error('Select a package size.'); return }
+    if (contact.error) { toast.error(contact.error); goTo(2); return }
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
     if (quoteError) { toast.error(quoteError); return }
     if (!quote) { toast.error('Still calculating the price — please wait a moment.'); return }
@@ -567,7 +590,9 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     setSubmitting(true)
     try {
       checkoutKey.current ??= newShoppingRequestId()
+      saveDeliveryDraft(ownerId,{...draft,checkoutKey:checkoutKey.current})
       const result = await startOrderCheckout({ requestKey: checkoutKey.current, type: "delivery", order: {
+        ...contact,
         pickup_instructions:pickupInstructions,delivery_instructions:deliveryInstructions,
         consent_token: quote.consentToken,
         pickup_address: pickupValue,
@@ -598,16 +623,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
     setAddingFunds(true)
     try {
       const needed = Math.max(1, Math.ceil((price - (walletBalance ?? 0)) * 100) / 100)
-      saveDeliveryDraft({
-        pickupValue,
-        deliveryValue,
-        pickupCoords,
-        deliveryCoords,
-        itemDescription,
-        itemPhotos,
-        packageSize,
-        promoCode,
-      })
+      saveDeliveryDraft(ownerId,{...draft,checkoutKey:checkoutKey.current})
       const result = await createWalletTopUpSession(Math.min(500, needed), 'new-delivery')
       if ('url' in result) {
         window.location.href = result.url
@@ -834,6 +850,13 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
           )}
 
 {liveLocationError && <div className={styles.locationFeedback}><p role="status">{liveLocationError.message}</p><button type="button" onClick={() => setLocationRecovery({ target: 'live', issue: liveLocationError })}>Reconnect live location</button></div>}
+<fieldset className="grid gap-2 rounded-xl border border-white/20 p-3 text-sm">
+<legend>Recipient and collection</legend>
+<label>Recipient name <input className="block w-full rounded bg-[#262626] p-2" maxLength={100} autoComplete="off" value={recipientName} onChange={e=>setRecipientName(e.target.value)} /></label>
+<label>Recipient UK phone <input className="block w-full rounded bg-[#262626] p-2" type="tel" maxLength={40} value={recipientPhone} onChange={e=>setRecipientPhone(e.target.value)} /></label>
+<label>Collection time <select className="block w-full rounded bg-[#262626] p-2" value={collectionTime==="asap"?"asap":"later"} onChange={e=>setCollectionTime(e.target.value==="asap"?"asap":"")}><option value="asap">As soon as possible</option><option value="later">Request a date and time</option></select></label>
+{collectionTime!=="asap"&&<label>Preferred date and time (your device’s time zone)<input className="block w-full rounded bg-[#262626] p-2" type="datetime-local" value={collectionTime} onChange={e=>setCollectionTime(e.target.value)} /></label>}
+</fieldset>
 <AddressInstructions pickup={pickupInstructions} delivery={deliveryInstructions} onPickup={setPickupInstructions} onDelivery={setDeliveryInstructions}/>
 <BookingRouteMap pickup={pickupCoords} destination={deliveryCoords} userLocation={userCoords}/>
 </div>}
@@ -841,7 +864,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress }
 
           <div className={styles.summary}>
             <div><span>Pickup</span><p>{pickupValue}</p><button onClick={() => goTo(2)}>Edit</button></div>
-            <div><span>Delivery</span><p>{deliveryValue}</p><button onClick={() => goTo(2)}>Edit</button></div>
+            <div><span>Delivery</span><p>{deliveryValue}<br/>{recipientName} · {recipientPhone}<br/>{collectionTime==="asap"?"Collect as soon as possible":`Preferred collection: ${collectionTime.replace("T"," ")}`}</p><button onClick={() => goTo(2)}>Edit</button></div>
             <div className={styles.reviewPackage}>{packageSize && <span className={styles.reviewParcel} data-size={packageSize}><PackageIllustration bulky={packageSize === "bulky"}/></span>}<span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
           </div>
           <div className={styles.price}>

@@ -25,7 +25,11 @@ export async function saveCustomerProfile(name:string,phone:string){
  return error?{error:'Could not save your profile. Please try again.'}:{data}
 }
 export async function getSavedAddresses(){
- const user=await identity();if(!user)return {error:'Please sign in again.',data:[]}
+ const client=await createClient()
+ const {data:identity,error:authError}=await client.auth.getClaims()
+ if(authError && (authError.name==="AuthRetryableFetchError"||(authError.status??0)>=500))return {error:"Saved addresses are temporarily unavailable. Please retry.",data:[]}
+ const user=identity?.claims.sub?{id:identity.claims.sub}:null
+ if(!user)return {error:"Please sign in to load saved addresses. Your draft will be kept.",data:[]}
  const {data,error}=await createAdminClient().from('addresses').select('id,address,lat,lng,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100)
  return error?{error:'Could not load saved addresses.',data:[]}:{data:data??[]}
 }
