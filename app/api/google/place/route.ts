@@ -9,9 +9,9 @@ export async function GET(req:NextRequest) {
  if(!placeId||placeId.length>300||!/^[a-zA-Z0-9_-]+$/.test(placeId))return NextResponse.json({error:"Invalid place ID."},{status:400})
  const budget=await integrationBudget(access.userId,"maps")
  if(budget)return NextResponse.json({error:budget.error},{status:budget.status,headers:budget.status===429?{"Retry-After":"60"}:{}})
- const result=await googleProxy("place/details/json",new URLSearchParams({place_id:placeId,fields:"geometry"}),req.signal)
+ const result=await googleProxy("place/details/json",new URLSearchParams({place_id:placeId,fields:"geometry,formatted_address"}),req.signal)
  if("error" in result)return NextResponse.json({error:result.error},{status:result.status})
  const loc=result.data.result?.geometry?.location
  if(!loc||!validCoordinates(loc.lat,loc.lng))return NextResponse.json({error:"Location not found."},{status:404})
- return NextResponse.json({location:{latitude:loc.lat,longitude:loc.lng}})
+ return NextResponse.json({location:{latitude:loc.lat,longitude:loc.lng},...(typeof result.data.result?.formatted_address === "string" ? {address:result.data.result.formatted_address} : {})})
 }

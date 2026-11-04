@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowRight,
@@ -12,9 +12,7 @@ import {
   Truck,
 } from 'lucide-react'
 import { shoppingFinancials, type RefundRecord } from '@/lib/shopping-summary'
-import { createClient } from '@/lib/supabase/client'
 import { getDriverNamesByIds } from '@/app/actions/driver'
-import { useCustomerLiveRefresh } from '@/hooks/use-customer-live-refresh'
 import { CancelOrderButton } from './cancel-order-button'
 import {
   CustomerDialog,
@@ -27,7 +25,7 @@ import {
   useCustomerPageSize,
 } from './CustomerPage'
 import s from './CustomerPages.module.css'
-import { SHIPMENT_COLUMNS } from '@/lib/shipment-query'
+import { shortRequest } from '@/lib/short-request'
 
 type Shipment = {
   max_spend_approved?: number | null
@@ -52,7 +50,6 @@ export default function CustomerShipments({
 }: {
   history?: boolean
 }) {
-  const client = useMemo(() => createClient(), [])
   const [rows, setRows] = useState<Shipment[]>([]),
     [count, setCount] = useState(0),
     [page, setPage] = useState(1),
@@ -60,7 +57,6 @@ export default function CustomerShipments({
     [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
-    [userId, setUserId] = useState(''),
     [revision, setRevision] = useState(0)
   const [names, setNames] = useState<Record<string, string>>({}),
     [selected, setSelected] = useState<string | null>(null),
@@ -78,67 +74,50 @@ export default function CustomerShipments({
   const current = Math.min(page, Math.max(1, Math.ceil(count / size)))
   useEffect(() => {
     let alive = true
-    async function load() {
-      setLoading(true)
-      setError('')
-      try {
-        const {
-          data: { user },
-        } = await client.auth.getUser()
-        if (!user) {
-          if (alive) setError('Please sign in to see your shipments.')
-          return
-        }
-        if (alive) setUserId(user.id)
-        let request = client
-          .from('delivery_requests')
-          .select(
-            SHIPMENT_COLUMNS,
-            { count: 'exact' },
-          )
-          .eq('customer_id', user.id)
-        request = history
-          ? request.in('status', ['delivered', 'cancelled'])
-          : request.not('status', 'in', '(delivered,cancelled)')
-        if (search)
-          request = request.or(
-            `tracking_number.ilike.%${search}%,pickup_address.ilike.%${search}%,delivery_address.ilike.%${search}%`,
-          )
-        const result = await request
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: false })
-          .range((current - 1) * size, current * size - 1)
-        if (result.error) throw result.error
-        if (!alive) return
-        setRows((result.data ?? []) as Shipment[])
-        setCount(result.count ?? 0)
-        const ids = [
-          ...new Set(
-            (result.data ?? []).map((r) => r.driver_id).filter(Boolean),
-          ),
-        ] as string[]
-        if (ids.length) {
-          const map = await getDriverNamesByIds(ids)
-          if (alive) setNames(map ?? {})
-        }
-      } catch {
-        if (alive) setError('Could not load shipments. Please try again.')
-      } finally {
-        if (alive) setLoading(false)
-      }
-    }
-    void load()
-    return () => {
-      alive = false
-    }
-  }, [client, history, current, size, search, revision])
+    const controller = new AbortController()
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(2850)])
+    setLoading(true)
+    setError('')
+    const params = new URLSearchParams({history:history?'1':'0',page:String(current),size:String(size),search})
+    void shortRequest(fetch(`/api/customer/shipments?${params}`, {signal, cache:'no-store'}).then(async response => {
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not load shipments. Please try again.')
+      return result as {rows: Shipment[]; count:number}
+    }), 2900).then(result => {
+      if (!alive) return
+      setRows(result.rows)
+      setCount(result.count)
+      setLoading(false)
+      const ids = [...new Set(result.rows.map(r => r.driver_id).filter((id):id is string => !!id))]
+      // Optional names never block the list or replace it with an error.
+      setNames({})
+      if (ids.length) void shortRequest(getDriverNamesByIds(ids), 2400).then(map => { if(alive) setNames(map ?? {}) }).catch(()=>{})
+    }).catch(error => {
+      if (!alive) return
+      setError(signal.aborted || error?.message === 'Request timed out' ? 'Shipments are taking too long to load. Please retry.' : error?.message || 'Could not load shipments. Please try again.')
+      setLoading(false)
+    })
+    return () => { alive = false; controller.abort() }
+  }, [history, current, size, search, revision])
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') setRevision(r=>r+1) }
+    const timer = setInterval(refresh, 30000)
+    document.addEventListener('godrop-order-created',refresh)
+    window.addEventListener('online',refresh)
+    return () => { clearInterval(timer);document.removeEventListener('godrop-order-created',refresh);window.removeEventListener('online',refresh) }
+  }, [])
   useEffect(()=>{
     const id=orderDetails?.id
-    if(!id||!userId)return
+    if(!id)return
+    const controller=new AbortController()
     let alive=true;setDetailsLoading(true);setDetailsError('')
-    void Promise.resolve(client.from('delivery_requests').select(SHIPMENT_COLUMNS).eq('id',id).eq('customer_id',userId).maybeSingle()).then(({data,error})=>{if(!alive)return;if(error||!data)setDetailsError('Could not refresh this order. Please retry.');else setOrderDetails(data as Shipment)}).catch(()=>{if(alive)setDetailsError('Could not refresh this order. Please retry.')}).finally(()=>{if(alive)setDetailsLoading(false)})
-    return()=>{alive=false}
-  },[client,userId,orderDetails?.id,revision])
+    void shortRequest(fetch('/api/customer/shipments?'+new URLSearchParams({id}),{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(2850)])}).then(async response=>{
+      const result=await response.json()
+      if(!response.ok||!result.shipment)throw new Error()
+      return result.shipment as Shipment
+    }),2900).then(shipment=>{if(alive)setOrderDetails(shipment)}).catch(()=>{if(alive)setDetailsError('Could not refresh this order. Please retry.')}).finally(()=>{if(alive)setDetailsLoading(false)})
+    return()=>{alive=false;controller.abort()}
+  },[orderDetails?.id,revision])
   const focus = rows.find((r) => r.id === selected) ?? rows[0]
   const label = (row: Shipment) =>
     row.tracking_number ?? `GD-${row.id.slice(0, 6).toUpperCase()}`
@@ -155,7 +134,6 @@ export default function CustomerShipments({
     })[row.status ?? ''] ?? (row.status ?? 'Requested').replaceAll('_', ' ')
   const totalPaid = (row: Shipment) => row.service_type === 'buy_for_me' ? shoppingFinancials({...row,max_spend_approved:row.max_spend_approved??0},row.payments?.[0]).charged : Number(row.price??0)
   const track = (row: Shipment) => `/dashboard/customer/tracking?id=${row.id}`
-  useCustomerLiveRefresh(async()=>{setRevision(r=>r+1)},'delivery_requests',20000)
   const liveDetails = orderDetails
   return (
     <CustomerPage
@@ -208,7 +186,7 @@ export default function CustomerShipments({
         <div className={s.content}>
           {loading ? (
             <CustomerEmpty loading>Loading shipments</CustomerEmpty>
-          ) : !rows.length ? (
+          ) : error && !rows.length ? null : !rows.length ? (
             <CustomerEmpty>
               {search
                 ? 'No shipments match your search.'

@@ -1,3 +1,5 @@
+import { boundedFetch, shortRequest } from "@/lib/short-request"
+import { OrderMediaPreview } from "@/components/admin/order-media-preview"
 import { TestOrderFlag } from "@/components/admin/test-order-flag"
 import {timelineTime} from '@/lib/timeline-time'
 import {getAdminActor} from "@/lib/admin-access"
@@ -37,7 +39,7 @@ export default async function AdminOrderDetailPage({
   const actor=await getAdminActor("any");if(!actor||!actor.owner&&!actor.scopes.some((s:string)=>["operations","support","finance"].includes(s)))notFound()
   const { orderId } = await params
   const messagePage=Math.max(1,Math.trunc(Number((await searchParams).messages)||1))
-  const admin = createAdminClient()
+  const admin = createAdminClient(boundedFetch(2800))
 
   const { data: order, error } = await admin
     .from("delivery_requests")
@@ -45,9 +47,10 @@ export default async function AdminOrderDetailPage({
     .eq("id", orderId)
     .single()
 
-  if (error || !order) notFound()
+  if (error && error.code !== "PGRST116") return <p role="alert" className="p-6 text-amber-200">Order could not load. Reload to retry.</p>
+  if (!order) notFound()
 
-  const [customerRes, driverRes, logsRes, ratingsRes, driversRes] = await Promise.all([
+  const [customerRes, driverRes, logsRes, ratingsRes, driversRes, paymentRes, testRecord] = await Promise.all([
     order.customer_id
       ? admin.from("users").select("full_name, email, phone").eq("id", order.customer_id).single()
       : Promise.resolve({ data: null }),
@@ -59,12 +62,15 @@ export default async function AdminOrderDetailPage({
       .select("status, created_at, occurred_at_known")
       .eq("delivery_id", orderId)
       .order("created_at", { ascending: true }),
-    getDeliveryRatings(orderId),
+    shortRequest(getDeliveryRatings(orderId),2800).catch(()=>({data:[]})),
     admin
       .from("users")
       .select("id, full_name")
       .eq("role", "driver")
       .order("full_name", { ascending: true }),
+    admin.from('payments').select('id,purpose,amount,status,refund_jobs').or(`delivery_id.eq.${orderId},related_delivery_id.eq.${orderId}`).eq('payment_method','stripe').order('created_at'),
+    admin.from("admin_audit_log").select("details").eq("entity",orderId).eq("event","order_test_record")
+      .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle(),
   ])
 
   const customer = customerRes.data
@@ -75,15 +81,13 @@ export default async function AdminOrderDetailPage({
   const customerRating = ratings.find((r) => r.rater_role === "customer")
   const driverRating   = ratings.find((r) => r.rater_role === "driver")
 
-  const {data:cardPayments,error:paymentError}=await admin.from('payments').select('id,purpose,amount,status,refund_jobs').or(`delivery_id.eq.${orderId},related_delivery_id.eq.${orderId}`).eq('payment_method','stripe').order('created_at');if(paymentError)throw new Error('Order payment records could not load.')
+  const {data:cardPayments,error:paymentError}=paymentRes
   const canFlag = (actor.owner || actor.scopes.includes("operations")) && ["delivered","cancelled"].includes(order.status)
-  const testRecord = await admin.from("admin_audit_log").select("details").eq("entity",orderId).eq("event","order_test_record")
-    .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle()
   const currentIdx = STATUS_ORDER.indexOf(order.status)
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
-      {!testRecord.error && <TestOrderFlag id={orderId} flagged={testRecord.data?.details?.flagged === true} canEdit={canFlag} />}
+      {testRecord.error ? <p role="status" className="mb-4 text-amber-200">Test record status is unavailable. Reload to check it.</p> : <TestOrderFlag id={orderId} flagged={testRecord.data?.details?.flagged === true} canEdit={canFlag} />}
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 md:mb-8">
         <Link
@@ -165,7 +169,7 @@ export default async function AdminOrderDetailPage({
                       <a key={url} href={orderMediaUrl(url)} target="_blank" rel="noreferrer"
                         className="w-16 h-16 rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20 shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={orderMediaUrl(url)} alt="Item" className="w-full h-full object-cover" />
+                        <OrderMediaPreview src={orderMediaUrl(url)} alt="Item" />
                       </a>
                     ))}
                   </div>
@@ -179,7 +183,7 @@ export default async function AdminOrderDetailPage({
                       <a href={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=pickup`} target="_blank" rel="noreferrer">
                         <div className="w-24 h-24 rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=pickup`} alt="Parcel at pickup" className="w-full h-full object-cover" />
+                          <OrderMediaPreview src={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=pickup`} alt="Parcel at pickup" />
                         </div>
                         <p className="text-[10px] text-[var(--color-on-surface-variant)] mt-1 text-center">Pickup</p>
                       </a>
@@ -188,7 +192,7 @@ export default async function AdminOrderDetailPage({
                       <a href={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=delivery`} target="_blank" rel="noreferrer">
                         <div className="w-24 h-24 rounded-lg overflow-hidden border border-[var(--color-outline-variant)]/20">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=delivery`} alt="Delivered package" className="w-full h-full object-cover" />
+                          <OrderMediaPreview src={`/api/delivery-proof?id=${encodeURIComponent(order.id)}&kind=delivery`} alt="Delivered package" />
                         </div>
                         <p className="text-[10px] text-[var(--color-on-surface-variant)] mt-1 text-center">Delivery</p>
                       </a>
@@ -202,6 +206,7 @@ export default async function AdminOrderDetailPage({
           {order.service_type === "buy_for_me" && <ShoppingItemsHistory orderId={orderId} />}
           {order.collection_wait_history?.length>0&&<details className="rounded-xl border border-white/15 p-4"><summary>Previous waiting timers</summary>{order.collection_wait_history.map((w:any,i:number)=><p key={i}>Closed on reassignment · {w.status.replaceAll("_"," ")} · {w.amount==null?"No amount agreed":`£${Number(w.amount).toFixed(2)}`}</p>)}</details>}
           {order.collection_wait&&<section className="rounded-xl border border-white/15 bg-[var(--brand-panel)] p-4 text-white"><h3 className="font-bold">Collection waiting request</h3><p>Status: {order.collection_wait.status}</p>{order.collection_wait.amount!=null&&<p>Requested £{Number(order.collection_wait.amount).toFixed(2)} at £{Number(order.collection_wait.rate).toFixed(2)} per minute after 5 free minutes.</p>}<p className="text-sm">Approval alone does not take payment. A separate paid checkout records the waiting charge; earnings follow delivery completion.</p></section>}
+          {paymentError && <p role="status" className="text-amber-200">Payment details are temporarily unavailable. Reload to retry.</p>}
           {cardPayments?.map(p=><OrderPaymentPanel key={p.id} id={orderId} paymentId={p.id} purpose={p.purpose} amount={p.amount} status={p.status} refunds={p.refund_jobs??[]} />)}
       {order.service_type === "buy_for_me" && <ShoppingFundingPanel id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
           {/* Buy for Me Details */}

@@ -1,3 +1,4 @@
+import { boundedFetch } from "@/lib/short-request"
 import {createAdminClient} from "@/lib/supabase/admin"
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
@@ -6,7 +7,7 @@ import type { NextRequest } from "next/server"
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   // The callback owns its code exchange. Avoid an unrelated session refresh before it.
-  if (pathname === "/auth/callback" || pathname === "/track" || pathname.startsWith("/track/") ||
+  if (pathname === "/api/customer/shipments" || pathname === "/auth/callback" || pathname === "/track" || pathname.startsWith("/track/") ||
       (pathname === "/login" && request.nextUrl.searchParams.has("error"))) return NextResponse.next({request})
   if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
     const url = request.nextUrl.clone()
@@ -25,6 +26,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      ...(pathname.startsWith("/dashboard") ? {global:{fetch:boundedFetch(3000)}} : {}),
       cookies: {
         // getAll/setAll (not the deprecated get/set/remove trio) — required
         // for Supabase to correctly read/write session cookies that get
@@ -58,8 +60,9 @@ export async function proxy(request: NextRequest) {
   }
 
   const {
-    data: { user },
+    data: { user }, error: authError,
   } = await supabase.auth.getUser()
+  if (pathname.startsWith("/dashboard") && authError?.name === "AuthRetryableFetchError") return new NextResponse("Sign-in service is taking too long. Reload to retry.",{status:503})
 
   // PUBLIC ROUTES - always allow access
   if (
@@ -112,12 +115,13 @@ export async function proxy(request: NextRequest) {
 
     // Fetch the user's role from the users table.
     // RLS policy "Allow user to read own row" permits this select.
-    const { data } = await supabase.from("users").select("role,account_status,admin_access").eq("id", user.id).maybeSingle()
+    const { data, error: profileError } = await supabase.from("users").select("role,account_status,admin_access").eq("id", user.id).maybeSingle()
 
+    if (profileError) return new NextResponse("Account details could not load. Reload to retry.",{status:503})
     const role = data?.role as "admin" | "driver" | "customer" | undefined
     if(data?.account_status && data.account_status!=='active')return redirectWithCookies(new URL('/unauthorized',request.url))
     if(role==='admin'&&pathname.startsWith('/dashboard/admin')&&pathname!=='/dashboard/admin/security'){
-      const config=await createAdminClient().from('surge_pricing_settings').select('operational_settings').eq('id',true).single()
+      const config=await createAdminClient(boundedFetch(3000)).from('surge_pricing_settings').select('operational_settings').eq('id',true).single()
       if(config.error)return new NextResponse('Admin settings are unavailable. Please retry.',{status:503})
       if(config.data.operational_settings?.requireAdminMfa){const level=await supabase.auth.mfa.getAuthenticatorAssuranceLevel();if(level.error||level.data.currentLevel!=='aal2')return redirectWithCookies(new URL('/dashboard/admin/security',request.url))}
       const section=pathname.split('/')[3]??''

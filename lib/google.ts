@@ -62,12 +62,12 @@ export async function googlePlacesAutocomplete(
 
 export async function googlePlaceCoords(
   placeId: string, signal?: AbortSignal
-): Promise<{ lat: number; lng: number } | null> {
+): Promise<{ lat: number; lng: number; address?: string } | null> {
   const res = await fetch(`/api/google/place?placeId=${encodeURIComponent(placeId)}`, {signal})
   const data = await res.json()
   assertGoogleResponse(res, data)
   if (!data.location) return null
-  return { lat: data.location.latitude, lng: data.location.longitude }
+  return { lat: data.location.latitude, lng: data.location.longitude, ...(typeof data.address === "string" ? {address:data.address} : {}) }
 }
 
 export async function googleReverseGeocode(lat: number, lng: number): Promise<string | null> {

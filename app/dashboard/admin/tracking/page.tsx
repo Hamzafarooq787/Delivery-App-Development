@@ -1,3 +1,4 @@
+import { boundedFetch } from "@/lib/short-request"
 import {getAdminActor} from "@/lib/admin-access"
 import {RecordPager} from "@/components/admin/admin-records"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -11,7 +12,7 @@ const LIVE_STATUSES = ["accepted", "collected", "in_transit", "picked_up"]
 export default async function AdminLiveTrackingPage({searchParams}:{searchParams:Promise<{page?:string}>}) {
   const params=await searchParams,page=Math.max(1,Math.trunc(Number(params.page)||1))
   if(!(await getAdminActor("operations")))return <p className="p-6 text-white">Operations permission is required.</p>
-  const admin = createAdminClient()
+  const admin = createAdminClient(boundedFetch(2800))
 
   const { data: deliveries, error, count } = await admin
     .from("delivery_requests")
