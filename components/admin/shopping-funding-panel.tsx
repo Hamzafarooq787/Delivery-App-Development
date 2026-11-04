@@ -7,7 +7,7 @@ export function ShoppingFundingPanel({
   verified,
   problem,
   started,
-  completed,
+  completed, canVerify, closed,
 }: {
   id: string;
   reference: string | null;
@@ -15,6 +15,7 @@ export function ShoppingFundingPanel({
   problem: string | null;
   started: string | null;
   completed: string | null;
+  canVerify:boolean; closed:boolean;
 }) {
   const [card, setCard] = useState("");
   const [message, setMessage] = useState("");
@@ -27,9 +28,9 @@ export function ShoppingFundingPanel({
     <section className="rounded-xl bg-[var(--brand-panel)] p-5 text-white space-y-3">
       <h2 className="font-bold">Shopping operations</h2>
       <p>
-        {reference && verified
+        {closed ? "Order cancelled. Shopping cannot start." : reference && verified
           ? "Company card verified for this order."
-          : "Company card required before shopping starts."}
+          : "A funded GBP Stripe Issuing card is required for the assigned driver before shopping starts."}
       </p>
       <p>
         Shopping duration:{" "}
@@ -40,7 +41,7 @@ export function ShoppingFundingPanel({
           : `${minutes} minutes`}
       </p>
       {problem && <p role="alert">Driver report: {problem}</p>}
-      <label className="block">
+      {canVerify && !closed && <><label className="block">
         Dedicated Stripe Issuing card reference
         <input
           value={card}
@@ -64,7 +65,7 @@ export function ShoppingFundingPanel({
       >
         {busy ? "Verifying…" : "Verify company funding"}
       </button>
-      <p role="status">{message}</p>
+      <p role="status">{message}</p></>}
       <p className="text-sm">
         Use a dedicated company card provided securely to the assigned driver.
         Never enter or store its card number here.

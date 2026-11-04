@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { submitRating } from "@/app/actions/ratings"
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
 export function RatingPrompt({ deliveryId, ratedLabel, onSubmitted }: Props) {
   const [score, setScore] = useState(0)
   const [hoverScore, setHoverScore] = useState(0)
-  const [comment, setComment] = useState("")
+  const commentInput = useRef<HTMLTextAreaElement>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
@@ -20,6 +20,7 @@ export function RatingPrompt({ deliveryId, ratedLabel, onSubmitted }: Props) {
   function handleSubmit() {
     if (score === 0 || isPending) return
     setError(null)
+    const comment = commentInput.current?.value ?? ""
     startTransition(async () => {
       const result = await submitRating({ deliveryId, score, comment })
       if (result.error) { setError(result.error); return }
@@ -69,8 +70,8 @@ export function RatingPrompt({ deliveryId, ratedLabel, onSubmitted }: Props) {
         ))}
       </div>
       <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value.slice(0, 300))}
+        ref={commentInput}
+        maxLength={300}
         placeholder="Leave a comment (optional)"
         rows={2}
         className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-3 py-2 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors resize-none"

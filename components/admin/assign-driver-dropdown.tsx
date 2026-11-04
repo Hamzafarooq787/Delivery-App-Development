@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useTransition, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { adminAssignDriver } from "@/app/actions/delivery"
 
-export type DriverOption = { id: string; full_name: string }
+export type DriverOption = { id: string; full_name: string | null }
 
 export function AssignDriverDropdown({
   deliveryId,
@@ -16,6 +17,7 @@ export function AssignDriverDropdown({
   drivers: DriverOption[]
   disabled?: boolean
 }) {
+  const router = useRouter()
   const [reason,setReason]=useState("")
   const [error,setError]=useState("")
   const [open, setOpen] = useState(false)
@@ -35,14 +37,15 @@ export function AssignDriverDropdown({
 
   function handleSelect(driverId: string | null) {
     if(reason.trim().length<3){setError("Enter an assignment reason first.");return}
-    setOpen(false)
+    setError("")
     if (driverId === localDriverId) return
-    setLocalDriverId(driverId)
     startTransition(async () => {
       const result = await adminAssignDriver(deliveryId, driverId, reason)
       if (result.error) {
         setLocalDriverId(currentDriverId)
-        alert("Failed to assign driver: " + result.error)
+        setError(result.error)
+      } else {
+        setLocalDriverId(driverId); setOpen(false); setReason(""); router.refresh()
       }
     })
   }
@@ -73,7 +76,7 @@ export function AssignDriverDropdown({
               {localDriverId ? "person" : "person_add"}
             </span>
             <span className="max-w-[100px] truncate">
-              {currentDriver?.full_name ?? "Assign Driver"}
+              {currentDriver ? "Reassign driver" : "Assign driver"}
             </span>
             <span className="material-symbols-outlined text-xs">expand_more</span>
           </>
@@ -90,13 +93,14 @@ export function AssignDriverDropdown({
             {/* Unassign option */}
             <button
               type="button"
+              disabled={isPending || !localDriverId}
               onClick={() => handleSelect(null)}
               className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors hover:bg-[var(--color-surface-container-highest)] ${
                 !localDriverId ? "text-[#ff6e84]" : "text-[var(--color-on-surface-variant)]"
               }`}
             >
               <span className="material-symbols-outlined text-sm">person_remove</span>
-              Unassign
+              Unassign driver
             </button>
 
             {drivers.length === 0 ? (
@@ -106,6 +110,7 @@ export function AssignDriverDropdown({
                 <button
                   key={driver.id}
                   type="button"
+                  disabled={isPending || driver.id === localDriverId}
                   onClick={() => handleSelect(driver.id)}
                   className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left transition-colors hover:bg-[var(--color-surface-container-highest)] ${
                     driver.id === localDriverId
@@ -115,10 +120,10 @@ export function AssignDriverDropdown({
                 >
                   <div className="w-5 h-5 rounded-full bg-[var(--brand-strong)]/10 flex items-center justify-center shrink-0">
                     <span className="text-[8px] font-bold text-[var(--brand-soft)]">
-                      {driver.full_name.charAt(0).toUpperCase()}
+                      {driver.full_name?.trim().charAt(0).toUpperCase() || "?"}
                     </span>
                   </div>
-                  <span className="truncate">{driver.full_name}</span>
+                  <span className="truncate">{driver.full_name?.trim() || "Unnamed driver"}</span>
                   {driver.id === localDriverId && (
                     <span className="material-symbols-outlined text-xs ml-auto shrink-0 text-[var(--brand-soft)]">check</span>
                   )}

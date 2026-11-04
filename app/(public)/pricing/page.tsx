@@ -37,7 +37,7 @@ export default async function PricingPage() {
         {rates ? <dl className="space-y-3">
           <div><dt className="text-[#adaaaa]">{rates.includedMiles ? `First ${rates.includedMiles} ${rates.includedMiles === 1 ? "mile" : "miles"}` : "Base delivery charge"}</dt><dd className="text-2xl font-bold">{money(rates.baseFare)}</dd></div>
           <div><dt className="text-[#adaaaa]">{rates.includedMiles ? "Each extra driving mile" : "Each driving mile"}</dt><dd>{money(rates.perMile)}</dd></div>
-          <div><dt className="text-[#adaaaa]">Parcel size</dt><dd>Small and medium have no size fee. Large: {money(rates.largeFee)} extra. Bulky (van): {money(rates.vanFee)} extra.</dd></div>
+          <div><dt className="text-[#adaaaa]">Parcel size</dt><dd>Small: {money(rates.smallFee??0)} extra. Medium: {money(rates.mediumFee??0)} extra. Large: {money(rates.largeFee)} extra. Van-size: {money(rates.vanFee)} extra.</dd></div>
           {rates.weatherFee > 0 && <div><dt className="text-[#adaaaa]">Current weather charge</dt><dd>{money(rates.weatherFee)}</dd></div>}
         </dl> : <p>Current rates are unavailable. Please try again shortly.</p>}
       </article>

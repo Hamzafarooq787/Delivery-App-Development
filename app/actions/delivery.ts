@@ -562,6 +562,7 @@ export async function safetyReleaseJob(deliveryId: string, reason: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  if (typeof reason!=="string" || reason.trim().length<3 || reason.length>120) return {error:"Choose a valid reason."}
   // Release job back to the pool so another driver can accept it
   const { data: released, error } = await admin
     .from("delivery_requests")
@@ -569,6 +570,8 @@ export async function safetyReleaseJob(deliveryId: string, reason: string) {
     .eq("id", deliveryId)
     .eq("driver_id", user.id)
     .eq("status", "accepted")
+    .is("company_card_reference",null)
+    .or("bfm_stage.is.null,bfm_stage.in.(assigned,arrived_at_shop)")
     .select("id").maybeSingle()
 
   if (error) return { error: error.message }
@@ -581,6 +584,10 @@ export async function safetyReleaseJob(deliveryId: string, reason: string) {
     updated_by: user.id,
   })
 
+  after(async()=>{
+    const {data:admins}=await admin.from("users").select("id").eq("role","admin").limit(50);
+    await Promise.allSettled((admins??[]).map(a=>notifyUser({userId:a.id,title:"Driver released a job",body:"The job is available again. See its timeline for the reason.",url:`/dashboard/admin/orders/${deliveryId}`,tag:`driver-release-${deliveryId}` })));
+  });
   // Auto-offline if no other active jobs remain
   const ACTIVE = ["accepted", "collected", "picked_up", "in_transit"]
   const { count } = await admin
@@ -857,8 +864,15 @@ export async function adminRejectDriver(driverId: string, reason?: string) {
 export async function adminAssignDriver(deliveryId: string, driverId: string | null, reason: string) {
  return runAdminMutation("operations","adminAssignDriver",deliveryId,async()=>{
   const actor=await getAdminActor("operations");if(!actor)return{error:"Not authorised."}
-  const {error}=await createAdminClient().rpc("admin_assign_delivery",{p_actor:actor.id,p_id:deliveryId,p_driver:driverId,p_reason:reason})
+  const db=createAdminClient();
+  const {data:previous}=await db.from("delivery_requests").select("driver_id,bfm_stage,company_card_reference").eq("id",deliveryId).maybeSingle();
+  if (!previous || previous.company_card_reference || ["shopping","purchase_completed","heading_to_customer"].includes(previous.bfm_stage)) return {error:"This job cannot change drivers after shopping or card assignment. Contact support."};
+  const {error}=await db.rpc("admin_assign_delivery",{p_actor:actor.id,p_id:deliveryId,p_driver:driverId,p_reason:reason})
   if(error)return{error:"Assignment could not save. Enter a reason and select an approved, available driver with a suitable vehicle. Paid and uncollected orders only."}
+  after(async()=>{
+    if(previous.driver_id && previous.driver_id!==driverId) await notifyUser({userId:previous.driver_id,title:"Driver assignment changed",body:"This job is no longer assigned to you.",url:"/dashboard/driver/jobs/available",tag:`unassigned-${deliveryId}`}).catch(()=>{});
+    if(driverId && previous.driver_id!==driverId) await notifyUser({userId:driverId,title:"Delivery assigned",body:"GoDrop assigned a job to you. Open your active jobs for details.",url:"/dashboard/driver/active-jobs",tag:`assigned-${deliveryId}`}).catch(()=>{});
+  });
   revalidatePath("/dashboard/admin/orders");revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
   return{success:true}
  })

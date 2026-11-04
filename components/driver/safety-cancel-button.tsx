@@ -12,9 +12,10 @@ const SAFETY_REASONS = [
   { icon: "location_off", label: "Pickup/drop-off location feels unsafe" },
   { icon: "crisis_alert", label: "I feel personally threatened" },
   { icon: "report", label: "Other safety concern" },
+  { icon: "schedule", label: "Unable to complete pickup" },
 ]
 
-export function SafetyCancelButton({ jobId }: { jobId: string }) {
+export function SafetyCancelButton({ jobId, label="Safety Cancel" }: { jobId: string; label?:string }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -42,7 +43,7 @@ export function SafetyCancelButton({ jobId }: { jobId: string }) {
         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/25 bg-red-500/8 text-sm font-bold text-red-400 hover:bg-red-500/15 transition-all active:scale-[0.98]"
       >
         <span className="material-symbols-outlined text-base">shield_with_heart</span>
-        Safety Cancel
+        {label}
       </button>
 
       {open && (

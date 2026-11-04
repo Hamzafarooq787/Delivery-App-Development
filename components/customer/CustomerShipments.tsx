@@ -372,7 +372,7 @@ export default function CustomerShipments({
               </span>
               <div>
                 <h3>
-                  {focus.driver_id
+                  {focus.status === "cancelled" ? "Order cancelled" : focus.driver_id
                     ? (names[focus.driver_id] ?? 'Your driver')
                     : 'Finding your driver'}
                 </h3>

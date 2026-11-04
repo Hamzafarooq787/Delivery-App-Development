@@ -251,7 +251,7 @@ export default function CustomerPayments() {
                           <button
                             className={s.secondary}
                             aria-label={`View payment ${row.tracking}`}
-                            onClick={() => setSelected(row.id)}
+                            onClick={() => {setSelected(row.id);setDetails(row)}}
                           >
                             <FileText size={17} />
                           </button>

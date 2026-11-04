@@ -15,7 +15,7 @@ export async function GET(request:Request) {
  if(order.error)return reply({},503)
  if(!order.data)return reply({user,order:null})
  const admin=createAdminClient(boundedFetch(4000))
- const idDriver=order.data.driver_id
+ const idDriver=order.data.status==="cancelled"?null:order.data.driver_id
  const [logs,driver,vehicle,rating]=await Promise.all([
   db.from("delivery_status_logs").select("status,created_at,occurred_at_known").eq("delivery_id",order.data.id).order("created_at"),
   idDriver?admin.from("users").select("full_name").eq("id",idDriver).maybeSingle():{data:null},

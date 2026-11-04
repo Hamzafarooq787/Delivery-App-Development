@@ -1,3 +1,4 @@
+import { paymentDisplayStatus } from "@/lib/payment-display"
 import {getAdminActor} from "@/lib/admin-access"
 import {RecordFilters} from "@/components/admin/admin-records"
 import {parseAdminDate} from "@/lib/admin-operations"
@@ -32,9 +33,17 @@ export default async function AdminPaymentsPage({
   const admin = createAdminClient();
   let paymentQuery=admin.from("payments").select("id,delivery_id,related_delivery_id,purpose,amount,status,payment_method,stripe_payment_intent,stripe_session_id,created_at,refund_jobs").order("created_at",{ascending:false}).order("id").range((page-1)*50,page*50-1)
   if(params.status)paymentQuery=paymentQuery.eq('status',params.status)
-  if(params.q){const q=params.q.replace(/[^a-zA-Z0-9_-]/g,'').slice(0,100);paymentQuery=paymentQuery.or(`id.eq.${/^[0-9a-f-]{36}$/i.test(q)?q:'00000000-0000-4000-8000-000000000000'},stripe_payment_intent.ilike.%${q}%`)}
+  if(params.q){
+    const q=params.q.trim().replace(/[^a-zA-Z0-9_-]/g,'').slice(0,100)
+    const matched=q?await admin.from("delivery_requests").select("id").ilike("tracking_number",q).limit(20):null
+    const ids=matched?.data?.map(o=>o.id)??[]
+    const filters=[`id.eq.${/^[0-9a-f-]{36}$/i.test(q)?q:'00000000-0000-4000-8000-000000000000'}`]
+    if(q)filters.push(`stripe_payment_intent.ilike.%${q}%`)
+    if(ids.length)filters.push(`delivery_id.in.(${ids.join(",")})`,`related_delivery_id.in.(${ids.join(",")})`)
+    paymentQuery=paymentQuery.or(filters.join(","))
+  }
   const from=parseAdminDate(params.from),to=parseAdminDate(params.to,true);if(from)paymentQuery=paymentQuery.gte('created_at',from);if(to)paymentQuery=paymentQuery.lt('created_at',to)
-  const [payments,payouts]=await Promise.all([paymentQuery,admin.from('payouts').select('id,amount,status,payment_reference,created_at,processed_at').order('created_at',{ascending:false}).order('id').range((page-1)*50,page*50-1)])
+  const [payments,payouts,wallet]=await Promise.all([paymentQuery,admin.from('payouts').select('id,amount,status,payment_reference,created_at,processed_at').order('created_at',{ascending:false}).order('id').range((page-1)*50,page*50-1),admin.from('payments').select('amount',{count:'exact'}).eq('payment_method','wallet').eq('status','paid').limit(1000)])
   if (payments.error || payouts.error)
     throw new Error("Payment records could not load. Please retry.");
   const pounds=new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"});
@@ -44,6 +53,7 @@ export default async function AdminPaymentsPage({
       <h1 className="text-3xl font-bold">Payments</h1>
       <RecordFilters kind="payments" params={params} statuses={["pending","paid","failed"]}/>
       <CardPaymentsOverview />
+      <section className="rounded-xl bg-[var(--brand-panel)] p-4"><h2 className="font-bold">Wallet payments</h2><p>{wallet.error || wallet.count==null || wallet.data?.length!==wallet.count ? "Total unavailable" : `${wallet.count} paid · ${money(wallet.data.reduce((sum,p)=>sum+Number(p.amount),0))} before refunds`}</p></section>
       <p>
         Payment records and payout records have separate states. Order status
         does not indicate whether money was received.
@@ -53,7 +63,7 @@ export default async function AdminPaymentsPage({
         {payments.data.map((p) => (
           <div key={p.id} className="rounded-xl bg-[var(--brand-panel)] p-4">
             <strong>
-              {money(p.amount)} — {p.status==="pending"&&p.payment_method==="stripe"?"Checkout awaiting confirmation":p.status}
+              {money(p.amount)} — {p.status==="pending"&&p.payment_method==="stripe"?"Checkout awaiting confirmation":paymentDisplayStatus(p.status,p.amount,p.refund_jobs??[]).replaceAll("_"," ")}
             </strong>
             <p>
               {p.payment_method} ·{" "}
