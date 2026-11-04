@@ -4,8 +4,8 @@ import {createClient} from '@/lib/supabase/server'
 import {createAdminClient} from '@/lib/supabase/admin'
 import type {AdminScope} from './admin-operations'
 const adminSession=cache(async()=>{
- const session=await createClient(boundedFetch(2800));const {data:{user}}=await session.auth.getUser();if(!user)return null
- const db=createAdminClient(boundedFetch(2800));const [profile,settings]=await Promise.all([db.from('users').select('role,account_status,admin_access').eq('id',user.id).maybeSingle(),db.from('surge_pricing_settings').select('operational_settings').eq('id',true).single()])
+ const session=await createClient(boundedFetch(4500));const {data:{user}}=await session.auth.getUser();if(!user)return null
+ const db=createAdminClient(boundedFetch(4500));const [profile,settings]=await Promise.all([db.from('users').select('role,account_status,admin_access').eq('id',user.id).maybeSingle(),db.from('surge_pricing_settings').select('operational_settings').eq('id',true).single()])
  const data=profile.data;if(profile.error||settings.error||data?.role!=='admin'||data.account_status!=='active')return null
  if(settings.data.operational_settings?.requireAdminMfa){const level=await session.auth.mfa.getAuthenticatorAssuranceLevel();if(level.error||level.data.currentLevel!=='aal2')return null}
  return{id:user.id,owner:data.admin_access?.owner===true,scopes:data.admin_access?.scopes??[]}

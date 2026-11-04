@@ -8,7 +8,7 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Header from '@/components/customer/Header'
 import navStyles from '@/components/customer/CustomerNavigation.module.css'
-import NewDeliveryModal from '@/components/customer/NewDeliveryModal'
+import {openNewCustomerOrder} from '@/components/customer/CustomerNavigation'
 import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
 import { CollectionWaiting } from '@/components/driver/collection-waiting'
 import { CustomerThread } from '@/components/shared/customer-thread'
@@ -104,7 +104,6 @@ function TrackingPageInner() {
   const [centreRequest,setCentreRequest]=useState(0),[mapType,setMapType]=useState<'roadmap'|'satellite'>('roadmap')
   const [eta, setEta] = useState<{minutes:number;destination:boolean}|null>(null)
   const [loading, setLoading] = useState(true), [loadError,setLoadError]=useState(''), [revision,setRevision]=useState(0)
-  const [showModal, setShowModal] = useState(false)
   const [shipment, setShipment] = useState<any>(null)
   const [driver, setDriver] = useState<Driver>(null)
   const [otp, setOtp] = useState<string | null>(null)
@@ -237,7 +236,7 @@ function TrackingPageInner() {
 
   return (
     <>
-      <Header onNewDelivery={() => setShowModal(true)} userId={userId} />
+      <Header onNewDelivery={openNewCustomerOrder} userId={userId} />
       {loadError && <div role="alert" className="fixed top-24 left-4 right-4 z-50 bg-[#1b1d20] border border-red-400/40 rounded-xl p-4 text-white">{loadError} <button type="button" className="text-[var(--brand-soft)] underline" onClick={() => setRevision(v=>v+1)}>Try again</button></div>}
 
       <main
@@ -753,7 +752,6 @@ function TrackingPageInner() {
         </div>
       </main>
 
-      {showModal && <NewDeliveryModal onClose={() => setShowModal(false)} />}
     </>
   )
 }

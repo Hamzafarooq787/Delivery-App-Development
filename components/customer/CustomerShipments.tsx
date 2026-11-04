@@ -32,7 +32,7 @@ type Shipment = {
   actual_items_total?: number | null
   shopping_hold_settled_at?: string | null
   payment_method?: string | null
-  payments?: {amount:number;payment_method:string;refund_jobs:RefundRecord[]}[]
+  payments?: {amount:number;payment_method:string;refund_jobs:RefundRecord[]}[] | {amount:number;payment_method:string;refund_jobs:RefundRecord[]}
   id: string
   tracking_number: string | null
   driver_id: string | null
@@ -71,11 +71,11 @@ export default function CustomerShipments({
     }, 250)
     return () => clearTimeout(timer)
   }, [query])
-  const current = Math.min(page, Math.max(1, Math.ceil(count / size)))
+  const current = page
   useEffect(() => {
     let alive = true
     const controller = new AbortController()
-    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(2850)])
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(9000)])
     setLoading(true)
     setError('')
     const params = new URLSearchParams({history:history?'1':'0',page:String(current),size:String(size),search})
@@ -83,7 +83,7 @@ export default function CustomerShipments({
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not load shipments. Please try again.')
       return result as {rows: Shipment[]; count:number}
-    }), 2900).then(result => {
+    }), 9200).then(result => {
       if (!alive) return
       setRows(result.rows)
       setCount(result.count)
@@ -111,7 +111,7 @@ export default function CustomerShipments({
     if(!id)return
     const controller=new AbortController()
     let alive=true;setDetailsLoading(true);setDetailsError('')
-    void shortRequest(fetch('/api/customer/shipments?'+new URLSearchParams({id}),{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(2850)])}).then(async response=>{
+    void shortRequest(fetch('/api/customer/shipments?'+new URLSearchParams({id}),{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(9000)])}).then(async response=>{
       const result=await response.json()
       if(!response.ok||!result.shipment)throw new Error()
       return result.shipment as Shipment
@@ -132,7 +132,7 @@ export default function CustomerShipments({
       delivered: 'Delivered',
       cancelled: 'Cancelled',
     })[row.status ?? ''] ?? (row.status ?? 'Requested').replaceAll('_', ' ')
-  const totalPaid = (row: Shipment) => row.service_type === 'buy_for_me' ? shoppingFinancials({...row,max_spend_approved:row.max_spend_approved??0},row.payments?.[0]).charged : Number(row.price??0)
+  const totalPaid = (row: Shipment) => row.service_type === 'buy_for_me' ? shoppingFinancials({...row,max_spend_approved:row.max_spend_approved??0},Array.isArray(row.payments) ? row.payments[0] : row.payments).charged : Number(row.price??0)
   const track = (row: Shipment) => `/dashboard/customer/tracking?id=${row.id}`
   const liveDetails = orderDetails
   return (

@@ -19,7 +19,7 @@ export async function proxy(request: NextRequest) {
     "/how-it-works", "/our-fleet", "/contact", "/offline",
     "/firebase-messaging-sw.js", "/api/brand-theme", "/api/auth/signup",
     "/api/customer/shipments", "/api/driver-document", "/auth/callback", "/auth/confirm", "/api/auth/resend", "/track",
-  ].includes(pathname) || pathname.startsWith("/track/") ||
+  ].includes(pathname) || pathname.startsWith("/track/") || pathname.startsWith("/api/google/") || pathname.startsWith("/api/stripe/") ||
       (pathname === "/login" && request.nextUrl.searchParams.has("error"))) return NextResponse.next({request})
 
   // Per Supabase SSR docs: this response object is what carries any
@@ -47,6 +47,7 @@ export async function proxy(request: NextRequest) {
         setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
+          supabaseResponse.headers.set("Cache-Control", "private, no-store")
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -60,6 +61,7 @@ export async function proxy(request: NextRequest) {
   // happened during this request isn't lost.
   function redirectWithCookies(url: URL) {
     const redirectResponse = NextResponse.redirect(url)
+    redirectResponse.headers.set("Cache-Control","private, no-store")
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie)
     })
@@ -67,9 +69,10 @@ export async function proxy(request: NextRequest) {
   }
 
   const {
-    data: { user }, error: authError,
-  } = await supabase.auth.getUser()
-  if (pathname.startsWith("/dashboard") && authError?.name === "AuthRetryableFetchError") return new NextResponse("Sign-in service is taking too long. Reload to retry.",{status:503})
+    data: identity, error: authError,
+  } = await supabase.auth.getClaims()
+  const user = identity?.claims.sub ? {id: identity.claims.sub} : null
+  if (pathname.startsWith("/dashboard") && authError && (authError.name === "AuthRetryableFetchError" || (authError.status ?? 0) >= 500 || authError.status === 429)) return new NextResponse("Sign-in service is taking too long. Reload to retry.",{status:503})
 
   // PUBLIC ROUTES - always allow access
   if (

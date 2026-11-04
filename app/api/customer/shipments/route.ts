@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { SHIPMENT_COLUMNS } from "@/lib/shipment-query"
 
 export async function GET(request: Request) {
-  const deadline = AbortSignal.any([request.signal, AbortSignal.timeout(2400)])
+  const deadline = AbortSignal.any([request.signal, AbortSignal.timeout(7200)])
   const boundedFetch: typeof fetch = (input, options) => fetch(input, {
     ...options, cache: "no-store", signal: options?.signal ? AbortSignal.any([deadline, options.signal]) : deadline,
   })
@@ -12,8 +12,9 @@ export async function GET(request: Request) {
     const id = params.get("id")
     if (id && !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) return reply({error:"Invalid shipment."},400)
     const db = await createClient(boundedFetch)
-    const {data:{user},error:authError} = await db.auth.getUser()
-    if (deadline.aborted || (authError && authError.name === "AuthRetryableFetchError")) return reply({error:"Shipments are taking too long to load. Please retry."},504)
+    const {data:identity,error:authError} = await db.auth.getClaims()
+    const user = identity?.claims.sub ? {id:identity.claims.sub} : null
+    if (deadline.aborted || (authError && (authError.name === "AuthRetryableFetchError" || (authError.status??0)>=500 || authError.status===429))) return reply({error:"Shipments are taking too long to load. Please retry."},504)
     if (!user || authError) return reply({error:"Please sign in to see your shipments."},401)
 
     // RLS remains active. Never accept a customer ID from the browser.

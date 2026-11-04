@@ -109,7 +109,7 @@ export async function getDriverDocumentsById(driverId: string): Promise<DriverDo
 
 export async function getAdminDriverReviewDetails(driverId: string) {
   if (!(await getAdminActor("operations"))) return { error: "Driver review permission is required." }
-  const admin = createAdminClient(boundedFetch(3500))
+  const admin = createAdminClient(boundedFetch(6500))
   const [docs, vehicles] = await Promise.all([
     admin.from("driver_documents").select(documentColumns).eq("driver_id", driverId).order("created_at", { ascending: false }),
     admin.from("driver_vehicles").select("id,vehicle_type,registration_number,colour,make,model").eq("driver_id", driverId).order("created_at"),

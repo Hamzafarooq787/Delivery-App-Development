@@ -38,6 +38,9 @@ const STATUS_ICONS: Record<string, string> = {
 }
 
 type Job = {
+  recipient_name?: string|null
+  recipient_phone?: string|null
+  collection_at?: string|null
   pickup_instructions?:string|null
   delivery_instructions?:string|null
   shop_instructions?:string|null
@@ -242,7 +245,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
             <div className="flex-1 space-y-4 min-w-0">
               <div>
                 <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold mb-1">Pickup</p>
-                <p className="text-sm font-semibold text-white leading-snug">{job.pickup_address || "—"}</p>{job.pickup_instructions&&<p className="mt-2 text-sm text-white">Access: {job.pickup_instructions}</p>}
+                <p className="text-sm font-semibold text-white leading-snug">{job.pickup_address || "—"}</p>{job.collection_at&&<p className="mt-2 text-sm text-white">Preferred collection: {new Date(job.collection_at).toLocaleString("en-GB",{timeZone:"Europe/London"})} UK time</p>}{job.pickup_instructions&&<p className="mt-2 text-sm text-white">Access: {job.pickup_instructions}</p>}
                 {pickup && (
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${pickup.lat},${pickup.lng}`}
@@ -257,7 +260,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
               </div>
               <div>
                 <p className="text-[10px] text-[var(--color-on-surface-variant)] uppercase font-bold mb-1">Destination</p>
-                <p className="text-sm font-semibold text-white leading-snug">{job.delivery_address || "—"}</p>{job.delivery_instructions&&<p className="mt-2 text-sm text-white">Access: {job.delivery_instructions}</p>}
+                <p className="text-sm font-semibold text-white leading-snug">{job.delivery_address || "—"}</p>{job.recipient_name&&<p className="mt-2 text-sm text-white">Recipient: {job.recipient_name} {job.recipient_phone&&<a className="underline" href={`tel:${job.recipient_phone}`}>{job.recipient_phone}</a>}</p>}{job.delivery_instructions&&<p className="mt-2 text-sm text-white">Access: {job.delivery_instructions}</p>}
                 {destination && job.status !== "accepted" && (
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`}

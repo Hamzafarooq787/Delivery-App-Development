@@ -284,6 +284,7 @@ export default async function AdminOrderDetailPage({
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Pickup</p>
                   <p className="text-white text-sm">{order.pickup_address ?? "—"}</p>
+                  {order.collection_at&&<p className="text-sm text-white">Preferred collection: {new Date(order.collection_at).toLocaleString("en-GB",{timeZone:"Europe/London"})} UK time</p>}
                 </div>
               </div>
               <div className="flex gap-3">
@@ -293,6 +294,7 @@ export default async function AdminOrderDetailPage({
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Dropoff</p>
                   <p className="text-white text-sm">{order.delivery_address ?? "—"}</p>
+                  {order.recipient_name&&<p className="text-sm text-white">Recipient: {order.recipient_name} {order.recipient_phone&&<a href={`tel:${order.recipient_phone}`} className="underline">{order.recipient_phone}</a>}</p>}
                 </div>
               </div>
             </div>

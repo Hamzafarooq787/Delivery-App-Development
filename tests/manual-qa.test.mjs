@@ -240,7 +240,7 @@ test('Shipment API bounds upstream auth and reads only the verified customer, re
   '@/lib/shipment-query':columns,
   '@/lib/supabase/server':{createClient:async custom=>{
    assert.equal(typeof custom,'function')
-   return {auth:{getUser:async()=>mode==='timeout'?{data:{user:null},error:{name:'AuthRetryableFetchError'}}:mode==='signed-out'?{data:{user:null}}:{data:{user:{id:'owner'}}}},from:()=>q}
+   return {auth:{getClaims:async()=>mode==='timeout'?{data:null,error:{name:'AuthRetryableFetchError'}}:mode==='signed-out'?{data:null}:{data:{claims:{sub:'owner'}}}},from:()=>q}
   }},
  },{Response})
  const req=new Request('https://godrop.uk/api/customer/shipments?history=1&customer_id=other')
@@ -257,7 +257,7 @@ test('An SDK promise that never settles releases the UI deadline, and shipment f
  await assert.rejects(shortRequest(new Promise(()=>{}),8),/Request timed out/)
  const ui=read('components/customer/CustomerShipments.tsx')
  assert.match(ui,/error && !rows.length \? null/)
- assert.match(ui,/AbortSignal.timeout\(2850\)/)
+ assert.match(ui,/AbortSignal.timeout\(9000\)/)
  assert.match(ui,/setLoading\(false\)[\s\S]*getDriverNamesByIds/)
 })
 test('A UK postcode district or street alone is not a delivery address',()=>{

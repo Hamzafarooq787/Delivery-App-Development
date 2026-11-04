@@ -26,6 +26,9 @@ import { getDeliveryQuote } from "@/app/actions/pricing"
 // ── Customer actions ──────────────────────────────────────────────────────────
 
 export type CreateDeliveryParams = {
+  recipient_name?: string
+  recipient_phone?: string
+  collection_at?: string | null
   pickup_instructions?: string
   delivery_instructions?: string
   consent_token?: string

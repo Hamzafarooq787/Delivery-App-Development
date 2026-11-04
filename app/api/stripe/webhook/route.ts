@@ -43,6 +43,18 @@ export async function POST(request: NextRequest) {
       case "refund.failed":
         await reconcileStripeRefund(event.data.object)
         break
+      case "checkout.session.expired": {
+        const session=event.data.object
+        const id=session.metadata?.payment_id
+        if (!id || !/^[0-9a-f-]{36}$/i.test(id) || session.status!=="expired" || session.payment_status!=="unpaid" || session.currency!=="gbp" || session.amount_total==null) break
+        const type=session.metadata?.type
+        if(type!=="order_booking" && type!=="collection_wait") break
+        const {error}=await admin.from("payments").update({status:"failed"})
+          .eq("id",id).eq("stripe_session_id",session.id).eq("payment_method","stripe")
+          .eq("purpose",type==="order_booking"?"booking":"collection_wait").eq("amount",session.amount_total/100).eq("status","pending")
+        if(error)throw error
+        break
+      }
       case "checkout.session.async_payment_succeeded":
       case "checkout.session.completed": {
         const session = event.data.object

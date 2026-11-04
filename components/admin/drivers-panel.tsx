@@ -82,6 +82,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [documents, setDocuments] = useState<DriverDocument[]>([])
   const [vehicles, setVehicles] = useState<Pick<DriverVehicle,"id"|"vehicle_type"|"registration_number"|"colour"|"make"|"model">[]>([])
+  const [detailRetry,setDetailRetry]=useState(0)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [loadingDocs, setLoadingDocs] = useState(false)
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null)
@@ -108,7 +109,8 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
     setVehicles([])
     setDetailId(null)
     setLoadingDocs(true)
-    shortRequest(getAdminDriverReviewDetails(selected.id), 8000)
+    setActionError(null)
+    shortRequest(getAdminDriverReviewDetails(selected.id), 13500)
       .then(result => {
         if (!active) return
         if (result.error || !result.documents || !result.vehicles) { setActionError(result.error ?? "Driver details could not load."); return }
@@ -119,7 +121,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
       .catch(() => { if (active) setActionError("Driver details could not load. Refresh to retry.") })
       .finally(() => { if (active) setLoadingDocs(false) })
     return () => { active = false }
-  }, [selected?.id])
+  }, [selected?.id,detailRetry])
 
   function handleApprove() {
     if (!selected || isPending || detailId !== selected.id || !documents.length) return
@@ -320,6 +322,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
                 {actionError && (
                   <p className="text-xs font-bold text-[#ff6e84] bg-[#ff6e84]/10 border border-[#ff6e84]/20 rounded-lg px-3 py-2 -mt-1">
                     {actionError}
+                    {!loadingDocs&&detailId!==selected.id&&<button type="button" className="ml-2 underline" onClick={()=>setDetailRetry(v=>v+1)}>Retry details</button>}
                   </p>
                 )}
                 <div className="flex gap-2 pt-3 border-t border-[var(--color-outline-variant)]/10">

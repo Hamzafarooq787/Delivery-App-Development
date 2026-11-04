@@ -1,5 +1,7 @@
 "use server";
 
+import { parcelContact } from "@/lib/parcel-contact"
+
 import {isPreciseDeliveryAddress,PRECISE_DELIVERY_ADDRESS_ERROR} from "@/lib/precise-delivery-address"
 import {revalidatePath} from "next/cache"
 import { getAdminActor } from "@/lib/admin-access"
@@ -111,6 +113,8 @@ export async function startOrderCheckout(
     let itemsHold = 0;
     if (input.type === "delivery") {
       const p = input.order;
+      const contact = parcelContact(p.recipient_name,p.recipient_phone,p.collection_at ?? "asap");
+      if ("error" in contact) return {error:contact.error!};
       if (!p.pickup_address?.trim() || !p.delivery_address?.trim())
         return { error: "Select both addresses." };
       if (!isPreciseDeliveryAddress(p.delivery_address)) return {error:PRECISE_DELIVERY_ADDRESS_ERROR};
@@ -138,6 +142,7 @@ export async function startOrderCheckout(
       amount = quote.data.finalPrice;
       draft = {
         ...p,
+        ...contact,
         service_type: "delivery",
         price: amount,
         base_price: quote.data.basePrice,
