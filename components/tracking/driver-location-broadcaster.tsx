@@ -1,5 +1,6 @@
 "use client";
 import { canRequestDriverLocation, rememberDriverLocationDenial } from "@/lib/driver-location-permission"
+import { shortRequest } from "@/lib/short-request"
 import { useEffect, useState } from "react";
 import { updateMyLocation, clearMyLocation } from "@/app/actions/tracking";
 type Props = {
@@ -107,7 +108,7 @@ export function DriverLocationBroadcaster({
         measured_at: new Date(position.timestamp).toISOString(),
       };
       try {
-        const result = await updateMyLocation(payload);
+        const result = await shortRequest(updateMyLocation(payload),11000);
         if (!alive) return;
         if (result.error) {
           setStatus("error");
@@ -195,7 +196,7 @@ export function DriverLocationBroadcaster({
     denied: "Allow location in your browser settings, then retry.",
     unsupported: "GPS is unavailable on this device.",
     offline: "Offline — reconnect to share location.",
-    error: "Location unavailable — retrying.",
+    error: "GPS fix unavailable. Keep this page open, or tap Retry location.",
   };
   return (
     <div

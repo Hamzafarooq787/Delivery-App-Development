@@ -12,7 +12,7 @@ import { PackageIllustration } from './PackageIllustration'
 import { ItemPhotoPreview } from './ItemPhotoPreview'
 import { compressImage } from '@/lib/image-compress'
 import { requestBrowserLocation, locationIssue, type LocationIssue } from '@/lib/browser-location'
-import { LocationButton, supportsLocationControl } from './LocationButton'
+import { LocationButton } from './LocationButton'
 import { LocationPermissionDialog } from './LocationPermissionDialog'
 const BookingRouteMap = dynamic(() => import('./BookingRouteMap'), { ssr: false })
 import { useEffect, useRef, useState } from 'react'
@@ -172,7 +172,7 @@ function AddressInput({
           className="w-full bg-[#262626] border border-[#494847]/20 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#494847] outline-none focus:border-[var(--color-primary)]/50 transition-colors"
           placeholder={placeholder}
           value={value}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={(e) => handleChange(e.currentTarget.value)}
           onFocus={() => { if (suggestions.length > 0) openDropdown() }}
           autoComplete="off"
         />
@@ -252,12 +252,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
   }, [])
   function goTo(next: number) {
     if(next < step) checkoutKey.current = null
-    if (next === 2 && !locationAccessRequested.current && !supportsLocationControl()) {
-      locationAccessRequested.current = true
-      // Ask automatically as Locations opens, still inside the Continue click.
-      // This restores the browser's Allow/Block prompt without another tap.
-      void requestLocationAccess()
-    }
     setStepError(null)
     setStep(next)
   }
@@ -275,7 +269,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
     if (!focusAddress || step !== 2) return
     const timer = setTimeout(() => {
       const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('[data-delivery-address]'))
-      inputs[focusAddress === 'delivery' ? 1 : 0]?.focus()
+      if (!inputs.includes(document.activeElement as HTMLInputElement)) inputs[focusAddress === 'delivery' ? 1 : 0]?.focus()
     }, 100)
     return () => clearTimeout(timer)
   }, [focusAddress, step])
@@ -366,7 +360,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
   const [liveLocationActive, setLiveLocationActive] = useState(false)
   const [liveLocationLoading, setLiveLocationLoading] = useState(false)
   const [liveLocationError, setLiveLocationError] = useState<LocationIssue | null>(null)
-  const locationAccessRequested = useRef(false)
   const locationRequests = useRef({ pickup: 0, destination: 0, live: 0 })
   const liveWatch = useRef<number | null>(null)
   const locationMounted = useRef(true)
@@ -381,14 +374,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
       if (liveWatch.current !== null) navigator.geolocation.clearWatch(liveWatch.current)
     }
   }, [])
-
-  async function requestLocationAccess() {
-    try {
-      const pos = await requestBrowserLocation()
-      if (locationMounted.current) setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-      // Permission enables the map; existing pickup/delivery choices stay intact.
-    } catch { /* Show help only after an explicit location action, not when opening this step. */ }
-  }
 
   function reportLocationIssue(target: LocationTarget, error: unknown) {
     if (locationMounted.current) setLocationRecovery({ target, issue: locationIssue(error) })

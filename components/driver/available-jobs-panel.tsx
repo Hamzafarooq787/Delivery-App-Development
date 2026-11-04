@@ -51,6 +51,7 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number):
 }
 
 export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
+  const [previewId,setPreviewId]=useState<string|null>(null)
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<SortKey>("newest")
   const [driverGps, setDriverGps] = useState<{ lat: number; lng: number } | null>(null)
@@ -169,11 +170,11 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-bold text-white truncate">
+                          <h3 className="text-base font-bold text-white truncate"><button type="button" className="text-left underline decoration-white/40" aria-expanded={previewId===job.id} onClick={()=>setPreviewId(id=>id===job.id?null:job.id)}>
                             {job.service_type === "buy_for_me"
                               ? (job.shop_name || "Shopping request")
                               : (job.item_description || "Delivery request")}
-                          </h3>
+                          </button></h3>
                           {job.service_type === "buy_for_me" ? (
                             <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] border border-[var(--color-secondary)]/20">
                               BUY FOR ME
@@ -245,6 +246,13 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                       <span className="text-[var(--brand-soft)] font-bold uppercase">{job.status}</span>
                     </div>
                   </div>
+                  {previewId===job.id&&<div className="rounded-lg border border-white/15 p-2 text-xs text-white">
+                    <p><strong>Pickup:</strong> {job.pickup_address??"Not provided"}</p>
+                    <p><strong>Drop-off:</strong> {job.delivery_address??"Not provided"}</p>
+                    <p><strong>Size:</strong> {job.package_size??"Not specified"}</p>
+                    <p><strong>Driving distance:</strong> {job.distance_miles==null?"Unavailable":`${Number(job.distance_miles).toFixed(1)} miles`}</p>
+                    <p><strong>Your earnings:</strong> {price??"Not quoted"}</p>
+                  </div>}
                   <AcceptJobButton deliveryId={job.id} />
                 </div>
               </div>

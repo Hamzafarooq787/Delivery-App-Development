@@ -16,6 +16,7 @@ import { cancelCardBooking } from "@/app/actions/order-checkout"
 import { checkQuoteConsent, deliveryScope } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { after } from "next/server"
 import { revalidatePath } from "next/cache"
 import { notifyUser, notifyDriversOfNewDelivery } from "@/lib/notifications/internal"
 import { NotificationTag } from "@/lib/notifications/types"
@@ -1095,7 +1096,7 @@ export async function adminGetPayoutsWithDrivers() {
 // Photo is uploaded client-side (ParcelAuthModal); this just records the URL
 // and advances status to 'collected'.
 export async function markParcelCollected(deliveryId: string, photoUrl: string) {
-  const supabase = await createClient()
+  const supabase = await createClient(boundedFetch(3500))
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
@@ -1103,43 +1104,31 @@ export async function markParcelCollected(deliveryId: string, photoUrl: string) 
     const url = new URL(photoUrl)
     if (url.origin !== new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin || !url.pathname.startsWith(`/storage/v1/object/public/driver-documents/${user.id}/parcel-${deliveryId}-`)) return { error: 'Upload a collection photo for this job.' }
   } catch { return { error: 'Upload a valid collection photo.' } }
-  // Admin client — see updateDeliveryStatus() for why.
-  const admin = createAdminClient()
+  const admin = createAdminClient(boundedFetch(3500))
+  const existing=await admin.from('delivery_requests').select('status,parcel_image_url').eq('id',deliveryId).eq('driver_id',user.id).maybeSingle()
+  if(existing.data?.parcel_image_url===photoUrl && ['collected','picked_up','in_transit','delivered'].includes(existing.data.status))return {success:true}
+  if(existing.error || existing.data?.status!=='accepted')return {error:'This accepted job could not be verified. Refresh and retry.'}
   const photoName=decodeURIComponent(new URL(photoUrl).pathname.split('/').at(-1)!)
   const {data:photos,error:photoError}=await admin.storage.from('driver-documents').list(user.id,{search:photoName})
-  if(photoError||!photos?.some(photo=>photo.name===photoName))return{error:'Collection photo upload was not found. Please upload it again.'}
-  const { data: updated, error } = await admin
-    .from('delivery_requests')
-    .update({ status: 'collected', parcel_image_url: photoUrl })
-    .eq('id', deliveryId)
-    .eq('driver_id', user.id)
-    .eq('status', 'accepted')
-    .eq('service_type', 'delivery')
-    .select('customer_id, tracking_number')
-    .single()
-
-  if (error) return { error: error.message }
-
-  await supabase.from('delivery_status_logs').insert({
-    delivery_id: deliveryId,
-    status: 'collected',
-    updated_by: user.id,
-  })
-
+  if(photoError||!photos?.some(photo=>photo.name===photoName))return{error:'Could not verify the uploaded photo. Retry saving the status.'}
+  const {data:updated,error}=await admin.from('delivery_requests').update({status:'collected',parcel_image_url:photoUrl})
+    .eq('id',deliveryId).eq('driver_id',user.id).eq('status','accepted').eq('service_type','delivery')
+    .select('customer_id,tracking_number').maybeSingle()
+  if(error || !updated)return{error:'Collected status could not be saved. Refresh or retry.'}
+  // The database trigger writes the status log in the same transaction.
   // Notify the customer — fire-and-forget, matches updateDeliveryStatus()'s
   // notification for every other status transition.
   if (updated?.customer_id) {
-    notifyUser({
+    after(async()=>{await notifyUser({
       userId: updated.customer_id,
       title: "📦 Package collected!",
       body: `Your package has been collected and is on its way. (${updated.tracking_number ?? deliveryId})`,
       url: "/dashboard/customer",
       tag: `${NotificationTag.DELIVERY_COLLECTED}-${deliveryId}`,
       data: { deliveryId, status: "collected" },
-    }).catch((err) => console.error("[Notify] Failed to send collected push:", err))
+    }).catch((err) => console.error("[Notify] Failed to send collected push:", err))})
   }
 
-  revalidatePath(`/dashboard/driver/jobs/${deliveryId}`)
   return { success: true }
 }
 

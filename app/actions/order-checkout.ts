@@ -1,5 +1,6 @@
 "use server";
 
+import { boundedFetch } from "@/lib/short-request"
 import { parcelContact } from "@/lib/parcel-contact"
 
 import {isPreciseDeliveryAddress,PRECISE_DELIVERY_ADDRESS_ERROR} from "@/lib/precise-delivery-address"
@@ -301,6 +302,7 @@ export async function startOrderCheckout(
       {
         expires_at: expiry,
         mode: "payment",
+        adaptive_pricing: { enabled: false },
         payment_method_types: ["card"],
         customer_email: user.email,
         line_items: lineItems,
@@ -334,29 +336,25 @@ export async function startOrderCheckout(
   }
 }
 export async function getCheckoutOutcome(sessionId: string) {
-  const client = await createClient();
-  const {
-    data: { user },
-  } = await client.auth.getUser();
-  if (!user) return { error: "Sign in to view this booking." };
+  if (!/^cs_[a-zA-Z0-9_]{5,250}$/.test(sessionId)) return {error:"Booking not found."}
+  const client = await createClient(boundedFetch(4500))
+  const {data:identity}=await client.auth.getClaims()
+  const user=identity?.claims.sub
+  if(!user)return {error:"Sign in to view this booking."}
   try {
-    const session = await getStripe().checkout.sessions.retrieve(sessionId);
-    if (
-      session.metadata?.user_id !== user.id ||
-      session.metadata?.type !== "order_booking"
-    )
-      return { error: "Booking not found." };
-    if (session.payment_status !== "paid")
-      return {
-        error:
-          "Payment has not been confirmed yet. Refresh after payment completes.",
-      };
-    return { data: await fulfillDirectSession(session) };
+    const admin=createAdminClient(boundedFetch(4000))
+    const {data:payment}=await admin.from("payments").select("delivery_id,status")
+      .eq("stripe_session_id",sessionId).eq("customer_id",user).eq("purpose","booking").maybeSingle()
+    if(payment?.status==="paid" && payment.delivery_id){
+      const {data:order}=await admin.from("delivery_requests").select("id,tracking_number,service_type").eq("id",payment.delivery_id).eq("customer_id",user).maybeSingle()
+      if(order)return {data:order}
+    }
+    const session=await getStripe().checkout.sessions.retrieve(sessionId,{}, {timeout:6500,maxNetworkRetries:0})
+    if(session.metadata?.user_id!==user||session.metadata?.type!=="order_booking")return {error:"Booking not found."}
+    if(session.payment_status!=="paid")return {error:"Payment has not been confirmed yet. Please do not pay again."}
+    return {data:await fulfillDirectSession(session)}
   } catch {
-    return {
-      error:
-        "Payment confirmation is still processing. Please refresh; do not pay again.",
-    };
+    return {error:"Payment confirmation is still processing. Please refresh; do not pay again."}
   }
 }
 export async function cancelCardBooking(

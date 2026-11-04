@@ -85,6 +85,7 @@ export default function CustomerShipments({
       return result as {rows: Shipment[]; count:number}
     }), 9200).then(result => {
       if (!alive) return
+      setError("")
       setRows(result.rows)
       setCount(result.count)
       setLoading(false)
@@ -171,7 +172,7 @@ export default function CustomerShipments({
           />
         </label>
       </div>
-      {error && (
+      {error && !rows.length && (
         <div className={s.error} role="alert">
           {error}{' '}
           <button

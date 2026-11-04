@@ -87,7 +87,7 @@ export function LiveTrackingPanel({
       if(!Number.isFinite(measured)||measured<latest||!Number.isFinite(lat)||!Number.isFinite(lng))return
       latest=measured;setDriverPos({lat,lng});setLastUpdate(measured);setStale(Date.now()-measured>=45000)
     }
-    const refresh=async()=>{const request=++requestSequence,version=revision;const {data,error}=await supabase.from('driver_locations').select('lat,lng,updated_at,delivery_id').eq('driver_id',driverId).maybeSingle();if(!error&&request===requestSequence&&version===revision)apply(data)}
+    const refresh=async()=>{const request=++requestSequence,version=revision;if(!deliveryId)return;try{const response=await fetch(`/api/tracking/positions?id=${encodeURIComponent(deliveryId)}`,{signal:AbortSignal.timeout(9000)});if(response.ok){const data=await response.json();if(request===requestSequence&&version===revision)apply(data.driver)}}catch{/* Keep last valid fix until it expires. */}}
     void refresh()
     const channel=supabase.channel(`live-tracking-${driverId}-${deliveryId}`).on('postgres_changes',{event:'*',schema:'public',table:'driver_locations',filter:`driver_id=eq.${driverId}`},payload=>{revision++;if(payload.eventType==='DELETE')apply(null);else apply(payload.new)}).subscribe(state=>{if(state==='SUBSCRIBED')void refresh()})
     const timer=setInterval(()=>{void refresh()},15000)
@@ -107,7 +107,7 @@ export function LiveTrackingPanel({
       setCustomerPos({lat:Number(row.lat),lng:Number(row.lng)})
       expiry=setTimeout(()=>{if(alive)setCustomerPos(null)},Math.max(0,45000-age))
     }
-    const refresh=async()=>{const version=revision;try{const {data,error}=await supabase.from('customer_locations').select('lat,lng,delivery_id,updated_at').eq('customer_id',customerId).eq('delivery_id',deliveryId).maybeSingle();if(alive&&version===revision&&!error)apply(data)}catch{/* The last signal still expires automatically. */}}
+    const refresh=async()=>{const version=revision;try{const response=await fetch(`/api/tracking/positions?id=${encodeURIComponent(deliveryId)}`,{signal:AbortSignal.timeout(9000)});if(response.ok){const data=await response.json();if(alive&&version===revision)apply(data.customer)}}catch{/* The last signal still expires automatically. */}}
     void refresh()
     const channel=supabase.channel(`customer-loc-${customerId}-${deliveryId}`).on('postgres_changes',{event:'*',schema:'public',table:'customer_locations',filter:`customer_id=eq.${customerId}`},payload=>{revision++;apply(payload.new)}).subscribe()
     const timer=setInterval(()=>{if(document.visibilityState==='visible')void refresh()},15000)
@@ -130,9 +130,9 @@ export function LiveTrackingPanel({
   const badge = !driverId
     ? { label: "Awaiting driver", color: "bg-[#494847]" }
     : !driverPos
-    ? { label: "Acquiring GPS…", color: "bg-amber-400 animate-pulse" }
+    ? { label: "Driver location not shared yet", color: "bg-amber-400" }
     : stale
-    ? { label: "Location unavailable", color: "bg-red-400" }
+    ? { label: "Waiting for a fresh location", color: "bg-amber-400" }
     : { label: "Live", color: "bg-green-400 animate-pulse" }
 
   return (

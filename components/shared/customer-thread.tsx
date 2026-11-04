@@ -1,4 +1,5 @@
 'use client'
+import { shortRequest } from '@/lib/short-request'
 import { newShoppingRequestId } from '@/lib/shopping-booking'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getCustomerThread, sendCustomerThread, type ThreadMessage } from '@/app/actions/customer-repairs'
@@ -10,7 +11,7 @@ function mergeMessages(previous:ThreadMessage[],incoming:ThreadMessage[]) {
   incoming.forEach(m=>byId.set(m.id,m))
   return [...byId.values()].sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.id.localeCompare(b.id))
 }
-export function CustomerThread({kind,id}:{kind:'order'|'support';id:string}) {
+export function CustomerThread({kind,id,activeAssignment=false}:{kind:'order'|'support';id:string;activeAssignment?:boolean}) {
   const [data,setData]=useState<ThreadData>(), [messages,setMessages]=useState<ThreadMessage[]>([])
   const [text,setText]=useState(''), [error,setError]=useState(''), [sending,setSending]=useState(false)
   const [open,setOpen]=useState(kind==='support'), [earlier,setEarlier]=useState(false)
@@ -20,7 +21,7 @@ export function CustomerThread({kind,id}:{kind:'order'|'support';id:string}) {
     if(loading.current)return
     loading.current=true
     try {
-      const r=await getCustomerThread(kind,id)
+      const r=await shortRequest(getCustomerThread(kind,id),11000)
       if(version!==generation.current)return
       if(r.error)setError(r.error)
       else if(r.data){setData(r.data);setMessages(prev=>mergeMessages(prev,r.data!.messages));setError('')}
@@ -65,8 +66,8 @@ export function CustomerThread({kind,id}:{kind:'order'|'support';id:string}) {
   const contactLabel=data?.contactLabel??'driver'
   return <section className="space-y-3 text-sm text-white" aria-label={kind==='order'?'Delivery contact':'Support conversation'}>
     {kind==='order'&&<div className="flex flex-wrap items-center gap-3">
-      <button type="button" className={s.secondary} onClick={()=>setOpen(v=>!v)} aria-expanded={open}>Message {contactLabel}</button>
-      {data?.contact?.phone?<a className={s.primary} href={`tel:${data.contact.phone}`}>Call {contactLabel}</a>:<span className="text-xs text-gray-400">{data?.contact?'Phone unavailable — use messages.':'Contact becomes available for an active assigned delivery.'}</span>}
+      <button type="button" className={s.secondary} onClick={()=>{setOpen(v=>!v);if(!open)void refresh(generation.current)}} aria-expanded={open}>Message {contactLabel}</button>
+      {data?.contact?.phone?<a className={s.primary} href={`tel:${data.contact.phone}`}>Call {contactLabel}</a>:<span className="text-xs text-gray-400">{data?.contact?'Phone unavailable — use messages.':activeAssignment ? (error ? 'Contact details could not load. Try again.' : 'Loading driver contact…') : 'Contact becomes available for an active assigned delivery.'}</span>}
     </div>}
     {open&&<>
       <p className="text-xs text-gray-400">{data?.status?.replaceAll('_',' ')??'Loading conversation…'}</p>

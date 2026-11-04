@@ -410,6 +410,7 @@ export function MapFirstDashboard({
                 </Link>
               ) : (
                 <>
+                  <Link className={styles.secondary} href={`/dashboard/driver/jobs/available?job=${encodeURIComponent(job.id)}`}>Preview job</Link>
                   <button
                     type="button"
                     className={styles.primary}

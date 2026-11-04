@@ -207,7 +207,7 @@ test('Legacy multi-job GPS follows the displayed owned job and rejects a foreign
   const client={from:()=>q,channel:()=>channel,removeChannel:()=>{}}
   const react={useState:initial=>{const i=slot++;if(!(i in state))state[i]=initial;return[state[i],v=>{state[i]=v}]},useMemo:f=>f(),useEffect:f=>effects.push(f)}
   const Broadcaster=()=>null
-  const component=compile('components/tracking/driver-active-tracking.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'next/navigation':{usePathname:()=>path},'@/lib/supabase/client':{createClient:()=>client},'./driver-location-broadcaster':{DriverLocationBroadcaster:Broadcaster},'./driver-tracking-selection':{useDriverTrackingSelection:()=>({deliveryId:selected})}},{setInterval:()=>1,clearInterval:()=>{}})
+  const component=compile('components/tracking/driver-active-tracking.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'next/navigation':{usePathname:()=>path},'@/lib/supabase/client':{createClient:()=>client},'./driver-location-broadcaster':{DriverLocationBroadcaster:Broadcaster},'./driver-tracking-selection':{useDriverTrackingSelection:()=>({deliveryId:selected})}},{setInterval:()=>1,clearInterval:()=>{},AbortSignal,fetch:async()=>({ok:true,json:async()=>({jobs:[{id:job},{id:second}]})})})
   component.DriverActiveTracking({userId:driver})
   const cleanups=effects.map(f=>f())
   await new Promise(resolve=>setImmediate(resolve))

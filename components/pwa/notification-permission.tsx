@@ -112,7 +112,9 @@ export function NotificationPermission({
       toast("Notifications blocked", {
         description:
           "To enable later, tap the lock icon in your browser's address bar.",
-        duration: 6000,
+        duration: 3500,
+        position: "top-right",
+        closeButton: true,
       })
     }
   }
