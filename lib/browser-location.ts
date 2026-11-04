@@ -11,7 +11,7 @@ export function locationIssue(error: unknown, userAgent = navigator.userAgent): 
         : 'Allow Location for this website using the icon beside the address bar. Also enable location for your browser in your device settings, then tap Try again.'
     return { code, message: 'Location access is blocked. You can enable it or enter an address.', help }
   }
-  if (code === 2) return { code, message: 'Your device could not find a location. Turn on Location Services, check your signal and try again, or enter an address.' }
+  if (code === 2) return { code, message: 'Your device could not find a location. Turn on Location Services, check your connection and try again, or enter an address.' }
   if (code === 3) return { code, message: 'Finding your location took too long. Try again with a better signal, or enter an address.' }
   return { message: error instanceof Error ? error.message : 'Location is unavailable. Try again or enter an address.' }
 }

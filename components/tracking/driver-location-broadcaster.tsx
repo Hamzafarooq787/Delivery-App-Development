@@ -188,7 +188,7 @@ export function DriverLocationBroadcaster({
   const labels: Record<Status, string> = {
     idle: "Location off",
     requesting: "Requesting GPS…",
-    sharing: fresh ? "Sharing location" : "GPS signal stale — retrying",
+    sharing: fresh ? "Sharing location" : "GPS location out of date — retrying",
     denied: "Allow location in your browser settings, then retry.",
     unsupported: "GPS is unavailable on this device.",
     offline: "Offline — reconnect to share location.",

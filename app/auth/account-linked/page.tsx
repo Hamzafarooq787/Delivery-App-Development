@@ -46,7 +46,7 @@ function AccountLinkedContent() {
             <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-[var(--color-primary)] text-2xl">bolt</span>
             </div>
-            <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">GO DROP</h1>
+            <h1 className="font-headline text-2xl font-extrabold text-white tracking-tight">GoDrop</h1>
           </Link>
         </div>
 
@@ -117,10 +117,6 @@ function AccountLinkedContent() {
             </Link>
           </div>
         </div>
-
-        <p className="text-center text-xs text-[#494847] mt-6">
-          &copy; {new Date().getFullYear()} GoDrop. All rights reserved.
-        </p>
       </div>
     </main>
   )

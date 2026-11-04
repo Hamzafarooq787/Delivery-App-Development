@@ -260,7 +260,7 @@ export function usePushNotifications({
       if (!payload) return
 
       const { notification, data } = payload
-      const title = notification?.title ?? data?.title ?? "Go Drop"
+      const title = notification?.title ?? data?.title ?? "GoDrop"
       const body  = notification?.body  ?? data?.body  ?? ""
       const url   = data?.url ?? "/"
       const image = notification?.image ?? data?.image

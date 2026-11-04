@@ -226,10 +226,6 @@ export default function DownloadPage() {
           </div>
           <CopyButton text="https://v0-supabase-integration-tau-one.vercel.app/download" />
         </div>
-
-        <p className="text-center text-xs text-[#494847] mt-8">
-          &copy; {new Date().getFullYear()} GoDrop. All rights reserved.
-        </p>
       </div>
     </main>
   )

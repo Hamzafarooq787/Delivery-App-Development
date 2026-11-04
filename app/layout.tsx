@@ -1,3 +1,4 @@
+import { StandaloneFooter } from "@/components/layout/StandaloneFooter"
 import type { Metadata, Viewport } from 'next'
 import { Manrope, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -130,6 +131,7 @@ export default function RootLayout({
             },
           }}
         />
+        <StandaloneFooter />
         <Analytics />
         <SWRegister />
         <IconGuard />

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getAppOrigin } from "@/lib/get-app-origin"
-import { normaliseUKPhone } from "@/lib/uk-phone"
+import { normaliseUKMobile, UK_MOBILE_ERROR } from "@/lib/uk-phone"
 import { ensureVerifiedProfile } from "@/lib/auth-profile"
 import { redirect } from "next/navigation"
 
@@ -106,8 +106,8 @@ export async function signUp(formData: FormData) {
   // anything else) must never be reachable through public signup.
   const requestedRole = formData.get("role") as string
   const role = requestedRole === "driver" ? "driver" : "customer"
-  const phone = normaliseUKPhone(formData.get("phone"))
-  if (!phone) return { error: "Enter a UK phone number, such as +44 7700 900123." }
+  const phone = normaliseUKMobile(formData.get("phone"))
+  if (!phone) return { error: UK_MOBILE_ERROR }
   const address = (formData.get("address") as string) || null
 
   const origin = await getAppOrigin()

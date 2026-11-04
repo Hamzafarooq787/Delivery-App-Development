@@ -153,3 +153,83 @@ test('OAuth error pages safely handle unusual codes and never echo them into the
  for(const code of ['__proto__','constructor','%','<provider error>'])assert.equal(oauthErrorMessage(code),fallback)
  assert.equal(oauthErrorMessage(null),null)
 })
+
+const fakeLink = {default: ({children,...props}) => jsx.jsx('a',{...props,children})}
+const fakeIcons = new Proxy({}, {get:()=>props=>jsx.jsx('svg',props)})
+
+test('Public pricing uses live booking rates, fee and funds and recalculates an example when settings change',async()=>{
+ const booking=load('lib/booking-pricing.ts')
+ let rates={...booking.DEFAULT_BOOKING_PRICING}
+ let shopping={enabled:true,max_purchase_amount:50}, busy={master_enabled:false}
+ const {default:Page,dynamic}=load('app/(public)/pricing/page.tsx',{
+  'next/link':fakeLink,'@/lib/booking-pricing':booking,
+  '@/app/actions/booking-settings':{getBookingPricing:async()=>{if(!rates)throw Error();return rates}},
+  '@/app/actions/shopping':{getBfmSettings:async()=>shopping},
+  '@/lib/supabase/admin':{createAdminClient:()=>({from:()=>({select:()=>({eq:()=>({single:async()=>({data:busy})})})})})},
+ })
+ assert.equal(dynamic,'force-dynamic')
+ let html=renderToStaticMarkup(await Page())
+ for(const value of ['£4.49','£1.20','£3.99','£50.00','£8.09','currently off'])assert.ok(html.includes(value),value)
+ rates={...rates,baseFare:6,includedMiles:1,perMile:2,shoppingFee:5,largeFee:3,vanFee:4,weatherFee:1,waitingPerMinute:.65}
+ shopping={enabled:true,max_purchase_amount:60};busy={master_enabled:true,traffic_enabled:true,demand_enabled:true}
+ html=renderToStaticMarkup(await Page())
+ for(const value of ['First 1 mile','£13.00','£60.00','£0.65','heavy traffic','£5.00'])assert.ok(html.includes(value),value)
+ rates=null;shopping={enabled:false}
+ html=renderToStaticMarkup(await Page())
+ assert.match(html,/Current rates are unavailable/)
+ assert.match(html,/Buy for Me is currently unavailable/)
+ assert.doesNotMatch(html,/£4.49|£60.00/)
+})
+test('Fleet renders the same vehicles and parcel capacity combinations as booking and driver settings',()=>{
+ const vehicles=load('lib/vehicles.ts')
+ const {default:Page}=load('app/(public)/our-fleet/page.tsx',{'next/link':fakeLink,'lucide-react':fakeIcons,'@/lib/vehicles':vehicles})
+ const html=renderToStaticMarkup(Page())
+ for(const type of vehicles.VEHICLE_TYPES){
+  const card=html.split('<article').find(fragment=>fragment.includes('>'+vehicles.VEHICLE_INFO[type].label+'</h2>'))
+  assert.ok(card)
+  assert.ok(card.includes(vehicles.VEHICLE_CAPABILITIES[type].map(size=>vehicles.PACKAGE_SIZE_INFO[size].label).join(', ')))
+ }
+ assert.match(html,/verified local driver/)
+ assert.doesNotMatch(html,/drone|autonom/i)
+})
+test('Public copy audit excludes obsolete claims and the guide renders SVG icons',()=>{
+ const banned=/\b(?:kinetic|quantum|transmit|mission|telemetry|autonomous|autonomy|lidar|neural|velocity|mobilize|globally|swarm|handshake|supremacy|cryo|aero-drone)\b|\b(?:the void|send a signal|every node)\b/i
+ for(const base of ['app/(public)','components/home','components/layout','components/public'])
+  for(const file of fs.readdirSync(base,{recursive:true}).filter(x=>/\.tsx?$/.test(x)))assert.doesNotMatch(read(base+'/'+file),banned,base+'/'+file)
+ const {default:Page}=load('app/(public)/how-it-works/page.tsx',{'next/link':fakeLink,'lucide-react':fakeIcons})
+ const html=renderToStaticMarkup(Page())
+ assert.ok((html.match(/<svg/g)??[]).length>=11)
+ assert.doesNotMatch(html,/[📡📊🔀🕸]/u)
+ assert.match(read('app/(public)/contact/contact-form.tsx'),/Send us a message[\s\S]*you@example.com/)
+})
+test('Footer has one normal-case copyright and home and standalone public pages use it',()=>{
+ const {default:Footer}=load('components/layout/Footer.tsx',{'next/link':fakeLink})
+ const html=renderToStaticMarkup(Footer())
+ assert.match(html,/GoDrop\. All rights reserved\./)
+ assert.match(html,/Local collection and delivery across the UK/)
+ assert.doesNotMatch(html,/GODROP|\buppercase\b/)
+ for(const page of ['app/signup/page.tsx','app/login/page.tsx'])assert.doesNotMatch(read(page),/All rights reserved/)
+ assert.match(read('components/home/HomeSlides.tsx'),/<Footer \/>/)
+ assert.match(read('components/layout/PublicShell.tsx'),/<Footer \/>/)
+ assert.match(read('components/layout/StandaloneFooter.tsx'),/"\/login", "\/signup"/)
+})
+test('Signup mobile validation shares the server rule and attaches an accessible blur error',()=>{
+ const {normaliseUKMobile,UK_MOBILE_ERROR}=load('lib/uk-phone.ts')
+ for(const value of ['+44 7700 900123','07700 900123','0044 7700 900123'])assert.equal(normaliseUKMobile(value),'+447700900123')
+ for(const value of ['+92 300 1234567','020 7946 0123','07000 900123',null])assert.equal(normaliseUKMobile(value),null)
+ assert.equal(UK_MOBILE_ERROR,'Please enter a UK mobile number')
+ const source=read('app/signup/page.tsx')
+ assert.match(source,/onBlur=\{\(\) => setPhoneTouched\(true\)\}/)
+ assert.match(source,/aria-describedby=\{phoneError \? "phone-error"/)
+ assert.match(source,/id="phone-error" role="alert"/)
+ assert.match(read('app/actions/auth.ts'),/normaliseUKMobile\(formData.get\("phone"\)\)/)
+})
+test('Admin declares its own title and old cached admin documents are retired',()=>{
+ assert.match(read('app/dashboard/admin/layout.tsx'),/title: "GoDrop Admin"/)
+ assert.doesNotMatch(read('app/layout.tsx'),/Go Drop|Premium Logistics/)
+ const worker=read('app/firebase-messaging-sw.js/route.ts')
+ assert.match(worker,/godrop-cache-v3/)
+ const adminBranch=worker.split('// Admin pages depend')[1].split('// Navigations:')[0]
+ assert.match(adminBranch,/fetch\(request\)/)
+ assert.doesNotMatch(adminBranch,/caches.match\(request\)|cache.put/)
+})

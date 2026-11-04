@@ -11,7 +11,7 @@ import {recordHealth} from "@/lib/integration-health"
  *
  * Required environment variables (add to Vercel project settings):
  *   RESEND_API_KEY   — re_...            (Resend Dashboard → API Keys)
- *   EMAIL_FROM        — "Go Drop <hello@yourdomain.com>" (must be a domain
+ *   EMAIL_FROM        — "GoDrop <hello@yourdomain.com>" (must be a domain
  *                        verified in Resend — Dashboard → Domains)
  *
  * Until these are configured, isEmailConfigured() returns false and
@@ -100,12 +100,12 @@ export function marketingEmailHtml({
 
   return `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#1a1a1a;">
-      <p style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#8387ff;font-weight:700;margin:0 0 24px;">Go Drop</p>
+      <p style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#8387ff;font-weight:700;margin:0 0 24px;">GoDrop</p>
       <h1 style="font-size:22px;margin:0 0 16px;">${heading}</h1>
       <p style="font-size:14px;line-height:1.6;white-space:pre-wrap;margin:0 0 8px;">${message}</p>
       ${promoBlock}
       <p style="font-size:11px;color:#999;margin-top:32px;">
-        You're receiving this because you opted in to marketing emails from Go Drop.
+        You're receiving this because you opted in to marketing emails from GoDrop.
         You can unsubscribe anytime from your account settings.
       </p>
     </div>

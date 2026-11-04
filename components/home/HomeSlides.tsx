@@ -1,5 +1,7 @@
 "use client"
 
+import Footer from "@/components/layout/Footer"
+
 import Image from "next/image"
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react"
@@ -206,12 +208,13 @@ export default function HomeSlides() {
           </section>)}
         </div>
       </div>
-      <footer className={styles.controls}>
+      <div className={styles.controls}>
         <button aria-label="Previous slide" disabled={active === 0} onClick={() => go(active - 1, true)}><ArrowLeft aria-hidden /></button>
         <div><p className={styles.gestureHint}>Scroll down: next · Scroll up: back · Swipe left / right · Double tap: next</p><span aria-live="polite" aria-atomic="true">{names[active]} <b>{String(active + 1).padStart(2, "0")} / {String(SLIDE_COUNT).padStart(2, "0")}</b></span></div>
         <button aria-label="Next slide" disabled={active === SLIDE_COUNT - 1} onClick={() => go(active + 1, true)}><ArrowRight aria-hidden /></button>
         <Link className={`${styles.primary} ${styles.mobileBooking}`} href="/signup">Book a Delivery <ArrowRight size={18} aria-hidden /></Link>
-      </footer>
+      </div>
+      <Footer />
     </div>
   )
 }
