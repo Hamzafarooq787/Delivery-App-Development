@@ -29,7 +29,7 @@ function decodePoly(encoded: string): [number, number][] {
 
 export async function googlePlacesAutocomplete(
   input: string,
-  opts: { proximity?: { lat: number; lng: number }; countryCode?: string | null }
+  opts: { proximity?: { lat: number; lng: number }; countryCode?: string | null; signal?: AbortSignal }
 ): Promise<PlaceSuggestion[]> {
   opts = { proximity: { lat: 53.4808, lng: -2.2426 }, countryCode: 'gb', ...opts }
   const body: Record<string, unknown> = { input, languageCode: 'en' }
@@ -47,6 +47,7 @@ export async function googlePlacesAutocomplete(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal: opts.signal,
   })
   const data = await res.json()
   assertGoogleResponse(res, data)
@@ -60,9 +61,9 @@ export async function googlePlacesAutocomplete(
 }
 
 export async function googlePlaceCoords(
-  placeId: string
+  placeId: string, signal?: AbortSignal
 ): Promise<{ lat: number; lng: number } | null> {
-  const res = await fetch(`/api/google/place?placeId=${encodeURIComponent(placeId)}`)
+  const res = await fetch(`/api/google/place?placeId=${encodeURIComponent(placeId)}`, {signal})
   const data = await res.json()
   assertGoogleResponse(res, data)
   if (!data.location) return null

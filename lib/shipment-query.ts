@@ -1,0 +1,1 @@
+export const SHIPMENT_COLUMNS = 'id,tracking_number,driver_id,pickup_address,delivery_address,item_description,price,status,created_at,service_type,delivered_image_url,max_spend_approved,actual_items_total,shopping_hold_settled_at,payment_method,payments!payments_delivery_id_fkey(amount,payment_method,refund_jobs)'

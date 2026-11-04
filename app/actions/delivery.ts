@@ -961,7 +961,7 @@ export async function adminSaveSettings(formData: FormData) {
   if(!(await getAdminActor("settings")))return {error:"Not authorized"}
   const name=String(formData.get("full_name")??"").trim(),email=String(formData.get("email")??"").trim(),phone=String(formData.get("phone")??"").trim()
   if(!name||name.length>80||phone.length>40||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))return {error:"Check platform name and support contact details"}
-  const {error}=await createAdminClient().from("surge_pricing_settings").update({platform_settings:{name,email,phone,updated_by:user.id,updated_at:new Date().toISOString()}}).eq("id",1).select("id").single()
+  const {error}=await createAdminClient().from("surge_pricing_settings").update({platform_settings:{name,email,phone,updated_by:user.id,updated_at:new Date().toISOString()}}).eq("id",true).select("id").single()
 
   if (error) return { error: error.message }
   revalidatePath("/dashboard/admin/settings")

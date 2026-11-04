@@ -1,10 +1,11 @@
 import "server-only"
-export async function googleProxy(endpoint:string,params:URLSearchParams) {
+export async function googleProxy(endpoint:string,params:URLSearchParams, requestSignal?: AbortSignal) {
  const key=process.env.GOOGLE_MAPS_KEY
  if(!key)return {error:"Location service unavailable.",status:503} as const
  params.set("key",key)
  try {
-  const response=await fetch(`https://maps.googleapis.com/maps/api/${endpoint}?${params}`,{signal:AbortSignal.timeout(10000),cache:"no-store"})
+  const timeout=AbortSignal.timeout(10000)
+  const response=await fetch(`https://maps.googleapis.com/maps/api/${endpoint}?${params}`,{signal:requestSignal ? AbortSignal.any([timeout,requestSignal]) : timeout,cache:"no-store"})
   if(!response.ok)return {error:"Location lookup failed. Please retry.",status:502} as const
   const data=await response.json()
   if(!["OK","ZERO_RESULTS","NOT_FOUND"].includes(data.status))return {error:"Location service unavailable. Please retry.",status:data.status==="OVER_QUERY_LIMIT"?429:data.status==="INVALID_REQUEST"?400:503} as const

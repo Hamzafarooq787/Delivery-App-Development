@@ -120,7 +120,7 @@ export default function CustomerHome({ initialData }: { initialData: CustomerHom
         </div>
         <Link
           className={styles.desktopDeliveries}
-          href="/dashboard/customer/active-deliveries"
+          href={delivery?.status === "delivered" || delivery?.status === "cancelled" ? "/dashboard/customer/history" : "/dashboard/customer/active-deliveries"}
         >
           <span className={styles.shortcutIcon}>
             <Truck aria-hidden />
@@ -233,7 +233,7 @@ export default function CustomerHome({ initialData }: { initialData: CustomerHom
         </section>
         <Link
           className={styles.deliveries}
-          href="/dashboard/customer/active-deliveries"
+          href={delivery?.status === "delivered" || delivery?.status === "cancelled" ? "/dashboard/customer/history" : "/dashboard/customer/active-deliveries"}
         >
           <Truck aria-hidden />
           <span>

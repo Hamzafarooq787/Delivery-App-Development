@@ -6,13 +6,14 @@ import { cookies } from 'next/headers'
  * global variable. Always create a new client within each function when using
  * it.
  */
-export async function createClient() {
+export async function createClient(customFetch?: typeof fetch) {
   const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      ...(customFetch ? { global: { fetch: customFetch } } : {}),
       cookies: {
         getAll() {
           return cookieStore.getAll()

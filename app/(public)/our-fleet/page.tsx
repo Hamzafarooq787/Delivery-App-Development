@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 export const metadata: Metadata = {
-  title: "Our Fleet | Go Drop",
-  description: "Precision-engineered autonomous fleet designed for zero-latency logistics. From hyper-local delivery to heavy continental freight.",
+  title: "Our Fleet | GoDrop",
+  description: "See which vehicles are suitable for different parcel sizes, from small packages to bulky items.",
 }
 
 const vehicles = [
@@ -97,7 +97,7 @@ export default function OurFleetPage() {
             THE FUTURE OF <span className="text-[var(--color-primary)]">KINETIC</span> MOTION
           </h1>
           <p className="text-[#adaaaa] text-base sm:text-xl max-w-xl font-light leading-relaxed mb-6 sm:mb-8">
-            Precision-engineered autonomous fleet designed for zero-latency logistics. From hyper-local delivery to heavy continental freight.
+            See which vehicles are suitable for different parcel sizes, from small packages to bulky items.
           </p>
           <div className="flex gap-4">
             <Link
@@ -193,7 +193,7 @@ export default function OurFleetPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[var(--color-primary)]/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="relative z-10 max-w-2xl mx-auto">
           <h2 className="font-headline text-3xl sm:text-5xl font-extrabold mb-4 sm:mb-6 tracking-tighter text-balance">Ready to optimize your velocity?</h2>
-          <p className="text-[#adaaaa] text-base sm:text-lg mb-8 sm:mb-10">Join the network of thousands of businesses scaling their logistics through the Go Drop ecosystem.</p>
+          <p className="text-[#adaaaa] text-base sm:text-lg mb-8 sm:mb-10">Join the network of thousands of businesses scaling their logistics through the GoDrop ecosystem.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/contact" className="bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold px-10 py-4 rounded-lg active:scale-95 transition-all text-lg">
               Book Now

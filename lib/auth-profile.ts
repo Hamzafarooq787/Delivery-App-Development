@@ -3,8 +3,7 @@ import type { User } from "@supabase/supabase-js"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 // The caller must supply a user verified by auth.getUser(), never form input.
-export async function ensureVerifiedProfile(user: User, requestedRole: "customer" | "driver" = "customer") {
-  const db = createAdminClient()
+export async function ensureVerifiedProfile(user: User, requestedRole: "customer" | "driver" = "customer", db = createAdminClient()) {
   const existing = await db.from("users").select("role,account_status").eq("id", user.id).maybeSingle()
   if (existing.error) throw new Error("Your account could not be loaded. Please retry.")
   if (!existing.data) {

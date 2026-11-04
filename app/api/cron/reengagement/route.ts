@@ -3,7 +3,7 @@ import {recordHealth} from "@/lib/integration-health"
  * app/api/cron/reengagement/route.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Automatic re-engagement reminders — triggered daily by Vercel Cron (see
- * vercel.json). Sends "come back to Go Drop" reminders to customers who've
+ * vercel.json). Sends "come back to GoDrop" reminders to customers who've
  * been inactive for `reengagement_settings.inactive_days`, over whichever
  * channel(s) are configured, always gated on each customer's marketing
  * consent. Skips anyone already reminded within the current inactivity

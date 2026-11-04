@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 export const metadata: Metadata = {
-  title: "How It Works | Go Drop",
-  description: "Go Drop is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.",
+  title: "How It Works | GoDrop",
+  description: "Book a collection, follow your driver’s progress and see when your parcel arrives.",
 }
 
 export default function HowItWorksPage() {
@@ -16,25 +16,25 @@ export default function HowItWorksPage() {
           <img
             className="w-full h-full object-cover opacity-40"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-g29a55dZuQD_mtN8IbGXYjpn579HD7D1BLJGU9aM2iUbkElTwh9ZlM28od6d3mbI6H-uMgvTx8lKcBFH3tUOfU39VlzsGhbQlsECBHR2T2I-ueYpNsUQ_MFSA7F_kzSnTbdI6rweXzJzX7Q8kBJMwXoJrc4dNEuUESMkVJmVnw6qEj4QjJkff-ldkAKqJLfcFZravdauuu2-ONfgF_fRxX_bYRgOSUtw9g1YwhQ-U6W4QZLeyzxhETxlnaI64FC7ujkSU1vRiA"
-            alt="Go Drop network"
+            alt="GoDrop network"
           />
           <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0e0e0e]/60 to-[#0e0e0e]" />
         </div>
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 flex flex-col items-center text-center">
           <h1 className="font-headline text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 text-balance break-words w-full">
-            ENGINEERED FOR <span className="text-[var(--color-primary)] italic">VELOCITY</span>
+            How <span className="text-[var(--color-primary)] italic">GoDrop</span> works
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-[#adaaaa] max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">
-            Go Drop is a precision logistics architecture designed to eliminate friction between request and fulfillment. Three steps to absolute delivery.
+            Book a collection, follow your driver’s progress and see when your parcel arrives.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-none mx-auto">
             <Link href="/signup" className="w-full sm:w-auto bg-[var(--color-primary)] text-[var(--color-on-primary)] font-headline font-bold px-8 py-4 rounded-lg flex items-center justify-center gap-2 kinetic-glow transition-transform active:scale-95">
-              INITIALIZE NETWORK ⚡
+              Book a delivery
             </Link>
-            <button className="w-full sm:w-auto border border-[#494847] text-white hover:bg-[#201f1f] font-headline font-bold px-8 py-4 rounded-lg transition-colors">
-              VIEW LIVE STATUS
-            </button>
+            <Link href="/track" className="w-full sm:w-auto border border-[#494847] text-white hover:bg-[#201f1f] font-headline font-bold px-8 py-4 rounded-lg transition-colors">
+              Track a shipment
+            </Link>
           </div>
         </div>
       </section>
@@ -45,16 +45,16 @@ export default function HowItWorksPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           <div className="order-2 md:order-1">
             <div className="inline-block px-3 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-[10px] tracking-[0.2em] uppercase mb-6">
-              Phase 01
+              Step 1
             </div>
-            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">The Void Signal</h3>
+            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">Book your collection</h3>
             <p className="text-[#adaaaa] text-base sm:text-lg leading-relaxed mb-8">
-              Every journey begins as a digital resonance. Your request is ingested into our core, where it is instantly parsed for destination, density, and urgency. We don&apos;t just record orders; we manifest a delivery path.
+              Tell us what you’re sending and enter the collection and delivery addresses. Review your price before you pay.
             </p>
             <ul className="space-y-4">
               {[
-                { icon: "📡", title: "Encrypted Ingestion", desc: "Real-time data parity across all nodes." },
-                { icon: "📊", title: "Predictive Sizing", desc: "Automated volume analysis for perfect vehicle matching." },
+                { icon: "📡", title: "Collection details", desc: "Add instructions to help your driver find the right entrance." },
+                { icon: "📊", title: "Parcel size", desc: "Choose the size that fits your parcel." },
               ].map((item) => (
                 <li key={item.title} className="flex items-start gap-3">
                   <span className="text-[var(--color-primary)] text-xl mt-1">{item.icon}</span>
@@ -73,7 +73,7 @@ export default function HowItWorksPage() {
               <img
                 className="w-full h-full object-cover"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFQdYxSPPnPfcq4R6JG4kwjwy4vCgLq87C85WFcQE9-tNrHrA5SZ7-ItUQ1o5-7OsHu-ykzo4G7RXS5emGpn6c-FsNhduOwg7N2N5yh1vNXg_9RgP5K6mj2mELDyZC5INuNLitjtXS6PE53_TA6vxfO_pYaN15N2bn1tiX6J7lkdjPCQEqHUjWDbgILQkwkBLBqZmy_hBrqMzy4viHIu7KLK8IcF0wEe9RUxgGixrn93vsanTXBA2f_hzvA-paXLa9zbNMzxoibw"
-                alt="Phase 01 circuitry"
+                alt="Collection booking"
               />
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function HowItWorksPage() {
             <img
               className="w-full h-full object-cover"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPAfiXWKV4bJtD3n2YxPHwzY4iRrq5DAkGafW_bzT6rFtOK70UioglpU_DJuUqLpcBCMrRLz9lInpuxOPM3WDsogoM1W5h3w2Eu5eTB_9zn58x1WWAlsVzzf9x_dFBTkpOwDe-Vv2ESHhq-hwAaGLYnBKCVlGVi6GbZ1-Ji_Y8W5uCgRasn87KLJoregB3Cw5rQ2PMOm6CNjE45g7J_-IUHLoZWLcLz9JSQIECdpmcoI5UnSSoF_nmdCpQIrJqNeiU_mlUh4yftw"
-              alt="Kinetic routing network"
+              alt="Delivery route"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-transparent to-transparent" />
             <div className="absolute bottom-6 left-6 right-6 glass-card p-6 rounded-xl border border-[#494847]/15">
@@ -94,23 +94,23 @@ export default function HowItWorksPage() {
                 <div className="h-10 w-10 rounded-full bg-[var(--color-secondary)]/20 flex items-center justify-center text-[var(--color-secondary)]">🔀</div>
                 <div>
                   <p className="text-xs text-[var(--color-secondary)] font-bold uppercase tracking-widest">Active Routing</p>
-                  <p className="text-white font-headline font-medium">Calculating optimal trajectory through the void...</p>
+                  <p className="text-white font-headline font-medium">Planning your collection and delivery route.</p>
                 </div>
               </div>
             </div>
           </div>
           <div className="md:col-span-5 md:pl-12">
             <div className="inline-block px-3 py-1 rounded-full bg-[var(--color-secondary)]/10 border border-[var(--color-secondary)]/20 text-[var(--color-secondary)] text-[10px] tracking-[0.2em] uppercase mb-6">
-              Phase 02
+              Step 2
             </div>
-            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">Kinetic Routing</h3>
+            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">We collect your parcel</h3>
             <p className="text-[#adaaaa] text-base sm:text-lg leading-relaxed mb-8">
-              The Kinetic engine never sleeps. It processes millions of variables—traffic entropy, atmospheric conditions, and fleet availability—to dispatch the exact resource needed.
+              Once a suitable driver accepts your booking, they collect your parcel. You can check the progress using your tracking number.
             </p>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { icon: "⚡", title: "Zero-Latency", desc: "Dispatch within 180ms of signal ingest." },
-                { icon: "🕸️", title: "Swarm Intelligence", desc: "Decentralized fleet coordination." },
+                { icon: "⚡", title: "Driver assigned", desc: "Check when a driver accepts your booking." },
+                { icon: "🕸️", title: "Delivery updates", desc: "Follow your parcel from collection to delivery." },
               ].map((item) => (
                 <div key={item.title} className="p-4 bg-[#1a1919] rounded-lg border border-[#494847]/10">
                   <span className="text-[var(--color-secondary)] text-xl mb-2 block">{item.icon}</span>
@@ -126,16 +126,16 @@ export default function HowItWorksPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           <div>
             <div className="inline-block px-3 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 text-[var(--color-primary)] text-[10px] tracking-[0.2em] uppercase mb-6">
-              Phase 03
+              Step 3
             </div>
-            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">The Final Handshake</h3>
+            <h3 className="font-headline text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight text-balance">See when it arrives</h3>
             <p className="text-[#adaaaa] text-base sm:text-lg leading-relaxed mb-8">
-              The void closes. Delivery is finalized with biometric precision. Our agents bridge the gap between the digital ether and the physical world with a secure, verified completion protocol.
+              Once your parcel arrives, check the delivery status and any available proof in your account.
             </p>
             <div className="space-y-6">
               {[
-                { icon: "✅", title: "Biometric Validation", desc: "Secure proof of possession for every item." },
-                { icon: "🧾", title: "Immutable Ledger", desc: "Instant digital confirmation and chain of custody." },
+                { icon: "✅", title: "Delivery confirmation", desc: "Check when your parcel has been delivered." },
+                { icon: "🧾", title: "Booking history", desc: "Find completed deliveries in your account." },
               ].map((item) => (
                 <div key={item.title} className="flex items-center gap-4 p-4 bg-[#201f1f] rounded-xl border border-[#494847]/15">
                   <div className="h-12 w-12 rounded bg-[var(--color-primary)]/20 flex items-center justify-center text-xl text-[var(--color-primary)]">
@@ -165,35 +165,35 @@ export default function HowItWorksPage() {
       <section className="py-16 sm:py-24 bg-[#131313]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
           <div className="mb-10 sm:mb-16 text-center">
-            <h2 className="font-headline text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">THE CORE STACK</h2>
-            <p className="text-[#adaaaa] uppercase tracking-[0.3em] text-xs">Proprietary Logistics Technologies</p>
+            <h2 className="font-headline text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">Useful features</h2>
+            <p className="text-[#adaaaa] uppercase tracking-[0.3em] text-xs">Tools for every delivery</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[600px] auto-rows-auto md:auto-rows-fr">
             <div className="md:col-span-2 md:row-span-2 bg-[#1a1919] p-7 sm:p-10 rounded-2xl border border-[#494847]/15 relative overflow-hidden flex flex-col justify-end group min-h-[280px] md:min-h-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="absolute inset-0 w-full h-full object-cover opacity-20 grayscale group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxY2pI22h6pQ7i3zo3HXqoO9Bt4fxlWH9ph1vJFdsoCHQ6MxvLk5dP_7sFCgpalfHrV5xVE2g0shX8yS3nycQMUBBGOKbh-T2hrRWzxgvVgu9DuDha7pb33I33nP8vBvXqnNlKwBHK_42j1V5wIRSUK8OnvTM71ubJss_VEE_RPK-JP9Xjvr6hOD0L1gmDs_w65KdBDpbOQI_703PUui-B9qDWR3pXnCV7s5Fw31xhEG97mSS8-yANQsi5H6I9_nisH5K3CNqdqw" alt="Void Analytics" />
+              <img className="absolute inset-0 w-full h-full object-cover opacity-20 grayscale group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxY2pI22h6pQ7i3zo3HXqoO9Bt4fxlWH9ph1vJFdsoCHQ6MxvLk5dP_7sFCgpalfHrV5xVE2g0shX8yS3nycQMUBBGOKbh-T2hrRWzxgvVgu9DuDha7pb33I33nP8vBvXqnNlKwBHK_42j1V5wIRSUK8OnvTM71ubJss_VEE_RPK-JP9Xjvr6hOD0L1gmDs_w65KdBDpbOQI_703PUui-B9qDWR3pXnCV7s5Fw31xhEG97mSS8-yANQsi5H6I9_nisH5K3CNqdqw" alt="Shipment tracking" />
               <div className="relative z-10">
                 <span className="text-[var(--color-primary)] text-4xl mb-4 block">📈</span>
-                <h4 className="text-2xl font-headline font-bold text-white mb-2">Void Analytics Hub</h4>
-                <p className="text-[#adaaaa] text-sm max-w-xs">Gain absolute visibility over your supply chain with real-time telemetry and deep-learning forecasts.</p>
+                <h4 className="text-2xl font-headline font-bold text-white mb-2">Track your parcel</h4>
+                <p className="text-[#adaaaa] text-sm max-w-xs">Use your tracking number to check your shipment’s latest status.</p>
               </div>
             </div>
             <div className="md:col-span-2 bg-[#201f1f] p-8 rounded-2xl border border-[#494847]/15 flex items-center justify-between group hover:bg-[#262626] transition-colors">
               <div className="flex-1">
-                <h4 className="text-xl font-headline font-bold text-white mb-1">Fleet Sync</h4>
-                <p className="text-[#adaaaa] text-xs">Proprietary vehicle-to-vehicle communication network.</p>
+                <h4 className="text-xl font-headline font-bold text-white mb-1">Vehicles for different parcels</h4>
+                <p className="text-[#adaaaa] text-xs">Your parcel size helps us match the booking with a suitable driver.</p>
               </div>
               <span className="text-[var(--color-secondary)] text-5xl opacity-50 group-hover:opacity-100 transition-opacity">📶</span>
             </div>
             <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/15 flex flex-col items-center text-center justify-center space-y-3 group">
               <div className="h-12 w-12 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform text-xl">🔒</div>
-              <h4 className="font-bold text-sm">Quantum Sec</h4>
-              <p className="text-[10px] text-[#adaaaa]">Military-grade encryption for all manifests.</p>
+              <h4 className="font-bold text-sm">Card checkout</h4>
+              <p className="text-[10px] text-[#adaaaa]">Review your price and pay by card.</p>
             </div>
             <div className="bg-[#1a1919] p-6 rounded-2xl border border-[#494847]/15 flex flex-col items-center text-center justify-center space-y-3 group">
               <div className="h-12 w-12 rounded-full bg-[var(--color-secondary)]/10 flex items-center justify-center text-[var(--color-secondary)] group-hover:scale-110 transition-transform text-xl">🔄</div>
-              <h4 className="font-bold text-sm">Auto-Scale</h4>
-              <p className="text-[10px] text-[#adaaaa]">Instant bandwidth expansion during peak traffic.</p>
+              <h4 className="font-bold text-sm">Need help?</h4>
+              <p className="text-[10px] text-[#adaaaa]">Contact us if you have a question about a booking.</p>
             </div>
           </div>
         </div>
@@ -202,11 +202,11 @@ export default function HowItWorksPage() {
       {/* Final CTA */}
       <section className="py-20 sm:py-32 px-4 sm:px-6 text-center">
         <h2 className="font-headline text-3xl sm:text-4xl md:text-6xl font-black mb-6 sm:mb-8 tracking-tighter text-balance">
-          READY TO <span className="text-[var(--color-primary)]">ENTER THE VOID?</span>
+          Ready to <span className="text-[var(--color-primary)]">send a parcel?</span>
         </h2>
-        <p className="text-[#adaaaa] text-lg max-w-xl mx-auto mb-12">Join the global leaders who trust Go Drop for their most critical logistics missions.</p>
+        <p className="text-[#adaaaa] text-lg max-w-xl mx-auto mb-12">Create an account to book a collection and delivery.</p>
         <Link href="/signup" className="inline-block bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold px-10 py-5 rounded-lg kinetic-glow uppercase tracking-widest text-sm transition-all hover:brightness-110 active:scale-95">
-          Request Onboarding
+          Get started
         </Link>
       </section>
     </div>

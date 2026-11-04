@@ -266,8 +266,8 @@ function CampaignHistorySection({ campaigns }: { campaigns: MarketingCampaign[] 
 
 const DEFAULT_SETTINGS: ReengagementSettings = {
   enabled: false, inactive_days: 30, channel: "both",
-  subject: "We miss you at Go Drop!",
-  message: "It's been a while — come back and get your next delivery moving with Go Drop.",
+  subject: "We miss you at GoDrop!",
+  message: "It's been a while — come back and get your next delivery moving with GoDrop.",
   promo_code_id: null,
 }
 

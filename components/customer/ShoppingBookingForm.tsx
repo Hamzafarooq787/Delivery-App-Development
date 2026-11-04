@@ -36,7 +36,7 @@ const money = (n: number) => new Intl.NumberFormat('en-GB', { style: 'currency',
 const freshItem = (): Item => ({ id: newShoppingRequestId(), name: '', quantity: 1, estimated_price: null, brand_size_variant: null, notes: null, photo_url: null, substitution_preference: 'contact_me' })
 
 function ShoppingSummary({ items, onEdit }: { items: Item[]; onEdit: () => void }) {
-  return <section className={styles.card} aria-label="Shopping summary"><div className={styles.cardHeading}><strong>Your shopping · {items.length} products</strong><button type="button" className={styles.link} onClick={onEdit}>Edit</button></div><div className={styles.summaryRows} tabIndex={0} aria-label="Shopping products">{items.map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Not estimated' : money(i.estimated_price * i.quantity)}</strong></p>)}</div></section>
+  return <section className={styles.card} aria-label="Shopping summary"><div className={styles.cardHeading}><strong>Your shopping · {items.length} products</strong><button type="button" className={styles.link} onClick={onEdit}>Edit</button></div><div className={styles.summaryRows} tabIndex={0} aria-label="Shopping products">{items.map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Estimate not provided' : money(i.estimated_price * i.quantity)}</strong></p>)}</div></section>
 }
 
 export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
@@ -81,7 +81,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const submitLock = useRef(false)
   const uploadLock = useRef(false)
   const total = shoppingEstimate(items)
-  const maximum = settings?.max_purchase_amount ?? 100
+  const maximum = settings?.max_purchase_amount ?? null
   useFreshBookingForm('buy_for_me')
   useOrderPhotoCleanup([...items.map(i=>i.photo_url).filter((u):u is string=>!!u),...(editor?.photo_url?[editor.photo_url]:[])])
   useEffect(() => {
@@ -132,6 +132,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   function validItems() {
     const message = validateShoppingItems(items, limits)
     if (message) { setError(message); return false }
+    if (maximum === null) { setError("Shopping settings are not available yet."); return false }
     if (total > maximum) { setError(`Keep your estimated shopping within ${money(maximum)}.`); return false }
     return true
   }
@@ -182,13 +183,14 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     editorVersion.current++; setEditor(existing ? { ...existing } : freshItem()); setEditorError(''); setEditorDetails(details)
   }
   function closeEditor() { if (!uploadLock.current) { const old=items.find(i=>i.id===editor?.id)?.photo_url; if(editor?.photo_url&&editor.photo_url!==old)void cleanupAbandonedOrderPhotos([editor.photo_url]).catch(()=>{}); editorVersion.current++; setEditor(null); setEditorError('') } }
-  function saveItem() {
+  function saveItem(draft: ShoppingItem) {
     if (!editor || uploadLock.current) return
-    const cleaned = { ...editor, name: editor.name.trim(), brand_size_variant: editor.brand_size_variant?.trim() || null }
+    const cleaned = { ...draft, id: editor.id, name: draft.name.trim(), brand_size_variant: draft.brand_size_variant?.trim() || null }
     const others = items.filter(i => i.id !== editor.id)
     const message = validateShoppingItems([...others, cleaned], limits)
     if (message) { setEditorError(message); return }
     if (duplicateShoppingProduct(others, cleaned)) { setEditorError('This product is already listed. Edit its quantity instead.'); return }
+    if (maximum === null) { setEditorError("Shopping settings are not available yet."); return }
     if (shoppingEstimate([...others, cleaned]) > maximum) { setEditorError(`Your estimated shopping must be ${money(maximum)} or less.`); return }
     const exists = items.some(i => i.id === editor.id)
     setItems(prev => exists ? prev.map(i => i.id === editor.id ? cleaned : i) : [...prev, cleaned])
@@ -243,18 +245,18 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
       <main className={styles.body} ref={body}>
         <h2 id="shopping-title" tabIndex={-1}>{titles[step - 1]}</h2>
         {step === 1 && <div className={styles.layout}><div className={styles.stack}>
-          <div className={styles.listHeading}><span>{items.length} of {limits.maxShoppingProducts} products</span><strong>{money(total)} estimated</strong></div>
+          <div className={styles.listHeading}><span>{items.length} of {limits.maxShoppingProducts} products</span><strong>{items.some(i=>i.estimated_price != null) ? `${money(total)} in entered estimates` : "No item estimates added"}</strong></div>
           <section className={styles.savedList} aria-label="Added shopping items" tabIndex={0}>
             {!items.length && <div className={styles.empty}><ShoppingBag size={36} /><strong>Your shopping list starts here</strong><span>Add a product, quantity and an optional photo.</span></div>}
             {items.map(i => <article key={i.id} className={styles.savedItem}>
               <div className={styles.itemPhoto}>{i.photo_url ? <ItemPhotoPreview url={i.photo_url} label={`Photo of ${i.name}`} onRemove={() => { setItems(prev => prev.map(x => x.id === i.id ? { ...x, photo_url: null } : x)); invalidate() }} /> : <span aria-hidden="true"><ShoppingBag size={34} /></span>}</div>
-              <div className={styles.itemText}><strong>{i.name}</strong><small>{i.brand_size_variant || 'Standard size'} · Qty {i.quantity}</small><b>{i.estimated_price == null ? 'Price not entered' : money(i.estimated_price * i.quantity)}</b></div>
+              <div className={styles.itemText}><strong>{i.name}</strong><small>{i.brand_size_variant || 'Standard size'} · Qty {i.quantity}</small><b>{i.estimated_price == null ? 'Estimate optional' : money(i.estimated_price * i.quantity)}</b></div>
               <button type="button" aria-label={`Edit ${i.name}`} onClick={() => openEditor(i)}><Pencil size={20} /></button>
             </article>)}
           </section>
-          <button className={styles.outline} type="button" disabled={items.length >= limits.maxShoppingProducts} onClick={() => openEditor()}>＋ {items.length ? 'Add another item' : 'Add your first item'}</button>
-          <button className={styles.detailsButton} type="button" onClick={() => openEditor(items[0], true)}><Camera size={23} /><span>Photos & item instructions<small>Add a photo or tell us your preferred brand.</small></span><span aria-hidden="true">›</span></button>
-          <p className={styles.hint}>Up to {limits.maxShoppingProducts} products · {money(maximum)} shopping limit</p>{settingsError && <p className={styles.error} role="alert">{settingsError}</p>}
+          <button className={styles.outline} type="button" disabled={!settings || items.length >= limits.maxShoppingProducts} onClick={() => openEditor()}>＋ {items.length ? 'Add another item' : 'Add your first item'}</button>
+          <button className={styles.detailsButton} type="button" disabled={!settings} onClick={() => openEditor(items[0], true)}><Camera size={23} /><span>Photos & item instructions<small>Add a photo or tell us your preferred brand.</small></span><span aria-hidden="true">›</span></button>
+          <p className={styles.hint}>Up to {limits.maxShoppingProducts} products · {maximum === null ? "Loading shopping limit…" : `${money(maximum)} shopping limit`}</p>{settingsError && <p className={styles.error} role="alert">{settingsError}</p>}
         </div><aside className={styles.desktopAside}>{map}<ShoppingSummary items={items} onEdit={() => openEditor(items[0])} /><p className={styles.hint}>Add each product separately. You can update quantities without losing other items.</p></aside></div>}
         {step === 2 && <div className={styles.layout}><div className={styles.stack}>
           <label>Shop name<input maxLength={200} value={shopName} onChange={e => { setShopName(e.target.value); invalidate() }} placeholder="e.g. Tesco" /></label>
@@ -265,7 +267,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
           <details className={styles.disclosure}><summary><span className={styles.desktopOnly}>Flat, entrance or access instructions (optional)</span><span className={styles.mobileOnly}>Access & shop instructions (optional)</span></summary><label>Delivery instructions<textarea rows={2} maxLength={500} value={deliveryInstructions} onChange={e => { setDeliveryInstructions(e.target.value); invalidate() }} placeholder="e.g. Flat 4, use the side entrance" /></label><label className={styles.mobileOnly}>Instructions for the shop<textarea rows={2} maxLength={500} value={shopInstructions} onChange={e => { setShopInstructions(e.target.value); invalidate() }} placeholder="Anything your shopper should know?" /></label></details>
           <label className={styles.desktopOnly}>Instructions for the shop (optional)<textarea rows={2} maxLength={500} value={shopInstructions} onChange={e => { setShopInstructions(e.target.value); invalidate() }} placeholder="Anything your shopper should know?" /></label>
           <div className={styles.desktopOnly}><ShoppingSummary items={items} onEdit={() => go(1)} /></div>
-        </div><aside className={styles.mapAside}>{map}<div className={`${styles.card} ${styles.budget}`} aria-live="polite"><span>{shop && delivery ? 'Estimated total' : 'Shopping funds budget'}</span><strong>{shop && delivery ? estimate ? money(estimate.totalCharge) : estimating || !estimateError ? 'Calculating…' : 'Unavailable' : money(maximum)}</strong></div>{estimateError && <p className={styles.hint} role="status">{estimateError} <button type="button" className={styles.link} onClick={() => setEstimateRetry(n => n + 1)}>Retry estimate</button></p>}</aside></div>}
+        </div><aside className={styles.mapAside}>{map}<div className={`${styles.card} ${styles.budget}`} aria-live="polite"><span>{shop && delivery ? 'Estimated total' : 'Shopping funds budget'}</span><strong>{shop && delivery ? estimate ? money(estimate.totalCharge) : estimating || !estimateError ? 'Calculating…' : 'Unavailable' : maximum === null ? "—" : money(maximum)}</strong></div>{estimateError && <p className={styles.hint} role="status">{estimateError} <button type="button" className={styles.link} onClick={() => setEstimateRetry(n => n + 1)}>Retry estimate</button></p>}</aside></div>}
         {step === 3 && <div className={styles.layout}><div className={styles.stack}>
           {individual && <label>Product for replacement preference<select aria-label="Product for replacement preference" value={replacementIndex} onChange={e => setReplacementIndex(Number(e.target.value))}>{items.map((i, n) => <option key={i.id} value={n}>{i.name}</option>)}</select></label>}
           {choices.map(c => <button type="button" key={c.value} className={styles.choice} aria-pressed={individual ? replacementItem?.substitution_preference === c.value : items.every(i => i.substitution_preference === c.value)} onClick={() => { setItems(prev => prev.map(i => !individual || i.id === replacementItem?.id ? { ...i, substitution_preference: c.value } : i)); invalidate() }}><span className={styles.radio} aria-hidden="true" /><span><strong>{c.label}</strong><small>{c.description}</small></span></button>)}
@@ -273,7 +275,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
           <button className={styles.link} type="button" onClick={() => { setIndividual(!individual); setReplacementIndex(0) }}>{individual ? 'Apply a choice to all items' : 'Change a specific item'}</button>
         </div><aside className={styles.desktopAside}><ShoppingSummary items={items} onEdit={() => go(1)} /><section className={styles.card}><strong>You stay in control</strong><p className={styles.hint}>Your driver must get approval before buying a replacement or any higher-priced product.</p></section></aside></div>}
         {step === 4 && <div className={`${styles.layout} ${styles.reviewLayout}`}><div className={`${styles.stack} ${styles.reviewDetails}`}>
-          <section className={styles.card}><div className={styles.cardHeading}><strong>{items.length} products</strong><button className={styles.link} type="button" onClick={() => go(1)}>Edit items</button></div><div className={styles.summaryRows} tabIndex={0} aria-label="Shopping products">{items.map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Not estimated' : money(i.quantity * i.estimated_price)}</strong></p>)}</div></section>
+          <section className={styles.card}><div className={styles.cardHeading}><strong>{items.length} products</strong><button className={styles.link} type="button" onClick={() => go(1)}>Edit items</button></div><div className={styles.summaryRows} tabIndex={0} aria-label="Shopping products">{items.map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Estimate not provided' : money(i.quantity * i.estimated_price)}</strong></p>)}</div></section>
           <section className={styles.card}><div className={styles.cardHeading}><strong>Shop</strong><button className={styles.link} type="button" onClick={() => go(2)}>Edit</button></div><p className={styles.addressText}>{shopName}, {shop?.address}</p><strong>Deliver to</strong><p className={styles.addressText}>{delivery?.address}</p></section>
           <button className={styles.link} type="button" onClick={() => go(3)}>Replacement: {items.every(i => i.substitution_preference === items[0]?.substitution_preference) ? choices.find(c => c.value === items[0]?.substitution_preference)?.label : 'Per item'} · Edit</button>
         </div><details className={styles.compactReview}><summary><strong>{items.length} products · {shopName}</strong><span className={styles.reviewExtra}>{items.slice(0, 2).map(i => i.name).join(' · ')}{items.length > 2 ? ` +${items.length - 2} more` : ''}</span><span className={styles.reviewExtra}>Shop: {shop?.address}</span><span>Deliver to {delivery?.address}</span></summary><div className={styles.stack}>
@@ -293,7 +295,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
       </main>
       <footer className={styles.footer}>{error && !editor && <p role="alert" className={styles.error}>{error}</p>}<div className={styles.actions}><button type="button" disabled={submitting || uploading} onClick={() => step === 1 ? onClose() : go(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button><button type="button" className={styles.primary} disabled={submitting || quoting || uploading || locating || (step === 4 && (!quote || !confirmed))} onClick={next}>{submitting ? 'Opening checkout…' : quoting ? 'Calculating…' : locating ? 'Finding location…' : step === 4 ? `Confirm & Pay ${quote ? money(quote.totalCharge) : ''}` : 'Continue'}</button></div>{step === 4 && <p className={styles.secure}>Secure card checkout · No wallet required</p>}</footer>
     </section>
-    {editor && <ShoppingItemEditor item={editor} existing={items.some(i => i.id === editor.id)} maxQuantity={limits.maxQuantityPerProduct} busy={uploading} error={editorError} showDetails={editorDetails} onChange={(field, value) => { setEditor(prev => prev ? { ...prev, [field]: value } : prev); setEditorError('') }} onPhoto={file => void photo(file)} onSave={saveItem} onCancel={closeEditor} onDelete={() => removeItem(editor.id)} />}
+    {editor && <ShoppingItemEditor key={editor.id} item={editor} existing={items.some(i => i.id === editor.id)} maxQuantity={limits.maxQuantityPerProduct} busy={uploading} error={editorError} showDetails={editorDetails} onChange={(field, value) => { setEditor(prev => prev ? { ...prev, [field]: value } : prev); setEditorError('') }} onPhoto={file => void photo(file)} onSave={saveItem} onCancel={closeEditor} onDelete={() => removeItem(editor.id)} />}
     {locationHelp && <LocationPermissionDialog issue={locationHelp} onClose={() => setLocationHelp(null)} onRetry={() => void gps()} onPosition={p => void gps(p)} onError={e => setLocationHelp(locationIssue(e))} />}
   </div>
 }

@@ -12,7 +12,7 @@ export default async function AdminSettingsPage() {
   const admin = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const {data:settings,error:settingsError}=await admin.from("surge_pricing_settings").select("platform_settings").eq("id",1).single()
+  const {data:settings,error:settingsError}=await admin.from("surge_pricing_settings").select("platform_settings").eq("id",true).single()
   if(settingsError)throw new Error("Platform settings could not load. Please retry.")
   const p=settings.platform_settings
   const adminProfile={full_name:p.name??"GoDrop",email:p.email??"",phone:p.phone??""}

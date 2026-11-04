@@ -291,7 +291,7 @@ export function DriverOnboarding({
           )}
         </div>
 
-        <p className="text-xs text-[var(--color-outline-variant)] mt-10">&copy; {new Date().getFullYear()} Go Drop. All rights reserved.</p>
+        <p className="text-xs text-[var(--color-outline-variant)] mt-10">&copy; {new Date().getFullYear()} GoDrop. All rights reserved.</p>
       </main>
     </div>
   )

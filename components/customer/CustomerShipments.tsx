@@ -27,6 +27,7 @@ import {
   useCustomerPageSize,
 } from './CustomerPage'
 import s from './CustomerPages.module.css'
+import { SHIPMENT_COLUMNS } from '@/lib/shipment-query'
 
 type Shipment = {
   max_spend_approved?: number | null
@@ -92,7 +93,7 @@ export default function CustomerShipments({
         let request = client
           .from('delivery_requests')
           .select(
-            'id,tracking_number,driver_id,pickup_address,delivery_address,item_description,price,status,created_at,service_type,delivered_image_url,max_spend_approved,actual_items_total,shopping_hold_settled_at,payment_method,payments(amount,payment_method,refund_jobs)',
+            SHIPMENT_COLUMNS,
             { count: 'exact' },
           )
           .eq('customer_id', user.id)
@@ -105,6 +106,7 @@ export default function CustomerShipments({
           )
         const result = await request
           .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
           .range((current - 1) * size, current * size - 1)
         if (result.error) throw result.error
         if (!alive) return
@@ -134,7 +136,7 @@ export default function CustomerShipments({
     const id=orderDetails?.id
     if(!id||!userId)return
     let alive=true;setDetailsLoading(true);setDetailsError('')
-    void Promise.resolve(client.from('delivery_requests').select('id,tracking_number,driver_id,pickup_address,delivery_address,item_description,price,status,created_at,service_type,delivered_image_url,max_spend_approved,actual_items_total,shopping_hold_settled_at,payment_method,payments(amount,payment_method,refund_jobs)').eq('id',id).eq('customer_id',userId).maybeSingle()).then(({data,error})=>{if(!alive)return;if(error||!data)setDetailsError('Could not refresh this order. Please retry.');else setOrderDetails(data as Shipment)}).catch(()=>{if(alive)setDetailsError('Could not refresh this order. Please retry.')}).finally(()=>{if(alive)setDetailsLoading(false)})
+    void Promise.resolve(client.from('delivery_requests').select(SHIPMENT_COLUMNS).eq('id',id).eq('customer_id',userId).maybeSingle()).then(({data,error})=>{if(!alive)return;if(error||!data)setDetailsError('Could not refresh this order. Please retry.');else setOrderDetails(data as Shipment)}).catch(()=>{if(alive)setDetailsError('Could not refresh this order. Please retry.')}).finally(()=>{if(alive)setDetailsLoading(false)})
     return()=>{alive=false}
   },[client,userId,orderDetails?.id,revision])
   const focus = rows.find((r) => r.id === selected) ?? rows[0]

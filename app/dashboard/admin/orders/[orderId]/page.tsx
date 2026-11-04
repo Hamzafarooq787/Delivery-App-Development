@@ -1,3 +1,4 @@
+import { TestOrderFlag } from "@/components/admin/test-order-flag"
 import {timelineTime} from '@/lib/timeline-time'
 import {getAdminActor} from "@/lib/admin-access"
 import {OrderRecoveryPanel} from "@/components/admin/order-recovery-panel"
@@ -75,10 +76,14 @@ export default async function AdminOrderDetailPage({
   const driverRating   = ratings.find((r) => r.rater_role === "driver")
 
   const {data:cardPayments,error:paymentError}=await admin.from('payments').select('id,purpose,amount,status,refund_jobs').or(`delivery_id.eq.${orderId},related_delivery_id.eq.${orderId}`).eq('payment_method','stripe').order('created_at');if(paymentError)throw new Error('Order payment records could not load.')
+  const canFlag = (actor.owner || actor.scopes.includes("operations")) && ["delivered","cancelled"].includes(order.status)
+  const testRecord = await admin.from("admin_audit_log").select("details").eq("entity",orderId).eq("event","order_test_record")
+    .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle()
   const currentIdx = STATUS_ORDER.indexOf(order.status)
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8 min-h-screen bg-[var(--brand-bg)]">
+      {!testRecord.error && <TestOrderFlag id={orderId} flagged={testRecord.data?.details?.flagged === true} canEdit={canFlag} />}
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 md:mb-8">
         <Link

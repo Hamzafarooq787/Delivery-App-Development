@@ -8,7 +8,7 @@ import { InstallButton } from '@/components/pwa/install-button'
 
 const navLinks = [
   { label: 'How It Works', href: '/how-it-works' },
-  { label: 'Our Fleet', href: '/fleet' },
+  { label: 'Our Fleet', href: '/our-fleet' },
   { label: 'Safety', href: '/safety' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
@@ -26,14 +26,14 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-2">
             <BrandLogo />
           </Link>
-          <div className="hidden lg:flex items-center bg-[#2a2a2a] px-4 py-2 rounded-lg w-64">
+          <form action="/track" role="search" aria-label="Track shipment" className="hidden lg:flex items-center bg-[#2a2a2a] px-4 py-2 rounded-lg w-64">
             <Search className="w-4 h-4 text-[#6b6b6b] mr-2 flex-shrink-0" />
             <input
               className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-[#6b6b6b]"
               placeholder="Track shipment..."
-              type="text"
+              type="search" name="number" aria-label="Tracking number" maxLength={80} required
             />
-          </div>
+          </form>
         </div>
 
         {/* Center: Navigation Links (desktop) */}
@@ -80,14 +80,14 @@ export default function Header() {
         <div className="md:hidden bg-[#1a1a1a] border-t border-[#2a2a2a]">
           {/* Mobile search */}
           <div className="px-4 pt-3">
-            <div className="flex items-center bg-[#2a2a2a] px-4 py-2 rounded-lg">
+            <form action="/track" role="search" aria-label="Track shipment" className="flex items-center bg-[#2a2a2a] px-4 py-2 rounded-lg">
               <Search className="w-4 h-4 text-[#6b6b6b] mr-2 flex-shrink-0" />
               <input
                 className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-[#6b6b6b]"
                 placeholder="Track shipment..."
-                type="text"
+                type="search" name="number" aria-label="Tracking number" maxLength={80} required
               />
-            </div>
+            </form>
           </div>
 
           {/* Mobile nav links */}
