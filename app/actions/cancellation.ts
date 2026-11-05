@@ -1,4 +1,5 @@
 "use server"
+import {isShoppingSimulation,verifiedShoppingSimulation} from "@/lib/payments/shopping-sandbox"
 import { after } from "next/server"
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
@@ -29,18 +30,21 @@ export async function getCancellationQuote(id:string,fault="customer"){
  if(!user||!/^[a-f0-9-]{36}$/i.test(id))return {error:"Sign in to view this order."}
  if(fault!=="customer"&&fault!=="driver"&&!(await getAdminActor("finance")))return {error:"Finance access required."}
  const {data,error}=await createAdminClient(boundedFetch(5000)).rpc("cancellation_quote",{p_actor:user.id,p_id:id,p_fault:fault})
- return error?{error:"Cancellation details could not load."}:{data:data as {fee:number;driver:number;platform:number;refund:number;review:boolean;status:string;canCancel:boolean;method:string}}
+ return error?{error:"Cancellation details could not load."}:{data:data as {fee:number;driver:number;platform:number;refund:number;review:boolean;status:string;canCancel:boolean;method:string;graceSeconds:number;graceExpiresAt:string|null}}
 }
 export async function cancelByPolicy(id:string,fee:number,reason="Customer cancellation",fault="customer"){
  const db=await createClient(boundedFetch(5000));const {data:{user}}=await db.auth.getUser()
  if(!user)return {error:"Please sign in again."}
  const preview=await getCancellationQuote(id,fault)
  if(!preview.data)return {error:preview.error}
+ if(Number(preview.data.fee)!==fee)return {error:"The cancellation fee changed. Review the current fee before confirming."}
  const admin=createAdminClient(boundedFetch(7000))
  const {data:order}=await admin.from("delivery_requests").select("company_card_reference,driver_id,customer_id,status").eq("id",id).maybeSingle()
  if(!order)return {error:"Order unavailable."}
+ const simulation=isShoppingSimulation(order.company_card_reference)
+ if(simulation){try{await verifiedShoppingSimulation(id,order.company_card_reference!)}catch{return {error:"This sandbox order requires Stripe test mode before cancellation."}}}
  // Closing a dedicated card prevents a purchase racing a pre-purchase refund.
- if(order.company_card_reference&&!preview.data.review&&order.status!=="cancelled"){
+ if(order.company_card_reference&&!simulation&&!preview.data.review&&order.status!=="cancelled"){
   try{
    const stripe=getStripe()
    const card=await stripe.issuing.cards.retrieve(order.company_card_reference)

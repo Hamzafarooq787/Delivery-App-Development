@@ -123,7 +123,7 @@ export async function getDriverPayoutDetails(driverId: string) {
       .limit(10),
     admin
       .from("payouts")
-      .select("id, amount, status, created_at")
+      .select("id, amount, status, created_at, payment_reference")
       .eq("driver_id", driverId)
       .order("created_at", { ascending: false })
       .limit(6),

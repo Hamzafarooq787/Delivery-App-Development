@@ -27,7 +27,7 @@ const sections = [
   },
   {
     title: "Cancellation Policy",
-    content: "Cancellation is free before the driver starts travel, including after acceptance. A fee applies after travel starts or the driver arrives, as shown in the booking policy and cancellation preview. Driver fault or no-show has no cancellation fee. Purchased shopping requires an admin review before a return, delivery or refund decision.",
+    content: "Cancellation is free before the driver starts travel, including after acceptance. A free grace period applies after travel starts, as set out below. A fee applies after that grace period or immediately when the driver arrives, as shown in the booking policy and cancellation preview. Driver fault or no-show has no cancellation fee. Purchased shopping requires an admin review before a return, delivery or refund decision.",
   },
   {
     title: "Limitation of Liability",

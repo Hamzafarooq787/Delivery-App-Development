@@ -41,6 +41,7 @@ const STATUS_ICONS: Record<string, string> = {
 }
 
 type Job = {
+  company_card_reference?:string|null
   accepted_at?: string|null
   travel_started_at?: string|null
   arrived_at?: string|null
@@ -136,7 +137,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
 
   if (job.service_type === "buy_for_me") {
     return (
-      <><OrderRecoveryInstructions id={job.id} driver/><BfmShoppingWorkflow
+      <>{job.company_card_reference?.startsWith("sandbox_")&&<p role="status" className="m-4 rounded-xl border border-orange-400/50 p-4 text-orange-200">SANDBOX SIMULATION. Do not buy real goods or spend personal money. Use test item prices and a test receipt.</p>}<OrderRecoveryInstructions id={job.id} driver/><BfmShoppingWorkflow
         job={{
           id: job.id,
           shop_instructions:job.shop_instructions,delivery_instructions:job.delivery_instructions,

@@ -1,6 +1,7 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createSandboxShoppingCard, fundShoppingCard } from "@/app/actions/shopping-operations";
+import { createSandboxShoppingCard, fundShoppingCard, simulateShoppingFunding } from "@/app/actions/shopping-operations";
 export function ShoppingFundingPanel({
   id,
   reference,
@@ -17,6 +18,8 @@ export function ShoppingFundingPanel({
   completed: string | null;
   canVerify:boolean; closed:boolean; sandbox?:boolean;
 }) {
+  const router=useRouter();
+  const simulation=reference?.startsWith("sandbox_");
   const [card, setCard] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,7 +31,7 @@ export function ShoppingFundingPanel({
     <section className="rounded-xl bg-[var(--brand-panel)] p-5 text-white space-y-3">
       <h2 className="font-bold">Shopping operations</h2>
       <p>
-        {closed ? "Order cancelled. Shopping cannot start." : reference && verified
+        {closed ? "Order cancelled. Shopping cannot start." : simulation ? "SANDBOX SIMULATION — no real purchase card or money. Use test products and a test receipt only." : reference && verified
           ? "Company card verified for this order."
           : "A funded GBP Stripe Issuing card is required for the assigned driver before shopping starts."}
       </p>
@@ -41,7 +44,7 @@ export function ShoppingFundingPanel({
           : `${minutes} minutes`}
       </p>
       {problem && <p role="alert">Driver report: {problem}</p>}
-      {canVerify && !closed && <>{sandbox && <div className="rounded-lg border border-orange-400/30 p-3 space-y-2"><p className="text-sm">Stripe sandbox only. This creates a test card; funded Issuing balance is still required.</p><button disabled={busy} className="min-h-11 rounded-lg border border-white/20 px-3" onClick={async()=>{setBusy(true);try{const r=await createSandboxShoppingCard(id);if(r.cardId){setCard(r.cardId);setMessage("Test card created. Add test Issuing funds in Stripe, then verify company funding below.")}else setMessage(r.error??"Test card unavailable.")}catch{setMessage("Test card could not be created.")}finally{setBusy(false)}}}>Create sandbox purchase card</button></div>}<label className="block">
+      {canVerify && !closed && <>{sandbox && <div className="rounded-lg border border-orange-400/30 p-3 space-y-2"><p className="text-sm">Stripe sandbox only. This creates a test card; funded Issuing balance is still required.</p><button disabled={busy||!!reference} className="min-h-11 rounded-lg border border-white/20 px-3" onClick={async()=>{setBusy(true);try{const r=await createSandboxShoppingCard(id);if(r.cardId){setCard(r.cardId);setMessage("Test card created. Add test Issuing funds in Stripe, then verify company funding below.")}else setMessage(r.error??"Test card unavailable.")}catch{setMessage("Test card could not be created.")}finally{setBusy(false)}}}>Create sandbox purchase card</button><button disabled={busy||!!reference} className="min-h-11 rounded-lg border border-orange-400/50 px-3" onClick={async()=>{if(!window.confirm("Enable shopping simulation for this paid Stripe test order? No real card, funds or purchases will be created. Use a test receipt only."))return;setBusy(true);try{const r=await simulateShoppingFunding(id);setMessage(r.error??"Sandbox simulation enabled. The driver can test shopping and receipt settlement.");if(!r.error)router.refresh()}catch{setMessage("Simulation could not be enabled.")}finally{setBusy(false)}}}>Simulate funded card · test only</button><p className="text-xs">If Issuing is unavailable, simulation tests the app workflow only. It does not test Stripe Issuing authorisations or real merchant purchases.</p></div>}{!simulation&&<><label className="block">
         Dedicated Stripe Issuing card reference
         <input
           value={card}
@@ -65,7 +68,7 @@ export function ShoppingFundingPanel({
       >
         {busy ? "Verifying…" : "Verify company funding"}
       </button>
-      <p role="status">{message}</p></>}
+      </>}<p role="status">{message}</p></>}
       <p className="text-sm">
         Use a dedicated company card provided securely to the assigned driver.
         Never enter or store its card number here.

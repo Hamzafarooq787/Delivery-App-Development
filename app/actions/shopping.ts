@@ -1,4 +1,5 @@
 "use server"
+import {isShoppingSimulation,verifiedShoppingSimulation} from "@/lib/payments/shopping-sandbox"
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
@@ -257,6 +258,10 @@ export async function updateBfmStage(
   if (["cancelled", "delivered"].includes(delivery.status)) return { error: "Order is closed" }
   if (delivery.service_type !== "buy_for_me") return { error: "Not a Buy for Me order" }
 
+  if(isShoppingSimulation(delivery.company_card_reference)){
+    try{const simulation=await verifiedShoppingSimulation(deliveryId,delivery.company_card_reference!);if(simulation.driver_id!==user.id)return {error:"Sandbox driver changed. Contact support."}}
+    catch{return {error:"Shopping simulation is disabled outside its paid Stripe test booking. No real purchases are allowed."}}
+  }
   const currentStage = delivery.bfm_stage ?? delivery.status
   const allowed = VALID_BFM_TRANSITIONS[currentStage] ?? []
   if (!allowed.includes(newStage)) {
@@ -481,7 +486,12 @@ export async function submitPurchaseReceipt(params: {
   const { data: objects, error: storageError } = await admin.storage.from("delivery-item-photos").list(`${user.id}/receipts/${params.deliveryId}`)
   if (storageError || !objects?.some(o => o.name === receiptPath.split("/").at(-1))) return { error: "Receipt upload could not be verified." }
   if(delivery.payment_method === "stripe" && !delivery.shopping_hold_settled_at) {
-    try { await verifyCompanyReceipt(delivery.company_card_reference,Number(delivery.purchase_authorized_total),params.actual_items_total) }
+    try {
+      if(isShoppingSimulation(delivery.company_card_reference)){
+        const simulation=await verifiedShoppingSimulation(params.deliveryId,delivery.company_card_reference!)
+        if(simulation.driver_id!==user.id||simulation.simulated_spent===null||Math.round(Number(simulation.simulated_spent)*100)!==Math.round(params.actual_items_total*100)||Math.round(Number(delivery.purchase_authorized_total)*100)!==Math.round(params.actual_items_total*100))throw Error("Simulated purchase and receipt do not match")
+      }else await verifyCompanyReceipt(delivery.company_card_reference,Number(delivery.purchase_authorized_total),params.actual_items_total)
+    }
     catch { return {error:"Company card purchase does not match the approved basket and receipt yet. Check the total or contact support; do not use personal money."} }
   }
   const { data: settlement, error } = await admin.rpc("settle_shopping_receipt_atomic", { p_delivery_id: params.deliveryId, p_driver_id: user.id, p_receipt_url: params.receipt_url, p_actual_total: params.actual_items_total })

@@ -51,3 +51,6 @@
 
 .stepError{position:static;margin:0 0 12px;color:var(--brand-soft);font-size:13px;line-height:1.4;overflow-wrap:anywhere}
 @media(max-width:600px){.body[data-step="2"],.body[data-step="3"]{padding-bottom:calc(36px + env(safe-area-inset-bottom));scroll-padding-bottom:36px}.footer{position:relative;flex:0 0 auto}}
+
+/* Keep the last review control reachable as policy text or the keyboard grows. */
+.body[data-step="2"],.body[data-step="3"]{padding-bottom:calc(72px + env(safe-area-inset-bottom));scroll-padding-bottom:72px}.reviewStep>label:last-child{flex-shrink:0;scroll-margin-bottom:48px}.footer{max-height:48%;overflow-y:auto}.footer details p{max-height:20dvh;overflow-y:auto}

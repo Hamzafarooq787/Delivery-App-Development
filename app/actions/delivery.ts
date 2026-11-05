@@ -872,7 +872,13 @@ export async function adminAssignDriver(deliveryId: string, driverId: string | n
   const {data:previous}=await db.from("delivery_requests").select("driver_id,bfm_stage,company_card_reference").eq("id",deliveryId).maybeSingle();
   if (!previous || previous.company_card_reference || ["shopping","purchase_completed","heading_to_customer"].includes(previous.bfm_stage)) return {error:"This job cannot change drivers after shopping or card assignment. Contact support."};
   const {error}=await db.rpc("admin_assign_delivery",{p_actor:actor.id,p_id:deliveryId,p_driver:driverId,p_reason:reason})
-  if(error)return{error:"Assignment could not save. Enter a reason and select an approved, available driver with a suitable vehicle. Paid and uncollected orders only."}
+  if(error){
+    if(driverId && error.message?.includes("driver_has_active_job")){
+      const {data:active}=await db.from("delivery_requests").select("id,tracking_number,status").eq("driver_id",driverId).neq("id",deliveryId).in("status",["accepted","collected","picked_up","in_transit"]).order("created_at",{ascending:false}).limit(1).maybeSingle()
+      return {error:active?`This driver is busy with order ${active.tracking_number??active.id} (${active.status}). Release or finish that job before assigning another.`:"This driver is busy with another active order. Refresh the driver’s jobs before assigning."}
+    }
+    return{error:"Assignment could not save. Enter a reason and select an approved, available driver with a suitable vehicle. Paid and uncollected orders only."}
+  }
   after(async()=>{
     if(previous.driver_id && previous.driver_id!==driverId) await notifyUser({userId:previous.driver_id,title:"Driver assignment changed",body:"This job is no longer assigned to you.",url:"/dashboard/driver/jobs/available",tag:`unassigned-${deliveryId}`}).catch(()=>{});
     if(driverId && previous.driver_id!==driverId) await notifyUser({userId:driverId,title:"Delivery assigned",body:"GoDrop assigned a job to you. Open your active jobs for details.",url:"/dashboard/driver/active-jobs",tag:`assigned-${deliveryId}`}).catch(()=>{});
