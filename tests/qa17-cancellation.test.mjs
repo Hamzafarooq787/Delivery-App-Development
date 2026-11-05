@@ -31,6 +31,7 @@ async function database(){
  await db.exec(source.slice(source.indexOf('create or replace function public.queue_order_refund'),source.indexOf('-- Legacy wallet refund')))
  await db.exec(migration)
  await db.exec(fs.readFileSync("supabase/migrations/20261105053922_qa17_postcollection_cancellation.sql","utf8"))
+ await db.exec(fs.readFileSync("supabase/migrations/20261105054441_qa17_cancellation_null_guard.sql","utf8"))
  return db
 }
 async function quote(db,actor=customer,fault='customer'){return (await db.query('select cancellation_quote($1,$2,$3) q',[actor,job,fault])).rows[0].q}
@@ -152,4 +153,16 @@ test('Both booking flows expose cancellation terms before the payment action, ou
  assert.ok(normalFooter.indexOf('<CancellationPolicyNotice')<normalFooter.indexOf('Confirm & Pay'))
  const shopping=fs.readFileSync('components/customer/ShoppingBookingForm.tsx','utf8')
  assert.match(shopping,/step===4 && <CancellationPolicyNotice\/>/)
+})
+
+test('Unassigned orders cannot be previewed or cancelled by an unrelated customer; malformed fees cannot reach quotes',async()=>{
+ const db=await database()
+ try{
+  await db.exec("update delivery_requests set status='requested',driver_id=null")
+  await assert.rejects(quote(db,other),/order_unavailable/)
+  await assert.rejects(cancel(db,0,other),/order_unavailable/)
+  await assert.rejects(db.exec(`update surge_pricing_settings set cancellation_settings='{}'`))
+  assert.equal((await db.query('select status from delivery_requests')).rows[0].status,'requested')
+  assert.equal((await db.query('select refund_jobs from payments')).rows[0].refund_jobs.length,0)
+ }finally{await db.close()}
 })
