@@ -144,3 +144,12 @@ test('Collected parcels retain the agreed arrival fee, while driver fault is ful
   }finally{await db.close()}
  }
 })
+
+test('Both booking flows expose cancellation terms before the payment action, outside the success screen',()=>{
+ const parcel=fs.readFileSync('components/customer/NewDeliveryModal.tsx','utf8')
+ const normalFooter=parcel.slice(parcel.lastIndexOf('<footer className={styles.footer}>'))
+ assert.match(normalFooter,/step === 3 && <CancellationPolicyNotice\/>/)
+ assert.ok(normalFooter.indexOf('<CancellationPolicyNotice')<normalFooter.indexOf('Confirm & Pay'))
+ const shopping=fs.readFileSync('components/customer/ShoppingBookingForm.tsx','utf8')
+ assert.match(shopping,/step===4 && <CancellationPolicyNotice\/>/)
+})

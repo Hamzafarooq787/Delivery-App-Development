@@ -648,7 +648,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
           <p>We’ll let you know when a driver accepts your delivery.</p>
         </div>
         <footer className={styles.footer}>
-          {step===3 && <CancellationPolicyNotice/>}<div className={styles.actions}>
+          <div className={styles.actions}>
           <button onClick={onClose}>Done</button>
           <button className={styles.continue} onClick={() => { onClose(); router.push(`/dashboard/customer/tracking?id=${encodeURIComponent(success.id)}`) }}>Track delivery</button>
         </div></footer>
@@ -944,6 +944,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
           </div>}
         </div>
         <footer className={styles.footer}>
+          {step === 3 && <CancellationPolicyNotice/>}
           {step === 3 && missingReason && <p role="status">{missingReason}</p>}
           <div className={styles.actions}>
             <button disabled={submitting || addingFunds} onClick={() => step === 1 ? onClose() : goTo(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button>
