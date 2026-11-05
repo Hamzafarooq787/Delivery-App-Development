@@ -49,7 +49,7 @@ export function CustomerShoppingOrder({ orderId }: { orderId: string }) {
   const decisionsOpen = order?.status === 'collected' && order.bfm_stage === 'shopping'
   return <section className={styles.panel} aria-label="Your shopping order">
     <h2>Your shopping order</h2>
-    {order && <p>{order.shop_name} · {(order.bfm_stage ?? order.status ?? 'pending').replaceAll('_',' ')}</p>}
+    {order && <p>{order.shop_name} · {(['delivered','cancelled'].includes(order.status)?order.status:order.bfm_stage??order.status??'pending').replaceAll('_',' ')}</p>}
     {loading && <p role="status">Loading shopping details…</p>}
     {error && <div role="alert"><p>{error}</p><button type="button" onClick={()=>void refresh()}>Refresh shopping details</button></div>}
     {notice && <p role="status">{notice}</p>}

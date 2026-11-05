@@ -241,7 +241,7 @@ export default async function AdminOrderDetailPage({
                 {order.bfm_stage && (
                   <div>
                     <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Shopping Stage</p>
-                    <p className="text-white font-medium capitalize">{String(order.bfm_stage).replace(/_/g, " ")}</p>
+                    <p className="text-white font-medium capitalize">{String(["delivered","cancelled"].includes(order.status)?order.status:order.bfm_stage).replace(/_/g, " ")}</p>
                   </div>
                 )}
                 {order.max_spend_approved != null && (
@@ -481,7 +481,7 @@ export default async function AdminOrderDetailPage({
             </div>
             <OrderActionsPanel
               paymentMethod={order.payment_method??"wallet"}
-              shoppingStage={order.bfm_stage}
+              shoppingStage={["delivered","cancelled"].includes(order.status)?order.status:order.bfm_stage}
               orderId={order.id}
               orderStatus={order.status}
               currentDriverId={order.driver_id ?? null}

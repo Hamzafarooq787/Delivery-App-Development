@@ -1,6 +1,4 @@
--- The completion RPC writes the terminal BfM stage; retain all existing stages.
-alter table public.delivery_requests drop constraint delivery_requests_bfm_stage_check;
-alter table public.delivery_requests add constraint delivery_requests_bfm_stage_check check(bfm_stage in ('heading_to_shop','arrived_at_shop','shopping','purchase_completed','heading_to_customer','delivered'));
+-- Keep the existing BfM stage constraint; the main status is the terminal delivery state.
 alter table public.delivery_requests add column assignment_history jsonb not null default '[]'::jsonb check(jsonb_typeof(assignment_history)='array');
 
 create or replace function public.record_collection_milestones() returns trigger language plpgsql security definer set search_path=public,pg_temp as $$
@@ -54,8 +52,7 @@ begin
   update delivery_otps set attempts=attempts+1 where delivery_id=p_id;
   return jsonb_build_object('error','Incorrect delivery code','attemptsRemaining',greatest(0,4-code.attempts));
  end if;
- update delivery_requests set status='delivered',delivered_at=now(),delivered_image_url=p_photo,
- bfm_stage=case when service_type='buy_for_me' then 'delivered' else bfm_stage end where id=p_id;
+ update delivery_requests set status='delivered',delivered_at=now(),delivered_image_url=p_photo where id=p_id;
  update delivery_otps set verified_at=now() where delivery_id=p_id;
  insert into delivery_status_logs(delivery_id,status,updated_by) values(p_id,'delivered',p_driver);
  delete from driver_locations where driver_id=p_driver and delivery_id=p_id;

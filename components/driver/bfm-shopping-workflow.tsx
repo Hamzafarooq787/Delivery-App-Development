@@ -91,7 +91,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
   const [uploadingReceipt, setUploadingReceipt] = useState(false)
   const router = useRouter()
 
-  const currentStage = job.bfm_stage ?? job.status
+  const currentStage = ["delivered","cancelled"].includes(job.status)?job.status:job.bfm_stage??job.status
 
   useEffect(() => {
     let active = true, pending = false

@@ -281,7 +281,7 @@ test('QA18: simulated purchase retains basket approval checks, queues the differ
  }finally{await db.close()}
 })
 
-test('QA19: the actual pre-fix BfM stage constraint rejects delivery; the migration allows PIN completion once',async()=>{
+test('QA19: the actual pre-fix BfM stage constraint rejects delivery; the migration completes by main status without weakening the constraint',async()=>{
  const db=await database({qa19:false})
  try{
   await db.exec(fs.readFileSync("tests/fixtures/qa19-completion-baseline.sql","utf8"))
@@ -293,7 +293,7 @@ test('QA19: the actual pre-fix BfM stage constraint rejects delivery; the migrat
   assert.equal((await complete()).rows[0].result.success,true)
   assert.equal((await complete()).rows[0].result.success,true)
   const row=(await db.query('select status,bfm_stage,delivered_image_url from delivery_requests')).rows[0]
-  assert.deepEqual(row,{status:'delivered',bfm_stage:'delivered',delivered_image_url:'test-pod'})
+  assert.deepEqual(row,{status:'delivered',bfm_stage:'heading_to_customer',delivered_image_url:'test-pod'})
   assert.equal((await db.query('select count(*) n from driver_earnings where delivery_id=$1',[job])).rows[0].n,1)
  }finally{await db.close()}
 })
