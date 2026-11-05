@@ -13,7 +13,7 @@ async function database(){
  create table users(id uuid primary key,role text,account_status text);
  create table driver_profiles(id uuid primary key,status text);
  create table surge_pricing_settings(id boolean primary key);insert into surge_pricing_settings values(true);
- create table delivery_requests(id uuid primary key,customer_id uuid,driver_id uuid,status text,service_type text,payment_method text,bfm_stage text,purchase_confirmed_at timestamptz,recovery_case jsonb,cancelled_by text,shopping_hold_settled_at timestamptz,max_spend_approved numeric,created_at timestamptz,tracking_number text);
+ create table delivery_requests(id uuid primary key,customer_id uuid,driver_id uuid,status text,service_type text,payment_method text,cancellation_policy jsonb,bfm_stage text,purchase_confirmed_at timestamptz,recovery_case jsonb,cancelled_by text,shopping_hold_settled_at timestamptz,max_spend_approved numeric,created_at timestamptz,tracking_number text);
  create table payments(id uuid primary key default gen_random_uuid(),delivery_id uuid,related_delivery_id uuid,purpose text default 'booking',status text default 'paid',payment_method text default 'stripe',amount numeric,refund_jobs jsonb default '[]');
  create table wallet_transactions(user_id uuid,type text,amount numeric,description text,delivery_id uuid);
  create table wallet_balances(user_id uuid primary key,balance numeric,updated_at timestamptz);
@@ -113,4 +113,16 @@ test('Sandbox issuing card tool refuses live keys and live provider objects befo
   const {result,writes}=await run(key,live);assert.ok(result.error);assert.equal(writes,0)
  }
  const {result,writes}=await run('sk_test_test',false);assert.equal(result.cardId,'ic_test');assert.equal(writes,2)
+})
+
+test('New bookings retain their recorded cancellation fees after an administrator changes settings',async()=>{
+ const db=await database()
+ try{
+  await db.exec("delete from payments;delete from delivery_requests")
+  await db.query("insert into delivery_requests(id,customer_id,driver_id,status,service_type,payment_method) values($1,$2,$3,'accepted','delivery','stripe')",[job,customer,driver])
+  await db.query("insert into payments(delivery_id,amount) values($1,15.69)",[job])
+  await db.query("select collection_milestone($1,$2,'travel')",[driver,job])
+  await db.exec(`update surge_pricing_settings set cancellation_settings='{"travelFee":9,"travelDriver":8,"arrivedFee":10,"arrivedDriver":9}'`)
+  assert.equal((await quote(db)).fee,2.5)
+ }finally{await db.close()}
 })

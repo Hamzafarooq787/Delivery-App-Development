@@ -63,7 +63,7 @@ begin
  if p_fault not in ('customer','driver','no_show','service_failure','admin') then raise exception 'invalid_reason';end if;
  if p_actor=o.customer_id and p_fault<>'customer' then raise exception 'support_review_required';end if;
  if p_actor=o.driver_id and p_fault<>'driver' then raise exception 'support_review_required';end if;
- select cancellation_settings into config from surge_pricing_settings where id=true;
+ select coalesce(o.cancellation_policy->'milestoneFees',cancellation_settings) into config from surge_pricing_settings where id=true;
  if config is null then raise exception 'policy_unavailable';end if;
  if o.payment_method='stripe' then
   select p.amount,coalesce((select sum((r->>'amount')::numeric) from jsonb_array_elements(p.refund_jobs) r where r->>'state' not in ('failed','canceled')),0) into paid,returned
@@ -207,3 +207,17 @@ begin
   end if;
  end loop;
 end $patch$;
+
+
+-- Keep the cancellation terms attached to new paid bookings.
+create function public.snapshot_milestone_cancellation_policy() returns trigger
+language plpgsql security definer set search_path=public,pg_temp as $$
+declare settings jsonb;
+begin
+ select cancellation_settings into settings from surge_pricing_settings where id=true;
+ if settings is null then raise exception 'cancellation_policy_unavailable';end if;
+ new.cancellation_policy:=coalesce(new.cancellation_policy,'{}')||jsonb_build_object('milestoneFees',settings,'version',1);
+ return new;
+end $$;
+revoke all on function public.snapshot_milestone_cancellation_policy() from public,anon,authenticated;
+create trigger zz_snapshot_milestone_cancellation_policy before insert on public.delivery_requests for each row execute function public.snapshot_milestone_cancellation_policy();
