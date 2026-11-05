@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { updateDeliveryStatus } from "@/app/actions/delivery"
 import { ParcelAuthModal } from "./parcel-auth-modal"
+import { CancelOrderButton } from "@/components/customer/cancel-order-button"
 import { CollectionMilestones } from "./collection-milestones"
 import { PACKAGE_SIZE_INFO,isPackageSize } from "@/lib/vehicles"
 import { SafetyCancelButton } from "./safety-cancel-button"
@@ -438,6 +439,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
 
             {/* Safety cancel — slim secondary row */}
             <SafetyCancelButton jobId={job.id} label="Release job" />
+            <CancelOrderButton deliveryId={job.id} currentStatus={job.status} fault="driver" onCancelled={()=>router.refresh()}/>
 
           </div>
         </div>

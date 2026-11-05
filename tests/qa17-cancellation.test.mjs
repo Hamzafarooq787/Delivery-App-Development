@@ -30,6 +30,7 @@ async function database(){
  const source=fs.readFileSync('supabase/migrations/20261030211100_direct_checkout_and_shopping_operations.sql','utf8')
  await db.exec(source.slice(source.indexOf('create or replace function public.queue_order_refund'),source.indexOf('-- Legacy wallet refund')))
  await db.exec(migration)
+ await db.exec(fs.readFileSync("supabase/migrations/20261105053922_qa17_postcollection_cancellation.sql","utf8"))
  return db
 }
 async function quote(db,actor=customer,fault='customer'){return (await db.query('select cancellation_quote($1,$2,$3) q',[actor,job,fault])).rows[0].q}
@@ -125,4 +126,21 @@ test('New bookings retain their recorded cancellation fees after an administrato
   await db.exec(`update surge_pricing_settings set cancellation_settings='{"travelFee":9,"travelDriver":8,"arrivedFee":10,"arrivedDriver":9}'`)
   assert.equal((await quote(db)).fee,2.5)
  }finally{await db.close()}
+})
+
+test('Collected parcels retain the agreed arrival fee, while driver fault is fully refunded and opens safe return',async()=>{
+ for(const fault of ['customer','driver']){
+  const db=await database()
+  try{
+   await db.query("select collection_milestone($1,$2,'travel')",[driver,job])
+   await db.query("select collection_milestone($1,$2,'arrived')",[driver,job])
+   await db.exec("update delivery_requests set status='collected'")
+   const actor=fault==='customer'?customer:driver
+   const q=await quote(db,actor,fault)
+   assert.equal(q.review,false);assert.equal(q.fee,fault==='customer'?3.5:0)
+   await cancel(db,q.fee,actor,fault)
+   const state=(await db.query('select status,recovery_case from delivery_requests')).rows[0]
+   assert.equal(state.status,'cancelled');assert.equal(state.recovery_case.action,'return_to_pickup')
+  }finally{await db.close()}
+ }
 })
