@@ -128,7 +128,7 @@ export default async function AdminOrderDetailPage({
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Item Description</p>
                 <p className="text-white font-medium">{order.item_description ?? "—"}</p>
-                {isPackageSize(parcelSize) && <p className="text-sm text-white/70">{PACKAGE_SIZE_INFO[parcelSize].label}</p>}
+                {isPackageSize(parcelSize) && <p className="text-sm text-white/70">{PACKAGE_SIZE_INFO[parcelSize].label} · {PACKAGE_SIZE_INFO[parcelSize].minVehicle}</p>}
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Declared Value</p>
