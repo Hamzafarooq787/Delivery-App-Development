@@ -1,5 +1,6 @@
 "use client"
 
+import { declineDelivery } from "@/app/actions/delivery"
 import { canRequestDriverLocation, rememberDriverLocationDenial } from "@/lib/driver-location-permission"
 import { driverEarning } from "@/lib/driver-earnings"
 import { useState, useMemo, useEffect } from "react"
@@ -51,6 +52,8 @@ function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number):
 }
 
 export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
+  const [declineError,setDeclineError]=useState("")
+  const [declining,setDeclining]=useState<string|null>(null)
   const [skipped,setSkipped]=useState<string[]>([])
   const [previewId,setPreviewId]=useState<string|null>(null)
   const [search, setSearch] = useState("")
@@ -104,6 +107,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
         </p>
       </div>
 
+      {declineError&&<p role="alert" className="text-red-300">{declineError}</p>}
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
@@ -256,7 +260,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
                     <p><strong>Your earnings:</strong> {price??"Not quoted"}</p>
                   </div>}
                   <AcceptJobButton deliveryId={job.id} />
-                  <button type="button" onClick={()=>setSkipped(current=>[...current,job.id])} className="min-h-11 rounded-lg border border-white/20 px-3 text-sm text-white hover:bg-white/10">Decline for now</button>
+                  <button type="button" disabled={!!declining} onClick={async()=>{if(!window.confirm("Decline this job? It will stay hidden for your driver account."))return;setDeclining(job.id);setDeclineError("");try{const result=await declineDelivery(job.id);if(result.error)setDeclineError(result.error);else setSkipped(current=>[...current,job.id])}catch{setDeclineError("Decline could not save. Please retry.")}finally{setDeclining(null)}}} className="min-h-11 rounded-lg border border-white/20 px-3 text-sm text-white hover:bg-white/10">Decline for now</button>
                 </div>
               </div>
             )

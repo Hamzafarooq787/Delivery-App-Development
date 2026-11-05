@@ -153,7 +153,7 @@ function LoginPageContent() {
                 </>
               )}
             </button>
-          </form>
+          <p className="mt-3 text-xs text-white/70">By continuing, you agree to our <Link href="/terms" className="inline-flex min-h-11 items-center underline">Terms</Link> and acknowledge our <Link href="/privacy-policy" className="inline-flex min-h-11 items-center underline">Privacy Policy</Link>.</p></form>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">

@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 
 export const getDriverReadProfile = cache(async (driverId: string) =>
   createAdminClient(boundedFetch(3500)).from("driver_profiles")
-    .select("status,is_online,verification_submitted_at").eq("id", driverId).maybeSingle())
+    .select("status,is_online,verification_submitted_at,declined_jobs").eq("id", driverId).maybeSingle())
 
 export const getDriverActiveJobs = cache(async (driverId: string) =>
   createAdminClient(boundedFetch(3500)).from("delivery_requests")

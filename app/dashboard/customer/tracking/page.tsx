@@ -10,7 +10,7 @@ import navStyles from '@/components/customer/CustomerNavigation.module.css'
 import {openNewCustomerOrder} from '@/components/customer/CustomerNavigation'
 import { CustomerLocationBroadcaster } from '@/components/tracking/customer-location-broadcaster'
 import { CollectionWaiting } from '@/components/driver/collection-waiting'
-import { cancelOrder } from '@/app/actions/wallet'
+import { CancelOrderButton } from '@/components/customer/cancel-order-button'
 import { CustomerThread } from '@/components/shared/customer-thread'
 import { CustomerShoppingOrder } from '@/components/customer/CustomerShoppingOrder'
 import { LiveTrackingPanel } from '@/components/tracking/live-tracking-panel'
@@ -155,8 +155,6 @@ function TrackingPageInner() {
   const statusCfg = STATUS_COLORS[shipment?.status] ?? STATUS_COLORS.requested
   const isDelivered = shipment?.status === 'delivered'
   const isCancelled = shipment?.status === 'cancelled'
-  const [cancelPending,setCancelPending]=useState(false)
-  const [cancelError,setCancelError]=useState('')
   const canCancel=!!shipment && ['requested','accepted'].includes(shipment.status) && !['shopping','purchase_completed','heading_to_customer'].includes(shipment.bfm_stage??'')
 
   return (
@@ -241,17 +239,8 @@ function TrackingPageInner() {
             )}
           </div>
 
-          {isCancelled && <p className="p-5 text-sm text-white">This order was cancelled. Check Payments for your refund status.</p>}
-          {canCancel && <div className="px-5 py-3"><button type="button" className="rounded-lg border border-red-400/50 px-3 py-2 text-sm text-red-200" disabled={cancelPending} onClick={async()=>{
-            if (!shipment || !window.confirm('Cancel this order? Check Payments for any refund.')) return
-            setCancelPending(true);setCancelError('')
-            try {
-              const result=await cancelOrder(shipment.id)
-              if (!result.success) setCancelError(result.error??'Could not cancel this order.')
-              else {setShipment({...shipment,status:'cancelled'});setRevision(v=>v+1)}
-            } catch {setCancelError('Cancellation could not be confirmed. Refresh before trying again.')}
-            finally {setCancelPending(false)}
-          }}>{cancelPending?'Cancelling…':'Cancel order'}</button>{cancelError&&<p role="alert">{cancelError}</p>}</div>}
+          {isCancelled && <p className="p-5 text-sm text-white">This order was cancelled. {shipment?.cancellation_outcome?.reason} Check Payments for your refund status.</p>}
+          {shipment && !["cancelled","delivered"].includes(shipment.status) && <div className="px-5 py-3 flex flex-wrap gap-3"><CancelOrderButton deliveryId={shipment.id} currentStatus={shipment.status} onCancelled={()=>setRevision(v=>v+1)}/><a className="min-h-11 inline-flex items-center underline text-sm text-white" href="/dashboard/customer/support">Contact Support</a></div>}
           {/* ── Payment breakdown ── */}
           {shipment?.service_type !== 'buy_for_me' && shipment?.price != null && (
             <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-[#494847]/20 shrink-0 bg-[#1a1919]">

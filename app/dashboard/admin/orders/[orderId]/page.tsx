@@ -116,6 +116,8 @@ export default async function AdminOrderDetailPage({
         {/* Main column */}
         <div className="lg:col-span-8 space-y-5">
 
+          {order.cancellation_outcome && <section className="rounded-xl border border-white/20 p-4 text-white"><h3 className="font-bold">Cancellation</h3><p>{order.cancellation_outcome.reason}</p><p>Customer fee £{Number(order.cancellation_outcome.fee).toFixed(2)} · Driver compensation £{Number(order.cancellation_outcome.driver).toFixed(2)} · GoDrop £{Number(order.cancellation_outcome.platform).toFixed(2)}</p></section>}
+          <section className="rounded-xl border border-white/15 p-4 text-white"><h3 className="font-bold">Collection milestones</h3>{[["Accepted",order.accepted_at],["Travel started",order.travel_started_at],["Arrived",order.arrived_at],["Purchased",order.purchased_at]].map(([label,value])=><p key={label as string} className="text-sm">{label}: {value?new Date(value).toLocaleString("en-GB",{timeZone:"Europe/London"}):"Not recorded"}</p>)}</section>
           {/* Package Details */}
           <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-5">
@@ -212,7 +214,7 @@ export default async function AdminOrderDetailPage({
           {order.collection_wait&&<section className="rounded-xl border border-white/15 bg-[var(--brand-panel)] p-4 text-white"><h3 className="font-bold">Collection waiting request</h3><p>Status: {order.collection_wait.status}</p>{order.collection_wait.amount!=null&&<p>Requested £{Number(order.collection_wait.amount).toFixed(2)} at £{Number(order.collection_wait.rate).toFixed(2)} per minute after 5 free minutes.</p>}<p className="text-sm">Approval alone does not take payment. A separate paid checkout records the waiting charge; earnings follow delivery completion.</p></section>}
           {paymentError && <p role="status" className="text-amber-200">Payment details are temporarily unavailable. Reload to retry.</p>}
           {cardPayments?.map(p=><OrderPaymentPanel key={p.id} id={orderId} paymentId={p.id} purpose={p.purpose} amount={p.amount} status={p.status} closed={order.status === "cancelled"} refunds={p.refund_jobs??[]} />)}
-      {order.service_type === "buy_for_me" && <ShoppingFundingPanel canVerify={actor.owner||actor.scopes.includes("finance")} closed={order.status==="cancelled"} id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
+      {order.service_type === "buy_for_me" && <ShoppingFundingPanel sandbox={/^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY??"")} canVerify={actor.owner||actor.scopes.includes("finance")} closed={order.status==="cancelled"} id={order.id} reference={order.company_card_reference} verified={!!order.company_card_verified_at} problem={order.shopping_problem} started={order.shopping_started_at} completed={order.purchase_confirmed_at} />}
           {/* Buy for Me Details */}
           {order.service_type === "buy_for_me" && (
             <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-secondary)]/15 rounded-xl p-5 md:p-6">

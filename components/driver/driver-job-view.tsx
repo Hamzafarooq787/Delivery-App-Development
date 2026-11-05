@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { updateDeliveryStatus } from "@/app/actions/delivery"
 import { ParcelAuthModal } from "./parcel-auth-modal"
+import { CollectionMilestones } from "./collection-milestones"
+import { PACKAGE_SIZE_INFO,isPackageSize } from "@/lib/vehicles"
 import { SafetyCancelButton } from "./safety-cancel-button"
 import { DeliveryOtpModal } from "./delivery-otp-modal"
 import { RateCustomerCard } from "./rate-customer-card"
@@ -38,6 +40,11 @@ const STATUS_ICONS: Record<string, string> = {
 }
 
 type Job = {
+  accepted_at?: string|null
+  travel_started_at?: string|null
+  arrived_at?: string|null
+  package_size?:string|null
+  cancellation_outcome?: {fee:number;driver:number;reason:string}|null
   recipient_name?: string|null
   recipient_phone?: string|null
   collection_at?: string|null
@@ -171,6 +178,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
           "bg-amber-400/10 text-amber-400 border-amber-400/20"
         }`}>
           {STATUS_LABELS[job.status] ?? job.status}
+          {job.package_size && isPackageSize(job.package_size) && <span className="block text-sm">{PACKAGE_SIZE_INFO[job.package_size].label} · {PACKAGE_SIZE_INFO[job.package_size].minVehicle}</span>}
         </div>
 
       </div>
@@ -385,6 +393,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
 
       </div>
 
+      {job.cancellation_outcome && <section className="m-4 rounded-xl border border-white/20 p-4 text-white"><h2>Cancellation</h2><p>{job.cancellation_outcome.reason}</p><p>Your compensation: £{Number(job.cancellation_outcome.driver).toFixed(2)}</p></section>}
       {/* Fixed action bar */}
       {!isDone && (
         <div
@@ -393,6 +402,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
         >
           <div className="max-w-2xl mx-auto space-y-2">
 
+            {job.status==="accepted" && <CollectionMilestones id={job.id} travel={job.travel_started_at} arrived={job.arrived_at}/>}
             {/* Primary CTA — full width */}
             {job.status === "accepted" && (
               <button

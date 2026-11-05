@@ -1,5 +1,6 @@
 'use client'
 
+import { CancellationPolicyNotice } from "./cancellation-policy-notice"
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Camera, Pencil, ShoppingBag } from 'lucide-react'
@@ -293,7 +294,8 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
           </> : <div className={styles.stack}><p>Price unavailable. Please retry before paying.</p><button type="button" className={styles.outline} onClick={() => void loadQuote()}>Retry price calculation</button></div>}
         </section></aside></div>}
       </main>
-      <footer className={styles.footer}>{error && !editor && <p role="alert" className={styles.error}>{error}</p>}<div className={styles.actions}><button type="button" disabled={submitting || uploading} onClick={() => step === 1 ? onClose() : go(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button><button type="button" className={styles.primary} disabled={submitting || quoting || uploading || locating || (step === 3 && !limitsAccepted) || (step === 4 && (!quote || !confirmed || !limitsAccepted))} onClick={next}>{submitting ? 'Opening checkout…' : quoting ? 'Calculating…' : locating ? 'Finding location…' : step === 4 ? `Confirm & Pay ${quote ? money(quote.totalCharge) : ''}` : 'Continue'}</button></div>{step === 4 && <p className={styles.secure}>Secure card checkout · No wallet required</p>}</footer>
+      <footer className={styles.footer}>
+        {step===4 && <CancellationPolicyNotice/>}{error && !editor && <p role="alert" className={styles.error}>{error}</p>}<div className={styles.actions}><button type="button" disabled={submitting || uploading} onClick={() => step === 1 ? onClose() : go(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button><button type="button" className={styles.primary} disabled={submitting || quoting || uploading || locating || (step === 3 && !limitsAccepted) || (step === 4 && (!quote || !confirmed || !limitsAccepted))} onClick={next}>{submitting ? 'Opening checkout…' : quoting ? 'Calculating…' : locating ? 'Finding location…' : step === 4 ? `Confirm & Pay ${quote ? money(quote.totalCharge) : ''}` : 'Continue'}</button></div>{step === 4 && <p className={styles.secure}>Secure card checkout · No wallet required</p>}</footer>
     </section>
     {editor && <ShoppingItemEditor key={editor.id} item={editor} existing={items.some(i => i.id === editor.id)} maxQuantity={limits.maxQuantityPerProduct} busy={uploading} error={editorError} showDetails={editorDetails} onChange={(field, value) => { setEditor(prev => prev ? { ...prev, [field]: value } : prev); setEditorError('') }} onPhoto={file => void photo(file)} onSave={saveItem} onCancel={closeEditor} onDelete={() => removeItem(editor.id)} />}
     {locationHelp && <LocationPermissionDialog issue={locationHelp} onClose={() => setLocationHelp(null)} onRetry={() => void gps()} onPosition={p => void gps(p)} onError={e => setLocationHelp(locationIssue(e))} />}

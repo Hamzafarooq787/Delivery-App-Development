@@ -1,5 +1,6 @@
 "use server";
 
+import { cancelByPolicy } from "@/app/actions/cancellation"
 import { boundedFetch } from "@/lib/short-request"
 import { parcelContact } from "@/lib/parcel-contact"
 
@@ -230,6 +231,7 @@ export async function startOrderCheckout(
     } else return { error: "Invalid service" };
     if (!Number.isFinite(amount) || amount < 0.5)
       return { error: "Invalid checkout amount." };
+    draft.checkout_ui_version = 1;
     draft.fingerprint = fingerprint;
     draft.tracking_number = `GD-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     // Ignore duplicate request inserts; both concurrent attempts use the same persisted draft and Stripe key.
@@ -302,6 +304,7 @@ export async function startOrderCheckout(
       {
         expires_at: expiry,
         mode: "payment",
+        ...(saved.checkout_ui_version === 1 ? {locale:"en-GB" as const} : {}),
         adaptive_pricing: { enabled: false },
         payment_method_types: ["card"],
         customer_email: user.email,
@@ -357,73 +360,14 @@ export async function getCheckoutOutcome(sessionId: string) {
     return {error:"Payment confirmation is still processing. Please refresh; do not pay again."}
   }
 }
-export async function cancelCardBooking(
-  deliveryId: string,
-): Promise<{ success?: boolean; amount?: number; error?: string }> {
-  const client = await createClient();
-  const {
-    data: { user },
-  } = await client.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-  const admin = createAdminClient();
-  const { data: job } = await admin
-    .from("delivery_requests")
-    .select("company_card_reference,customer_id,driver_id,status,bfm_stage,cancellation_policy")
-    .eq("id", deliveryId)
-    .maybeSingle();
-  const { data: caller } = await admin
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (
-    !job ||
-    (job.customer_id !== user.id &&
-      job.driver_id !== user.id &&
-      !(await getAdminActor("finance")))
-  )
-    return { error: "Not authorized" };
-  if (
-    job.status !== "cancelled" &&
-    (!["requested", "accepted"].includes(job.status) ||
-      ["shopping", "purchase_completed", "heading_to_customer"].includes(
-        job.bfm_stage,
-      ))
-  )
-    return {
-      error:
-        "Contact support to cancel after collection or shopping has started.",
-    };
-  if(job.cancellation_policy?.before==="review" && !(await getAdminActor("finance")))return{error:"This booking requires a support cancellation review. No refund or extra charge has been created."}
-  if (job.company_card_reference) {
-    try {
-      await getStripe().issuing.cards.update(job.company_card_reference, {
-        status: "inactive",
-      });
-    } catch {
-      return {
-        error:
-          "Company card could not be disabled. Contact support before cancelling.",
-      };
-    }
-  }
-  const { data, error } = await admin.rpc("cancel_card_order", {
-    p_id: deliveryId,
-    p_actor: user.id,
-  });
-  if (error)
-    return {
-      error:
-        "This order cannot be cancelled automatically after collection. Contact support.",
-    };
-  try {
-    await processOrderRefunds(deliveryId);
-  } catch {
-    /* Persistent refund queue is retried by cron/admin. */
-  }
-  revalidatePath(`/dashboard/admin/orders/${deliveryId}`);
-  revalidatePath("/dashboard/admin/payments");
-  return { success: true, amount: Number(data?.amount ?? 0) };
+export async function cancelCardBooking(deliveryId:string):Promise<{success?:boolean;amount?:number;error?:string}> {
+ const db=await createClient();const {data:{user}}=await db.auth.getUser()
+ if(!user)return {error:"Sign in again."}
+ const {data:order}=await createAdminClient().from("delivery_requests").select("customer_id,driver_id").eq("id",deliveryId).maybeSingle()
+ if(!order)return {error:"Order unavailable."}
+ const fault=order.customer_id===user.id?"customer":order.driver_id===user.id?"driver":"admin"
+ const result=await cancelByPolicy(deliveryId,0,"Cancellation requested",fault)
+ return result.data&&!result.data.review?{success:true,amount:Number(result.data.refund)}:{error:result.error??"Cancellation is waiting for admin review."}
 }
 
 /** Resume the same immutable checkout; never create a second charge on a return-page retry. */

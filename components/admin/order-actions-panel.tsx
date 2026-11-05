@@ -29,9 +29,12 @@ export function OrderActionsPanel({
 }) {
   const router = useRouter()
   const [closed,setClosed]=useState(false)
+  const canRequestCancellation = ["requested","accepted","collected","picked_up","in_transit"].includes(orderStatus)
   const canCancel = ["requested","accepted"].includes(orderStatus) && !["shopping","purchase_completed","heading_to_customer"].includes(shoppingStage??"")
 
   const refundKey=useRef<string | null>(null)
+  const [reason,setReason]=useState("Service failure")
+  const [note,setNote]=useState("")
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showRefundInput, setShowRefundInput] = useState(false)
   const [refundAmount, setRefundAmount] = useState("")
@@ -47,14 +50,14 @@ export function OrderActionsPanel({
 
   function handleCancel() {
     startCancel(async () => {
-      const result = await adminCancelOrder(orderId)
+      const result = await adminCancelOrder(orderId,`${reason}${note.trim()?": "+note.trim():""}`,reason==="Customer requested cancellation"?"customer":reason==="Driver no-show"?"no_show":"admin")
       setShowCancelConfirm(false)
       if (result.error) {
         flash(result.error, false)
       } else {
         setClosed(true); router.refresh()
         flash(
-          result.refunded
+          result.review ? "Cancellation sent for admin review. No automatic refund was issued." : result.refunded
             ? `Order cancelled. £${result.refundAmount?.toFixed(2)} refunded to customer.`
             : "Order cancelled.",
           true
@@ -103,11 +106,12 @@ export function OrderActionsPanel({
       </div>}
 
       {/* Cancel Order */}
-      {canCancel && !closed && (
+      {canRequestCancellation && !closed && (
         <>
           {showCancelConfirm ? (
             <div className="px-4 py-3 bg-red-500/5 rounded-lg border border-red-500/20 space-y-2">
-              <p className="text-xs text-red-400 font-medium">Cancel this order? The customer will be refunded the full amount.</p>
+              <p className="text-xs text-red-400 font-medium">Choose why this order is being cancelled. Purchased goods require admin review.</p>
+              <label className="block text-xs text-white">Reason<select value={reason} onChange={e=>setReason(e.target.value)} className="block w-full rounded bg-black/30 p-2">{["Service failure","Driver no-show","Customer requested cancellation","Duplicate test booking","Other"].map(value=><option key={value}>{value}</option>)}</select></label><label className="block text-xs text-white">Note<textarea value={note} maxLength={350} onChange={e=>setNote(e.target.value)} className="block w-full rounded bg-black/30 p-2"/></label>
               <div className="flex gap-2">
                 <button
                   type="button"

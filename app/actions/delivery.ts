@@ -230,6 +230,7 @@ export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
       documents.data?.some(doc => required.includes(doc.document_type) && !driverDocumentValid(doc))) {
     return { error: "Add your vehicle and current documents on the Verification page.", data: [] }
   }
+  if(profile.data?.declined_jobs?.length) { /* applied before pagination below */ }
   const allowedSizes = unionCapabilities((vehicles.data ?? []).map(v => v.vehicle_type as VehicleType))
   if (!allowedSizes.length) return { error: "Register a suitable vehicle before viewing jobs.", data: [] }
 
@@ -240,6 +241,8 @@ export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
     .eq("payments.purpose", "booking")
     .eq("status", "requested")
     .is("driver_id", null)
+    .gte("pickup_lat",49.8).lte("pickup_lat",61.1).gte("pickup_lng",-8.7).lte("pickup_lng",1.9)
+    .gte("delivery_lat",49.8).lte("delivery_lat",61.1).gte("delivery_lng",-8.7).lte("delivery_lng",1.9)
     .order("created_at", { ascending: false })
 
   // Legacy rows created before package_size existed have no size — shown to
@@ -248,6 +251,7 @@ export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
     ? query.or(`package_size.is.null,package_size.in.(${allowedSizes.join(",")})`)
     : query.is("package_size", null)
 
+  if(profile.data?.declined_jobs?.length) query=query.not("id","in",`(${profile.data.declined_jobs.join(",")})`)
   if(jobId){if(!/^[0-9a-f-]{36}$/i.test(jobId))return {data:[],count:0,error:'This job link is invalid.'};query=query.eq('id',jobId)}
   const safeSearch=search.replace(/[^\p{L}\p{N}\s-]/gu," ").trim().slice(0,80)
   if(safeSearch)query=query.or(`pickup_address.ilike.%${safeSearch}%,delivery_address.ilike.%${safeSearch}%,tracking_number.ilike.%${safeSearch}%`)
@@ -1148,3 +1152,9 @@ export async function markParcelCollected(deliveryId: string, photoUrl: string) 
   return { success: true }
 }
 
+
+export async function declineDelivery(id:string){
+ const user=await getDashboardUser();if(!user||!/^[0-9a-f-]{36}$/i.test(id))return {error:"Sign in as the driver."}
+ const {error}=await createAdminClient().rpc("decline_driver_job",{p_actor:user.id,p_id:id})
+ return error?{error:"This job could not be declined. Please refresh."}:{success:true}
+}

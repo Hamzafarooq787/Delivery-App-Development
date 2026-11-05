@@ -214,3 +214,26 @@ export async function enableApprovedPurchase(deliveryId: string) {
     };
   }
 }
+
+/** Creates a real Stripe test card; never bypasses funding or purchase checks. */
+export async function createSandboxShoppingCard(deliveryId:string){
+ return runAdminMutation("finance","createSandboxShoppingCard",deliveryId,async()=>{
+  if(!/^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY??""))return {error:"Sandbox card creation is disabled outside Stripe test mode."}
+  const actor=await getAdminActor("finance");if(!actor)return {error:"Finance permission is required."}
+  const admin=createAdminClient()
+  const {data:job}=await admin.from("delivery_requests").select("id,driver_id,status,service_type,company_card_reference,max_spend_approved").eq("id",deliveryId).maybeSingle()
+  if(!job || !job.driver_id || job.service_type!=="buy_for_me" || !["accepted","collected"].includes(job.status))return {error:"Assign a driver to an active Buy for Me test order first."}
+  if(job.company_card_reference)return {cardId:job.company_card_reference}
+  const {data:payment}=await admin.from("payments").select("stripe_payment_intent").eq("delivery_id",deliveryId).eq("purpose","booking").eq("status","paid").maybeSingle()
+  if(!payment?.stripe_payment_intent)return {error:"A paid Stripe test booking is required."}
+  try{
+   const stripe=getStripe()
+   const [balance,intent]=await Promise.all([stripe.balance.retrieve(),stripe.paymentIntents.retrieve(payment.stripe_payment_intent)])
+   if(balance.livemode || intent.livemode)return {error:"Live funds cannot use the sandbox card tool."}
+   const holder=await stripe.issuing.cardholders.create({type:"individual",name:"GoDrop Sandbox Driver",billing:{address:{line1:"1 Test Street",city:"Manchester",postal_code:"M1 1AE",country:"GB"}},metadata:{godrop_sandbox:"true"}},{idempotencyKey:`godrop-test-holder-${deliveryId}`})
+   const card=await stripe.issuing.cards.create({cardholder:holder.id,currency:"gbp",type:"virtual",status:"inactive",metadata:{godrop_job_id:deliveryId,driver_id:job.driver_id,godrop_sandbox:"true"},spending_controls:{allowed_merchant_countries:["GB"],spending_limits:[{amount:Math.round(Number(job.max_spend_approved)*100),interval:"all_time"}]}},{idempotencyKey:`godrop-test-card-${deliveryId}`})
+   if(card.livemode)return {error:"Unexpected live card response. Contact support."}
+   return {cardId:card.id}
+  }catch{return {error:"Stripe could not create the test card. Enable Issuing in this same sandbox and complete its test setup first. No funding bypass was applied."}}
+ })
+}
