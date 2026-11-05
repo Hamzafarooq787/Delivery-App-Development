@@ -1,4 +1,5 @@
 "use server";
+import {isShoppingSimulation,requireSandboxPayment,verifiedShoppingSimulation} from "@/lib/payments/shopping-sandbox"
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
 import { createClient } from "@/lib/supabase/server";
@@ -181,6 +182,8 @@ export async function enableApprovedPurchase(deliveryId: string) {
     .maybeSingle();
   if (!job || job.driver_id !== user.id || !job.company_card_reference)
     return { error: "A verified company card is required." };
+  const simulated=isShoppingSimulation(job.company_card_reference)
+  if(simulated){try{const session=await verifiedShoppingSimulation(deliveryId,job.company_card_reference);if(session.driver_id!==user.id)return {error:"Sandbox driver changed. Ask admin to review this order."}}catch{return {error:"Shopping simulation requires a paid Stripe test booking and test mode."}}}
   const { data: total, error } = await admin.rpc("prepare_company_purchase", {
     p_id: deliveryId,
     p_driver: user.id,
@@ -191,6 +194,11 @@ export async function enableApprovedPurchase(deliveryId: string) {
         "Confirm all shelf prices and resolve customer approvals first. The basket must be within the prepaid budget.",
     };
   try {
+    if(simulated){
+      const {error:simulationError}=await admin.rpc("record_sandbox_purchase",{p_id:deliveryId,p_driver:user.id,p_total:Number(total)})
+      if(simulationError)return {error:"The simulated basket could not be saved. Refresh before retrying."}
+      return {success:true,total:Number(total)}
+    }
     if (Number(total) === 0) {
       await getStripe().issuing.cards.update(job.company_card_reference, {
         status: "inactive",
@@ -223,6 +231,7 @@ export async function createSandboxShoppingCard(deliveryId:string){
   const admin=createAdminClient()
   const {data:job}=await admin.from("delivery_requests").select("id,driver_id,status,service_type,company_card_reference,max_spend_approved").eq("id",deliveryId).maybeSingle()
   if(!job || !job.driver_id || job.service_type!=="buy_for_me" || !["accepted","collected"].includes(job.status))return {error:"Assign a driver to an active Buy for Me test order first."}
+  if(isShoppingSimulation(job.company_card_reference))return {error:"Sandbox simulation is already enabled for this order. No Issuing card is needed."}
   if(job.company_card_reference)return {cardId:job.company_card_reference}
   const {data:payment}=await admin.from("payments").select("stripe_payment_intent").eq("delivery_id",deliveryId).eq("purpose","booking").eq("status","paid").maybeSingle()
   if(!payment?.stripe_payment_intent)return {error:"A paid Stripe test booking is required."}
@@ -235,5 +244,19 @@ export async function createSandboxShoppingCard(deliveryId:string){
    if(card.livemode)return {error:"Unexpected live card response. Contact support."}
    return {cardId:card.id}
   }catch{return {error:"Stripe could not create the test card. Enable Issuing in this same sandbox and complete its test setup first. No funding bypass was applied."}}
+ })
+}
+
+/** No card, bank balance or merchant purchase is created. Test receipt/refund workflow only. */
+export async function simulateShoppingFunding(deliveryId:string){
+ return runAdminMutation("finance","simulateShoppingFunding",deliveryId,async()=>{
+  const actor=await getAdminActor("finance");if(!actor)return {error:"Finance permission is required."}
+  try{
+   const intent=await requireSandboxPayment(deliveryId)
+   const {error}=await createAdminClient().rpc("enable_shopping_simulation",{p_actor:actor.id,p_id:deliveryId,p_intent:intent})
+   if(error)return {error:"Simulation cannot start. Use a paid, assigned Buy for Me test order without a real company card or completed purchase."}
+   revalidatePath(`/dashboard/admin/orders/${deliveryId}`);revalidatePath(`/dashboard/driver/jobs/${deliveryId}`)
+   return {success:true}
+  }catch{return {error:"Simulation is available only for paid GBP Stripe test bookings. It never enables real purchases."}}
  })
 }

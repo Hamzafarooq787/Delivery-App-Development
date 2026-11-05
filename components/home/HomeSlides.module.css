@@ -16,7 +16,7 @@
 .outline,.pills button{border:1px solid #ffffff30;background:#ffffff05;color:white}
 .outline:hover,.pills button:hover{background:#ffffff0c}
 .menuButton{display:none;background:none;border:0;color:white;min-width:44px;min-height:44px}
-.mobileMenu{position:absolute;z-index:5;inset:64px 0 0;background:var(--brand-panel);display:flex;flex-direction:column;padding:20px;box-shadow:0 20px 50px #0008;max-height:calc(100dvh - 64px);overflow:auto}
+.mobileMenu{position:fixed;z-index:50;inset:64px 0 0;background:var(--brand-panel);display:flex;flex-direction:column;padding:20px;box-shadow:0 20px 50px #0008;max-height:calc(100dvh - 64px);overflow:auto}
 .mobileMenu button,.mobileMenu a{background:none;border:0;border-bottom:1px solid #ffffff12;padding:13px;text-align:left;color:white}
 .viewport{flex:1;min-height:0;overflow:hidden}
 .track{height:100%;display:flex;transition:transform .55s cubic-bezier(.22,.8,.22,1);will-change:transform}
