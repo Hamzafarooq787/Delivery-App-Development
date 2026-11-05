@@ -83,6 +83,12 @@ export function AssignDriverDropdown({
         )}
       </button>
 
+      {localDriverId && !disabled && <button type="button" disabled={isPending} className="mt-2 block min-h-11 rounded-lg border border-red-400/30 px-3 text-xs text-red-200" onClick={()=>{
+        const note=window.prompt("Reason for unassigning this driver:")
+        if(!note?.trim() || note.trim().length<3){setError("Enter an unassignment reason.");return}
+        startTransition(async()=>{const r=await adminAssignDriver(deliveryId,null,note);if(r.error)setError(r.error);else {setLocalDriverId(null);router.refresh()}})
+      }}>Unassign driver</button>}
+      {!open && error && <p role="alert" className="text-xs text-red-300">{error}</p>}
       {open && (
         <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-xl bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 shadow-2xl overflow-hidden">
           <div className="px-3 py-2 border-b border-[var(--color-outline-variant)]/10">

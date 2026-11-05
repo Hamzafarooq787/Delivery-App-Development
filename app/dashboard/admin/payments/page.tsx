@@ -31,15 +31,12 @@ export default async function AdminPaymentsPage({
     Math.min(100000, Math.floor(Number(params.page) || 1)),
   );
   const admin = createAdminClient();
-  let paymentQuery=admin.from("payments").select("id,delivery_id,related_delivery_id,purpose,amount,status,payment_method,stripe_payment_intent,stripe_session_id,created_at,refund_jobs").order("created_at",{ascending:false}).order("id").range((page-1)*50,page*50-1)
-  if(params.status)paymentQuery=paymentQuery.eq('status',params.status)
+  let paymentQuery=admin.from("admin_payment_ledger").select("tracking_number,display_status,id,delivery_id,related_delivery_id,purpose,amount,status,payment_method,stripe_payment_intent,stripe_session_id,created_at,refund_jobs").order("created_at",{ascending:false}).order("id").range((page-1)*50,page*50-1)
+  if(params.status)paymentQuery=paymentQuery.eq('display_status',params.status)
   if(params.q){
     const q=params.q.trim().replace(/[^a-zA-Z0-9_-]/g,'').slice(0,100)
-    const matched=q?await admin.from("delivery_requests").select("id").ilike("tracking_number",q).limit(20):null
-    const ids=matched?.data?.map(o=>o.id)??[]
     const filters=[`id.eq.${/^[0-9a-f-]{36}$/i.test(q)?q:'00000000-0000-4000-8000-000000000000'}`]
-    if(q)filters.push(`stripe_payment_intent.ilike.%${q}%`)
-    if(ids.length)filters.push(`delivery_id.in.(${ids.join(",")})`,`related_delivery_id.in.(${ids.join(",")})`)
+    if(q)filters.push(`stripe_payment_intent.ilike.%${q}%`,`tracking_number.ilike.%${q}%`)
     paymentQuery=paymentQuery.or(filters.join(","))
   }
   const from=parseAdminDate(params.from),to=parseAdminDate(params.to,true);if(from)paymentQuery=paymentQuery.gte('created_at',from);if(to)paymentQuery=paymentQuery.lt('created_at',to)
@@ -51,7 +48,7 @@ export default async function AdminPaymentsPage({
   return (
     <div className="p-4 md:p-8 text-white space-y-6">
       <h1 className="text-3xl font-bold">Payments</h1>
-      <RecordFilters kind="payments" params={params} statuses={["pending","paid","failed"]}/>
+      <RecordFilters kind="payments" params={params} statuses={["pending","paid","failed","refunded","partially_refunded","refund_pending"]}/>
       <CardPaymentsOverview />
       <section className="rounded-xl bg-[var(--brand-panel)] p-4"><h2 className="font-bold">Wallet payments</h2><p>{wallet.error || wallet.count==null || wallet.data?.length!==wallet.count ? "Total unavailable" : `${wallet.count} paid · ${money(wallet.data.reduce((sum,p)=>sum+Number(p.amount),0))} before refunds`}</p></section>
       <p>
@@ -62,6 +59,7 @@ export default async function AdminPaymentsPage({
       <div className="space-y-3">
         {payments.data.map((p) => (
           <div key={p.id} className="rounded-xl bg-[var(--brand-panel)] p-4">
+            <p className="font-bold">{p.tracking_number ?? "No order reference"}</p>
             <strong>
               {money(p.amount)} — {p.status==="pending"&&p.payment_method==="stripe"?"Checkout awaiting confirmation":paymentDisplayStatus(p.status,p.amount,p.refund_jobs??[]).replaceAll("_"," ")}
             </strong>

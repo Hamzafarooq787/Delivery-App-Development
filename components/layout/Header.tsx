@@ -77,7 +77,7 @@ export default function Header() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-[#1a1a1a] border-t border-[#2a2a2a]">
+        <div className="fixed inset-x-0 top-16 bottom-0 z-50 overflow-y-auto md:hidden bg-[#1a1a1a] border-t border-[#2a2a2a]">
           {/* Mobile search */}
           <div className="px-4 pt-3">
             <form action="/track" role="search" aria-label="Track shipment" className="flex items-center bg-[#2a2a2a] px-4 py-2 rounded-lg">

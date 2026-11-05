@@ -1,3 +1,5 @@
+import { SupportContactLinks } from "@/components/public/support-contact-links"
+import { CancellationPolicyNotice } from "@/components/customer/cancellation-policy-notice"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = { title: "Terms of Service | GoDrop" }
@@ -25,7 +27,7 @@ const sections = [
   },
   {
     title: "Cancellation Policy",
-    content: "Orders may be cancelled free of charge before a driver is assigned. Once a driver has accepted your order, a cancellation fee may apply. Cancellations after pickup are not permitted and the full delivery fee will be charged.",
+    content: "Cancellation is free before the driver starts travel, including after acceptance. A fee applies after travel starts or the driver arrives, as shown in the booking policy and cancellation preview. Driver fault or no-show has no cancellation fee. Purchased shopping requires an admin review before a return, delivery or refund decision.",
   },
   {
     title: "Limitation of Liability",
@@ -54,7 +56,7 @@ export default function TermsPage() {
     <div className="mx-auto max-w-3xl px-4 py-16 md:px-6">
       <div className="mb-10">
         <h1 className="text-3xl font-semibold text-foreground text-balance mb-3">Terms of Service</h1>
-        <p className="text-sm text-muted-foreground">Last updated: January 1, 2025</p>
+        <p className="text-sm text-muted-foreground">Last updated: 5 November 2026</p>
       </div>
       <div className="space-y-8">
         {sections.map((section, i) => (
@@ -63,6 +65,8 @@ export default function TermsPage() {
               {i + 1}. {section.title}
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">{section.content}</p>
+            {section.title==="Contact Information"&&<SupportContactLinks/>}
+            {section.title==="Cancellation Policy"&&<CancellationPolicyNotice/>}
           </div>
         ))}
       </div>

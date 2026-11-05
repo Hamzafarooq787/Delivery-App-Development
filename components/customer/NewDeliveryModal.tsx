@@ -1,4 +1,7 @@
 'use client'
+import { getBookingPricing } from "@/app/actions/booking-settings"
+import { packageSizeFee, type BookingPricing } from "@/lib/booking-pricing"
+import { CancellationPolicyNotice } from "./cancellation-policy-notice"
 import { newShoppingRequestId } from '@/lib/shopping-booking'
 import { useOrderPhotoCleanup } from '@/hooks/use-order-photo-cleanup'
 import { cleanupAbandonedOrderPhotos } from '@/app/actions/order-photo-cleanup'
@@ -287,6 +290,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
   const contact=parcelContact(recipientName,recipientPhone,collectionTime==="asap" || !collectionTime ? collectionTime : new Date(collectionTime).toJSON())
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [parcelRates,setParcelRates]=useState<BookingPricing|null>(null)
+  useEffect(()=>{let active=true;getBookingPricing().then(r=>{if(active)setParcelRates(r)}).catch(()=>{});return()=>{active=false}},[])
   const [packageSize, setPackageSize] = useState<PackageSize | null>(initialDraft?.packageSize ?? null)
   const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -308,9 +313,17 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
   const [quoted, setQuote] = useState<{key:string;value:DeliveryQuote} | null>(null)
   const [promoCode, setPromoCode] = useState(initialDraft?.promoCode ?? '')
   const draft = {step,pickupValue,deliveryValue,pickupCoords,deliveryCoords,itemDescription,itemPhotos,packageSize,promoCode,pickupInstructions,deliveryInstructions,recipientName,recipientPhone,collectionTime}
-  useEffect(() => {
-    saveDeliveryDraft(ownerId,{...draft,checkoutKey:checkoutKey.current})
-  }, [ownerId,step,pickupValue,deliveryValue,pickupCoords,deliveryCoords,itemDescription,itemPhotos,packageSize,promoCode,pickupInstructions,deliveryInstructions,recipientName,recipientPhone,collectionTime])
+  const latestDraft=useRef({ownerId,draft:{...draft,checkoutKey:checkoutKey.current}})
+  latestDraft.current={ownerId,draft:{...draft,checkoutKey:checkoutKey.current}}
+  useEffect(()=>{
+    const timer=setTimeout(()=>saveDeliveryDraft(ownerId,{...draft,checkoutKey:checkoutKey.current}),250)
+    return()=>clearTimeout(timer)
+  },[ownerId,step,pickupValue,deliveryValue,pickupCoords,deliveryCoords,itemDescription,itemPhotos,packageSize,promoCode,pickupInstructions,deliveryInstructions,recipientName,recipientPhone,collectionTime])
+  useEffect(()=>{
+    const flush=()=>{const latest=latestDraft.current;saveDeliveryDraft(latest.ownerId,latest.draft)}
+    window.addEventListener("pagehide",flush)
+    return()=>{window.removeEventListener("pagehide",flush)}
+  },[])
   const quoteKey = JSON.stringify([pickupCoords, deliveryCoords, packageSize, promoCode.trim()])
   const quote = quoted?.key === quoteKey ? quoted.value : null
   const [quoteLoading, setQuoteLoading] = useState(false)
@@ -634,7 +647,8 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
           <div className={styles.receipt}><span>Tracking code</span><strong>{success.tracking_number}</strong></div>
           <p>We’ll let you know when a driver accepts your delivery.</p>
         </div>
-        <footer className={styles.footer}><div className={styles.actions}>
+        <footer className={styles.footer}>
+          <div className={styles.actions}>
           <button onClick={onClose}>Done</button>
           <button className={styles.continue} onClick={() => { onClose(); router.push(`/dashboard/customer/tracking?id=${encodeURIComponent(success.id)}`) }}>Track delivery</button>
         </div></footer>
@@ -681,7 +695,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
                   >
                     {active && <span className={styles.selectedMark} aria-hidden="true">✓</span>}
                     <span className={styles.parcel} data-size={size}><PackageIllustration bulky={size === 'bulky'}/></span>
-                    <strong>{info.label}</strong>
+                    <strong>{info.label}</strong><small>{parcelRates?`+£${packageSizeFee(parcelRates,size).toFixed(2)}`:"Fee shown in review"}</small>
                   </button>
                 )
               })}
@@ -930,6 +944,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
           </div>}
         </div>
         <footer className={styles.footer}>
+          {step === 3 && <CancellationPolicyNotice/>}
           {step === 3 && missingReason && <p role="status">{missingReason}</p>}
           <div className={styles.actions}>
             <button disabled={submitting || addingFunds} onClick={() => step === 1 ? onClose() : goTo(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button>

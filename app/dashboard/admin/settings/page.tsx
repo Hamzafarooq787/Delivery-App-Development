@@ -1,3 +1,4 @@
+import {CancellationSettingsForm} from "@/components/admin/cancellation-settings-form"
 import {getOperationalSettings,getIntegrationHealth,getStaffList,getFailedDispatches} from "@/app/actions/admin-operations"
 import {FailedDispatches} from "@/components/admin/failed-dispatches"
 import {StaffAccessPanel} from "@/components/admin/staff-access-panel"
@@ -39,6 +40,7 @@ export default async function AdminSettingsPage() {
         </p>
       </div>
 
+      <CancellationSettingsForm/>
       <SettingsTabsClient adminProfile={adminProfile} initialBfmSettings={initialBfmSettings} />
       <div className="mb-6"><OperationsSettingsForm initial={operations}/></div>
       <IntegrationHealthPanel initial={health}/>

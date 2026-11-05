@@ -19,7 +19,7 @@ function fixture() {
   const validation=compile('lib/shopping-validation.ts',{})
   const db={from(table){assert.equal(table,'payments','checkout must not read a wallet');const q={select:()=>q,eq:()=>q,is:()=>q,maybeSingle:async()=>({data:payment,error:null}),single:async()=>({data:payment,error:null}),update(values){Object.assign(payment,values);return q},then(resolve){return Promise.resolve({error:null}).then(resolve)}};return q},async rpc(name,p){assert.equal(name,'reserve_order_checkout');assert.equal(p.p_funds_available,null);reserves++;payment={id:'payment-1',amount:p.p_amount,booking_draft:p.p_draft,created_at:new Date().toISOString(),status:'pending',customer_id:'customer'};return{error:null}}}
   const stripe={balance:{retrieve(){balanceReads++;throw Error('Issuing balance is not needed for customer checkout')}},checkout:{sessions:{async create(p,key){sessions++;sessionParams=p;assert.equal(key.idempotencyKey,'booking:payment-1');return{id:'cs_test',url:'https://checkout.stripe.test/session'}},async retrieve(){return{status:'open',url:'https://checkout.stripe.test/session'}}}}}
-  const api=compile('app/actions/order-checkout.ts',{
+  const api=compile('app/actions/order-checkout.ts',{'@/app/actions/cancellation':{},
     'node:crypto':nodeCrypto,
     '@/lib/short-request':{boundedFetch:()=>fetch},
     '@/lib/parcel-contact':compile('lib/parcel-contact.ts',{'./uk-phone':compile('lib/uk-phone.ts',{})}),

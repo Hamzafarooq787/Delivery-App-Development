@@ -60,7 +60,7 @@ export default async function JobDetailPage({
 
   return (
     <><DriverJobView
-      canOperate={profileRes.data?.status==="approved"&&!(job.recovery_case?.status==="open"&&["return_to_pickup","verification_hold"].includes(job.recovery_case?.action))}
+      canOperate={profileRes.data?.status==="approved"&&!(job.recovery_case?.status==="open"&&["return_to_pickup","verification_hold","cancellation_review"].includes(job.recovery_case?.action))}
       job={job}
       customer={customer}
       timelineSteps={timelineSteps}

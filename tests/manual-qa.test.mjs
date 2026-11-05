@@ -203,7 +203,7 @@ test('Public copy audit excludes obsolete claims and the guide renders SVG icons
  assert.match(read('app/(public)/contact/contact-form.tsx'),/Send us a message[\s\S]*you@example.com/)
 })
 test('Footer has one normal-case copyright and home and standalone public pages use it',()=>{
- const {default:Footer}=load('components/layout/Footer.tsx',{'next/link':fakeLink})
+ const {default:Footer}=load('components/layout/Footer.tsx',{'@/components/public/support-contact-links':{SupportContactLinks:()=>null},'next/link':fakeLink})
  const html=renderToStaticMarkup(Footer())
  assert.match(html,/GoDrop\. All rights reserved\./)
  assert.match(html,/Local collection and delivery across the UK/)

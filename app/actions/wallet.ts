@@ -2,6 +2,7 @@
 
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
+import { cancelByPolicy,getCancellationQuote } from "@/app/actions/cancellation"
 import { cancelCardBooking } from "@/app/actions/order-checkout"
 import { processOrderRefunds } from "@/lib/payments/direct"
 import { createClient } from "@/lib/supabase/server"
@@ -61,100 +62,26 @@ export type CancelOrderResult = {
   error?: string
 }
 
-export async function cancelOrder(deliveryId: string): Promise<CancelOrderResult> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: "Not authenticated" }
-
-  const { data: cardOrder } = await createAdminClient().from("delivery_requests").select("payment_method,cancellation_policy").eq("id",deliveryId).eq("customer_id",user.id).maybeSingle()
-  if(cardOrder?.cancellation_policy?.before==="review")return{success:false,freeCancel:false,cancellationFee:0,distanceMiles:0,refundAmount:0,error:"Contact support to review this cancellation. No extra charge has been created."}
-  if (cardOrder?.payment_method === "stripe") {
-    const result = await cancelCardBooking(deliveryId)
-    return { paymentMethod:"stripe", success: !result.error, freeCancel: true, cancellationFee: 0, distanceMiles: 0, refundAmount: result.amount ?? 0, error: result.error }
-  }
-  // Atomic RPC — locks the delivery row before doing anything, so concurrent
-  // cancel calls on the same order can't both read "still cancellable" and
-  // both credit a refund. See scripts/030_security_hardening.sql.
-  const { data, error } = await supabase.rpc("cancel_delivery_order", { p_delivery_id: deliveryId })
-
-  if (error) {
-    const msg = error.message ?? ""
-    let friendly = "Could not cancel this order. Please try again."
-    if (msg.includes("not_found")) friendly = "Order not found"
-    else if (msg.includes("not_your_order")) friendly = "Not your order"
-    else if (msg.includes("cannot_cancel")) friendly = "This order cannot be cancelled"
-    return { success: false, freeCancel: false, cancellationFee: 0, distanceMiles: 0, refundAmount: 0, error: friendly }
-  }
-
-  return {
-    success: true,
-    freeCancel: data.freeCancel,
-    cancellationFee: Number(data.cancellationFee),
-    distanceMiles: Number(data.distanceMiles),
-    refundAmount: Number(data.refundAmount),
-  }
+export async function cancelOrder(deliveryId: string, confirmedFee=0): Promise<CancelOrderResult> {
+ const result=await cancelByPolicy(deliveryId,confirmedFee)
+ if(!result.data || result.data.review)return {success:false,freeCancel:false,cancellationFee:0,distanceMiles:0,refundAmount:0,error:result.error??"Cancellation is waiting for admin review."}
+ return {success:true,paymentMethod:result.data.method as "stripe"|"wallet",freeCancel:Number(result.data.fee)===0,cancellationFee:Number(result.data.fee),distanceMiles:0,refundAmount:Number(result.data.refund)}
 }
 
-// ── Preview cancellation fee (before confirming) ──────────────────────────
-export async function previewCancellationFee(deliveryId: string): Promise<{
-  freeCancel: boolean
-  cancellationFee: number
-  distanceMiles: number
-  status: string
-  canCancel: boolean
-  error?: string
-}> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { freeCancel: false, cancellationFee: 0, distanceMiles: 0, status: "", canCancel: false, error: "Not authenticated" }
-
-  const admin = createAdminClient()
-  const { data: delivery } = await admin
-    .from("delivery_requests")
-    .select("id, status, customer_id, pickup_lat, pickup_lng, delivery_lat, delivery_lng, payment_method, bfm_stage,cancellation_policy")
-    .eq("id", deliveryId)
-    .single()
-
-  if (!delivery || (delivery as any).customer_id !== user.id) {
-    return { freeCancel: false, cancellationFee: 0, distanceMiles: 0, status: "", canCancel: false, error: "Not found" }
-  }
-
-  const status = (delivery as any).status as string
-  if (status === "delivered" || status === "cancelled") {
-    return { freeCancel: false, cancellationFee: 0, distanceMiles: 0, status, canCancel: false }
-  }
-
-  const allowed=['requested','accepted'].includes(status)&&!['shopping','purchase_completed','heading_to_customer'].includes(delivery.bfm_stage??'')&&delivery.cancellation_policy?.before!=='review'
-  return {freeCancel:allowed,cancellationFee:0,distanceMiles:0,status,canCancel:allowed,...(!allowed?{error:'Contact support for cancellation review or recovery after collection.'}:{})}
-
+export async function previewCancellationFee(deliveryId:string){
+ const result=await getCancellationQuote(deliveryId)
+ return {freeCancel:result.data?.fee===0,cancellationFee:Number(result.data?.fee??0),distanceMiles:0,status:result.data?.status??"",canCancel:result.data?.canCancel??false,error:result.error}
 }
 
 // ── Admin: cancel an order and optionally refund the customer ─────────────
-export async function adminCancelOrder(deliveryId: string): Promise<{
-  success?: boolean
-  refunded?: boolean
-  refundAmount?: number
-  error?: string
-}> {
+export async function adminCancelOrder(deliveryId:string,reason:string,fault="admin"):Promise<{success?:boolean;refunded?:boolean;refundAmount?:number;review?:boolean;error?:string}> {
  return runAdminMutation("finance","adminCancelOrder",deliveryId,async()=>{
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Not authenticated" }
-  const { data: adminRow } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle()
-  if (!(await getAdminActor("finance"))) return { error: "Not authorized" }
-
-  const admin = createAdminClient()
-
-  const { data: cardOrder } = await admin.from("delivery_requests").select("payment_method").eq("id",deliveryId).maybeSingle()
-  if (cardOrder?.payment_method === "stripe") {
-    const result = await cancelCardBooking(deliveryId)
-    return result.error ? { error: result.error } : { success: true, refunded: false, refundAmount: result.amount }
-  }
-  const {data,error}=await admin.rpc("admin_wallet_refund",{p_order:deliveryId,p_actor:user.id,p_amount:0,p_key:crypto.randomUUID(),p_cancel:true})
-  if(error)return {error:error.message}
-  const {revalidatePath}=await import("next/cache");revalidatePath("/dashboard/admin/orders");
-  return {success:true,refunded:Number(data)>0,refundAmount:Number(data)}
-
+  if(reason.trim().length<3)return {error:"Choose a reason and add any relevant notes."}
+  const quote=await getCancellationQuote(deliveryId,fault)
+  if(!quote.data)return {error:quote.error}
+  const result=await cancelByPolicy(deliveryId,Number(quote.data.fee),reason,fault)
+  if(!result.data)return {error:result.error}
+  return {success:true,refunded:false,refundAmount:Number(result.data.refund),review:result.data.review}
  })
 }
 

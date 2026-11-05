@@ -84,7 +84,7 @@ export function PublicNavbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-[#0e0e0e]/95 backdrop-blur-xl border-t border-[#494847]/15">
+        <div className="fixed inset-x-0 top-16 bottom-0 z-50 overflow-y-auto md:hidden bg-[#0e0e0e] border-t border-[#494847]/15">
           <nav className="flex flex-col gap-1 p-4">
             {navLinks.map((link) => (
               <Link
