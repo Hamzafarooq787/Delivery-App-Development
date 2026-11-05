@@ -1,5 +1,6 @@
 "use client"
 
+import { createPortal } from "react-dom"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { safetyReleaseJob } from "@/app/actions/delivery"
@@ -15,7 +16,7 @@ const SAFETY_REASONS = [
   { icon: "schedule", label: "Unable to complete pickup" },
 ]
 
-export function SafetyCancelButton({ jobId, label="Safety Cancel" }: { jobId: string; label?:string }) {
+export function SafetyCancelButton({ jobId, label="Request safety release" }: { jobId: string; label?:string }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -29,7 +30,7 @@ export function SafetyCancelButton({ jobId, label="Safety Cancel" }: { jobId: st
         toast.error(result.error)
         return
       }
-      toast.success("Job released. Stay safe — your account is protected.")
+      toast.success("Job released and paused for support review. Your duty status is unchanged.")
       setOpen(false)
       router.push("/dashboard/driver/jobs/available")
       router.refresh()
@@ -46,11 +47,11 @@ export function SafetyCancelButton({ jobId, label="Safety Cancel" }: { jobId: st
         {label}
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
 
-          <div className="relative z-10 w-full max-w-md bg-[var(--brand-panel)] rounded-2xl border border-red-500/20 shadow-2xl overflow-hidden">
+          <div className="relative z-10 w-full max-w-md bg-[var(--brand-panel)] rounded-2xl border border-red-500/20 shadow-2xl overflow-hidden max-h-[90dvh] flex flex-col">
 
             {/* Header */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-red-500/15 bg-red-500/5">
@@ -58,7 +59,7 @@ export function SafetyCancelButton({ jobId, label="Safety Cancel" }: { jobId: st
                 <span className="material-symbols-outlined text-red-400">shield_with_heart</span>
               </div>
               <div>
-                <p className="text-sm font-bold text-white">Driver Safety Cancel</p>
+                <p className="text-sm font-bold text-white">Request safety release</p>
                 <p className="text-[10px] text-red-400/80 uppercase tracking-wider">Your safety comes first</p>
               </div>
               <button
@@ -69,9 +70,9 @@ export function SafetyCancelButton({ jobId, label="Safety Cancel" }: { jobId: st
               </button>
             </div>
 
-            <div className="px-5 py-5 space-y-4">
+            <div className="px-5 py-5 space-y-4 min-h-0 overflow-y-auto">
               <p className="text-[13px] text-[var(--color-on-surface-variant)] leading-relaxed">
-                You can cancel this job at any time if you feel unsafe. The job will be released back to the pool and <span className="text-white font-semibold">your account will not be penalised</span>. Select your reason:
+                Release an uncollected job if you feel unsafe. It will be paused for admin review, not silently offered to another driver. Your duty status stays unchanged. Select your reason:
               </p>
 
               <div className="space-y-2">
@@ -100,13 +101,13 @@ export function SafetyCancelButton({ jobId, label="Safety Cancel" }: { jobId: st
               <div className="rounded-xl border border-[var(--color-outline-variant)]/15 bg-[var(--color-surface-container-highest)] px-4 py-3">
                 <p className="text-[11px] text-[var(--color-on-surface-variant)] leading-relaxed">
                   <span className="material-symbols-outlined text-amber-400 text-sm align-middle mr-1">info</span>
-                  This action is logged for safety review. The job will be reassigned to another driver. Your anonymity is protected.
+                  This does not issue a refund. No customer cancellation fee is applied. Support must review the job before reassignment. If you cannot complete the job through driver fault, use “Cancel job — driver fault” for a full customer refund; purchased shopping requires admin review.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 border-t border-[var(--color-outline-variant)]/15 flex gap-3">
+            <div className="shrink-0 px-5 py-4 border-t border-[var(--color-outline-variant)]/15 flex gap-3">
               <button
                 onClick={() => setOpen(false)}
                 className="px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--color-on-surface-variant)] hover:text-white hover:bg-[var(--color-surface-container-highest)] transition-colors"
@@ -119,12 +120,12 @@ export function SafetyCancelButton({ jobId, label="Safety Cancel" }: { jobId: st
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">shield_with_heart</span>
-                {isPending ? "Releasing…" : "Confirm Safety Cancel"}
+                {isPending ? "Releasing…" : "Confirm safety release"}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ,document.body)}
     </>
   )
 }

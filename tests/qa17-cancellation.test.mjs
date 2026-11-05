@@ -4,28 +4,31 @@ import fs from 'node:fs'
 import {PGlite} from '@electric-sql/pglite'
 const driver='00000000-0000-4000-8000-000000000001',customer='00000000-0000-4000-8000-000000000002',admin='00000000-0000-4000-8000-000000000003',job='00000000-0000-4000-8000-000000000004',other='00000000-0000-4000-8000-000000000005'
 const migration=fs.readFileSync('supabase/migrations/20261105051940_qa17_cancellation_policy.sql','utf8')
-async function database(){
+async function database({qa19=true}={}){
  const db=new PGlite()
  await db.exec(`
  create role anon;create role authenticated;create role service_role;
  create schema auth;create function auth.uid() returns uuid language sql as 'select nullif(current_setting(''request.jwt.claim.sub'',true),'''')::uuid';
  create schema godrop_private;create function godrop_private.admin_has_scope(actor uuid,scope text) returns boolean language sql as 'select actor=''${admin}''::uuid';
- create table users(id uuid primary key,role text,account_status text);
- create table driver_profiles(id uuid primary key,status text);
+ create table users(id uuid primary key,role text,account_status text,admin_access jsonb default '{"owner":true}');
+ create table driver_profiles(id uuid primary key,status text,is_online boolean default true);
  create table surge_pricing_settings(id boolean primary key);insert into surge_pricing_settings values(true);
- create table delivery_requests(id uuid primary key,customer_id uuid,driver_id uuid,status text,service_type text,payment_method text,cancellation_policy jsonb,bfm_stage text,purchase_confirmed_at timestamptz,recovery_case jsonb,cancelled_by text,shopping_hold_settled_at timestamptz,receipt_url text,actual_items_total numeric,company_card_reference text,company_card_verified_at timestamptz,purchase_authorized_at timestamptz,purchase_authorized_total numeric,max_spend_approved numeric,created_at timestamptz,tracking_number text);
+ create table delivery_requests(id uuid primary key,customer_id uuid,driver_id uuid,status text,service_type text,payment_method text,cancellation_policy jsonb,bfm_stage text constraint delivery_requests_bfm_stage_check check(bfm_stage in ('heading_to_shop','arrived_at_shop','shopping','purchase_completed','heading_to_customer')),price numeric default 15.69,driver_earning_quote numeric default 7.5,delivered_at timestamptz,delivered_image_url text,purchase_confirmed_at timestamptz,recovery_case jsonb,cancelled_by text,shopping_hold_settled_at timestamptz,receipt_url text,actual_items_total numeric,company_card_reference text,company_card_verified_at timestamptz,purchase_authorized_at timestamptz,purchase_authorized_total numeric,max_spend_approved numeric,created_at timestamptz,tracking_number text);
  create table shopping_items(id uuid primary key default gen_random_uuid(),delivery_id uuid,status text,confirmed_unit_price numeric,estimated_price numeric,quantity integer);
  create table shopping_substitutions(shopping_item_id uuid,delivery_id uuid,customer_approved boolean,suggested_price numeric,customer_responded_at timestamptz);
  create table payments(id uuid primary key default gen_random_uuid(),delivery_id uuid,related_delivery_id uuid,purpose text default 'booking',status text default 'paid',payment_method text default 'stripe',amount numeric,refund_jobs jsonb default '[]',stripe_payment_intent text);
  create table wallet_transactions(user_id uuid,type text,amount numeric,description text,delivery_id uuid);
  create table wallet_balances(user_id uuid primary key,balance numeric,updated_at timestamptz);
- create table driver_earnings(driver_id uuid,recovery_delivery_id uuid unique,amount numeric,commission_amount numeric,status text);
+ create table driver_earnings(driver_id uuid,delivery_id uuid unique,recovery_delivery_id uuid unique,amount numeric,commission_amount numeric,status text);
+ create table delivery_otps(delivery_id uuid primary key,otp text,attempts integer default 0,verified_at timestamptz);
+ create table driver_locations(driver_id uuid,delivery_id uuid);
+ create table delivery_status_logs(delivery_id uuid,status text,updated_by uuid,created_at timestamptz default clock_timestamp());
  create function handle_driver_cancellation() returns trigger language plpgsql as 'begin if new.cancelled_by=''driver'' and new.status=''cancelled'' and old.status<>''cancelled'' then insert into wallet_transactions(user_id,type,amount,delivery_id) values(new.customer_id,''cashback'',99,new.id);end if;return new;end';
  create trigger legacy_driver_refund after update on delivery_requests for each row execute function handle_driver_cancellation();
  create table admin_audit_log(actor_id uuid,event text,entity text,details jsonb);
- create function append_admin_audit(uuid,text,text,jsonb) returns void language plpgsql as 'begin raise exception ''admin_required'';end';
- insert into users values('${driver}','driver','active'),('${customer}','customer','active'),('${admin}','admin','active'),('${other}','customer','active');
- insert into driver_profiles values('${driver}','approved');
+ create function append_admin_audit(uuid,text,text,jsonb) returns void language plpgsql as 'begin if $1<>''${admin}''::uuid then raise exception ''admin_required'';end if;end';
+ insert into users(id,role,account_status) values('${driver}','driver','active'),('${customer}','customer','active'),('${admin}','admin','active'),('${other}','customer','active');
+ insert into driver_profiles(id,status) values('${driver}','approved');
  insert into delivery_requests(id,customer_id,driver_id,status,service_type,payment_method) values('${job}','${customer}','${driver}','accepted','delivery','stripe');
  insert into payments(delivery_id,amount) values('${job}',15.69);
  `)
@@ -36,10 +39,12 @@ async function database(){
  let receipt=receiptSource.slice(receiptSource.indexOf('create or replace function public.settle_shopping_receipt_atomic'),receiptSource.indexOf('-- Prevent item/approval edits'))
  receipt=receipt.replace('if v_refund>0 then',"if v_refund>0 and v_order.payment_method='stripe' then perform public.queue_order_refund(p_delivery_id,'unused-shopping',v_refund); end if; if v_refund>0 and v_order.payment_method<>'stripe' then")
  await db.exec(receipt)
+ await db.exec(source.slice(source.indexOf('create or replace function public.record_completed_earnings'),source.indexOf('create or replace function public.prepare_company_purchase')))
  await db.exec(migration)
  await db.exec(fs.readFileSync("supabase/migrations/20261105053922_qa17_postcollection_cancellation.sql","utf8"))
  await db.exec(fs.readFileSync("supabase/migrations/20261105054441_qa17_cancellation_null_guard.sql","utf8"))
  await db.exec(fs.readFileSync("supabase/migrations/20261105075614_qa18_grace_and_sandbox.sql","utf8"))
+ if(qa19)await db.exec(fs.readFileSync("supabase/migrations/20261105190832_qa19_completion_release_and_quotes.sql","utf8"))
  return db
 }
 async function quote(db,actor=customer,fault='customer'){return (await db.query('select cancellation_quote($1,$2,$3) q',[actor,job,fault])).rows[0].q}
@@ -273,5 +278,87 @@ test('QA18: simulated purchase retains basket approval checks, queues the differ
   assert.equal((await receipt()).rows[0].result.replayed,true)
   const rows=(await db.query('select refund_jobs from payments')).rows[0].refund_jobs
   assert.equal(rows.length,1);assert.equal(rows[0].amount,45)
+ }finally{await db.close()}
+})
+
+test('QA19: the actual pre-fix BfM stage constraint rejects delivery; the migration completes by main status without weakening the constraint',async()=>{
+ const db=await database({qa19:false})
+ try{
+  await db.exec(fs.readFileSync("tests/fixtures/qa19-completion-baseline.sql","utf8"))
+  await db.exec("update delivery_requests set service_type='buy_for_me',status='in_transit',bfm_stage='heading_to_customer',receipt_url='test-receipt',purchase_confirmed_at=now();insert into delivery_otps(delivery_id,otp) select id,'1234' from delivery_requests")
+  const complete=()=>db.query("select complete_order_with_otp($1,$2,'1234','test-pod') result",[job,driver])
+  await assert.rejects(complete(),/delivery_requests_bfm_stage_check/)
+  assert.equal((await db.query('select status from delivery_requests')).rows[0].status,'in_transit')
+  await db.exec(fs.readFileSync('supabase/migrations/20261105190832_qa19_completion_release_and_quotes.sql','utf8'))
+  assert.equal((await complete()).rows[0].result.success,true)
+  assert.equal((await complete()).rows[0].result.success,true)
+  const row=(await db.query('select status,bfm_stage,delivered_image_url from delivery_requests')).rows[0]
+  assert.deepEqual(row,{status:'delivered',bfm_stage:'heading_to_customer',delivered_image_url:'test-pod'})
+  assert.equal((await db.query('select count(*) n from driver_earnings where delivery_id=$1',[job])).rows[0].n,1)
+ }finally{await db.close()}
+})
+
+test('QA19: a cancellation review explains why completion is paused without consuming a correct PIN',async()=>{
+ const db=await database()
+ try{
+  await db.exec(`update delivery_requests set status='in_transit',bfm_stage='heading_to_customer',service_type='buy_for_me',receipt_url='test',purchase_confirmed_at=now(),recovery_case='{"status":"open","action":"cancellation_review"}';insert into delivery_otps(delivery_id,otp) select id,'1234' from delivery_requests`)
+  const result=(await db.query("select complete_order_with_otp($1,$2,'1234','test-pod') result",[job,driver])).rows[0].result
+  assert.match(result.error,/paused for support/)
+  assert.equal((await db.query('select attempts from delivery_otps')).rows[0].attempts,0)
+ }finally{await db.close()}
+})
+
+test('QA19: GD-CC58B3FC-shaped return cancellation refunds only £11.58 after the successful £48 refund and releases the driver',async()=>{
+ const db=await database()
+ try{
+  await db.exec(`update payments set amount=59.58,refund_jobs='[{"key":"unused-shopping","amount":48,"state":"succeeded"}]';update delivery_requests set service_type='buy_for_me',status='in_transit',bfm_stage='heading_to_customer',company_card_reference='sandbox_${job}',max_spend_approved=50,actual_items_total=2,shopping_hold_settled_at=now(),recovery_case='{"status":"open","action":"cancellation_review"}'`)
+  const resolve=who=>db.query("select resolve_recovery_cancellation($1,$2,'Confirmed sandbox test outcome',true,$3)",[who,job,`sandbox_${job}`])
+  await assert.rejects(resolve(customer),/finance_return_confirmation_required/)
+  await resolve(admin);await resolve(admin)
+  const row=(await db.query('select status,recovery_case from delivery_requests')).rows[0]
+  assert.equal(row.status,'cancelled');assert.equal(row.recovery_case.status,'closed')
+  const refunds=(await db.query('select refund_jobs from payments')).rows[0].refund_jobs
+  assert.equal(refunds.length,2);assert.equal(refunds[1].amount,11.58)
+  assert.equal(refunds.reduce((sum,r)=>sum+r.amount,0),59.58)
+  assert.equal((await db.query("select count(*) n from delivery_requests where driver_id=$1 and status in ('accepted','collected','in_transit')",[driver])).rows[0].n,0)
+  assert.equal((await db.query('select is_online from driver_profiles')).rows[0].is_online,true)
+ }finally{await db.close()}
+})
+
+test('QA19: driver fault after travel refunds the full card balance rather than returning a charged job to the pool',async()=>{
+ const db=await database()
+ try{
+  await db.exec("update delivery_requests set travel_started_at=now()-interval '10 minutes'")
+  const result=await cancel(db,0,driver,'driver')
+  assert.equal(result.refund,15.69);assert.equal(result.fee,0)
+  assert.equal((await db.query('select status from delivery_requests')).rows[0].status,'cancelled')
+  assert.equal((await db.query('select is_online from driver_profiles')).rows[0].is_online,true)
+  assert.equal((await db.query('select count(*) n from driver_earnings')).rows[0].n,0)
+ }finally{await db.close()}
+})
+
+test('QA19: safety release preserves duty and travel evidence, pauses dispatch, and a new acceptance has its own milestones',async()=>{
+ const db=await database()
+ try{
+  await db.exec(`create table notices(user_id uuid,title text);create table dispatch_attempts(id uuid);
+  create function godrop_private.notice(uuid,text,text,text,uuid,text,text) returns void language sql as 'insert into notices values($1,$2)';
+  create function godrop_private.announce_paid_delivery(uuid,text,uuid) returns void language sql as 'insert into dispatch_attempts values($1)';
+  create trigger on_delivery_change after insert or update on delivery_requests for each row execute function notify_delivery_change();
+  update delivery_requests set accepted_at=now()-interval '20 minutes',travel_started_at=now()-interval '10 minutes';`)
+  await db.query("select request_safety_release($1,$2,'Unsafe collection location')",[driver,job])
+  const released=(await db.query('select status,driver_id,travel_started_at,assignment_history,recovery_case from delivery_requests')).rows[0]
+  assert.equal(released.driver_id,null);assert.equal(released.status,'requested');assert.equal(released.travel_started_at,null)
+  assert.ok(released.assignment_history[0].travel_started_at);assert.equal(released.recovery_case.action,'safety_release_review')
+  assert.equal((await db.query('select is_online from driver_profiles')).rows[0].is_online,true)
+  assert.equal((await db.query('select count(*) n from dispatch_attempts')).rows[0].n,0)
+  assert.equal((await db.query("select count(*) n from notices where title='Delivery paused for safety review'")).rows[0].n,1)
+  await assert.rejects(db.query("update delivery_requests set driver_id=$1,status='accepted'",[driver]),/safety_review_required/)
+  await db.exec("update delivery_requests set recovery_case=recovery_case||'{\"status\":\"closed\"}'::jsonb")
+  assert.equal((await db.query('select count(*) n from dispatch_attempts')).rows[0].n,1)
+  await db.query("update delivery_requests set driver_id=$1,status='accepted'",[driver])
+  const fresh=(await db.query('select accepted_at,travel_started_at,arrived_at from delivery_requests')).rows[0]
+  assert.ok(new Date(fresh.accepted_at)>new Date(released.assignment_history[0].accepted_at));assert.equal(fresh.arrived_at,null);assert.equal(fresh.travel_started_at,null)
+  await db.query("select collection_milestone($1,$2,'travel')",[driver,job])
+  assert.equal((await db.query('select arrived_at from delivery_requests')).rows[0].arrived_at,null)
  }finally{await db.close()}
 })

@@ -167,7 +167,7 @@ test('Shopping completion requires receipt and final stage, verifies OTP once an
  }finally{await db.close()}
 })
 
-function compile(file,imports,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:n=>{if(n==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(n==='@/lib/integration-health')return{recordHealth:async()=>{}};if(n in imports)return imports[n];throw Error('Unmocked '+n)},console,Number,Math,Date,...extra});return exports}
+function compile(file,imports,extra={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:n=>{if(n==='@/lib/booking-availability')return{bookingAvailability:async()=>null};if(n==='@/lib/admin-access')return{getAdminActor:async()=>null,runAdminMutation:async(_scope,_event,_entity,work)=>work()};if(n==='@/lib/integration-health')return{recordHealth:async()=>{}};if(n in imports)return imports[n];throw Error('Unmocked '+n)},console,Number,Math,Date,...extra});return exports}
 function elements(node){if(!node||typeof node!=='object')return[];return[node,...[node.props?.children].flat(Infinity).flatMap(elements)]}
 test('Actual Buy for Me final button opens OTP, while closed orders have no advance button',()=>{
  for(const status of ['in_transit','delivered','cancelled']){
@@ -188,7 +188,7 @@ test('Shopping stage updates compare driver, main status and previous shopping s
  const filters=[];let wrote=false
  const row={id:job,driver_id:driver,service_type:'buy_for_me',status:'accepted',bfm_stage:'heading_to_shop'}
  const q={select:()=>q,eq:(k,v)=>{filters.push([k,v]);return q},is:(k,v)=>{filters.push([k,v]);return q},single:async()=>({data:row}),update:()=>{wrote=true;return q},then:resolve=>resolve({data:[],error:null})}
- const module=compile('app/actions/shopping.ts',{'@/lib/payments/shopping-sandbox':{isShoppingSimulation:()=>false},'@/lib/order-photo-lifecycle':{},'@/lib/order-media':{},'@/lib/payments/company-card':{},'@/lib/payments/direct':{},'@/lib/quote-consent':{},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:driver}}})}})},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>q})},'next/cache':{},'@/lib/notifications/internal':{},'@/app/actions/booking-settings':{},'@/app/actions/pricing':{},'@/lib/shopping-validation':{}})
+ const module=compile('app/actions/shopping.ts',{'@/app/actions/shopping-operations':{},'@/lib/payments/shopping-sandbox':{isShoppingSimulation:()=>false},'@/lib/order-photo-lifecycle':{},'@/lib/order-media':{},'@/lib/payments/company-card':{},'@/lib/payments/direct':{},'@/lib/quote-consent':{readQuoteConsent:()=>null},'@/lib/supabase/server':{createClient:async()=>({auth:{getUser:async()=>({data:{user:{id:driver}}})}})},'@/lib/supabase/admin':{createAdminClient:()=>({from:()=>q})},'next/cache':{},'@/lib/notifications/internal':{},'@/app/actions/booking-settings':{},'@/app/actions/pricing':{},'@/lib/shopping-validation':{}})
  const result=await module.updateBfmStage(job,'arrived_at_shop')
  assert.equal(wrote,true);assert.ok(result.error)
  for(const filter of [['driver_id',driver],['status','accepted'],['bfm_stage','heading_to_shop']])assert.ok(filters.some(f=>f[0]===filter[0]&&f[1]===filter[1]))

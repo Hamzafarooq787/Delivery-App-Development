@@ -37,6 +37,7 @@ import {
   type PlaceSuggestion,
 } from '@/lib/google'
 import { addressPostcode, parcelContact } from "@/lib/parcel-contact"
+import {normaliseUKPhone} from '@/lib/uk-phone'
 import { saveDeliveryDraft, type DeliveryDraft } from '@/lib/delivery-draft'
 
 interface NewDeliveryModalProps {
@@ -255,6 +256,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
   }, [])
   function goTo(next: number) {
     if(next < step) checkoutKey.current = null
+    if(next===3)setQuoteRefresh(n=>n+1)
     setStepError(null)
     setStep(next)
   }
@@ -285,7 +287,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
   const [itemPhotos, setItemPhotos] = useState<string[]>(initialDraft?.itemPhotos ?? [])
   useOrderPhotoCleanup(itemPhotos, false)
   const [recipientName,setRecipientName]=useState(initialDraft?.recipientName??"")
-  const [recipientPhone,setRecipientPhone]=useState(initialDraft?.recipientPhone??"")
+  const [recipientPhone,setRecipientPhone]=useState(String(initialDraft?.recipientPhone??""))
   const [collectionTime,setCollectionTime]=useState(initialDraft?.collectionTime??"asap")
   const contact=parcelContact(recipientName,recipientPhone,collectionTime==="asap" || !collectionTime ? collectionTime : new Date(collectionTime).toJSON())
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
@@ -324,6 +326,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
     window.addEventListener("pagehide",flush)
     return()=>{window.removeEventListener("pagehide",flush)}
   },[])
+  const [quoteRefresh,setQuoteRefresh]=useState(0)
   const quoteKey = JSON.stringify([pickupCoords, deliveryCoords, packageSize, promoCode.trim()])
   const quote = quoted?.key === quoteKey ? quoted.value : null
   const [quoteLoading, setQuoteLoading] = useState(false)
@@ -361,7 +364,13 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
       setQuoteLoading(false)
     }, 400)
     return () => { current = false; clearTimeout(timer) }
-  }, [pickupCoords, deliveryCoords, packageSize, promoCode, quoteKey])
+  }, [pickupCoords, deliveryCoords, packageSize, promoCode, quoteKey,quoteRefresh])
+
+  useEffect(()=>{
+    if(!quote?.expiresAt)return
+    const timer=setTimeout(()=>{setQuote(null);setQuoteError("Quote expired. Refresh the price before paying.")},Math.max(0,quote.expiresAt-Date.now()))
+    return()=>clearTimeout(timer)
+  },[quote?.expiresAt])
 
   // User's device GPS + detected country
   const [userCoords, setUserCoords] = useState<LatLng | null>(null)
@@ -602,10 +611,10 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
         item_description: itemDescription.trim(),
         item_photo_urls: itemPhotos,
         package_size: packageSize,
-        promo_code: quote.promoCodeText,
+        promo_code: promoCode.trim()||null,
       } })
 
-      if ('error' in result) { toast.error(result.error); setSubmitting(false); return }
+      if ('error' in result) { if(result.restartCheckout)checkoutKey.current=null; if(/quote.*expired/i.test(result.error))setQuoteRefresh(n=>n+1);toast.error(result.error); setSubmitting(false); return }
       window.location.assign(result.url)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unexpected error.')
@@ -853,7 +862,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
 <fieldset className="grid gap-2 rounded-xl border border-white/20 p-3 text-sm">
 <legend>Recipient and collection</legend>
 <label>Recipient name <input className="block w-full rounded bg-[#262626] p-2" maxLength={100} autoComplete="off" value={recipientName} onChange={e=>setRecipientName(e.target.value)} /></label>
-<label>Recipient UK phone <input className="block w-full rounded bg-[#262626] p-2" type="tel" maxLength={40} value={recipientPhone} onChange={e=>setRecipientPhone(e.target.value)} /></label>
+<label>Recipient UK phone <input className="block w-full rounded bg-[#262626] p-2" type="tel" inputMode="tel" autoComplete="tel-national" name="recipient_phone" maxLength={40} value={recipientPhone} onBlur={()=>{const phone=normaliseUKPhone(recipientPhone);if(phone)setRecipientPhone(phone)}} onChange={e=>setRecipientPhone(e.target.value)} /></label>
 <label>Collection time <select className="block w-full rounded bg-[#262626] p-2" value={collectionTime==="asap"?"asap":"later"} onChange={e=>setCollectionTime(e.target.value==="asap"?"asap":"")}><option value="asap">As soon as possible</option><option value="later">Request a date and time</option></select></label>
 {collectionTime!=="asap"&&<label>Preferred date and time (your device’s time zone)<input className="block w-full rounded bg-[#262626] p-2" type="datetime-local" value={collectionTime} onChange={e=>setCollectionTime(e.target.value)} /></label>}
 </fieldset>
@@ -868,7 +877,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
             <div className={styles.reviewPackage}>{packageSize && <span className={styles.reviewParcel} data-size={packageSize}><PackageIllustration bulky={packageSize === "bulky"}/></span>}<span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
           </div>
           <div className={styles.price}>
-            {quote && <div><span>Driving distance</span><strong>{quote.distanceMiles.toFixed(3)} miles</strong></div>}
+            <p className="text-xs">This reviewed price is held for ten minutes. Checkout uses this exact total.</p>{quoteError&&<button type="button" onClick={()=>setQuoteRefresh(n=>n+1)}>Refresh price</button>}{quote && <div><span>Driving distance</span><strong>{quote.distanceMiles.toFixed(3)} miles</strong></div>}
             <div><span>Delivery subtotal</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
             {quote && <PriceBreakdown lines={quote.priceLines.some(line => /^(Large item|Van) surcharge$/.test(line.label)) ? quote.priceLines : [...quote.priceLines,{label:"Parcel size fee",amount:0}]}/>}
             {quote && quote.surgeMultiplier > 1 && <div><span>Surge ({quote.surgeMultiplier}×)</span><strong>+£{formatPrice(quote.surgedPrice - quote.basePrice)}</strong></div>}

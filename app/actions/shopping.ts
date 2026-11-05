@@ -1,5 +1,7 @@
 "use server"
+import {bookingAvailability} from "@/lib/booking-availability"
 import {isShoppingSimulation,verifiedShoppingSimulation} from "@/lib/payments/shopping-sandbox"
+import { enableApprovedPurchase } from "@/app/actions/shopping-operations"
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
@@ -7,7 +9,7 @@ import { ownsOrderPhoto } from "@/lib/order-media"
 
 import { verifyCompanyReceipt } from "@/lib/payments/company-card"
 import { processOrderRefunds } from "@/lib/payments/direct"
-import { issueQuoteConsent, checkQuoteConsent } from "@/lib/quote-consent"
+import { issueQuoteConsent, checkQuoteConsent, readQuoteConsent, shoppingScope, QUOTE_TTL_MS } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -134,31 +136,14 @@ export async function createShoppingRequest(
     }
   }
 
-  // Get delivery quote (shop → customer delivery)
-  const quoteResult = await getDeliveryQuote({
-    serviceType: "buy_for_me",
-    pickupLat: params.shop_lat,
-    pickupLng: params.shop_lng,
-    deliveryLat: params.delivery_lat,
-    deliveryLng: params.delivery_lng,
-    packageSize: "medium", // shopping bags always medium
-    promoCode: params.promo_code,
-  })
-
-  if ("error" in quoteResult) return { error: quoteResult.error }
-  const quote = quoteResult.data
-
-  // Service fee on top of delivery fee
-  const serviceFee = (await getBookingPricing()).shoppingFee
-  const deliveryFee = parseFloat((quote.finalPrice + serviceFee).toFixed(2))
-
-  // max_spend is the lower of the configured limit or the customer's estimate (if provided)
-  const maxSpend = bfm.max_purchase_amount
-
-  // Total wallet deduction at booking: delivery fee + items hold
-  const totalCharge = parseFloat((deliveryFee + maxSpend).toFixed(2))
-
-  if (!checkQuoteConsent(params.consent_token, user.id, [params.shop_lat, params.shop_lng, params.delivery_lat, params.delivery_lng, estimatedTotal], totalCharge)) return { error: "Your quote changed or expired. Go back and review the new price before confirming." }
+  const scope=shoppingScope({...params,estimated_items_total:estimatedTotal})
+  const approved=readQuoteConsent<ShoppingQuote>(params.consent_token,user.id,scope)
+  if(approved?.snapshot){const unavailable=await bookingAvailability(user.id,"buy_for_me",{lat:params.shop_lat,lng:params.shop_lng},{lat:params.delivery_lat,lng:params.delivery_lng});if(unavailable)return {error:unavailable}}
+  const quoteResult=approved?.snapshot?{data:approved.snapshot}:await getShoppingQuote({...params,estimated_items_total:estimatedTotal})
+  if("error" in quoteResult)return {error:quoteResult.error}
+  const quote=quoteResult.data
+  const serviceFee=quote.serviceFee,deliveryFee=quote.totalFee,maxSpend=quote.itemsHold,totalCharge=quote.totalCharge
+  if(!checkQuoteConsent(params.consent_token,user.id,scope,totalCharge))return {error:"Your quote expired. Return to Review for a fresh ten-minute quote."}
 
   // Check wallet balance
   const { data: walletRow } = await admin
@@ -180,9 +165,9 @@ export async function createShoppingRequest(
   const { data: booking, error: rpcError } = await admin.rpc("book_shopping_order_atomic", {
     p_customer_id: user.id,
     p_request_key: params.request_key,
-    p_order: { ...params, tracking_number, price: deliveryFee, base_price: quote.basePrice,
+    p_order: { ...params, tracking_number, price: deliveryFee, base_price: quote.basePrice??quote.deliveryFee,
       service_fee: serviceFee, estimated_items_total: estimatedTotal, max_spend_approved: maxSpend,
-      discount_amount: quote.discountAmount, surge_multiplier: quote.surgeMultiplier },
+      discount_amount: quote.discountAmount, surge_multiplier: quote.surgeMultiplier??1 },
   })
   if (rpcError || !booking?.id) {
     console.error("[Shopping booking]", rpcError?.code, rpcError?.message)
@@ -488,6 +473,10 @@ export async function submitPurchaseReceipt(params: {
   if(delivery.payment_method === "stripe" && !delivery.shopping_hold_settled_at) {
     try {
       if(isShoppingSimulation(delivery.company_card_reference)){
+        const enabled=await enableApprovedPurchase(params.deliveryId)
+        if(enabled.error)return {error:`Test basket is not ready: ${enabled.error}`}
+        delivery.purchase_authorized_total=enabled.total
+
         const simulation=await verifiedShoppingSimulation(params.deliveryId,delivery.company_card_reference!)
         if(simulation.driver_id!==user.id||simulation.simulated_spent===null||Math.round(Number(simulation.simulated_spent)*100)!==Math.round(params.actual_items_total*100)||Math.round(Number(delivery.purchase_authorized_total)*100)!==Math.round(params.actual_items_total*100))throw Error("Simulated purchase and receipt do not match")
       }else await verifyCompanyReceipt(delivery.company_card_reference,Number(delivery.purchase_authorized_total),params.actual_items_total)
@@ -588,6 +577,9 @@ export type ShoppingQuoteParams = {
 }
 
 export type ShoppingQuote = {
+  basePrice?:number
+  surgeMultiplier?:number
+  expiresAt?:number
   priceLines: {label:string;amount:number}[]
   discountAmount: number
   discountCampaign?: string | null
@@ -636,9 +628,9 @@ export async function getShoppingQuote(
   if(!Number.isFinite(estimatedItems)||estimatedItems<0||estimatedItems>bfm.max_purchase_amount)return{error:"Shopping estimate exceeds the configured limit."}
   const itemsHold = bfm.max_purchase_amount
 
-  return {
-    data: {
-      consentToken: issueQuoteConsent(user.id, [params.shop_lat, params.shop_lng, params.delivery_lat, params.delivery_lng, estimatedItems], parseFloat((deliveryFee + itemsHold).toFixed(2))),
+  const snapshot = {
+      basePrice:quote.basePrice,surgeMultiplier:quote.surgeMultiplier,
+      expiresAt:Date.now()+QUOTE_TTL_MS,
       discountAmount: quote.discountAmount,
       discountCampaign: quote.discountCampaign,
       promoCodeId: quote.promoCodeId,
@@ -654,8 +646,8 @@ export async function getShoppingQuote(
       distanceMiles: quote.distanceMiles,
       durationMin: quote.durationMin,
       promoCodeError: quote.promoCodeError,
-    },
   }
+  return {data:{...snapshot,consentToken:issueQuoteConsent(user.id,shoppingScope(params),snapshot.totalCharge,snapshot)}}
 }
 
 function receiptObjectPath(url: string): string | null {

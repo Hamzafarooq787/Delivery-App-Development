@@ -94,7 +94,7 @@ export function AvailableJobsPanel({ jobs }: { jobs: Job[] }) {
   }, [jobs, search, sort, skipped])
 
   return (
-    <div className="pt-2 pb-12 px-2">
+    <div className="pt-2 pb-[calc(7rem+env(safe-area-inset-bottom))] px-2">
       {/* Header */}
       <div className="mb-6 md:mb-8">
         <h1 className="text-2xl md:text-4xl font-extrabold tracking-tighter text-white mb-2 font-headline">

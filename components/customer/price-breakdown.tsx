@@ -1,4 +1,5 @@
 "use client";
+import {createPortal} from "react-dom";
 import { useState } from "react";
 export function PriceBreakdown({
   lines,
@@ -15,9 +16,9 @@ export function PriceBreakdown({
       >
         View price breakdown
       </button>
-      {open && (
+      {open && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-[10020] flex items-center justify-center bg-black/70 p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Price breakdown"
@@ -43,7 +44,7 @@ export function PriceBreakdown({
             </button>
           </section>
         </div>
-      )}
+      ,document.body)}
     </>
   );
 }

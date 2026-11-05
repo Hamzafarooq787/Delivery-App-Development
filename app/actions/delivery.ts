@@ -1,4 +1,5 @@
 "use server"
+import {bookingAvailability} from "@/lib/booking-availability"
 import { getDashboardUser } from "@/lib/dashboard-user"
 import { getDriverActiveJobs, getDriverReadProfile } from "@/lib/driver-read-context"
 import { boundedFetch } from "@/lib/short-request"
@@ -13,7 +14,7 @@ import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
 
 import { cancelCardBooking } from "@/app/actions/order-checkout"
-import { checkQuoteConsent, deliveryScope } from "@/lib/quote-consent"
+import { checkQuoteConsent, readQuoteConsent, deliveryScope } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { after } from "next/server"
@@ -22,7 +23,7 @@ import { notifyUser, notifyDriversOfNewDelivery } from "@/lib/notifications/inte
 import { NotificationTag } from "@/lib/notifications/types"
 import { isPackageSize, unionCapabilities, type PackageSize, type VehicleType } from "@/lib/vehicles"
 import type { DriverVehicle } from "@/app/actions/vehicles"
-import { getDeliveryQuote } from "@/app/actions/pricing"
+import { type DeliveryQuote, getDeliveryQuote } from "@/app/actions/pricing"
 
 // ── Customer actions ──────────────────────────────────────────────────────────
 
@@ -74,20 +75,13 @@ export async function createDeliveryRequest(params: CreateDeliveryParams): Promi
   }
 
   if (!await leaseOrderPhotos(user.id,params.item_photo_urls??[])) return {error:'An item photo is no longer available. Please upload it again.'}
-  const quoteResult = await getDeliveryQuote({
-    pickupLat: params.pickup_lat,
-    pickupLng: params.pickup_lng,
-    deliveryLat: params.delivery_lat,
-    deliveryLng: params.delivery_lng,
-    packageSize: params.package_size,
-    promoCode: params.promo_code,
-  })
-
-  if ("error" in quoteResult) {
-    return { error: quoteResult.error, code: "invalid_price" }
-  }
-  const quote = quoteResult.data
-  if (!checkQuoteConsent(params.consent_token, user.id, deliveryScope({ pickupLat: params.pickup_lat, pickupLng: params.pickup_lng, deliveryLat: params.delivery_lat, deliveryLng: params.delivery_lng, packageSize: params.package_size }), quote.finalPrice)) return { error: "Your quote changed or expired. Go back and review the current price before confirming.", code: "invalid_price" }
+  const scope={pickupLat:params.pickup_lat,pickupLng:params.pickup_lng,deliveryLat:params.delivery_lat,deliveryLng:params.delivery_lng,packageSize:params.package_size,promoCode:params.promo_code}
+  const approved=readQuoteConsent<DeliveryQuote>(params.consent_token,user.id,deliveryScope(scope))
+  if(approved?.snapshot){const unavailable=await bookingAvailability(user.id,"delivery",{lat:params.pickup_lat,lng:params.pickup_lng},{lat:params.delivery_lat,lng:params.delivery_lng});if(unavailable)return {error:unavailable}}
+  const quoteResult=approved?.snapshot?{data:approved.snapshot}:await getDeliveryQuote(scope)
+  if("error" in quoteResult)return {error:quoteResult.error,code:"invalid_price"}
+  const quote=quoteResult.data
+  if(!checkQuoteConsent(params.consent_token,user.id,deliveryScope(scope),quote.finalPrice))return {error:"Your quote expired. Return to Review for a fresh ten-minute quote.",code:"invalid_price"}
 
   const tracking_number = `TRK-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
@@ -241,6 +235,7 @@ export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
     .eq("payments.purpose", "booking")
     .eq("status", "requested")
     .is("driver_id", null)
+    .or("recovery_case.is.null,recovery_case->>status.neq.open")
     .gte("pickup_lat",49.8).lte("pickup_lat",61.1).gte("pickup_lng",-8.7).lte("pickup_lng",1.9)
     .gte("delivery_lat",49.8).lte("delivery_lat",61.1).gte("delivery_lng",-8.7).lte("delivery_lng",1.9)
     .order("created_at", { ascending: false })
@@ -526,7 +521,12 @@ export async function verifyDeliveryOtpAndComplete(deliveryId: string, code: str
     if(error||!files?.some(f=>f.name===name))return{error:"Delivery photo was not found."}
   }catch{return{error:"Invalid delivery photo."}}
   const {data,error}=await admin.rpc('complete_order_with_otp',{p_id:deliveryId,p_driver:user.id,p_code:code,p_photo:photoUrl})
-  if(error)return{error:"Completion could not be saved. Please retry."}
+  if(error){
+    console.error("[delivery-completion]",{orderId:deliveryId,code:error.code,message:error.message})
+    if(error.message?.includes("admin_cancellation_review_required")||error.message?.includes("recovery_instructions_required"))return {error:"This delivery is paused for an admin review. Ask support to close the review before completing delivery."}
+    if(error.code==="23514")return {error:"Delivery status could not be saved. Contact support and quote this order reference; your photo and code can be retried."}
+    return {error:"Completion could not be saved. Refresh the job before retrying. If it continues, contact support with the order reference."}
+  }
   if(data?.success){
     const {data:order}=await admin.from('delivery_requests').select('customer_id,tracking_number').eq('id',deliveryId).single()
     if(order)await notifyUser({userId:order.customer_id,title:'Delivery completed',body:`Your order ${order.tracking_number??''} has been delivered.`,url:`/dashboard/customer/tracking?id=${deliveryId}`,tag:`delivered-${deliveryId}`}).catch(()=>{})
@@ -567,42 +567,14 @@ export async function safetyReleaseJob(deliveryId: string, reason: string) {
   if (!user) return { error: "Not authenticated" }
 
   if (typeof reason!=="string" || reason.trim().length<3 || reason.length>120) return {error:"Choose a valid reason."}
-  // Release job back to the pool so another driver can accept it
-  const { data: released, error } = await admin
-    .from("delivery_requests")
-    .update({ status: "requested", driver_id: null })
-    .eq("id", deliveryId)
-    .eq("driver_id", user.id)
-    .eq("status", "accepted")
-    .is("company_card_reference",null)
-    .or("bfm_stage.is.null,bfm_stage.in.(assigned,arrived_at_shop)")
-    .select("id").maybeSingle()
-
-  if (error) return { error: error.message }
-  if (!released) return { error: "Only jobs awaiting collection can be released. Contact support for an active collection." }
-
-  // Log the safety cancellation with reason
-  await admin.from("delivery_status_logs").insert({
-    delivery_id: deliveryId,
-    status: `safety_release: ${reason}`,
-    updated_by: user.id,
-  })
-
+  const {error}=await admin.rpc("request_safety_release",{p_actor:user.id,p_id:deliveryId,p_reason:reason})
+  if(error)return {error:"Only uncollected jobs without a purchase card can be released. Contact support for a safe handover."}
   after(async()=>{
-    const {data:admins}=await admin.from("users").select("id").eq("role","admin").limit(50);
-    await Promise.allSettled((admins??[]).map(a=>notifyUser({userId:a.id,title:"Driver released a job",body:"The job is available again. See its timeline for the reason.",url:`/dashboard/admin/orders/${deliveryId}`,tag:`driver-release-${deliveryId}` })));
-  });
-  // Auto-offline if no other active jobs remain
-  const ACTIVE = ["accepted", "collected", "picked_up", "in_transit"]
-  const { count } = await admin
-    .from("delivery_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("driver_id", user.id)
-    .in("status", ACTIVE)
-  if ((count ?? 0) === 0) {
-    await admin.from("driver_profiles").upsert({ id: user.id, is_online: false }, { onConflict: "id" })
-  }
-
+    const {data:admins}=await admin.from("users").select("id").eq("role","admin").limit(50)
+    await Promise.allSettled((admins??[]).map(a=>notifyUser({userId:a.id,title:"Safety release needs review",body:"The driver is released. This paid order is paused until you arrange a replacement or cancellation.",url:`/dashboard/admin/orders/${deliveryId}`,tag:`driver-release-${deliveryId}`})))
+  })
+  revalidatePath(`/dashboard/admin/orders/${deliveryId}`)
+  revalidatePath("/dashboard/customer/tracking")
   revalidatePath("/dashboard/driver/jobs")
   revalidatePath("/dashboard/driver/active-jobs")
   return { success: true }

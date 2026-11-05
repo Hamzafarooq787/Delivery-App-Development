@@ -22,6 +22,7 @@ import {
 import { DeliveryOtpModal } from "./delivery-otp-modal"
 
 type BfmJob = {
+  company_card_reference?:string|null
   pickup_lat?:number|null;pickup_lng?:number|null;delivery_lat?:number|null;delivery_lng?:number|null
   shop_instructions?:string|null
   delivery_instructions?:string|null
@@ -90,7 +91,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
   const [uploadingReceipt, setUploadingReceipt] = useState(false)
   const router = useRouter()
 
-  const currentStage = job.bfm_stage ?? job.status
+  const currentStage = ["delivered","cancelled"].includes(job.status)?job.status:job.bfm_stage??job.status
 
   useEffect(() => {
     let active = true, pending = false
@@ -117,6 +118,7 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
     }
     const next = NEXT_STAGE[currentStage]
     if (!next) return
+    if(next==="arrived_at_shop"&&!window.confirm("Confirm you have arrived at the shop? Arrival ends any free travel grace period."))return
 
     if (next === "purchase_completed") {
       // Need receipt first
@@ -437,8 +439,8 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
       {/* Receipt upload form */}
       {showReceiptForm && (
         <div className="bg-[var(--brand-panel)] border border-[var(--color-outline-variant)]/20 rounded-xl p-4 space-y-4">
-          <button disabled={isPending} onClick={()=>startTransition(async()=>{const r=await enableApprovedPurchase(job.id);if(r.error)toast.error(r.error);else toast.success(r.total===0?"No purchase needed. Upload evidence of unavailable items to settle the order.":`Company card enabled for £${r.total?.toFixed(2)}. You can now pay at the shop.`)})} className="w-full rounded-xl bg-[var(--brand-strong)] p-3 font-bold text-white">Enable company card for approved basket</button>
-          <p className="text-xs text-white">Confirm shelf prices and customer approvals before enabling the card. Then pay using the company card and upload the receipt.</p>
+          {!job.company_card_reference?.startsWith("sandbox_")&&<><button disabled={isPending} onClick={()=>startTransition(async()=>{const r=await enableApprovedPurchase(job.id);if(r.error)toast.error(r.error);else toast.success(r.total===0?"No purchase needed. Upload evidence of unavailable items to settle the order.":`Company card enabled for £${r.total?.toFixed(2)}. You can now pay at the shop.`)})} className="w-full rounded-xl bg-[var(--brand-strong)] p-3 font-bold text-white">Enable company card for approved basket</button>
+          <p className="text-xs text-white">Confirm shelf prices and customer approvals before enabling the card. Then pay using the company card and upload the receipt.</p></>}{job.company_card_reference?.startsWith("sandbox_")&&<p className="text-xs text-white">Test mode: Submit Receipt checks approvals and enables the simulated basket automatically. Do not buy real goods.</p>}
           <p className="text-sm font-bold text-white">Submit Purchase Receipt</p>
           <div>
             <label className="block text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1.5">Actual Total Spent (£)</label>

@@ -175,7 +175,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
         shopping_items: items.map(({ id: _id, ...i }) => ({ ...i, name: i.name.trim() })),
       } })
       if (!mounted.current) return
-      if ('error' in result) setError(result.error); else window.location.assign(result.url)
+      if ('error' in result){if(result.restartCheckout)requestKey.current=null;setError(result.error);if(/quote.*expired/i.test(result.error))void loadQuote()}else window.location.assign(result.url)
     } catch { if (mounted.current) setError('We could not confirm checkout. Check My Deliveries before trying again.') }
     finally { submitLock.current = false; if (mounted.current) setSubmitting(false) }
   }
