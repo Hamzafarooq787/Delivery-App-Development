@@ -117,7 +117,7 @@ export default async function AdminOrderDetailPage({
         <div className="lg:col-span-8 space-y-5">
 
           {order.cancellation_outcome && <section className="rounded-xl border border-white/20 p-4 text-white"><h3 className="font-bold">Cancellation</h3><p>{order.cancellation_outcome.reason}</p><p>Customer fee £{Number(order.cancellation_outcome.fee).toFixed(2)} · Driver compensation £{Number(order.cancellation_outcome.driver).toFixed(2)} · GoDrop £{Number(order.cancellation_outcome.platform).toFixed(2)}</p></section>}
-          <section className="rounded-xl border border-white/15 p-4 text-white"><h3 className="font-bold">Collection milestones</h3>{[["Accepted",order.accepted_at],["Travel started",order.travel_started_at],["Arrived",order.arrived_at],["Purchased",order.purchased_at]].map(([label,value])=><p key={label as string} className="text-sm">{label}: {value?new Date(value).toLocaleString("en-GB",{timeZone:"Europe/London"}):"Not recorded"}</p>)}</section>
+          <section className="rounded-xl border border-white/15 p-4 text-white"><h3 className="font-bold">Collection milestones — current assignment</h3>{order.assignment_history?.length>0&&<details className="my-3"><summary>Previous assignments and travel history</summary>{order.assignment_history.map((a:any,i:number)=><p key={i} className="text-xs">Driver {a.driver_id} · Accepted {a.accepted_at??"Unknown"} · Travel {a.travel_started_at??"Not started"} · Arrived {a.arrived_at??"Not recorded"} · Ended {a.ended_at}</p>)}</details>}{[["Accepted",order.accepted_at],["Travel started",order.travel_started_at],["Arrived",order.arrived_at],["Purchased",order.purchased_at]].map(([label,value])=><p key={label as string} className="text-sm">{label}: {value?new Date(value).toLocaleString("en-GB",{timeZone:"Europe/London"}):"Not recorded"}</p>)}</section>
           {/* Package Details */}
           <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-5">
@@ -344,7 +344,7 @@ export default async function AdminOrderDetailPage({
             </div>
             <div className="relative pl-6">
               {timelineStatuses.map((s, idx) => {
-                const log = logs.find((l) => l.status === s)
+                const log = [...logs].reverse().find((l) => l.status === s)
                 const isDone    = idx < currentIdx
                 const isActive  = idx === currentIdx
                 const isUpcoming = idx > currentIdx
@@ -471,7 +471,7 @@ export default async function AdminOrderDetailPage({
             </div>
           )}
 
-          <OrderRecoveryPanel id={order.id} record={order.recovery_case} canResolve={actor.owner||actor.scopes.includes("finance")}/>
+          <OrderRecoveryPanel simulation={order.company_card_reference?.startsWith("sandbox_")} id={order.id} record={order.recovery_case} canResolve={actor.owner||actor.scopes.includes("finance")}/>
           <OrderConversation id={order.id} page={messagePage}/>
           {/* Admin Actions */}
           <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 rounded-xl p-5">

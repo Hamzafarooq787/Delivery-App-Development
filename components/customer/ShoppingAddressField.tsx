@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useId, type ReactNode } from 'react'
+import {createPortal} from 'react-dom'
 import { createAddressRequest } from '@/lib/address-request'
 import dynamic from 'next/dynamic'
 import { MapPin } from 'lucide-react'
@@ -19,6 +20,8 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
   const [dropdownHeight, setDropdownHeight] = useState(160)
   const input = useRef<HTMLInputElement>(null)
   const wrapper = useRef<HTMLDivElement>(null)
+  const dropdown = useRef<HTMLDivElement>(null)
+  const [dropdownRect,setDropdownRect]=useState({left:0,top:0,width:0})
   const requests = useRef(createAddressRequest()).current
   const lastTyped = useRef(value)
   useEffect(() => {
@@ -28,10 +31,16 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
   }, [value, requests])
   useEffect(() => () => { pinSequence.current++; requests.cancel() }, [requests])
   useEffect(() => {
-    const outside = (event: PointerEvent) => { if (!wrapper.current?.contains(event.target as Node)) setSuggestions([]) }
+    const outside = (event: PointerEvent) => { if (!wrapper.current?.contains(event.target as Node)&&!dropdown.current?.contains(event.target as Node)) setSuggestions([]) }
     document.addEventListener('pointerdown', outside)
     return () => document.removeEventListener('pointerdown', outside)
   }, [])
+  useEffect(()=>{
+    if(!suggestions.length)return
+    const close=(event:Event)=>{if(!dropdown.current?.contains(event.target as Node))setSuggestions([])}
+    window.addEventListener('scroll',close,true);window.addEventListener('resize',close)
+    return()=>{window.removeEventListener('scroll',close,true);window.removeEventListener('resize',close)}
+  },[suggestions.length])
   useEffect(() => { if (pinOpen) pinDialog.current?.showModal() }, [pinOpen])
   function closePin() { pinSequence.current++; setBusy(false); setPinOpen(false); input.current?.focus() }
   function change(v: string) {
@@ -42,7 +51,11 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
       try {
         const list = await googlePlacesAutocomplete(v.trim(), {signal})
         if (signal.aborted || document.activeElement !== input.current) return
-        setDropdownHeight(Math.max(44, (window.visualViewport?.height ?? window.innerHeight) - (input.current?.getBoundingClientRect().bottom ?? 0) - 90))
+        const rect=input.current!.getBoundingClientRect()
+        const room=(window.visualViewport?.height??window.innerHeight)-rect.bottom-12
+        const height=Math.min(240,Math.max(88,room<100?rect.top-12:room))
+        setDropdownRect({left:rect.left,top:room<100?Math.max(8,rect.top-height-4):rect.bottom+4,width:rect.width})
+        setDropdownHeight(height)
         setSuggestions(list)
         setError(list.length ? '' : 'No addresses found. Try a postcode and building number.')
       } catch (e) {
@@ -51,13 +64,15 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
     })
   }
   async function choose(s: PlaceSuggestion) {
+    lastTyped.current=s.text
+    onChange(s.text)
     const signal = requests.start()
     setBusy(true); setSuggestions([]); setError('')
     try {
       const coords = await googlePlaceCoords(s.placeId, signal)
       if (signal.aborted) return
       if (!coords) { setError('Could not find this address. Try another suggestion.'); return }
-      onSelect({ address: s.text, ...coords }); input.current?.blur()
+      onSelect({lat:coords.lat,lng:coords.lng,address:s.text}); input.current?.blur()
     } catch { if (!signal.aborted) setError('Could not select this address. Please try again.') }
     finally { if (!signal.aborted) setBusy(false) }
   }
@@ -80,6 +95,6 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
       <button type="button" onClick={closePin}>Back to address search</button>
     </dialog>}
     {busy && <small>Finding address…</small>}{error && <small role="alert">{error}</small>}
-    {suggestions.length > 0 && <div className={styles.suggestions} style={{ maxHeight: dropdownHeight }}>{suggestions.map(s => <button key={s.placeId} type="button" onMouseDown={e => e.preventDefault()} onClick={() => choose(s)}>{s.text}</button>)}</div>}
+    {suggestions.length > 0 && createPortal(<div ref={dropdown} role="listbox" aria-label={`${label} suggestions`} className={styles.suggestions} style={{position:'fixed',zIndex:10030,right:'auto',...dropdownRect,maxHeight:dropdownHeight}}>{suggestions.map(s => <button key={s.placeId} role="option" aria-selected={false} type="button" onPointerDown={e => e.preventDefault()} onClick={() => choose(s)}>{s.text}</button>)}</div>,document.body)}
   </div>
 }

@@ -1,3 +1,4 @@
+import {unstable_cache} from "next/cache"
 import {recordHealth} from "@/lib/integration-health"
 /**
  * lib/google-server.ts
@@ -22,7 +23,7 @@ export type ServerRouteResult = {
   duration_in_traffic_min: number | null
 }
 
-export async function fetchRouteServer(
+async function requestDrivingRoute(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number }
 ): Promise<ServerRouteResult | null> {
@@ -62,4 +63,13 @@ export async function fetchRouteServer(
     await recordHealth("maps",false,"Directions request failed or timed out")
     return null
   }
+}
+
+const cachedDrivingRoute=unstable_cache(async(from:{lat:number;lng:number},to:{lat:number;lng:number})=>{
+ const route=await requestDrivingRoute(from,to)
+ if(!route)throw new Error("Route unavailable")
+ return route
+},["godrop-driving-route-qa19"],{revalidate:600})
+export async function fetchRouteServer(from:{lat:number;lng:number},to:{lat:number;lng:number}):Promise<ServerRouteResult|null>{
+ try{return await cachedDrivingRoute(from,to)}catch{return null}
 }

@@ -137,11 +137,12 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
 
   if (job.service_type === "buy_for_me") {
     return (
-      <>{job.company_card_reference?.startsWith("sandbox_")&&<p role="status" className="m-4 rounded-xl border border-orange-400/50 p-4 text-orange-200">SANDBOX SIMULATION. Do not buy real goods or spend personal money. Use test item prices and a test receipt.</p>}<OrderRecoveryInstructions id={job.id} driver/><BfmShoppingWorkflow
+      <>{job.company_card_reference?.startsWith("sandbox_")&&<p role="status" className="m-4 rounded-xl border border-orange-400/50 p-4 text-orange-200">SANDBOX SIMULATION. Do not buy real goods or spend personal money. Use test item prices and a test receipt.</p>}<OrderRecoveryInstructions id={job.id} driver/><section className="m-4 rounded-xl border border-white/20 p-4"><CancelOrderButton deliveryId={job.id} currentStatus={job.status} fault="driver" onCancelled={()=>router.refresh()}/></section><BfmShoppingWorkflow
         job={{
           id: job.id,
           shop_instructions:job.shop_instructions,delivery_instructions:job.delivery_instructions,
           pickup_lat:job.pickup_lat,pickup_lng:job.pickup_lng,delivery_lat:job.delivery_lat,delivery_lng:job.delivery_lng,
+          company_card_reference:job.company_card_reference,
           status: job.status,
           tracking_number: job.tracking_number,
           delivery_address: job.delivery_address,
@@ -396,10 +397,11 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
       </div>
 
       {job.cancellation_outcome && <section className="m-4 rounded-xl border border-white/20 p-4 text-white"><h2>Cancellation</h2><p>{job.cancellation_outcome.reason}</p><p>Your compensation: £{Number(job.cancellation_outcome.driver).toFixed(2)}</p></section>}
+      {!isDone&&<section className="mx-4 mb-8 space-y-3 rounded-xl border border-white/20 p-4"><h2 className="font-bold text-white">Unable to complete this job?</h2><CancelOrderButton deliveryId={job.id} currentStatus={job.status} fault="driver" onCancelled={()=>router.refresh()}/>{job.status==="accepted"&&<SafetyCancelButton jobId={job.id} label="Request safety release"/>}</section>}
       {/* Fixed action bar */}
       {!isDone && (
         <div
-          className="fixed bottom-16 lg:bottom-0 left-0 right-0 z-40 bg-[var(--brand-bg)]/95 backdrop-blur-sm border-t border-[var(--color-outline-variant)]/15 px-4 pt-3 lg:pl-[272px]"
+          className="fixed max-h-[45dvh] overflow-y-auto bottom-16 lg:bottom-0 left-0 right-0 z-40 bg-[var(--brand-bg)]/95 backdrop-blur-sm border-t border-[var(--color-outline-variant)]/15 px-4 pt-3 lg:pl-[272px]"
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
         >
           <div className="max-w-2xl mx-auto space-y-2">
@@ -439,8 +441,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
             )}
 
             {/* Safety cancel — slim secondary row */}
-            <SafetyCancelButton jobId={job.id} label="Release job" />
-            <CancelOrderButton deliveryId={job.id} currentStatus={job.status} fault="driver" onCancelled={()=>router.refresh()}/>
+
 
           </div>
         </div>

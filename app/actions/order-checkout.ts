@@ -1,5 +1,6 @@
 "use server";
 
+import {bookingAvailability} from "@/lib/booking-availability"
 import { cancelByPolicy } from "@/app/actions/cancellation"
 import { boundedFetch } from "@/lib/short-request"
 import { parcelContact } from "@/lib/parcel-contact"
@@ -13,9 +14,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/server";
 import { getAppOrigin } from "@/lib/get-app-origin";
 import { getBookingPricing } from "@/app/actions/booking-settings";
-import { getDeliveryQuote } from "@/app/actions/pricing";
+import { type DeliveryQuote, getDeliveryQuote } from "@/app/actions/pricing";
 import {
   getShoppingQuote,
+  type ShoppingQuote,
   getBfmSettings,
   type CreateShoppingRequestParams,
 } from "@/app/actions/shopping";
@@ -23,7 +25,7 @@ import type { CreateDeliveryParams } from "@/app/actions/delivery";
 import { validateShoppingItems } from "@/lib/shopping-validation";
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media";
-import { checkQuoteConsent, deliveryScope } from "@/lib/quote-consent";
+import { checkQuoteConsent, readQuoteConsent, deliveryScope, shoppingScope } from "@/lib/quote-consent";
 import {
   fulfillDirectSession,
   processOrderRefunds,
@@ -38,7 +40,7 @@ type Request =
     };
 export async function startOrderCheckout(
   input: Request,
-): Promise<{ url: string } | { error: string }> {
+): Promise<{ url: string } | { error: string; restartCheckout?:boolean }> {
   const client = await createClient();
   const {
     data: { user },
@@ -97,12 +99,24 @@ export async function startOrderCheckout(
       };
     if (previous?.status === "paid")
       return { url: `/dashboard/customer/tracking?id=${previous.delivery_id}` };
+    const shownScope=input.type==="delivery"?deliveryScope({pickupLat:input.order.pickup_lat,pickupLng:input.order.pickup_lng,deliveryLat:input.order.delivery_lat,deliveryLng:input.order.delivery_lng,packageSize:input.order.package_size,promoCode:input.order.promo_code}):shoppingScope({...input.order,estimated_items_total:input.order.shopping_items.reduce((sum,i)=>sum+(i.estimated_price??0)*i.quantity,0)})
+    const shown=readQuoteConsent(input.order.consent_token,user.id,shownScope)
+    if(previous&&shown&&Number(previous.amount)!==shown.amount&&!previous.stripe_session_id){
+      await admin.from("payments").update({status:"failed"}).eq("id",previous.id).eq("status","pending")
+      return {error:"The previous unpaid price has been retired. Confirm the current reviewed total again.",restartCheckout:true}
+    }
     if (previous?.stripe_session_id) {
       const session = await getStripe().checkout.sessions.retrieve(
         previous.stripe_session_id,
       );
       if (session.status === "complete")
         return { url: `/dashboard/customer/checkout?session_id=${session.id}` };
+      if(shown&&Number(previous.amount)!==shown.amount){
+        if(session.status==="open")await getStripe().checkout.sessions.expire(session.id)
+        await admin.from("payments").update({status:"failed"}).eq("id",previous.id).eq("status","pending")
+        return {error:"Your earlier unpaid checkout had a different total and has been closed. Confirm the current reviewed price again.",restartCheckout:true}
+      }
+      if(!shown)return {error:"Quote expired. Return to Review for a fresh ten-minute quote."}
       if (session.url && session.status === "open") return { url: session.url };
       return {
         error:
@@ -128,7 +142,9 @@ export async function startOrderCheckout(
         packageSize: p.package_size,
         promoCode: p.promo_code,
       };
-      const quote = await getDeliveryQuote(scope);
+      const approved=readQuoteConsent<DeliveryQuote>(p.consent_token,user.id,deliveryScope(scope))
+      if(approved?.snapshot){const unavailable=await bookingAvailability(user.id,"delivery",{lat:p.pickup_lat,lng:p.pickup_lng},{lat:p.delivery_lat,lng:p.delivery_lng});if(unavailable)return {error:unavailable}}
+      const quote=approved?.snapshot?{data:approved.snapshot}:await getDeliveryQuote(scope);
       if ("error" in quote) return quote;
       if (
         !checkQuoteConsent(
@@ -180,7 +196,9 @@ export async function startOrderCheckout(
         return {
           error: "Shopping is unavailable or the shopping limit was exceeded.",
         };
-      const quote = await getShoppingQuote({
+      const approved=readQuoteConsent<ShoppingQuote>(p.consent_token,user.id,shoppingScope({...p,estimated_items_total:estimated}))
+      if(approved?.snapshot){const unavailable=await bookingAvailability(user.id,"buy_for_me",{lat:p.shop_lat,lng:p.shop_lng},{lat:p.delivery_lat,lng:p.delivery_lng});if(unavailable)return {error:unavailable}}
+      const quote=approved?.snapshot?{data:approved.snapshot}:await getShoppingQuote({
         shop_lat: p.shop_lat,
         shop_lng: p.shop_lng,
         delivery_lat: p.delivery_lat,
@@ -193,7 +211,7 @@ export async function startOrderCheckout(
         !checkQuoteConsent(
           p.consent_token,
           user.id,
-          [p.shop_lat, p.shop_lng, p.delivery_lat, p.delivery_lng, estimated],
+          shoppingScope({...p,estimated_items_total:estimated}),
           quote.data.totalCharge,
         )
       )

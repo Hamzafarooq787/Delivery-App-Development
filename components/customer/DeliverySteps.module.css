@@ -54,3 +54,5 @@
 
 /* Keep the last review control reachable as policy text or the keyboard grows. */
 .body[data-step="2"],.body[data-step="3"]{padding-bottom:calc(72px + env(safe-area-inset-bottom));scroll-padding-bottom:72px}.reviewStep>label:last-child{flex-shrink:0;scroll-margin-bottom:48px}.footer{max-height:48%;overflow-y:auto}.footer details p{max-height:20dvh;overflow-y:auto}
+
+.price>div{min-width:0;align-items:center}.price>div>span{min-width:0;flex:1}.price>div>strong{flex-shrink:0;white-space:nowrap;font-variant-numeric:tabular-nums}.price>p{font-size:12px;line-height:1.5}

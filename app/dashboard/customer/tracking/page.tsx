@@ -86,7 +86,7 @@ function buildSteps(
   const cur = STATUS_ORDER.indexOf(status.toLowerCase())
   const isDelivered = status === 'delivered'
   return STATUS_ORDER.map((st, i) => {
-    const log = logs.find((l) => l.status === st)
+    const log = [...logs].reverse().find((l) => l.status === st)
     const timestamp = (log?.occurred_at_known===false?null:log?.created_at) ?? (st === 'requested' ? createdAt : null)
     return {
       label: st.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()),

@@ -22,7 +22,7 @@ import { bookingAvailability } from "@/lib/booking-availability"
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
 import { SURGE_COLUMNS, surgeSettingsSchema, busyPeriodSchema } from "@/lib/admin-pricing-validation"
-import { issueQuoteConsent, deliveryScope } from "@/lib/quote-consent"
+import { issueQuoteConsent, deliveryScope, QUOTE_TTL_MS } from "@/lib/quote-consent"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
@@ -34,6 +34,7 @@ import { resolveDiscount } from "@/app/actions/promotions"
 import { isPackageSize, type PackageSize } from "@/lib/vehicles"
 
 export type DeliveryQuote = {
+  expiresAt?:number
   priceLines: {label:string;amount:number}[]
   discountCampaign?: string | null
   consentToken: string
@@ -139,9 +140,8 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
 
   const finalPrice = Math.round((surgedPrice - discountAmount) * 100) / 100
 
-  return {
-    data: {
-      consentToken: issueQuoteConsent(user.id, deliveryScope(params), finalPrice),
+  const snapshot = {
+      expiresAt:Date.now()+QUOTE_TTL_MS,
       distanceMiles: route.distance_miles,
       durationMin: Math.ceil(route.duration_min),
       priceLines: fareBreakdown(route.distance_miles,config,params.packageSize),
@@ -156,8 +156,8 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
       promoCodeId: discount.error ? null : discount.promoCodeId,
       promoCodeText: discount.error ? null : discount.promoCodeText,
       finalPrice,
-    },
   }
+  return {data:{...snapshot,consentToken:issueQuoteConsent(user.id,deliveryScope(params),finalPrice,snapshot)}}
 }
 
 // ── Admin: surge pricing settings ───────────────────────────────────────────────
