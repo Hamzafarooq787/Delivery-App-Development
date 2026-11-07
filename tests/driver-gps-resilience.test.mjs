@@ -15,6 +15,20 @@ function compile(file, imports={}, context={}) {
 const utils=compile('lib/tracking-utils.ts')
 const position = timestamp => ({ timestamp, coords:{latitude:53.4609045,longitude:-2.1730057,accuracy:499240.739,heading:null,speed:null} })
 
+test('Maps interpret a timezone-free Supabase fix as UTC regardless of the browser timezone', () => {
+  const expected = Date.parse('2026-11-07T20:49:33.422Z')
+  const prior = process.env.TZ
+  try {
+    process.env.TZ = 'Asia/Karachi'
+    assert.equal(utils.locationTimestamp('2026-11-07T20:49:33.422'), expected)
+    assert.equal(utils.locationTimestamp('2026-11-07T20:49:33.422+00:00'), expected)
+    assert.equal(utils.isFreshLocation('2026-11-07T20:49:33.422', expected + 1000), true)
+  } finally {
+    if (prior === undefined) delete process.env.TZ
+    else process.env.TZ = prior
+  }
+})
+
 test('A coarse measurement is published; an equal or older repeat is a successful no-op',async()=>{
   const calls=[]
   const db={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{status:'approved'}})})})}),rpc:async(_,payload)=>{calls.push(payload);return{data:calls.length===1,error:null}}}
