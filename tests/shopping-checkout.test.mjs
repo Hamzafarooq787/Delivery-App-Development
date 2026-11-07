@@ -122,3 +122,17 @@ test('Buy for Me saves the selected size and does not accept a quote signed for 
   assert.equal(f.payment.booking_draft.max_spend_approved, 3)
   assert.equal(f.params.line_items.reduce((sum, i) => sum + i.price_data.unit_amount * i.quantity, 0), 1498)
 })
+
+test('Buy for Me normalises the optional recipient number before reserving card checkout',async()=>{
+ const bad=fixture()
+ bad.input.order.recipient_phone='+92 300 1234567'
+ assert.match((await bad.api.startOrderCheckout(bad.input)).error,/valid UK phone/)
+ assert.equal(bad.reserves,0)
+ const good=fixture()
+ good.input.order.recipient_phone='07928 922369'
+ assert.equal((await good.api.startOrderCheckout(good.input)).url,'https://checkout.stripe.test/session')
+ assert.equal(good.payment.booking_draft.recipient_phone,'+447928922369')
+ const blank=fixture()
+ await blank.api.startOrderCheckout(blank.input)
+ assert.equal(blank.payment.booking_draft.recipient_phone,null)
+})

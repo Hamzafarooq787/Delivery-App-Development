@@ -308,7 +308,7 @@ export default async function AdminOrderDetailPage({
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-[var(--color-on-surface-variant)] font-bold mb-1">Dropoff</p>
                   <p className="text-white text-sm">{order.delivery_address ?? "—"}</p>
-                  {order.recipient_name&&<p className="text-sm text-white">Recipient: {order.recipient_name} {order.recipient_phone&&<a href={`tel:${order.recipient_phone}`} className="underline">{order.recipient_phone}</a>}</p>}
+                  {(order.recipient_name||order.recipient_phone)&&<p className="text-sm text-white">Recipient: {order.recipient_name} {order.recipient_phone&&<a href={`tel:${order.recipient_phone}`} className="underline">{order.recipient_phone}</a>}</p>}
                 </div>
               </div>
             </div>
@@ -322,6 +322,8 @@ export default async function AdminOrderDetailPage({
                 <h3 className="text-base font-bold text-white font-headline">Live Tracking</h3>
               </div>
               <LiveTrackingPanel
+                status={order.status}
+                bfmStage={order.bfm_stage}
                 driverId={LIVE_TRACKING_STATUSES.includes(order.status) ? (order.driver_id ?? null) : null}
                 pickup={
                   order.pickup_lat != null && order.pickup_lng != null
@@ -479,7 +481,9 @@ export default async function AdminOrderDetailPage({
             </div>
           )}
 
-          <OrderRecoveryPanel simulation={order.company_card_reference?.startsWith("sandbox_")} id={order.id} record={order.recovery_case} canResolve={actor.owner||actor.scopes.includes("finance")}/>
+          <OrderRecoveryPanel simulation={order.company_card_reference?.startsWith("sandbox_")} id={order.id} record={order.recovery_case} canManage={actor.owner||actor.scopes.includes("operations")}
+            assigned={!!order.driver_id} orderStatus={order.status} canRelease={!order.company_card_reference&&!order.purchase_authorized_at&&!order.purchase_confirmed_at&&!order.receipt_url&&!order.parcel_image_url&&(!order.bfm_stage||["heading_to_shop","arrived_at_shop"].includes(order.bfm_stage))}
+            canResolve={actor.owner||actor.scopes.includes("finance")}/>
           <OrderConversation id={order.id} page={messagePage}/>
           {/* Admin Actions */}
           <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 rounded-xl p-5">

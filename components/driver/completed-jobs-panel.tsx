@@ -61,7 +61,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
           Completed Jobs
         </h1>
         <p className="text-[var(--color-on-surface-variant)] font-medium">
-          {filtered.length} {filtered.length === 1 ? "delivery" : "deliveries"} on this page · Page payout {fmt(totalPayout)}
+          {filtered.length} {filtered.length === 1 ? "delivery" : "deliveries"} on this page · Page earnings {fmt(totalPayout)}
         </p>
       </div>
 
@@ -126,7 +126,7 @@ export function CompletedJobsPanel({ jobs }: { jobs: Job[] }) {
                   <th className="px-5 py-3 text-left text-[11px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">Date</th>
                   <th className="px-5 py-3 text-left text-[11px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">Pickup</th>
                   <th className="px-5 py-3 text-left text-[11px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">Delivery</th>
-                  <th className="px-5 py-3 text-left text-[11px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">Payout</th>
+                  <th className="px-5 py-3 text-left text-[11px] uppercase tracking-widest font-bold text-[var(--color-on-surface-variant)]">Your earnings</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>

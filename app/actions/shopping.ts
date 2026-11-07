@@ -33,6 +33,7 @@ export type ShoppingItem = {
 }
 
 export type CreateShoppingRequestParams = {
+  recipient_phone?: string | null
   delivery_instructions?: string
   limits_acknowledged?: boolean
   consent_token?: string

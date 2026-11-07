@@ -10,3 +10,8 @@ export function driverEarning(order: {
     ) / 100
   );
 }
+
+const pounds = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" })
+export function formatDriverGBP(value: number | null | undefined): string {
+  return value != null && Number.isFinite(Number(value)) ? pounds.format(Number(value)) : "—"
+}

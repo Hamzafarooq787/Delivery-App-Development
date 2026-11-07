@@ -3,6 +3,7 @@
 import { CancellationPolicyNotice } from "./cancellation-policy-notice"
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { QuoteLock } from './quote-lock'
+import { optionalRecipientPhone } from '@/lib/parcel-contact'
 import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
 import dynamic from 'next/dynamic'
 import { Camera, Pencil, ShoppingBag } from 'lucide-react'
@@ -13,7 +14,7 @@ import { requestBrowserLocation, locationIssue, type LocationIssue } from '@/lib
 import { compressImage } from '@/lib/image-compress'
 import { createClient } from '@/lib/supabase/client'
 import { googleReverseGeocode } from '@/lib/google'
-import { shoppingEstimate, shoppingQuoteInputs, duplicateShoppingProduct, newShoppingRequestId } from '@/lib/shopping-booking'
+import { shoppingEstimate, shoppingAddressProblem, shoppingQuoteInputs, duplicateShoppingProduct, newShoppingRequestId } from '@/lib/shopping-booking'
 import { validateShoppingItems } from '@/lib/shopping-validation'
 import { useFreshBookingForm } from '@/hooks/use-fresh-booking-form'
 import { useOrderPhotoCleanup } from '@/hooks/use-order-photo-cleanup'
@@ -57,6 +58,8 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [replacementIndex, setReplacementIndex] = useState(0)
   const [limitsAccepted, setLimitsAccepted] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  const [locationAttempted, setLocationAttempted] = useState(false)
+  const [recipientPhone, setRecipientPhone] = useState('')
   const [shopName, setShopName] = useState('')
   const [shopInput, setShopInput] = useState('')
   const [deliveryInput, setDeliveryInput] = useState('')
@@ -86,6 +89,9 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const submitLock = useRef(false)
   const uploadLock = useRef(false)
   const { estimated_items_total: total, all_items_estimated: allItemsEstimated } = shoppingQuoteInputs(items)
+  const shopProblem = shoppingAddressProblem('shop address', shopInput, shop)
+  const deliveryProblem = shoppingAddressProblem('delivery address', deliveryInput, delivery)
+  const recipient = optionalRecipientPhone(recipientPhone)
   const maximum = settings?.max_purchase_amount ?? null
   useFreshBookingForm('buy_for_me')
   useOrderPhotoCleanup([...items.map(i=>i.photo_url).filter((u):u is string=>!!u),...(editor?.photo_url?[editor.photo_url]:[])])
@@ -170,8 +176,13 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
       if (!settings.enabled) { setError('Buy for Me is temporarily unavailable.'); return }
       if (validItems()) go(2)
     } else if (step === 2) {
-      if (!shopName.trim() || !shop || !delivery) { setError('Enter the shop name and select both addresses from suggestions or the map.'); return }
-      go(3)
+      setLocationAttempted(true)
+      if (!shopName.trim() || shopProblem || deliveryProblem || recipient.error) {
+        setError('Check the highlighted fields above.')
+        requestAnimationFrame(() => body.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
+        return
+      }
+      setLocationAttempted(false); go(3)
     } else if (step === 3) {
       if (!limitsAccepted) { setError('Confirm the shopping size and weight limits to continue.'); return }
       void loadQuote()
@@ -187,6 +198,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
         request_key: requestKey.current, package_size: packageSize, limits_acknowledged: limitsAccepted, consent_token: quote.consentToken,
         shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng,
         shop_instructions: shopInstructions.trim() || null, delivery_instructions: deliveryInstructions.trim(),
+        recipient_phone: recipient.recipient_phone,
         delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng,
         shopping_items: items.map(({ id: _id, ...i }) => ({ ...i, name: i.name.trim() })),
       } })
@@ -282,11 +294,16 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
           <p className={styles.hint}>Up to {limits.maxShoppingProducts} products · {maximum === null ? "Loading shopping limit…" : `${money(maximum)} shopping limit`}</p>{settingsError && <p className={styles.error} role="alert">{settingsError}</p>}
         </div><aside className={styles.desktopAside}>{map}<ShoppingSummary items={items} onEdit={() => openEditor(items[0])} /><p className={styles.hint}>Add each product separately. You can update quantities without losing other items.</p></aside></div>}
         {step === 2 && <div className={styles.layout}><div className={styles.stack}>
-          <label>Shop name<input maxLength={200} value={shopName} onChange={e => { setShopName(e.target.value); invalidate() }} placeholder="e.g. Tesco" /></label>
+          <label>Shop name<input aria-invalid={locationAttempted && !shopName.trim()} maxLength={200} value={shopName} onChange={e => { setShopName(e.target.value); invalidate() }} placeholder="e.g. Tesco" /></label>{locationAttempted&&!shopName.trim()&&<p role="alert" className={styles.error}>Enter the shop name.</p>}
           <SavedAddressPicker label="Saved shop or collection address" onSelect={p => { setShop(p); setShopInput(p.address); invalidate() }} />
-          <ShoppingAddressField label="Shop address" value={shopInput} onChange={v => { setShopInput(v); setShop(null); invalidate() }} onSelect={p => { setShop(p); setShopInput(p.address); invalidate() }} />
+          <ShoppingAddressField label="Shop address" validationError={locationAttempted ? shopProblem : undefined} value={shopInput} onChange={v => { setShopInput(v); setShop(null); invalidate() }} onSelect={p => { setShop(p); setShopInput(p.address); invalidate() }} />
           <SavedAddressPicker label="Saved delivery address" onSelect={p => { cancelGps(); setDelivery(p); setDeliveryInput(p.address); invalidate() }} />
-          <ShoppingAddressField label="Delivery address" value={deliveryInput} onChange={v => { cancelGps(); setDeliveryInput(v); setDelivery(null); invalidate() }} onSelect={p => { cancelGps(); setDelivery(p); setDeliveryInput(p.address); invalidate() }} locationControl={<LocationButton label={locating ? 'Locating…' : 'Use my location for delivery'} disabled={locating} suspended={!!locationHelp} getRequestVersion={() => gpsVersion.current} onRequest={() => void gps()} onPosition={p => void gps(p)} onError={e => setLocationHelp(locationIssue(e))} />} />
+          <ShoppingAddressField label="Delivery address" validationError={locationAttempted ? deliveryProblem : undefined} value={deliveryInput} onChange={v => { cancelGps(); setDeliveryInput(v); setDelivery(null); invalidate() }} onSelect={p => { cancelGps(); setDelivery(p); setDeliveryInput(p.address); invalidate() }} locationControl={<LocationButton label={locating ? 'Locating…' : 'Use my location for delivery'} disabled={locating} suspended={!!locationHelp} getRequestVersion={() => gpsVersion.current} onRequest={() => void gps()} onPosition={p => void gps(p)} onError={e => setLocationHelp(locationIssue(e))} />} />
+          <label>Recipient UK phone (optional)<input type="tel" inputMode="tel" autoComplete="tel-national" maxLength={40}
+            value={recipientPhone} aria-invalid={locationAttempted&&!!recipient.error} aria-describedby="shopping-recipient-phone-help"
+            onChange={e=>{setRecipientPhone(e.target.value);invalidate()}} onBlur={()=>{if(recipient.recipient_phone)setRecipientPhone(recipient.recipient_phone)}} /></label>
+          <p id="shopping-recipient-phone-help" className={styles.hint}>Add a number if someone else will receive the order. Otherwise, the driver uses the phone on your GoDrop account, if you have one.</p>
+          {locationAttempted&&recipient.error&&<p role="alert" className={styles.error}>{recipient.error}</p>}
           <details className={styles.disclosure}><summary><span className={styles.desktopOnly}>Flat, entrance or access instructions (optional)</span><span className={styles.mobileOnly}>Access & shop instructions (optional)</span></summary><label>Delivery instructions<textarea rows={2} maxLength={500} value={deliveryInstructions} onChange={e => { setDeliveryInstructions(e.target.value); invalidate() }} placeholder="e.g. Flat 4, use the side entrance" /></label><label className={styles.mobileOnly}>Instructions for the shop<textarea rows={2} maxLength={500} value={shopInstructions} onChange={e => { setShopInstructions(e.target.value); invalidate() }} placeholder="Anything your shopper should know?" /></label></details>
           <label className={styles.desktopOnly}>Instructions for the shop (optional)<textarea rows={2} maxLength={500} value={shopInstructions} onChange={e => { setShopInstructions(e.target.value); invalidate() }} placeholder="Anything your shopper should know?" /></label>
           <div className={styles.desktopOnly}><ShoppingSummary items={items} onEdit={() => go(1)} /></div>
@@ -299,11 +316,11 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
         </div><aside className={styles.desktopAside}><ShoppingSummary items={items} onEdit={() => go(1)} /><section className={styles.card}><strong>You stay in control</strong><p className={styles.hint}>Your driver must get approval before buying a replacement or any higher-priced product.</p></section></aside></div>}
         {step === 4 && <div className={`${styles.layout} ${styles.reviewLayout}`}><div className={`${styles.stack} ${styles.reviewDetails}`}>
           <section className={styles.card}><div className={styles.cardHeading}><strong>{items.length} products</strong><button className={styles.link} type="button" onClick={() => go(1)}>Edit items</button></div><div className={styles.summaryRows} tabIndex={0} aria-label="Shopping products">{items.map(i => <p key={i.id}><span>{i.name} · Qty {i.quantity}</span><strong>{i.estimated_price == null ? 'Estimate not provided' : money(i.quantity * i.estimated_price)}</strong></p>)}</div></section>
-          <section className={styles.card}><div className={styles.cardHeading}><strong>Shop</strong><button className={styles.link} type="button" onClick={() => go(2)}>Edit</button></div><p className={styles.addressText}>{shopName}, {shop?.address}</p><strong>Deliver to</strong><p className={styles.addressText}>{delivery?.address}</p></section>
+          <section className={styles.card}><div className={styles.cardHeading}><strong>Shop</strong><button className={styles.link} type="button" onClick={() => go(2)}>Edit</button></div><p className={styles.addressText}>{shopName}, {shop?.address}</p><strong>Deliver to</strong><p className={styles.addressText}>{delivery?.address}</p>{recipient.recipient_phone&&<p className={styles.hint}>Recipient phone: {recipient.recipient_phone}</p>}</section>
           <button className={styles.link} type="button" onClick={() => go(3)}>Replacement: {items.every(i => i.substitution_preference === items[0]?.substitution_preference) ? choices.find(c => c.value === items[0]?.substitution_preference)?.label : 'Per item'} · Edit</button>
         </div><details className={styles.compactReview}><summary><strong>{items.length} products · {shopName}</strong><span className={styles.reviewExtra}>{items.slice(0, 2).map(i => i.name).join(' · ')}{items.length > 2 ? ` +${items.length - 2} more` : ''}</span><span className={styles.reviewExtra}>Shop: {shop?.address}</span><span>Deliver to {delivery?.address}</span></summary><div className={styles.stack}>
           <ShoppingSummary items={items} onEdit={() => go(1)} />
-          <p className={styles.addressText}>Shop: {shop?.address}<br />Deliver to: {delivery?.address}</p>
+          <p className={styles.addressText}>Shop: {shop?.address}<br />Deliver to: {delivery?.address}{recipient.recipient_phone&&<><br/>Recipient phone: {recipient.recipient_phone}</>}</p>
           <button type="button" className={styles.link} onClick={() => go(2)}>Edit addresses</button>
           <button type="button" className={styles.link} onClick={() => go(3)}>Edit replacement choices</button>
           {quote && <section className={styles.costs}><strong>Delivery price breakdown</strong>{quote.priceLines.map((line, i) => <p key={i}><span>{line.label}</span><strong>{money(line.amount)}</strong></p>)}</section>}

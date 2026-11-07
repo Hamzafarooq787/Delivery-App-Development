@@ -8,7 +8,7 @@ import { googlePlacesAutocomplete, googlePlaceCoords, googleReverseGeocode, type
 import styles from './ShoppingSteps.module.css'
 const PinMap = dynamic(() => import('@/components/maps/google-live-map').then(m => m.GoogleLiveMap), { ssr: false })
 export type ShoppingPlace = { address: string; lat: number; lng: number }
-export function ShoppingAddressField({ label, value, onChange, onSelect, locationControl }: { label: string; value: string; onChange: (v: string) => void; onSelect: (p: ShoppingPlace) => void; locationControl?: ReactNode }) {
+export function ShoppingAddressField({ label, value, onChange, onSelect, locationControl, validationError }: { label: string; value: string; onChange: (v: string) => void; onSelect: (p: ShoppingPlace) => void; locationControl?: ReactNode; validationError?: string }) {
   const fieldId = useId()
   const pinDialog = useRef<HTMLDialogElement>(null)
   const [pinOpen, setPinOpen] = useState(false)
@@ -78,7 +78,7 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
   }
   return <div ref={wrapper} className={styles.field} onKeyDown={e => { if (e.key === 'Escape' && suggestions.length) { e.stopPropagation(); setSuggestions([]) } }}>
     <div className={styles.addressLabel}><label htmlFor={fieldId}>{label}</label>{locationControl}</div>
-    <div className={styles.addressInputWrap}><input id={fieldId} ref={input} aria-label={label} value={value} onChange={e => change(e.target.value)} placeholder="Start typing an address…" autoComplete="off" />
+    <div className={styles.addressInputWrap}><input id={fieldId} ref={input} aria-label={label} aria-invalid={!!validationError} aria-describedby={validationError ? `${fieldId}-validation` : undefined} value={value} onChange={e => change(e.target.value)} placeholder="Start typing an address…" autoComplete="off" />
     <button type="button" aria-label={`Choose ${label.toLowerCase()} on map`} title="Choose on map" className={styles.mapPinButton} onClick={() => { requests.cancel(); setSuggestions([]); setPin(null); setPinOpen(true); setError('') }}><MapPin size={20} /></button></div>
     {pinOpen && <dialog ref={pinDialog} className={styles.pinDialog} aria-label={`Choose ${label} on map`} onKeyDown={e => e.stopPropagation()} onCancel={e => { e.preventDefault(); closePin() }}>
       <p>Tap the exact entrance, then confirm the address.</p>
@@ -94,6 +94,7 @@ export function ShoppingAddressField({ label, value, onChange, onSelect, locatio
       <button type="button" disabled={!pin || busy} onClick={() => { if (pin) { requests.cancel(); onSelect(pin); closePin() } }}>Use this address</button>
       <button type="button" onClick={closePin}>Back to address search</button>
     </dialog>}
+    {validationError && <p id={`${fieldId}-validation`} className={styles.error} role="alert">{validationError}</p>}
     {busy && <small>Finding address…</small>}{error && <small role="alert">{error}</small>}
     {suggestions.length > 0 && createPortal(<div ref={dropdown} role="listbox" aria-label={`${label} suggestions`} className={styles.suggestions} style={{position:'fixed',zIndex:10030,right:'auto',...dropdownRect,maxHeight:dropdownHeight}}>{suggestions.map(s => <button key={s.placeId} role="option" aria-selected={false} type="button" onPointerDown={e => e.preventDefault()} onClick={() => choose(s)}>{s.text}</button>)}</div>,document.body)}
   </div>

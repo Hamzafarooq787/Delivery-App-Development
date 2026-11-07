@@ -1,13 +1,13 @@
 "use client"
 import { OrderRecoveryInstructions } from "@/components/shared/order-recovery-instructions"
 import { CustomerThread } from "@/components/shared/customer-thread"
-import { driverEarning } from '@/lib/driver-earnings'
+import { driverEarning, formatDriverGBP } from '@/lib/driver-earnings'
 import { CollectionWaiting } from './collection-waiting'
 import { orderMediaUrl } from '@/lib/order-media'
 
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { updateDeliveryStatus } from "@/app/actions/delivery"
@@ -84,6 +84,7 @@ type Customer = { full_name: string | null; phone: string | null; email: string 
 type TimelineStep = { label: string; status: "completed" | "active" | "upcoming"; time?: string }
 
 type Props = {
+  settledEarnings?: number | null
   canOperate?:boolean
   job: Job
   customer: Customer
@@ -91,11 +92,17 @@ type Props = {
   userId: string
 }
 
-export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=true }: Props) {
+export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=true,settledEarnings }: Props) {
   const [showParcelAuth, setShowParcelAuth] = useState(false)
   const [showOtpModal, setShowOtpModal] = useState(false)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  useEffect(()=>{
+    if(canOperate)return
+    const timer=setInterval(()=>{if(!document.hidden)router.refresh()},8000)
+    return()=>clearInterval(timer)
+  },[canOperate,router])
+  const netEarnings = settledEarnings === undefined ? driverEarning(job) : settledEarnings
 
   const ACTIVE_STATUSES = ["accepted", "collected", "in_transit", "picked_up"]
   const isActive = ACTIVE_STATUSES.includes(job.status)
@@ -133,7 +140,7 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
     return (parts[0][0] + parts[1][0]).toUpperCase()
   }
 
-  if(!canOperate)return <div className="p-4 text-white"><h1 className="text-xl font-bold">Delivery paused for support</h1><p>Your existing job is retained. Contact support to arrange a safe return or handover.</p><OrderRecoveryInstructions id={job.id} driver/><CustomerThread kind="order" id={job.id}/></div>
+  if(!canOperate&&!["cancelled","delivered"].includes(job.status))return <div className="p-4 text-white"><h1 className="text-xl font-bold">Delivery paused for support</h1><p>Your existing job is retained. Contact support to arrange a safe return or handover.</p><button type="button" className="my-2 underline" onClick={()=>router.refresh()}>Check for an update</button><OrderRecoveryInstructions id={job.id} driver/><CustomerThread kind="order" id={job.id}/></div>
 
   if (job.service_type === "buy_for_me") {
     return (
@@ -146,7 +153,8 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
           status: job.status,
           tracking_number: job.tracking_number,
           delivery_address: job.delivery_address,
-          price: job.price,
+          earnings: netEarnings,
+          recipient_phone: customer?.phone ?? null,
           customer_id: job.customer_id,
           bfm_stage: job.bfm_stage ?? null,
           shop_name: job.shop_name ?? null,
@@ -320,9 +328,9 @@ export function DriverJobView({ job, customer, timelineSteps, userId,canOperate=
               <p className="text-sm font-semibold text-white whitespace-pre-wrap">{job.item_description || "—"}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[var(--color-outline-variant)] uppercase mb-0.5">Payout</p>
+              <p className="text-[10px] text-[var(--color-outline-variant)] uppercase mb-0.5">Your earnings</p>
               <p className="text-sm font-black text-[#6ee7b7]">
-                {job.price != null ? `£${driverEarning(job).toFixed(2)}` : "—"}
+                {formatDriverGBP(netEarnings)}
               </p>
             </div>
           </div>

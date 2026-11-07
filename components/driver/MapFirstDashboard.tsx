@@ -403,7 +403,7 @@ export function MapFirstDashboard({
               </div>
             </div>
             <div className={styles.payout}>
-              <span>{isActive ? 'Your earnings' : 'Payout'}</span>
+              <span>Your earnings</span>
               <strong>{payout === null ? 'Not quoted' : pounds(payout)}</strong>
             </div>
             <div className={styles.actions}>

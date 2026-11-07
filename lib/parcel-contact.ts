@@ -14,3 +14,9 @@ export function parcelContact(name: unknown, phone: unknown, time: unknown, now=
 export function addressPostcode(address:string) {
   return address.match(/\b(?:GIR\s*0AA|[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i)?.[0]?.replace(/\s/g,"").toUpperCase() ?? null
 }
+
+export function optionalRecipientPhone(value: unknown): { recipient_phone: string | null; error?: never } | { error: string; recipient_phone?: never } {
+  if (value == null || (typeof value === "string" && !value.trim())) return { recipient_phone: null }
+  const phone = normaliseUKPhone(value)
+  return phone ? { recipient_phone: phone } : { error: "Enter a valid UK phone number for the recipient, or leave it blank." }
+}

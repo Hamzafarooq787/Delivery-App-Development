@@ -3,7 +3,7 @@
 import {bookingAvailability} from "@/lib/booking-availability"
 import { cancelByPolicy } from "@/app/actions/cancellation"
 import { boundedFetch } from "@/lib/short-request"
-import { parcelContact } from "@/lib/parcel-contact"
+import { optionalRecipientPhone, parcelContact } from "@/lib/parcel-contact"
 
 import {isPreciseDeliveryAddress,PRECISE_DELIVERY_ADDRESS_ERROR} from "@/lib/precise-delivery-address"
 import {revalidatePath} from "next/cache"
@@ -179,6 +179,8 @@ export async function startOrderCheckout(
       };
     } else if (input.type === "buy_for_me") {
       const p = input.order;
+      const contact = optionalRecipientPhone(p.recipient_phone);
+      if (contact.error) return { error: contact.error };
       const limits = await getBookingPricing();
       if (p.limits_acknowledged !== true)
         return {
@@ -227,6 +229,7 @@ export async function startOrderCheckout(
       itemsHold = quote.data.itemsHold;
       draft = {
         ...p,
+        recipient_phone: contact.recipient_phone,
         shopping_limits: {
           weightKg: limits.maxShoppingWeightKg,
           dimensionCm: limits.maxShoppingDimensionCm,

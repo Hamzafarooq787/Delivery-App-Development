@@ -1,5 +1,5 @@
 import { getDriverDeliveries } from "@/app/actions/delivery"
-import {driverEarning} from '@/lib/driver-earnings'
+import {driverEarning, formatDriverGBP} from '@/lib/driver-earnings'
 import {DriverPageControls} from "@/components/driver/driver-page-controls"
 import Link from "next/link"
 
@@ -143,12 +143,9 @@ export default async function ActiveJobsPage({searchParams}:{searchParams:Promis
                   </div>
                   {job.price != null && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-[var(--color-on-surface-variant)]">Payout</span>
+                      <span className="text-[var(--color-on-surface-variant)]">Your earnings</span>
                       <span className="text-[var(--brand-soft)] font-bold">
-                        {new Intl.NumberFormat(undefined, {
-                          style: "currency",
-                          currency: "USD",
-                        }).format(driverEarning(job))}
+                        {formatDriverGBP(driverEarning(job))}
                       </span>
                     </div>
                   )}
