@@ -51,7 +51,7 @@ export default async function AdminOrderDetailPage({
   if (error && error.code !== "PGRST116") return <p role="alert" className="p-6 text-amber-200">Order could not load. Reload to retry.</p>
   if (!order) notFound()
 
-  const [customerRes, driverRes, logsRes, ratingsRes, driversRes, paymentRes, testRecord] = await Promise.all([
+  const [customerRes, driverRes, logsRes, ratingsRes, driversRes, paymentRes, testRecord, gpsAudit] = await Promise.all([
     order.customer_id
       ? admin.from("users").select("full_name, email, phone").eq("id", order.customer_id).single()
       : Promise.resolve({ data: null }),
@@ -72,6 +72,8 @@ export default async function AdminOrderDetailPage({
     admin.from('payments').select('id,purpose,amount,status,refund_jobs').or(`delivery_id.eq.${orderId},related_delivery_id.eq.${orderId}`).eq('payment_method','stripe').order('created_at'),
     admin.from("admin_audit_log").select("details").eq("entity",orderId).eq("event","order_test_record")
       .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle(),
+    admin.from("admin_audit_log").select("id,created_at,details").eq("entity",orderId)
+      .eq("event","driver_milestone_without_location").order("created_at",{ascending:false}).limit(15),
   ])
 
   const parcelSize: string = order.package_size ?? ""
@@ -117,7 +119,13 @@ export default async function AdminOrderDetailPage({
         <div className="lg:col-span-8 space-y-5">
 
           {order.cancellation_outcome && <section className="rounded-xl border border-white/20 p-4 text-white"><h3 className="font-bold">Cancellation</h3><p>{order.cancellation_outcome.reason}</p><p>Customer fee £{Number(order.cancellation_outcome.fee).toFixed(2)} · Driver compensation £{Number(order.cancellation_outcome.driver).toFixed(2)} · GoDrop £{Number(order.cancellation_outcome.platform).toFixed(2)}</p></section>}
-          <section className="rounded-xl border border-white/15 p-4 text-white"><h3 className="font-bold">Collection milestones — current assignment</h3>{order.assignment_history?.length>0&&<details className="my-3"><summary>Previous assignments and travel history</summary>{order.assignment_history.map((a:any,i:number)=><p key={i} className="text-xs">Driver {a.driver_id} · Accepted {a.accepted_at??"Unknown"} · Travel {a.travel_started_at??"Not started"} · Arrived {a.arrived_at??"Not recorded"} · Ended {a.ended_at}</p>)}</details>}{[["Accepted",order.accepted_at],["Travel started",order.travel_started_at],["Arrived",order.arrived_at],["Purchased",order.purchased_at]].map(([label,value])=><p key={label as string} className="text-sm">{label}: {value?new Date(value).toLocaleString("en-GB",{timeZone:"Europe/London"}):"Not recorded"}</p>)}</section>
+          <section className="rounded-xl border border-white/15 p-4 text-white"><h3 className="font-bold">Collection milestones — current assignment</h3>{order.assignment_history?.length>0&&<details className="my-3"><summary>Previous assignments and travel history</summary>{order.assignment_history.map((a:any,i:number)=><p key={i} className="text-xs">Driver {a.driver_id} · Accepted {a.accepted_at??"Unknown"} · Travel {a.travel_started_at??"Not started"} · Arrived {a.arrived_at??"Not recorded"} · Ended {a.ended_at}</p>)}</details>}{[["Accepted",order.accepted_at],["Travel started",order.travel_started_at],["Arrived",order.arrived_at],["Purchased",order.purchased_at]].map(([label,value])=><p key={label as string} className="text-sm">{label}: {value?new Date(value).toLocaleString("en-GB",{timeZone:"Europe/London"}):"Not recorded"}</p>)}{gpsAudit.error && <p className="mt-2 text-sm text-amber-200">Location history could not load.</p>}
+            {!!gpsAudit.data?.length && <div className="mt-3 border-t border-white/15 pt-2">
+              <h4 className="text-sm font-semibold">Recorded without a live location</h4>
+              {gpsAudit.data.map(log => <p key={log.id} className="text-sm text-amber-200">{({
+                travel: "Started travel", arrived: "Arrived at collection", purchased: "Purchase completed", delivered: "Delivered",
+              } as Record<string,string>)[log.details?.stage] ?? "Delivery milestone"} · {new Date(log.created_at).toLocaleString("en-GB",{timeZone:"Europe/London"})} UK time</p>)}
+            </div>}</section>
           {/* Package Details */}
           <div className="bg-[var(--brand-panel)]/60 backdrop-blur-xl border border-[var(--color-outline-variant)]/15 rounded-xl p-5 md:p-6">
             <div className="flex items-center gap-2 mb-5">

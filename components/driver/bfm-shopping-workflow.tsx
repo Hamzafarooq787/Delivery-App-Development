@@ -1,4 +1,5 @@
 "use client"
+import { confirmDriverMilestone } from "@/lib/driver-milestone-location"
 import { orderMediaUrl } from '@/lib/order-media'
 import { CustomerThread } from '@/components/shared/customer-thread'
 import dynamic from 'next/dynamic'
@@ -118,7 +119,6 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
     }
     const next = NEXT_STAGE[currentStage]
     if (!next) return
-    if(next==="arrived_at_shop"&&!window.confirm("Confirm you have arrived at the shop? Arrival ends any free travel grace period."))return
 
     if (next === "purchase_completed") {
       // Need receipt first
@@ -127,6 +127,10 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
     }
 
     startTransition(async () => {
+      if (next === "heading_to_shop" || next === "arrived_at_shop") {
+        const message = next === "heading_to_shop" ? "Confirm you are starting travel to the shop?" : "Confirm you have arrived at the shop? Arrival ends any free travel grace period."
+        if (!await confirmDriverMilestone(job.id, message)) return
+      }
       const result = await updateBfmStage(job.id, next)
       if (result.error) { toast.error(result.error); return }
       toast.success(`Status updated: ${NEXT_STAGE_LABEL[next] ?? next}`)
