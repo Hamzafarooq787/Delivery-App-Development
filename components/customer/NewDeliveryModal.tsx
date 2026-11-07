@@ -1,4 +1,5 @@
 'use client'
+import { QuoteLock } from "./quote-lock"
 import { getBookingPricing } from "@/app/actions/booking-settings"
 import { packageSizeFee, type BookingPricing } from "@/lib/booking-pricing"
 import { CancellationPolicyNotice } from "./cancellation-policy-notice"
@@ -327,6 +328,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
     return()=>{window.removeEventListener("pagehide",flush)}
   },[])
   const [quoteRefresh,setQuoteRefresh]=useState(0)
+  const [quoteRenewed,setQuoteRenewed]=useState(false)
   const quoteKey = JSON.stringify([pickupCoords, deliveryCoords, packageSize, promoCode.trim()])
   const quote = quoted?.key === quoteKey ? quoted.value : null
   const [quoteLoading, setQuoteLoading] = useState(false)
@@ -368,7 +370,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
 
   useEffect(()=>{
     if(!quote?.expiresAt)return
-    const timer=setTimeout(()=>{setQuote(null);setQuoteError("Quote expired. Refresh the price before paying.")},Math.max(0,quote.expiresAt-Date.now()))
+    const timer=setTimeout(()=>{setQuote(null);setQuoteRenewed(true);setConfirmed(false);setQuoteRefresh(n=>n+1)},Math.max(0,quote.expiresAt-Date.now()))
     return()=>clearTimeout(timer)
   },[quote?.expiresAt])
 
@@ -592,6 +594,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
     if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
     if (quoteError) { toast.error(quoteError); return }
     if (!quote) { toast.error('Still calculating the price — please wait a moment.'); return }
+    if (quote.expiresAt && quote.expiresAt <= Date.now()) { setQuoteRenewed(true); setConfirmed(false); setQuoteRefresh(n=>n+1); return }
     if (insufficientFunds) { handleAddFunds(); return }
 
     setSubmitting(true)
@@ -614,7 +617,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
         promo_code: promoCode.trim()||null,
       } })
 
-      if ('error' in result) { if(result.restartCheckout)checkoutKey.current=null; if(/quote.*expired/i.test(result.error))setQuoteRefresh(n=>n+1);toast.error(result.error); setSubmitting(false); return }
+      if ('error' in result) { if(result.restartCheckout)checkoutKey.current=null; if(/quote.*expired/i.test(result.error)){setQuoteRenewed(true);setConfirmed(false);setQuoteRefresh(n=>n+1)};toast.error(result.error); setSubmitting(false); return }
       window.location.assign(result.url)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unexpected error.')
@@ -877,9 +880,9 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
             <div className={styles.reviewPackage}>{packageSize && <span className={styles.reviewParcel} data-size={packageSize}><PackageIllustration bulky={packageSize === "bulky"}/></span>}<span>{packageSize ? PACKAGE_SIZE_INFO[packageSize].label : 'Package'}</span><p>{itemDescription || 'No description added'}</p><button onClick={() => goTo(1)}>Edit</button></div>
           </div>
           <div className={styles.price}>
-            <p className="text-xs">This reviewed price is held for ten minutes. Checkout uses this exact total.</p>{quoteError&&<button type="button" onClick={()=>setQuoteRefresh(n=>n+1)}>Refresh price</button>}{quote && <div><span>Driving distance</span><strong>{quote.distanceMiles.toFixed(3)} miles</strong></div>}
+            {quote?.expiresAt && <QuoteLock expiresAt={quote.expiresAt}/>} {quoteRenewed && <p role="status">The previous quote expired. Review and confirm the updated total before paying.</p>}{quoteError&&<button type="button" onClick={()=>setQuoteRefresh(n=>n+1)}>Refresh price</button>}{quote && <div><span>Driving distance</span><strong>{quote.distanceMiles.toFixed(3)} miles</strong></div>}
             <div><span>Delivery subtotal</span><strong>{quote ? `£${formatPrice(quote.basePrice)}` : '—'}</strong></div>
-            {quote && <PriceBreakdown lines={quote.priceLines.some(line => /^(Large item|Van) surcharge$/.test(line.label)) ? quote.priceLines : [...quote.priceLines,{label:"Parcel size fee",amount:0}]}/>}
+            {quote && <PriceBreakdown lines={quote.priceLines.some(line => /^Parcel size surcharge$/.test(line.label)) ? quote.priceLines : [...quote.priceLines,{label:"Parcel size fee",amount:0}]}/>}
             {quote && quote.surgeMultiplier > 1 && <div><span>Surge ({quote.surgeMultiplier}×)</span><strong>+£{formatPrice(quote.surgedPrice - quote.basePrice)}</strong></div>}
             {quote && quote.discountAmount > 0 && <div><span>{quote.discountLabel}</span><strong>−£{formatPrice(quote.discountAmount)}</strong></div>}
             <div><span>Total</span><strong>{quoteLoading ? 'Calculating…' : price !== null ? `£${formatPrice(price)}` : '—'}</strong></div>

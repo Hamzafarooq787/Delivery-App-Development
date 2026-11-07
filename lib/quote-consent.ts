@@ -6,8 +6,8 @@ function sign(value: string) {
   return createHmac('sha256', key).update(value).digest('hex')
 }
 export const QUOTE_TTL_MS=10*60*1000
-export function issueQuoteConsent(userId: string, scope: unknown, amount: number, snapshot?:unknown) {
-  const payload = Buffer.from(JSON.stringify({ userId, scope, amount, expires: Date.now() + QUOTE_TTL_MS, ...(snapshot?{snapshot}:{}) })).toString('base64url')
+export function issueQuoteConsent(userId: string, scope: unknown, amount: number, snapshot?:unknown, expires = Date.now() + QUOTE_TTL_MS) {
+  const payload = Buffer.from(JSON.stringify({ userId, scope, amount, expires, ...(snapshot?{snapshot}:{}) })).toString('base64url')
   return `${payload}.${sign(payload)}`
 }
 export function checkQuoteConsent(token: string | undefined, userId: string, scope: unknown, amount: number) {
@@ -29,4 +29,4 @@ export function readQuoteConsent<T=Record<string,unknown>>(token: string | undef
 export function deliveryScope(p: { pickupLat: number; pickupLng: number; deliveryLat: number; deliveryLng: number; packageSize: string;promoCode?:string|null;serviceType?:string }) {
   return [p.pickupLat, p.pickupLng, p.deliveryLat, p.deliveryLng, p.packageSize,(p.promoCode??"").trim().toUpperCase(),p.serviceType??"delivery"]
 }
-export function shoppingScope(p:{shop_lat:number;shop_lng:number;delivery_lat:number;delivery_lng:number;estimated_items_total?:number;promo_code?:string|null}){return [p.shop_lat,p.shop_lng,p.delivery_lat,p.delivery_lng,p.estimated_items_total??0,(p.promo_code??"").trim().toUpperCase()]}
+export function shoppingScope(p:{shop_lat:number;shop_lng:number;delivery_lat:number;delivery_lng:number;estimated_items_total?:number;package_size?:string;all_items_estimated?:boolean;promo_code?:string|null}){return [p.shop_lat,p.shop_lng,p.delivery_lat,p.delivery_lng,p.estimated_items_total??0,p.package_size??"small",p.all_items_estimated===true,(p.promo_code??"").trim().toUpperCase()]}

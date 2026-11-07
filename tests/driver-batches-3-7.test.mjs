@@ -151,7 +151,9 @@ test('Verification component shows draft state and enables submission only for a
  assert.ok(!label(bike).includes('Insurance Policy'))
  assert.ok(nodes(bike).some(n=>n.type==='button'&&label(n).includes('Submit for Review')))
  const approved=api.VerificationPanel({driverStatus:'approved',documents,vehicles:[{vehicle_type:'car'}],userId:driver,submittedAt:'2026-11-04T10:00:00Z'})
- assert.ok(label(approved).includes('Your documents are approved.'))
+ assert.ok(label(approved).includes('Your driver account is approved.'))
+ const mixed=api.VerificationPanel({driverStatus:'approved',documents:documents.map(doc=>({...doc,expires_on:null})),vehicles:[{vehicle_type:'bicycle'},{vehicle_type:'motorcycle'}],userId:driver})
+ assert.match(label(mixed),/Add the expiry date for your motor insurance/)
  assert.ok(!label(approved).includes('Documents submitted for review.'))
 })
 

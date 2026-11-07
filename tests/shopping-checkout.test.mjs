@@ -34,6 +34,8 @@ function fixture() {
     '@/app/actions/pricing':{getDeliveryQuote:async()=>{quoteReads++;throw Error('Unreviewed route recalculation')}},
     '@/app/actions/shopping':{getBfmSettings:async()=>({enabled:true,max_purchase_amount:50}),getShoppingQuote:async()=>{quoteReads++;return {data:quote}}},
     '@/lib/shopping-validation':validation,
+    '@/lib/shopping-booking':compile('lib/shopping-booking.ts',{}),
+    '@/lib/vehicles':compile('lib/vehicles.ts',{}),
     '@/lib/quote-consent':consent,
     '@/lib/payments/direct':{},
   })
@@ -105,4 +107,18 @@ test('QA19: a signed quote is bound to the customer, route, size and promo, and 
  const payload=JSON.parse(Buffer.from(token.split('.')[0],'base64url').toString());payload.amount=0.01
  assert.equal(api.readQuoteConsent(Buffer.from(JSON.stringify(payload)).toString('base64url')+'.'+token.split('.')[1],'customer',scope),null)
  now++;assert.equal(api.readQuoteConsent(token,'customer',scope),null)
+})
+
+test('Buy for Me saves the selected size and does not accept a quote signed for another size', async () => {
+  const f = fixture()
+  f.input.order.package_size = 'large'
+  assert.match((await f.api.startOrderCheckout(f.input)).error, /Quote changed or expired/)
+  assert.equal(f.reserves, 0)
+  const scope = f.consent.shoppingScope(f.input.order)
+  const snapshot = { ...f.quote, packageSize: 'large', totalFee: 11.98, itemsHold: 3, totalCharge: 14.98 }
+  f.input.order.consent_token = f.consent.issueQuoteConsent('customer', scope, snapshot.totalCharge, snapshot)
+  assert.equal((await f.api.startOrderCheckout(f.input)).url, 'https://checkout.stripe.test/session')
+  assert.equal(f.payment.booking_draft.package_size, 'large')
+  assert.equal(f.payment.booking_draft.max_spend_approved, 3)
+  assert.equal(f.params.line_items.reduce((sum, i) => sum + i.price_data.unit_amount * i.quantity, 0), 1498)
 })

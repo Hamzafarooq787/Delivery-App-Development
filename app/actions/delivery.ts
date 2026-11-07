@@ -9,7 +9,7 @@ import {getAppOrigin} from "@/lib/get-app-origin"
 import {allAuthUsers} from "@/lib/auth-directory"
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
-import { driverDocumentValid, requiredDriverDocuments,driverComplianceReady } from '@/lib/driver-compliance'
+import { driverDispatchReadiness } from '@/lib/driver-compliance'
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
 
@@ -210,7 +210,7 @@ export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
     admin.from("users").select("role,account_status").eq("id", user.id).maybeSingle(),
     getDriverActiveJobs(user.id),
     admin.from("driver_vehicles").select("vehicle_type").eq("driver_id", user.id),
-    admin.from("driver_documents").select("document_type,expires_on").eq("driver_id", user.id),
+    admin.from("driver_documents").select("document_type,expires_on,review_status").eq("driver_id", user.id),
   ])
   if (profile.error || caller.error || active.error || vehicles.error || documents.error) {
     return { error: "Available jobs could not load. Please retry.", data: [] }
@@ -219,14 +219,12 @@ export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
     return { error: "Your account must be verified before you can view available jobs.", data: [] }
   }
   if (active.data?.length) return { error: "Finish your active delivery before accepting another job.", data: [] }
-  const required = requiredDriverDocuments(vehicles.data ?? [])
-  if (!driverComplianceReady(vehicles.data ?? [], documents.data ?? []) ||
-      documents.data?.some(doc => required.includes(doc.document_type) && !driverDocumentValid(doc))) {
-    return { error: "Add your vehicle and current documents on the Verification page.", data: [] }
-  }
-  if(profile.data?.declined_jobs?.length) { /* applied before pagination below */ }
-  const allowedSizes = unionCapabilities((vehicles.data ?? []).map(v => v.vehicle_type as VehicleType))
-  if (!allowedSizes.length) return { error: "Register a suitable vehicle before viewing jobs.", data: [] }
+  const readiness = driverDispatchReadiness(vehicles.data ?? [], documents.data ?? [])
+  const allowedSizes = unionCapabilities(readiness.eligible.map(v => v.vehicle_type as VehicleType))
+  if (!allowedSizes.length) return { error: readiness.message, data: [] }
+  const eligibilityNotice = readiness.issues.length
+    ? `You can receive jobs for your current eligible vehicle. To unlock more jobs: ${readiness.message}`
+    : undefined
 
   let query = admin
     .from("delivery_requests")
@@ -254,7 +252,7 @@ export async function getAvailableDeliveries(page=1,search="",jobId?:string) {
   const { data, error, count } = await query.order("id",{ascending:false}).range(offset,offset+19)
 
   if (error) return { error: "Available jobs could not load. Please retry.", data: [] }
-  return { data: data ?? [],count:count??0 }
+  return { data: data ?? [],count:count??0, eligibilityNotice }
 }
 
 export async function acceptDelivery(deliveryId: string) {
@@ -283,10 +281,15 @@ export async function acceptDelivery(deliveryId: string) {
     return { error: "This job is no longer available to accept." }
   }
 
-  const { data: vehicles, error: vehicleError } = await admin.from("driver_vehicles").select("vehicle_type").eq("driver_id", user.id)
-  const capabilities = unionCapabilities((vehicles ?? []).map(v => v.vehicle_type as VehicleType))
-  if (vehicleError || capabilities.length === 0 || (delivery.package_size && !capabilities.includes(delivery.package_size))) {
-    return { error: "Register a suitable vehicle before accepting this job." }
+  const [vehicles, documents] = await Promise.all([
+    admin.from("driver_vehicles").select("vehicle_type").eq("driver_id", user.id),
+    admin.from("driver_documents").select("document_type,expires_on,review_status").eq("driver_id", user.id),
+  ])
+  if (vehicles.error || documents.error) return { error: "Vehicle eligibility could not load. Please retry." }
+  const readiness = driverDispatchReadiness(vehicles.data ?? [], documents.data ?? [])
+  const capabilities = unionCapabilities(readiness.eligible.map(v => v.vehicle_type as VehicleType))
+  if (capabilities.length === 0 || (delivery.package_size && !capabilities.includes(delivery.package_size))) {
+    return { error: readiness.message || "Register a suitable vehicle before accepting this job." }
   }
 
   // Payment before dispatch — defense-in-depth. Every delivery created
@@ -299,6 +302,7 @@ export async function acceptDelivery(deliveryId: string) {
     .select("id")
     .eq("delivery_id", deliveryId)
     .eq("status", "paid")
+    .eq("purpose", "booking")
     .maybeSingle()
   if (!paidPayment) {
     return { error: "This delivery hasn't been paid for yet." }

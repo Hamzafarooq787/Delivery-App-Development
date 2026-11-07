@@ -22,6 +22,8 @@ import {
   type CreateShoppingRequestParams,
 } from "@/app/actions/shopping";
 import type { CreateDeliveryParams } from "@/app/actions/delivery";
+import { isPackageSize } from "@/lib/vehicles";
+import { shoppingQuoteInputs } from "@/lib/shopping-booking";
 import { validateShoppingItems } from "@/lib/shopping-validation";
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media";
@@ -49,7 +51,10 @@ export async function startOrderCheckout(
     return {
       error: "Sign in to confirm your order. Keep this form open if possible.",
     };
-  if (input.type === 'buy_for_me' && !Array.isArray(input.order.shopping_items)) return { error: 'Enter a valid shopping list.' };
+  if (input.type === 'buy_for_me') {
+    if (!Array.isArray(input.order.shopping_items) || input.order.shopping_items.some(item => !item || typeof item !== "object")) return { error: 'Enter a valid shopping list.' };
+    if (!isPackageSize(input.order.package_size ?? "small")) return { error: "Select a shopping size." };
+  }
   const photos = input.type === 'delivery' ? input.order.item_photo_urls ?? [] : input.order.shopping_items?.map(i=>i?.photo_url) ?? [];
   if (!Array.isArray(photos) || photos.some(photo=>!ownsOrderPhoto(photo,user.id))) return { error: 'Upload your own item photos before booking.' };
   if (!isStripeConfigured())
@@ -99,7 +104,7 @@ export async function startOrderCheckout(
       };
     if (previous?.status === "paid")
       return { url: `/dashboard/customer/tracking?id=${previous.delivery_id}` };
-    const shownScope=input.type==="delivery"?deliveryScope({pickupLat:input.order.pickup_lat,pickupLng:input.order.pickup_lng,deliveryLat:input.order.delivery_lat,deliveryLng:input.order.delivery_lng,packageSize:input.order.package_size,promoCode:input.order.promo_code}):shoppingScope({...input.order,estimated_items_total:input.order.shopping_items.reduce((sum,i)=>sum+(i.estimated_price??0)*i.quantity,0)})
+    const shownScope=input.type==="delivery"?deliveryScope({pickupLat:input.order.pickup_lat,pickupLng:input.order.pickup_lng,deliveryLat:input.order.delivery_lat,deliveryLng:input.order.delivery_lng,packageSize:input.order.package_size,promoCode:input.order.promo_code}):shoppingScope({...input.order,...shoppingQuoteInputs(input.order.shopping_items)})
     const shown=readQuoteConsent(input.order.consent_token,user.id,shownScope)
     if(previous&&shown&&Number(previous.amount)!==shown.amount&&!previous.stripe_session_id){
       await admin.from("payments").update({status:"failed"}).eq("id",previous.id).eq("status","pending")
@@ -187,23 +192,23 @@ export async function startOrderCheckout(
         !p.delivery_address?.trim()
       )
         return { error: "Enter the shop and delivery addresses." };
-      const estimated = p.shopping_items.reduce(
-        (sum, i) => sum + (i.estimated_price ?? 0) * i.quantity,
-        0,
-      );
+      const estimate = shoppingQuoteInputs(p.shopping_items);
+      const estimated = estimate.estimated_items_total;
+      const packageSize = p.package_size ?? "small";
       const bfm = await getBfmSettings();
       if (!bfm.enabled || estimated > bfm.max_purchase_amount)
         return {
           error: "Shopping is unavailable or the shopping limit was exceeded.",
         };
-      const approved=readQuoteConsent<ShoppingQuote>(p.consent_token,user.id,shoppingScope({...p,estimated_items_total:estimated}))
+      const approved=readQuoteConsent<ShoppingQuote>(p.consent_token,user.id,shoppingScope({...p,...estimate,package_size:packageSize}))
       if(approved?.snapshot){const unavailable=await bookingAvailability(user.id,"buy_for_me",{lat:p.shop_lat,lng:p.shop_lng},{lat:p.delivery_lat,lng:p.delivery_lng});if(unavailable)return {error:unavailable}}
       const quote=approved?.snapshot?{data:approved.snapshot}:await getShoppingQuote({
         shop_lat: p.shop_lat,
         shop_lng: p.shop_lng,
         delivery_lat: p.delivery_lat,
         delivery_lng: p.delivery_lng,
-        estimated_items_total: estimated,
+        ...estimate,
+        package_size: packageSize,
         promo_code: p.promo_code,
       });
       if ("error" in quote) return quote;
@@ -211,7 +216,7 @@ export async function startOrderCheckout(
         !checkQuoteConsent(
           p.consent_token,
           user.id,
-          shoppingScope({...p,estimated_items_total:estimated}),
+          shoppingScope({...p,...estimate,package_size:packageSize}),
           quote.data.totalCharge,
         )
       )
@@ -232,10 +237,10 @@ export async function startOrderCheckout(
         pickup_address: p.shop_address,
         pickup_lat: p.shop_lat,
         pickup_lng: p.shop_lng,
-        package_size: "medium",
+        package_size: packageSize,
         price: quote.data.totalFee,
-        base_price: quote.data.deliveryFee,
-        surge_multiplier: 1,
+        base_price: quote.data.basePrice ?? quote.data.deliveryFee,
+        surge_multiplier: quote.data.surgeMultiplier ?? 1,
         discount_amount: quote.data.discountAmount,
         promo_code_id: quote.data.promoCodeId,
         promo_code: quote.data.promoCodeText,

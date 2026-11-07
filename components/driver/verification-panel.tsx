@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { recordDriverDocument, submitForReview } from "@/app/actions/documents"
 import type { DriverDocument } from "@/app/actions/documents"
 import type { DriverVehicle } from "@/app/actions/vehicles"
-import { driverComplianceReady, driverDocumentValid, londonDate, requiredDriverDocuments } from "@/lib/driver-compliance"
+import { driverComplianceReady, driverDispatchReadiness, driverDocumentValid, londonDate, requiredDriverDocuments } from "@/lib/driver-compliance"
 import { VehicleManager } from "@/components/driver/vehicle-manager"
 
 type DocType = "identity" | "insurance" | "vehicle_registration" | "selfie"
@@ -104,6 +104,7 @@ export function VerificationPanel({
 
   const docMap = new Map(docs.map((d) => [d.document_type, d]))
   const uploadedCount = configs.filter(c=>{const d=docMap.get(c.type);return !!d&&driverDocumentValid(d)&&(c.type!=="insurance"||!!d.expires_on)}).length
+  const dispatch = driverDispatchReadiness(vehicles, docs)
   const hasVehicle = vehicles.length > 0
   // Vehicle registration counts as one extra "step" alongside the 3 document types
   const totalSteps = configs.length + 1
@@ -195,10 +196,12 @@ export function VerificationPanel({
         </div>
       )}
 
+      {driverStatus === "approved" && dispatch.message && <p role="status" className="mb-4 rounded-lg border border-white/15 p-3 text-sm text-white">{dispatch.message}</p>}
+
       {(submitted || driverStatus === "approved") && driverStatus !== "rejected" && (
         <div className="mb-6 flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
           <span className="material-symbols-outlined text-green-400">check_circle</span>
-          <p className="text-green-400 text-sm font-medium">{driverStatus === "approved" ? "Your documents are approved." : "Documents submitted for review. We’ll let you know when the review is complete."}</p>
+          <p className="text-green-400 text-sm font-medium">{driverStatus === "approved" ? "Your driver account is approved." : "Documents submitted for review. We’ll let you know when the review is complete."}</p>
         </div>
       )}
 
