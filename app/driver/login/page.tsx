@@ -106,7 +106,7 @@ function DriverLoginContent() {
                 <label htmlFor="password" className="text-xs font-semibold text-[#adaaaa] uppercase tracking-widest">
                   Password
                 </label>
-                <Link href="/login" className="text-xs text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
+                <Link href="/forgot-password" className="inline-flex min-h-11 items-center rounded px-2 text-xs text-[var(--color-primary)] underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]">
                   Forgot password?
                 </Link>
               </div>
