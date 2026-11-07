@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useTrackingRoute } from "@/hooks/use-tracking-route"
 import { fetchRoute } from "@/lib/google"
-import { goesToDestination } from "@/lib/tracking-utils"
+import { goesToDestination, locationTimestamp } from "@/lib/tracking-utils"
 
 const GoogleLiveMap = dynamic(
   () => import("@/components/maps/google-live-map").then((m) => m.GoogleLiveMap),
@@ -83,7 +83,7 @@ export function LiveTrackingPanel({
     const apply=(row:any)=>{
       if(!alive)return
       if(!row||(matchDeliveryId&&deliveryId&&row.delivery_id!==deliveryId)){setDriverPos(null);setLastUpdate(null);return}
-      const measured=Date.parse(row.updated_at),lat=Number(row.lat),lng=Number(row.lng)
+      const measured=locationTimestamp(row.updated_at),lat=Number(row.lat),lng=Number(row.lng)
       if(!Number.isFinite(measured)||measured<latest||!Number.isFinite(lat)||!Number.isFinite(lng))return
       latest=measured;setDriverPos({lat,lng});setLastUpdate(measured);setStale(Date.now()-measured>=45000)
     }
@@ -102,7 +102,7 @@ export function LiveTrackingPanel({
     const apply=(row:any)=>{
       if(!alive)return
       clearTimeout(expiry)
-      const age=Date.now()-Date.parse(row?.updated_at)
+      const age=Date.now()-locationTimestamp(row?.updated_at)
       if(row?.delivery_id!==deliveryId||!Number.isFinite(age)||age>=45000){setCustomerPos(null);return}
       setCustomerPos({lat:Number(row.lat),lng:Number(row.lng)})
       expiry=setTimeout(()=>{if(alive)setCustomerPos(null)},Math.max(0,45000-age))

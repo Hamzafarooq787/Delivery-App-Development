@@ -172,6 +172,7 @@ export function MapFirstDashboard({
       return
     }
     let disposed = false
+    let lastFixAt = 0
     let watch: number | undefined
     void canRequestDriverLocation(locationRequest > 0).then(allowed => {
       if (disposed) return
@@ -182,6 +183,7 @@ export function MapFirstDashboard({
       watch = navigator.geolocation.watchPosition(
         pos => {
           if (disposed) return
+          lastFixAt = pos.timestamp
           setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
           setLocationStatus('Live location · centre map')
         },
@@ -191,10 +193,11 @@ export function MapFirstDashboard({
             rememberDriverLocationDenial()
             if (watch !== undefined) navigator.geolocation.clearWatch(watch)
           }
+          if (error.code !== 1 && Date.now() - lastFixAt < 45000) return
           setLocationStatus(error.code === 1 ? 'Location blocked · check browser settings' : 'Location unavailable · retry')
           setLocation(null)
         },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
+        { enableHighAccuracy: false, maximumAge: 10000, timeout: 15000 },
       )
     })
     return () => { disposed = true; if (watch !== undefined) navigator.geolocation.clearWatch(watch) }

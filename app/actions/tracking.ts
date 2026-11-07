@@ -40,12 +40,13 @@ export async function updateMyLocation(input: {
     p_driver: user.id, p_job: input.delivery_id,
     p_lat: input.lat, p_lng: input.lng,
     p_heading: input.heading ?? null, p_speed: input.speed ?? null,
-    p_accuracy: input.accuracy ?? null, p_measured: new Date(measured).toISOString(),
+    p_accuracy: typeof input.accuracy === "number" && Number.isFinite(input.accuracy) && input.accuracy >= 0 ? input.accuracy : null, p_measured: new Date(measured).toISOString(),
   })
 
-  if (error) return { error: "Location could not be saved for this active delivery. Please retry." }
-  if (!data) return { error: "Waiting for a newer GPS position." }
-  return { ok: true }
+  if (error || typeof data !== "boolean") return { error: "Location could not be saved for this active delivery. Please retry." }
+  // The RPC has already authenticated the assignment. A false result means
+  // an equal or newer measurement won the upsert, not that tracking failed.
+  return { ok: true, unchanged: data === false }
 }
 
 export async function getDriverLocationForDelivery(deliveryId: string) {

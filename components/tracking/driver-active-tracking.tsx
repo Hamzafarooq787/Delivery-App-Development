@@ -32,5 +32,6 @@ export function DriverActiveTracking({ userId }: { userId: string }) {
     const timer = setInterval(() => { void refresh() }, 15000)
     return () => { alive = false; clearInterval(timer); void client.removeChannel(channel) }
   }, [client, userId, path, selectedDeliveryId])
-  return jobId ? <div className="fixed bottom-20 right-3 z-40"><DriverLocationBroadcaster deliveryId={jobId} /></div> : null
+  const jobDetail = /^\/dashboard\/driver\/jobs\/[0-9a-f-]{36}\/?$/i.test(path)
+  return jobId ? <div className={jobDetail ? "mx-4 mt-3" : "fixed bottom-20 right-3 z-30 pointer-events-none"}><DriverLocationBroadcaster deliveryId={jobId} className="pointer-events-auto" /></div> : null
 }
