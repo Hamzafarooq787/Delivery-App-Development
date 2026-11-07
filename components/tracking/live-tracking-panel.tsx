@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useTrackingRoute } from "@/hooks/use-tracking-route"
 import { fetchRoute } from "@/lib/google"
-import { goesToDestination, locationTimestamp } from "@/lib/tracking-utils"
+import { goesToDestination, locationTimestamp, terminalTrackingStatus } from "@/lib/tracking-utils"
 
 const GoogleLiveMap = dynamic(
   () => import("@/components/maps/google-live-map").then((m) => m.GoogleLiveMap),
@@ -75,11 +75,13 @@ export function LiveTrackingPanel({
     return () => { alive = false; clearInterval(timer) }
   },[onEta, !!driverPos, target?.lat, target?.lng, stale, status, bfmStage, driverId, deliveryId])
 
+  const terminal = terminalTrackingStatus(status)
+
   // Subscribe to driver location
   useEffect(() => {
     let alive=true,latest=0,revision=0,requestSequence=0
     setDriverPos(null);setLastUpdate(null);setStale(false)
-    if(!driverId)return
+    if(!driverId||terminal)return
     const apply=(row:any)=>{
       if(!alive)return
       if(!row||(matchDeliveryId&&deliveryId&&row.delivery_id!==deliveryId)){setDriverPos(null);setLastUpdate(null);return}
@@ -92,13 +94,13 @@ export function LiveTrackingPanel({
     const channel=supabase.channel(`live-tracking-${driverId}-${deliveryId}`).on('postgres_changes',{event:'*',schema:'public',table:'driver_locations',filter:`driver_id=eq.${driverId}`},payload=>{revision++;if(payload.eventType==='DELETE')apply(null);else apply(payload.new)}).subscribe(state=>{if(state==='SUBSCRIBED')void refresh()})
     const timer=setInterval(()=>{void refresh()},15000)
     return()=>{alive=false;clearInterval(timer);void supabase.removeChannel(channel)}
-  },[supabase,driverId,matchDeliveryId,deliveryId])
+  },[supabase,driverId,matchDeliveryId,deliveryId,terminal])
 
   // Customer sharing expires after connection loss, even if a tab-close clear was interrupted.
   useEffect(() => {
     let alive=true,revision=0,expiry:ReturnType<typeof setTimeout>
     setCustomerPos(null)
-    if(!customerId||!deliveryId)return
+    if(!customerId||!deliveryId||terminal)return
     const apply=(row:any)=>{
       if(!alive)return
       clearTimeout(expiry)
@@ -112,7 +114,7 @@ export function LiveTrackingPanel({
     const channel=supabase.channel(`customer-loc-${customerId}-${deliveryId}`).on('postgres_changes',{event:'*',schema:'public',table:'customer_locations',filter:`customer_id=eq.${customerId}`},payload=>{revision++;apply(payload.new)}).subscribe()
     const timer=setInterval(()=>{if(document.visibilityState==='visible')void refresh()},15000)
     return()=>{alive=false;clearTimeout(expiry);clearInterval(timer);void supabase.removeChannel(channel)}
-  },[supabase,customerId,deliveryId])
+  },[supabase,customerId,deliveryId,terminal])
 
   // Stale detection — 45 seconds before showing "Location unavailable"
   useEffect(() => {
@@ -123,11 +125,11 @@ export function LiveTrackingPanel({
     return () => clearTimeout(t)
   }, [lastUpdate])
 
-  const drivers = driverPos && driverId
+  const drivers = !terminal && driverPos && driverId
     ? [{ id: driverId, label: driverLabel, position: { lng: driverPos.lng, lat: driverPos.lat }, isAccepted: true }]
     : []
 
-  const badge = !driverId
+  const badge = terminal ? { label: terminal, color: status === "delivered" ? "bg-green-400" : "bg-[#a1a1a1]" } : !driverId
     ? { label: "Awaiting driver", color: "bg-[#494847]" }
     : !driverPos
     ? { label: "Driver location not shared yet", color: "bg-amber-400" }
@@ -140,7 +142,7 @@ export function LiveTrackingPanel({
       <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-[#0e0e0e]/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-[#494847]/20">
         <span className={`w-2 h-2 rounded-full ${badge.color}`} />
         <span className="text-[10px] font-bold text-white uppercase tracking-wider">{badge.label}</span>
-        {lastUpdate && !stale && (
+        {!terminal && lastUpdate && !stale && (
           <span className="text-[9px] text-[#adaaaa] ml-1">
             {Math.round((Date.now() - lastUpdate) / 1000)}s ago
           </span>

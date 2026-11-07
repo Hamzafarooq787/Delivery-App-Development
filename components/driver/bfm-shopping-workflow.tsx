@@ -1,4 +1,5 @@
 "use client"
+import { formatDriverGBP } from "@/lib/driver-earnings"
 import { confirmDriverMilestone } from "@/lib/driver-milestone-location"
 import { orderMediaUrl } from '@/lib/order-media'
 import { CustomerThread } from '@/components/shared/customer-thread'
@@ -39,7 +40,8 @@ type BfmJob = {
   receipt_url: string | null
   customer_id: string | null
   tracking_number: string | null
-  price: number | null
+  earnings: number | null
+  recipient_phone?: string | null
 }
 
 function fmt(v: number) {
@@ -218,6 +220,10 @@ export function BfmShoppingWorkflow({ job, userId }: { job: BfmJob; userId: stri
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3 px-4 text-sm text-white">
+        <p>Your earnings: <strong>{formatDriverGBP(job.earnings)}</strong></p>
+        {!isClosed && job.recipient_phone && <a className="inline-flex min-h-11 items-center underline" href={`tel:${job.recipient_phone}`}>Call delivery contact</a>}
+      </div>
       {!isClosed&&<><ShoppingMap driverId={userId} customerId={job.customer_id} deliveryId={job.id} status={job.status} bfmStage={job.bfm_stage} pickup={job.pickup_lat!=null&&job.pickup_lng!=null?{lat:Number(job.pickup_lat),lng:Number(job.pickup_lng)}:null} destination={job.delivery_lat!=null&&job.delivery_lng!=null?{lat:Number(job.delivery_lat),lng:Number(job.delivery_lng)}:null} isDriverView followDriver height={260}/><div className="flex gap-3 text-sm text-[var(--brand-soft)]"><a target="_blank" rel="noreferrer" href={'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(job.shop_address||job.shop_name||'')}>Navigate to shop</a><a target="_blank" rel="noreferrer" href={'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(job.delivery_address||'')}>Navigate to customer</a></div><CustomerThread kind="order" id={job.id}/></>}
       {job.shop_instructions&&<p className="rounded bg-[var(--brand-panel)] p-3 text-sm text-white">Shop instructions: {job.shop_instructions}</p>}{job.delivery_instructions&&<p className="rounded bg-[var(--brand-panel)] p-3 text-sm text-white">Delivery access: {job.delivery_instructions}</p>}
       <div className="rounded-xl border border-amber-400/30 p-3 mb-4 text-white">

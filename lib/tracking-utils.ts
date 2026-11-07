@@ -16,3 +16,9 @@ export function goesToDestination(status?: string, stage?: string | null): boole
   if (stage) return ['purchase_completed', 'heading_to_customer'].includes(stage)
   return ['collected', 'picked_up', 'in_transit', 'delivered'].includes(status ?? '') || ['purchase_completed', 'delivering', 'delivered'].includes(stage ?? '')
 }
+
+export function terminalTrackingStatus(status?: string) {
+  if (status === 'delivered') return 'Delivered'
+  if (status === 'cancelled') return 'Cancelled'
+  return null
+}

@@ -564,9 +564,9 @@ function TrackingPageInner() {
         </aside>
 
         {/* ── Map Area ─────────────────────────────────────── */}
-        <div hidden={isCancelled} className="order-1 md:order-2 flex-[4] md:flex-1 md:h-full relative bg-[#131313]">
+        <div className="order-1 md:order-2 flex-[4] md:flex-1 md:h-full relative bg-[#131313]">
           {/* When delivered, just show static pickup→destination route — no live driver marker */}
-          {!isCancelled && <LiveTrackingPanel
+          <LiveTrackingPanel
                 onEta={setEta}
                 centreRequest={centreRequest}
                 mapType={mapType}
@@ -596,7 +596,7 @@ function TrackingPageInner() {
             driverLabel={driver?.full_name ?? 'Driver'}
             height="100%"
             followDriver={false}
-          />}
+          />
 
           {/* Floating tracking chip */}
           {shipment && (

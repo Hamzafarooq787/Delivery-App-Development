@@ -35,3 +35,12 @@ export function shoppingFunds(estimate: number, maximum: number, allItemsEstimat
   const prepaid = allItemsEstimated && cents > 0 ? Math.min(cap, cents + Math.max(100, Math.ceil(cents / 5))) : cap
   return { itemsHold: prepaid / 100, shoppingBuffer: Math.max(0, prepaid - cents) / 100 }
 }
+
+export function shoppingAddressProblem(label: string, value: string, place: { address: string; lat: number; lng: number } | null) {
+  if (!value.trim()) return `Enter the ${label}.`
+  if (!place || place.address !== value || !Number.isFinite(place.lat) || !Number.isFinite(place.lng) ||
+      Math.abs(place.lat) > 90 || Math.abs(place.lng) > 180) {
+    return `Confirm the ${label} by selecting a suggestion or choosing a point on the map.`
+  }
+  return ''
+}
