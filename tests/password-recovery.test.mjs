@@ -149,7 +149,7 @@ test('The SDK carries the recovery verifier into the callback, then signs in wit
   const reset = browser()
   assert.equal((await reset.auth.getUser()).data.user.id, testUser.id)
   assert.equal((await reset.auth.updateUser({ password: 'new-fixture-password' })).error, null)
-  assert.equal((await reset.auth.signOut({ scope: 'local' })).error, null)
+  assert.equal((await reset.auth.signOut()).error, null)
   assert.equal((await reset.auth.getSession()).data.session, null)
   assert.ok((await reset.auth.signInWithPassword({ email: testUser.email, password: 'old-fixture-password' })).error)
   assert.equal((await reset.auth.signInWithPassword({ email: testUser.email, password: 'new-fixture-password' })).data.user.id, testUser.id)

@@ -55,8 +55,8 @@ export default function ResetPasswordPage() {
         return
       }
 
-      // Clear this recovery session and require sign-in with the new password.
-      const { error: signOutError } = await shortRequest(supabase.auth.signOut({ scope: "local" }), 10000)
+      // Sign out existing sessions and require sign-in with the new password.
+      const { error: signOutError } = await shortRequest(supabase.auth.signOut(), 10000)
       if (signOutError) {
         setError("Your password was changed, but we couldn’t sign you out. Sign out before using your new password.")
         return
