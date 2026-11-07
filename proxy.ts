@@ -12,12 +12,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Exchange recovery codes on the server before the reset page or the
+  // browser SDK can see them. Supabase still redirects to /reset-password.
+  const recoveryCode = request.nextUrl.searchParams.get("code")
+  if (pathname === "/reset-password" && recoveryCode !== null) {
+    const url = new URL("/auth/callback", request.url)
+    url.searchParams.set("type", "recovery")
+    url.searchParams.set("code", recoveryCode)
+    return NextResponse.redirect(url, { headers: { "Cache-Control": "private, no-store" } })
+  }
+
   // These routes either have no session dependency or enforce their own
   // authentication. In particular the public theme must never refresh cookies.
   if ([
     "/", "/pricing", "/privacy-policy", "/terms", "/prohibited-items",
     "/how-it-works", "/our-fleet", "/contact", "/offline",
-    "/firebase-messaging-sw.js", "/api/brand-theme", "/api/public/contact", "/api/auth/signup",
+    "/forgot-password", "/reset-password", "/firebase-messaging-sw.js", "/api/brand-theme", "/api/public/contact", "/api/auth/signup",
     "/api/customer/shipments", "/api/driver-document", "/api/driver/pickup-photo", "/api/customer/tracking-driver", "/api/tracking/positions", "/auth/callback", "/auth/confirm", "/api/auth/resend", "/track",
   ].includes(pathname) || pathname.startsWith("/track/") || pathname.startsWith("/api/google/") || pathname.startsWith("/api/stripe/") ||
       (pathname === "/login" && request.nextUrl.searchParams.has("error"))) return NextResponse.next({request})
@@ -81,7 +91,6 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/contact") ||
     pathname.startsWith("/how-it-works") ||
     pathname.startsWith("/fleet") ||
-    pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/unauthorized") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api")

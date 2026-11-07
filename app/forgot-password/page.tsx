@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Package, AlertCircle, CheckCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { shortRequest } from "@/lib/short-request"
 
 export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null)
@@ -25,16 +26,20 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    const supabase = createClient()
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
-    })
+    try {
+      const supabase = createClient()
+      const { error: resetError } = await shortRequest(supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: new URL("/reset-password", window.location.origin).href,
+      }), 12000)
 
-    if (resetError) {
-      setError(resetError.message)
-      setLoading(false)
-    } else {
+      if (resetError && resetError.code !== "user_not_found") {
+        setError(resetError.status === 429 ? "Too many requests. Please wait and try again." : "Could not request a reset link. Please try again.")
+        return
+      }
       setSuccess(true)
+    } catch {
+      setError("The reset request could not be confirmed. Check your inbox before trying again.")
+    } finally {
       setLoading(false)
     }
   }
@@ -56,26 +61,26 @@ export default function ForgotPasswordPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           {success ? (
-            <div className="flex flex-col items-center gap-3 py-2 text-center">
+            <div role="status" className="flex flex-col items-center gap-3 py-2 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
                 <CheckCircle className="h-5 w-5 text-foreground" />
               </div>
               <p className="text-sm text-foreground font-medium">Check your inbox</p>
-              <p className="text-xs text-muted-foreground">We sent a password reset link to your email address.</p>
+              <p className="text-xs text-muted-foreground">If an account exists for that email address, you’ll receive a password reset link. Open it in the same browser you used to request it.</p>
               <Link href="/login" className="mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors">Back to sign in</Link>
             </div>
           ) : (
             <>
               {error && (
-                <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+                <div role="alert" className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   {error}
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">Email</label>
-                  <input name="email" type="email" required placeholder="you@example.com"
+                  <label htmlFor="recovery-email" className="text-xs font-medium text-foreground">Email</label>
+                  <input id="recovery-email" name="email" type="email" autoComplete="email" required placeholder="you@example.com"
                     className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
                 </div>
                 <Button className="w-full" size="sm" type="submit" disabled={loading}>

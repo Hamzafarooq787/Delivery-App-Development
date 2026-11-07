@@ -5,11 +5,18 @@ import { createAdminClient } from "@/lib/supabase/admin"
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
-  const redirect = (path: string) => NextResponse.redirect(new URL(path,url.origin))
+  const redirect = (path: string) => {
+    const target = new URL(path, url.origin)
+    return target.pathname === "/reset-password"
+      ? NextResponse.redirect(target, { headers: { "Cache-Control": "private, no-store" } })
+      : NextResponse.redirect(target)
+  }
+  const isRecovery = url.searchParams.get("type") === "recovery"
+  const recoveryError = "/reset-password?error=invalid_link"
   const code = url.searchParams.get("code")
   const requested = url.searchParams.get("role")
   const signupRole = requested === "driver" || requested === "customer" ? requested : null
-  if (!code) return redirect(signupRole ? "/auth/confirm" : "/login?error=missing_oauth_code")
+  if (!code) return redirect(isRecovery ? recoveryError : signupRole ? "/auth/confirm" : "/login?error=missing_oauth_code")
   const deadline = AbortSignal.timeout(12000)
   const boundedFetch: typeof fetch = (input, init) => fetch(input,{
     ...init,
@@ -20,6 +27,12 @@ export async function GET(request: Request) {
     const supabase = await createClient(boundedFetch)
     // A PKCE code is single-use. Start a fresh sign-in after an uncertain exchange.
     const {data,error} = await supabase.auth.exchangeCodeForSession(code)
+    if (isRecovery) return redirect(error || !data.user || !data.session ? recoveryError : "/reset-password")
+    // Supabase may use the Site URL when the requested redirect is not
+    // allowlisted. In that case the PKCE verifier still marks the recovery.
+    if (!error && data.session && "redirectType" in data && data.redirectType === "PASSWORD_RECOVERY") {
+      return redirect("/reset-password")
+    }
     if (error && signupRole && ["AuthPKCECodeVerifierMissingError", "AuthPKCEGrantCodeExchangeError"].includes(error.name)) {
       return redirect("/login?confirmation=check")
     }
@@ -30,7 +43,6 @@ export async function GET(request: Request) {
       ? "/login?error=oauth_unavailable" : "/login?error=oauth_failed")
     exchanged = true
     if (!data.user) return redirect("/login?error=no_user")
-    if (url.searchParams.get("type") === "recovery") return redirect("/reset-password")
 
     const db = createAdminClient(boundedFetch)
     const role = await ensureVerifiedProfile(data.user,signupRole ?? "customer",db)
@@ -42,6 +54,6 @@ export async function GET(request: Request) {
     }
     return redirect(`/dashboard/${role}`)
   } catch {
-    return redirect(deadline.aborted || !exchanged ? "/login?error=oauth_unavailable" : "/login?error=profile_unavailable")
+    return redirect(isRecovery ? recoveryError : deadline.aborted || !exchanged ? "/login?error=oauth_unavailable" : "/login?error=profile_unavailable")
   }
 }

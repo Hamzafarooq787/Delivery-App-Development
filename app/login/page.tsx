@@ -113,9 +113,9 @@ function LoginPageContent() {
                 <label htmlFor="password" className="text-xs font-semibold text-[#adaaaa] uppercase tracking-widest">
                   Password
                 </label>
-                <button type="button" className="text-xs text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
+                <Link href="/forgot-password" className="inline-flex min-h-11 items-center rounded px-2 text-xs text-[var(--color-primary)] underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]">
                   Forgot password?
-                </button>
+                </Link>
               </div>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#adaaaa] text-[18px]">
