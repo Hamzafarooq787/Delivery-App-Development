@@ -83,7 +83,6 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
   )
   if (!route) return { error: "Could not calculate a route for this pickup/delivery pair. Please check the addresses." }
 
-  if (params.serviceType === "buy_for_me") config = {...config, mediumFee:0}
   const basePrice = calculateDeliveryFare(route.distance_miles, config, params.packageSize)
 
   const admin = createAdminClient()
@@ -157,7 +156,7 @@ export async function getDeliveryQuote(params: QuoteParams): Promise<{ data: Del
       promoCodeText: discount.error ? null : discount.promoCodeText,
       finalPrice,
   }
-  return {data:{...snapshot,consentToken:issueQuoteConsent(user.id,deliveryScope(params),finalPrice,snapshot)}}
+  return {data:{...snapshot,consentToken:issueQuoteConsent(user.id,deliveryScope(params),finalPrice,snapshot,snapshot.expiresAt)}}
 }
 
 // ── Admin: surge pricing settings ───────────────────────────────────────────────

@@ -1,17 +1,19 @@
 'use client'
 
 import { CancellationPolicyNotice } from "./cancellation-policy-notice"
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { QuoteLock } from './quote-lock'
+import { PACKAGE_SIZES, PACKAGE_SIZE_INFO, type PackageSize } from '@/lib/vehicles'
 import dynamic from 'next/dynamic'
 import { Camera, Pencil, ShoppingBag } from 'lucide-react'
 import { getShoppingBookingSettings, getShoppingQuote, type BfmSettings, type ShoppingItem, type ShoppingQuote } from '@/app/actions/shopping'
 import { startOrderCheckout } from '@/app/actions/order-checkout'
-import { DEFAULT_BOOKING_PRICING } from '@/lib/booking-pricing'
+import { DEFAULT_BOOKING_PRICING, packageSizeFee } from '@/lib/booking-pricing'
 import { requestBrowserLocation, locationIssue, type LocationIssue } from '@/lib/browser-location'
 import { compressImage } from '@/lib/image-compress'
 import { createClient } from '@/lib/supabase/client'
 import { googleReverseGeocode } from '@/lib/google'
-import { shoppingEstimate, duplicateShoppingProduct, newShoppingRequestId } from '@/lib/shopping-booking'
+import { shoppingEstimate, shoppingQuoteInputs, duplicateShoppingProduct, newShoppingRequestId } from '@/lib/shopping-booking'
 import { validateShoppingItems } from '@/lib/shopping-validation'
 import { useFreshBookingForm } from '@/hooks/use-fresh-booking-form'
 import { useOrderPhotoCleanup } from '@/hooks/use-order-photo-cleanup'
@@ -45,6 +47,8 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const [settings, setSettings] = useState<BfmSettings | null>(null)
   const [settingsError, setSettingsError] = useState('')
   const [step, setStep] = useState(1)
+  const [packageSize, setPackageSize] = useState<PackageSize>('small')
+  const [quoteRenewed, setQuoteRenewed] = useState(false)
   const [items, setItems] = useState<Item[]>([])
   const [editor, setEditor] = useState<Item | null>(null)
   const [editorError, setEditorError] = useState('')
@@ -81,7 +85,7 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   const mounted = useRef(true)
   const submitLock = useRef(false)
   const uploadLock = useRef(false)
-  const total = shoppingEstimate(items)
+  const { estimated_items_total: total, all_items_estimated: allItemsEstimated } = shoppingQuoteInputs(items)
   const maximum = settings?.max_purchase_amount ?? null
   useFreshBookingForm('buy_for_me')
   useOrderPhotoCleanup([...items.map(i=>i.photo_url).filter((u):u is string=>!!u),...(editor?.photo_url?[editor.photo_url]:[])])
@@ -119,15 +123,15 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     if (step !== 2 || !shop || !delivery || !settings?.enabled) return
     setEstimating(true)
     const timer = setTimeout(() => {
-      void getShoppingQuote({shop_lat:shop.lat,shop_lng:shop.lng,delivery_lat:delivery.lat,delivery_lng:delivery.lng,estimated_items_total:total}).then(result => {
+      void getShoppingQuote({shop_lat:shop.lat,shop_lng:shop.lng,delivery_lat:delivery.lat,delivery_lng:delivery.lng,estimated_items_total:total,all_items_estimated:allItemsEstimated,package_size:packageSize}).then(result => {
         if (!active) return
         if ('error' in result) setEstimateError(result.error)
         else setEstimate(result.data)
       }).catch(() => { if (active) setEstimateError('Could not calculate the estimate. Please retry.') }).finally(() => { if (active) setEstimating(false) })
     }, 400)
     return () => { active = false; clearTimeout(timer) }
-  }, [step, shop?.lat, shop?.lng, delivery?.lat, delivery?.lng, total, settings?.enabled, estimateRetry])
-  function invalidate() { quoteVersion.current++; setQuote(null); setQuoting(false); setConfirmed(false); requestKey.current = null; setError('') }
+  }, [step, shop?.lat, shop?.lng, delivery?.lat, delivery?.lng, total, allItemsEstimated, packageSize, settings?.enabled, estimateRetry])
+  function invalidate() { quoteVersion.current++; setQuote(null); setQuoting(false); setConfirmed(false); setQuoteRenewed(false); requestKey.current = null; setError('') }
   function cancelGps() { gpsVersion.current++; setLocating(false); setLocationHelp(null) }
   function go(next: number) { if (next < step) invalidate(); cancelGps(); setError(''); setStep(next) }
   function validItems() {
@@ -142,12 +146,23 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
     const version = ++quoteVersion.current
     setStep(4); setQuote(null); setConfirmed(false); setQuoting(true); setError('')
     try {
-      const result = await getShoppingQuote({ shop_lat: shop.lat, shop_lng: shop.lng, delivery_lat: delivery.lat, delivery_lng: delivery.lng, estimated_items_total: total })
+      const result = await getShoppingQuote({ shop_lat: shop.lat, shop_lng: shop.lng, delivery_lat: delivery.lat, delivery_lng: delivery.lng, estimated_items_total: total, all_items_estimated: allItemsEstimated, package_size: packageSize })
       if (!mounted.current || version !== quoteVersion.current) return
       if ('error' in result) setError(result.error); else setQuote(result.data)
     } catch { if (mounted.current && version === quoteVersion.current) setError('Could not calculate the price. Check your connection and retry.') }
     finally { if (mounted.current && version === quoteVersion.current) setQuoting(false) }
   }
+  function renewExpiredQuote() {
+    setQuoteRenewed(true)
+    void loadQuote()
+  }
+  const onQuoteExpiry = useEffectEvent(renewExpiredQuote)
+  useEffect(() => {
+    if (step !== 4 || !quote?.expiresAt || submitting) return
+    const timer = setTimeout(() => onQuoteExpiry(), Math.max(0, quote.expiresAt - Date.now()))
+    return () => clearTimeout(timer)
+  }, [step, quote?.expiresAt, submitting])
+
   function next() {
     if (submitting || uploading || locating || quoting) return
     if (step === 1) {
@@ -164,18 +179,19 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
   }
   async function submit() {
     if (submitLock.current || !confirmed || !limitsAccepted || !quote || !shop || !delivery || uploading || !validItems()) return
+    if (quote.expiresAt <= Date.now()) { renewExpiredQuote(); return }
     submitLock.current = true; setSubmitting(true); setError('')
     try {
       requestKey.current ??= newShoppingRequestId()
       const result = await startOrderCheckout({ requestKey: requestKey.current, type: 'buy_for_me', order: {
-        request_key: requestKey.current, limits_acknowledged: limitsAccepted, consent_token: quote.consentToken,
+        request_key: requestKey.current, package_size: packageSize, limits_acknowledged: limitsAccepted, consent_token: quote.consentToken,
         shop_name: shopName.trim(), shop_address: shop.address, shop_lat: shop.lat, shop_lng: shop.lng,
         shop_instructions: shopInstructions.trim() || null, delivery_instructions: deliveryInstructions.trim(),
         delivery_address: delivery.address, delivery_lat: delivery.lat, delivery_lng: delivery.lng,
         shopping_items: items.map(({ id: _id, ...i }) => ({ ...i, name: i.name.trim() })),
       } })
       if (!mounted.current) return
-      if ('error' in result){if(result.restartCheckout)requestKey.current=null;setError(result.error);if(/quote.*expired/i.test(result.error))void loadQuote()}else window.location.assign(result.url)
+      if ('error' in result){if(result.restartCheckout)requestKey.current=null;setError(result.error);if(/quote.*expired/i.test(result.error))renewExpiredQuote()}else window.location.assign(result.url)
     } catch { if (mounted.current) setError('We could not confirm checkout. Check My Deliveries before trying again.') }
     finally { submitLock.current = false; if (mounted.current) setSubmitting(false) }
   }
@@ -257,6 +273,12 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
           </section>
           <button className={styles.outline} type="button" disabled={!settings || items.length >= limits.maxShoppingProducts} onClick={() => openEditor()}>＋ {items.length ? 'Add another item' : 'Add your first item'}</button>
           <button className={styles.detailsButton} type="button" disabled={!settings} onClick={() => openEditor(items[0], true)}><Camera size={23} /><span>Photos & item instructions<small>Add a photo or tell us your preferred brand.</small></span><span aria-hidden="true">›</span></button>
+          <label>Shopping size
+            <select value={packageSize} onChange={e => { setPackageSize(e.target.value as PackageSize); setLimitsAccepted(false); invalidate() }}>
+              {PACKAGE_SIZES.map(size => <option key={size} value={size}>{PACKAGE_SIZE_INFO[size].label} · {PACKAGE_SIZE_INFO[size].minVehicle} · +{money(packageSizeFee(limits, size))}</option>)}
+            </select>
+          </label>
+          <p className={styles.hint}>Choose the size of the whole basket. Small is for lightweight shopping a bicycle can carry.</p>
           <p className={styles.hint}>Up to {limits.maxShoppingProducts} products · {maximum === null ? "Loading shopping limit…" : `${money(maximum)} shopping limit`}</p>{settingsError && <p className={styles.error} role="alert">{settingsError}</p>}
         </div><aside className={styles.desktopAside}>{map}<ShoppingSummary items={items} onEdit={() => openEditor(items[0])} /><p className={styles.hint}>Add each product separately. You can update quantities without losing other items.</p></aside></div>}
         {step === 2 && <div className={styles.layout}><div className={styles.stack}>
@@ -287,9 +309,14 @@ export function NewShoppingRequestModal({ onClose }: { onClose: () => void }) {
           {quote && <section className={styles.costs}><strong>Delivery price breakdown</strong>{quote.priceLines.map((line, i) => <p key={i}><span>{line.label}</span><strong>{money(line.amount)}</strong></p>)}</section>}
         </div></details><aside className={styles.reviewAside}><section className={styles.card}>
           {quoting ? <p role="status">Calculating your price…</p> : quote ? <>
-            <div className={styles.costs}><p><span>Prepaid shopping funds</span><strong>{money(quote.itemsHold)}</strong></p><p><span>Shopping service</span><strong>{money(quote.serviceFee)}</strong></p><p><span>Delivery · {quote.distanceMiles.toFixed(1)} miles</span><strong>{money(quote.deliveryFee)}</strong></p></div>
-            <details className={styles.priceDetails}><summary>View delivery price breakdown</summary>{quote.priceLines.map((line, i) => <p key={i}><span>{line.label}</span><strong>{money(line.amount)}</strong></p>)}</details>
-            <div className={styles.total}><span>Total to pay</span><strong>{money(quote.totalCharge)}</strong></div><p className={styles.hint}>We charge the full {money(quote.itemsHold)} shopping budget at checkout, even if the item estimate is lower. This is separate from the service and delivery fees. You only pay for what the driver actually spends on your items. After we check the receipt, we refund unused shopping funds to your payment card.</p>
+            {quoteRenewed && <p role="status">The previous quote expired. Review and confirm this updated total before paying.</p>}
+            <QuoteLock expiresAt={quote.expiresAt} />
+            <div className={styles.costs}><p><span>Shopping size</span><strong>{PACKAGE_SIZE_INFO[quote.packageSize].label}</strong></p>
+              <p><span>{quote.allItemsEstimated ? 'Estimated items' : 'Entered item estimates'}</span><strong>{money(quote.estimatedItemsTotal)}</strong></p>
+              <p><span>{quote.allItemsEstimated ? 'Shopping buffer' : 'Funds for unpriced items and price changes'}</span><strong>{money(quote.shoppingBuffer)}</strong></p>
+              <p><span>Prepaid shopping funds</span><strong>{money(quote.itemsHold)}</strong></p><p><span>Shopping service</span><strong>{money(quote.serviceFee)}</strong></p><p><span>Delivery · {quote.distanceMiles.toFixed(1)} miles</span><strong>{money(quote.deliveryFee)}</strong></p></div>
+            <details className={styles.priceDetails} open><summary>Delivery price breakdown</summary>{quote.priceLines.map((line, i) => <p key={i}><span>{line.label}</span><strong>{money(line.amount)}</strong></p>)}{!quote.priceLines.some(line => line.label === "Parcel size surcharge") && <p><span>Parcel size surcharge</span><strong>{money(0)}</strong></p>}</details>
+            <div className={styles.total}><span>Total to pay</span><strong>{money(quote.totalCharge)}</strong></div><p className={styles.hint}>We charge {money(quote.itemsHold)} in shopping funds at checkout, separate from fees. {quote.allItemsEstimated ? "This covers your estimate and a buffer for price changes." : "We use the shopping limit because some item prices were not entered."} We refund unused shopping funds to your payment card after checking the receipt.</p>
             <label className={styles.check}><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />I agree to the order details and total shown.</label>
           </> : <div className={styles.stack}><p>Price unavailable. Please retry before paying.</p><button type="button" className={styles.outline} onClick={() => void loadQuote()}>Retry price calculation</button></div>}
         </section></aside></div>}

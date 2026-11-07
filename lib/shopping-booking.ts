@@ -19,3 +19,19 @@ export function duplicateShoppingProduct(items: ShoppingItem[], candidate: Shopp
   const key = (item: ShoppingItem) => [item.name, item.brand_size_variant ?? ''].map(s => s.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-GB')).join('|')
   return items.some(item => key(item) === key(candidate))
 }
+
+export function shoppingQuoteInputs(items: ShoppingItem[]) {
+  return {
+    estimated_items_total: shoppingEstimate(items),
+    all_items_estimated: items.length > 0 && items.every(item => Number.isFinite(item.estimated_price) && (item.estimated_price ?? 0) > 0),
+  }
+}
+
+/** Unpriced items retain the approved budget. Fully estimated baskets need only
+ * the estimate and a small buffer, capped by the admin's spending limit. */
+export function shoppingFunds(estimate: number, maximum: number, allItemsEstimated: boolean) {
+  const cents = Math.round(estimate * 100)
+  const cap = Math.floor(maximum * 100 + 1e-7)
+  const prepaid = allItemsEstimated && cents > 0 ? Math.min(cap, cents + Math.max(100, Math.ceil(cents / 5))) : cap
+  return { itemsHold: prepaid / 100, shoppingBuffer: Math.max(0, prepaid - cents) / 100 }
+}

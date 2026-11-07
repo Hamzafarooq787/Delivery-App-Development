@@ -4,9 +4,9 @@ import {isShoppingSimulation,verifiedShoppingSimulation} from "@/lib/payments/sh
 import { enableApprovedPurchase } from "@/app/actions/shopping-operations"
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
+
 import { leaseOrderPhotos } from "@/lib/order-photo-lifecycle"
 import { ownsOrderPhoto } from "@/lib/order-media"
-
 import { verifyCompanyReceipt } from "@/lib/payments/company-card"
 import { processOrderRefunds } from "@/lib/payments/direct"
 import { issueQuoteConsent, checkQuoteConsent, readQuoteConsent, shoppingScope, QUOTE_TTL_MS } from "@/lib/quote-consent"
@@ -17,6 +17,8 @@ import { notifyUser, notifyMultipleUsers } from "@/lib/notifications/internal"
 import { getBookingPricing } from "@/app/actions/booking-settings"
 import { getDeliveryQuote } from "@/app/actions/pricing"
 import { validateShoppingItems, normalizeBfmSettings } from "@/lib/shopping-validation"
+import { shoppingFunds } from "@/lib/shopping-booking"
+import { isPackageSize, type PackageSize } from "@/lib/vehicles"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +37,7 @@ export type CreateShoppingRequestParams = {
   limits_acknowledged?: boolean
   consent_token?: string
   request_key: string
+  package_size?: PackageSize
   shop_name: string
   shop_address: string
   shop_lat: number
@@ -136,10 +139,10 @@ export async function createShoppingRequest(
     }
   }
 
-  const scope=shoppingScope({...params,estimated_items_total:estimatedTotal})
+  const scope=shoppingScope({...params,package_size:"medium",estimated_items_total:estimatedTotal})
   const approved=readQuoteConsent<ShoppingQuote>(params.consent_token,user.id,scope)
   if(approved?.snapshot){const unavailable=await bookingAvailability(user.id,"buy_for_me",{lat:params.shop_lat,lng:params.shop_lng},{lat:params.delivery_lat,lng:params.delivery_lng});if(unavailable)return {error:unavailable}}
-  const quoteResult=approved?.snapshot?{data:approved.snapshot}:await getShoppingQuote({...params,estimated_items_total:estimatedTotal})
+  const quoteResult=approved?.snapshot?{data:approved.snapshot}:await getShoppingQuote({...params,package_size:"medium",estimated_items_total:estimatedTotal})
   if("error" in quoteResult)return {error:quoteResult.error}
   const quote=quoteResult.data
   const serviceFee=quote.serviceFee,deliveryFee=quote.totalFee,maxSpend=quote.itemsHold,totalCharge=quote.totalCharge
@@ -572,6 +575,8 @@ export type ShoppingQuoteParams = {
   shop_lng: number
   delivery_lat: number
   delivery_lng: number
+  package_size?: PackageSize
+  all_items_estimated?: boolean
   estimated_items_total?: number
   promo_code?: string | null
 }
@@ -579,7 +584,10 @@ export type ShoppingQuoteParams = {
 export type ShoppingQuote = {
   basePrice?:number
   surgeMultiplier?:number
-  expiresAt?:number
+  expiresAt:number
+  packageSize: PackageSize
+  shoppingBuffer: number
+  allItemsEstimated: boolean
   priceLines: {label:string;amount:number}[]
   discountAmount: number
   discountCampaign?: string | null
@@ -609,13 +617,15 @@ export async function getShoppingQuote(
   try { bfm = await getBfmSettings() } catch { return { error: "Shopping settings are unavailable. Please try again." } }
   if (!bfm.enabled) return { error: "Buy for Me is currently unavailable." }
 
+  const packageSize = params.package_size ?? "small"
+  if (!isPackageSize(packageSize)) return { error: "Select a shopping size." }
   const quoteResult = await getDeliveryQuote({
     serviceType: "buy_for_me",
     pickupLat: params.shop_lat,
     pickupLng: params.shop_lng,
     deliveryLat: params.delivery_lat,
     deliveryLng: params.delivery_lng,
-    packageSize: "medium",
+    packageSize,
     promoCode: params.promo_code,
   })
 
@@ -626,11 +636,13 @@ export async function getShoppingQuote(
   const deliveryFee = parseFloat((quote.finalPrice + serviceFee).toFixed(2))
   const estimatedItems = params.estimated_items_total ?? 0
   if(!Number.isFinite(estimatedItems)||estimatedItems<0||estimatedItems>bfm.max_purchase_amount)return{error:"Shopping estimate exceeds the configured limit."}
-  const itemsHold = bfm.max_purchase_amount
+  const allItemsEstimated = params.all_items_estimated === true
+  const { itemsHold, shoppingBuffer } = shoppingFunds(estimatedItems, bfm.max_purchase_amount, allItemsEstimated)
 
   const snapshot = {
       basePrice:quote.basePrice,surgeMultiplier:quote.surgeMultiplier,
       expiresAt:Date.now()+QUOTE_TTL_MS,
+      packageSize, shoppingBuffer, allItemsEstimated,
       discountAmount: quote.discountAmount,
       discountCampaign: quote.discountCampaign,
       promoCodeId: quote.promoCodeId,
@@ -647,7 +659,7 @@ export async function getShoppingQuote(
       durationMin: quote.durationMin,
       promoCodeError: quote.promoCodeError,
   }
-  return {data:{...snapshot,consentToken:issueQuoteConsent(user.id,shoppingScope(params),snapshot.totalCharge,snapshot)}}
+  return {data:{...snapshot,consentToken:issueQuoteConsent(user.id,shoppingScope(params),snapshot.totalCharge,snapshot,snapshot.expiresAt)}}
 }
 
 function receiptObjectPath(url: string): string | null {
