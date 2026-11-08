@@ -33,12 +33,12 @@ const EMPTY_INPUT: VehicleInput = {
 function vehicleToInput(v: DriverVehicle): VehicleInput {
   return {
     vehicle_type: v.vehicle_type,
-    make: v.make ?? "",
-    model: v.model ?? "",
+    make: isMotorVehicle(v.vehicle_type) ? v.make ?? "" : "",
+    model: isMotorVehicle(v.vehicle_type) ? v.model ?? "" : "",
     colour: v.colour ?? "",
-    registration_number: v.registration_number ?? "",
-    driving_licence_details: v.driving_licence_details ?? "",
-    insurance_details: v.insurance_details ?? "",
+    registration_number: isMotorVehicle(v.vehicle_type) ? v.registration_number ?? "" : "",
+    driving_licence_details: isMotorVehicle(v.vehicle_type) ? v.driving_licence_details ?? "" : "",
+    insurance_details: isMotorVehicle(v.vehicle_type) ? v.insurance_details ?? "" : "",
   }
 }
 
@@ -73,19 +73,8 @@ function VehicleFormModal({
         ? await updateVehicle(editingId, form)
         : await addVehicle(form)
 
-      if (result.error) { setError(result.error); return }
-
-      onSaved({
-        id: editingId ?? result.id ?? crypto.randomUUID(),
-        vehicle_type: vehicleType,
-        make: form.make.trim(),
-        model: form.model.trim(),
-        colour: form.colour.trim(),
-        registration_number: form.registration_number.trim() || null,
-        driving_licence_details: form.driving_licence_details.trim() || null,
-        insurance_details: form.insurance_details.trim() || null,
-        created_at: new Date().toISOString(),
-      })
+      if (result.error || !result.vehicle) { setError(result.error ?? "The vehicle could not be saved."); return }
+      onSaved(result.vehicle)
     })
   }
 
@@ -117,7 +106,7 @@ function VehicleFormModal({
                   <button
                     key={t}
                     type="button"
-                    onClick={() => set("vehicle_type", t)}
+                    onClick={() => setForm(prev => prev.vehicle_type===t ? prev : { ...EMPTY_INPUT, vehicle_type:t, colour:prev.colour })}
                     className={`flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-bold transition-all ${
                       active
                         ? "bg-[var(--brand-strong)]/10 border-[var(--brand-strong)]/40 text-[var(--brand-soft)]"
@@ -132,16 +121,16 @@ function VehicleFormModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {motor && <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className={LABEL}>Make</label>
-              <input className={INPUT} placeholder="e.g. Toyota" value={form.make} onChange={(e) => set("make", e.target.value)} />
+              <input className={INPUT} placeholder={vehicleType==="motorcycle"?"e.g. Honda":vehicleType==="van"?"e.g. Ford":"e.g. Toyota"} value={form.make} onChange={(e) => set("make", e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <label className={LABEL}>Model</label>
-              <input className={INPUT} placeholder="e.g. Corolla" value={form.model} onChange={(e) => set("model", e.target.value)} />
+              <input className={INPUT} placeholder={vehicleType==="motorcycle"?"e.g. CB125F":vehicleType==="van"?"e.g. Transit":"e.g. Corolla"} value={form.model} onChange={(e) => set("model", e.target.value)} />
             </div>
-          </div>
+          </div>}
 
           <div className="space-y-1.5">
             <label className={LABEL}>Colour</label>
@@ -167,7 +156,7 @@ function VehicleFormModal({
 
           {!motor && (
             <p className="text-[11px] text-[var(--color-on-surface-variant)] bg-[var(--color-surface-container-highest)] rounded-xl px-3 py-2.5">
-              Registration, driving licence, and insurance aren't required for bicycles.
+              Bicycles only need a colour. Motor vehicle details do not apply.
             </p>
           )}
 
@@ -253,10 +242,10 @@ export function VehicleManager({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white truncate">
                   {VEHICLE_INFO[v.vehicle_type].label}
-                  {(v.make || v.model) && <span className="text-[var(--color-on-surface-variant)] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
+                  {isMotorVehicle(v.vehicle_type) && (v.make || v.model) && <span className="text-[var(--color-on-surface-variant)] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
                 </p>
                 <p className="text-[11px] text-[var(--color-on-surface-variant)] truncate">
-                  {[v.colour, v.registration_number].filter(Boolean).join(" · ") || "No details added"}
+                  {[v.colour, isMotorVehicle(v.vehicle_type) ? v.registration_number : null].filter(Boolean).join(" · ") || "No details added"}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">

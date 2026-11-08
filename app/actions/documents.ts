@@ -77,7 +77,7 @@ export async function submitForReview() {
   const admin = createAdminClient()
   const [{ data: caller }, { data: docs, error: docsError }, { data: vehicles, error: vehiclesError }, { data: profile }] = await Promise.all([
     admin.from("users").select("role").eq("id", user.id).maybeSingle(),
-    admin.from("driver_documents").select("document_type,file_url,expires_on").eq("driver_id", user.id),
+    admin.from("driver_documents").select("document_type,file_url,expires_on,review_status").eq("driver_id", user.id),
     admin.from("driver_vehicles").select("id,vehicle_type").eq("driver_id", user.id),
     admin.from("driver_profiles").select("status").eq("id", user.id).maybeSingle(),
   ])

@@ -2,7 +2,8 @@
 
 import { runAdminMutation } from "@/lib/admin-access"
 import { getAdminActor } from "@/lib/admin-access"
-import { cancelByPolicy,getCancellationQuote } from "@/app/actions/cancellation"
+import { cancelByPolicy, getCancellationQuote } from "@/app/actions/cancellation"
+import type { CancellationPreview } from "@/lib/cancellation-policy"
 import { cancelCardBooking } from "@/app/actions/order-checkout"
 import { processOrderRefunds } from "@/lib/payments/direct"
 import { createClient } from "@/lib/supabase/server"
@@ -74,12 +75,11 @@ export async function previewCancellationFee(deliveryId:string){
 }
 
 // ── Admin: cancel an order and optionally refund the customer ─────────────
-export async function adminCancelOrder(deliveryId:string,reason:string,fault="admin"):Promise<{success?:boolean;refunded?:boolean;refundAmount?:number;review?:boolean;error?:string}> {
+export async function adminCancelOrder(deliveryId:string,reason:string,fault="admin",expected?:CancellationPreview):Promise<{success?:boolean;refunded?:boolean;refundAmount?:number;review?:boolean;error?:string}> {
  return runAdminMutation("finance","adminCancelOrder",deliveryId,async()=>{
   if(reason.trim().length<3)return {error:"Choose a reason and add any relevant notes."}
-  const quote=await getCancellationQuote(deliveryId,fault)
-  if(!quote.data)return {error:quote.error}
-  const result=await cancelByPolicy(deliveryId,Number(quote.data.fee),reason,fault)
+  if(!expected?.canCancel)return {error:"Review the cancellation preview before confirming."}
+  const result=await cancelByPolicy(deliveryId,Number(expected.fee),reason,fault,expected)
   if(!result.data)return {error:result.error}
   return {success:true,refunded:false,refundAmount:Number(result.data.refund),review:result.data.review}
  })

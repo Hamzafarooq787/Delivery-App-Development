@@ -243,12 +243,12 @@ function DriverCard({ driver, onRemove }: { driver: PendingVerificationDriver; o
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-white truncate">
                       {VEHICLE_INFO[v.vehicle_type].label}
-                      {(v.make || v.model) && <span className="text-[var(--color-on-surface-variant)] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
+                      {v.vehicle_type!=="bicycle" && (v.make || v.model) && <span className="text-[var(--color-on-surface-variant)] font-normal"> — {[v.make, v.model].filter(Boolean).join(" ")}</span>}
                     </p>
                     <p className="text-[10px] text-[var(--color-on-surface-variant)] truncate">
-                      {[v.colour, v.registration_number].filter(Boolean).join(" · ") || "No details"}
+                      {[v.colour, v.vehicle_type!=="bicycle" ? v.registration_number : null].filter(Boolean).join(" · ") || "No details"}
                     </p>
-                    {(v.driving_licence_details || v.insurance_details) && (
+                    {v.vehicle_type!=="bicycle" && (v.driving_licence_details || v.insurance_details) && (
                       <p className="text-[10px] text-[var(--color-on-surface-variant)]/70 truncate mt-0.5">
                         {v.driving_licence_details && `Licence: ${v.driving_licence_details}`}
                         {v.driving_licence_details && v.insurance_details && " · "}

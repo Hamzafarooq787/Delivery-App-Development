@@ -96,10 +96,10 @@ function validateVehicleInput(input: VehicleInput): { error?: string; vehicleTyp
   }
   const vehicleType = input.vehicle_type
 
-  if (!input.make.trim() || !input.model.trim()) return { error: "Make and model are required." }
   if (!input.colour.trim()) return { error: "Vehicle colour is required." }
 
   if (isMotorVehicle(vehicleType)) {
+    if (!input.make.trim() || !input.model.trim()) return { error: "Make and model are required for this motor vehicle." }
     if (!input.registration_number.trim()) return { error: "Registration number is required for this vehicle type." }
     if (!input.driving_licence_details.trim()) return { error: "Driving licence details are required for this vehicle type." }
     if (!input.insurance_details.trim()) return { error: "Insurance details are required for this vehicle type." }
@@ -109,20 +109,22 @@ function validateVehicleInput(input: VehicleInput): { error?: string; vehicleTyp
 }
 
 function toRow(input: VehicleInput, vehicleType: VehicleType) {
-  return {
-    vehicle_type: vehicleType,
+  const basic = { vehicle_type: vehicleType, colour: input.colour.trim() }
+  // Omit motor fields on bicycle writes. New bicycles have no motor metadata;
+  // old bicycle values remain in storage for audit and are not displayed.
+  return isMotorVehicle(vehicleType) ? {
+    ...basic,
     make: input.make.trim(),
     model: input.model.trim(),
-    colour: input.colour.trim(),
-    registration_number: input.registration_number.trim() || null,
-    driving_licence_details: input.driving_licence_details.trim() || null,
-    insurance_details: input.insurance_details.trim() || null,
-  }
+    registration_number: input.registration_number.trim(),
+    driving_licence_details: input.driving_licence_details.trim(),
+    insurance_details: input.insurance_details.trim(),
+  } : basic
 }
 
 // ── Write ────────────────────────────────────────────────────────────────────
 
-export async function addVehicle(input: VehicleInput): Promise<{ success?: boolean; error?: string; id?: string }> {
+export async function addVehicle(input: VehicleInput): Promise<{ success?: boolean; error?: string; vehicle?: DriverVehicle }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
@@ -134,7 +136,7 @@ export async function addVehicle(input: VehicleInput): Promise<{ success?: boole
   const { data, error } = await admin
     .from("driver_vehicles")
     .insert({ driver_id: user.id, ...toRow(input, vehicleType) })
-    .select("id")
+    .select(VEHICLE_COLUMNS)
     .single()
 
   if (error) return { error: vehicleSaveError(error.message) }
@@ -142,10 +144,10 @@ export async function addVehicle(input: VehicleInput): Promise<{ success?: boole
   refreshVehicleReview()
   revalidatePath("/dashboard/driver/verification")
   revalidatePath("/dashboard/driver/settings")
-  return { success: true, id: data.id }
+  return { success: true, vehicle: data as DriverVehicle }
 }
 
-export async function updateVehicle(vehicleId: string, input: VehicleInput): Promise<{ success?: boolean; error?: string; id?: string }> {
+export async function updateVehicle(vehicleId: string, input: VehicleInput): Promise<{ success?: boolean; error?: string; vehicle?: DriverVehicle }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
@@ -154,18 +156,20 @@ export async function updateVehicle(vehicleId: string, input: VehicleInput): Pro
   if (validationError || !vehicleType) return { error: validationError }
 
   const admin = createAdminClient()
-  const { error } = await admin
+  const { data, error } = await admin
     .from("driver_vehicles")
     .update({ ...toRow(input, vehicleType), updated_at: new Date().toISOString() })
     .eq("id", vehicleId)
     .eq("driver_id", user.id) // ownership check — never trust vehicleId alone
+    .select(VEHICLE_COLUMNS).maybeSingle()
 
   if (error) return { error: vehicleSaveError(error.message) }
 
+  if(!data)return {error:"This vehicle could not be found on your account."}
   refreshVehicleReview()
   revalidatePath("/dashboard/driver/verification")
   revalidatePath("/dashboard/driver/settings")
-  return { success: true }
+  return { success: true, vehicle: data as DriverVehicle }
 }
 
 export async function deleteVehicle(vehicleId: string): Promise<{ success?: boolean; error?: string }> {

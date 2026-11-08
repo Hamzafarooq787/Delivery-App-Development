@@ -492,6 +492,7 @@ export default async function AdminOrderDetailPage({
               <h3 className="text-sm font-bold text-white font-headline">Admin Actions</h3>
             </div>
             <OrderActionsPanel
+              serviceType={order.service_type??"delivery"}
               paymentMethod={order.payment_method??"wallet"}
               shoppingStage={["delivered","cancelled"].includes(order.status)?order.status:order.bfm_stage}
               orderId={order.id}

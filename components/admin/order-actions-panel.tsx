@@ -1,7 +1,9 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useRef, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
+import { getCancellationQuote } from "@/app/actions/cancellation"
+import type { CancellationPreview } from "@/lib/cancellation-policy"
 import { adminCancelOrder, adminIssueRefund } from "@/app/actions/wallet"
 import { AssignDriverDropdown, type DriverOption } from "@/components/admin/assign-driver-dropdown"
 
@@ -18,13 +20,14 @@ export function OrderActionsPanel({
   orderId,
   orderStatus,
   currentDriverId,
-  drivers, paymentMethod, shoppingStage,
+  drivers, paymentMethod, shoppingStage, serviceType,
 }: {
   orderId: string
   orderStatus: string
   currentDriverId: string | null
   drivers: DriverOption[]
   paymentMethod: string
+  serviceType: string
   shoppingStage?: string | null
 }) {
   const router = useRouter()
@@ -43,25 +46,39 @@ export function OrderActionsPanel({
   const [cancelPending, startCancel] = useTransition()
   const [refundPending, startRefund] = useTransition()
 
+  const [previewVersion,setPreviewVersion]=useState(0)
+  const [previewResult,setPreviewResult]=useState<{key:string;data?:CancellationPreview;error?:string} | null>(null)
+  const fault = reason==="Customer requested cancellation"?"customer":reason==="Driver no-show"?"no_show":"admin"
+  const previewKey = `${orderId}:${fault}:${previewVersion}`
+  const preview = previewResult?.key === previewKey ? previewResult.data : undefined
+  const previewError = previewResult?.key === previewKey ? previewResult.error : undefined
+  useEffect(()=>{
+    if(!showCancelConfirm)return
+    let active=true
+    getCancellationQuote(orderId,fault).then(result=>{
+      if(active)setPreviewResult({key:previewKey,...result})
+    }).catch(()=>{if(active)setPreviewResult({key:previewKey,error:"Cancellation details could not load."})})
+    return()=>{active=false}
+  },[showCancelConfirm,orderId,fault,previewKey])
+  const money = (value:number) => new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(value)
+
   function flash(text: string, ok: boolean) {
     setMessage({ text, ok })
     setTimeout(() => setMessage(null), 4000)
   }
 
   function handleCancel() {
+    if(!preview?.canCancel)return
     startCancel(async () => {
-      const result = await adminCancelOrder(orderId,`${reason}${note.trim()?": "+note.trim():""}`,reason==="Customer requested cancellation"?"customer":reason==="Driver no-show"?"no_show":"admin")
-      setShowCancelConfirm(false)
+      const result = await adminCancelOrder(orderId,`${reason}${note.trim()?": "+note.trim():""}`,fault,preview)
       if (result.error) {
-        flash(result.error, false)
+        flash(result.error, false); setPreviewVersion(v=>v+1)
       } else {
+        setShowCancelConfirm(false)
         setClosed(true); router.refresh()
-        flash(
-          result.review ? "Cancellation sent for admin review. No automatic refund was issued." : result.refunded
-            ? `Order cancelled. £${result.refundAmount?.toFixed(2)} refunded to customer.`
-            : "Order cancelled.",
-          true
-        )
+        flash(result.review ? "Cancellation sent for admin review. No automatic refund was issued." : result.refunded
+          ? `Order cancelled. ${money(Number(result.refundAmount))} refunded to customer.`
+          : Number(result.refundAmount)>0 ? `Order cancelled. Refund requested: ${money(Number(result.refundAmount))}.` : "Order cancelled.",true)
       }
     })
   }
@@ -110,12 +127,19 @@ export function OrderActionsPanel({
         <>
           {showCancelConfirm ? (
             <div className="px-4 py-3 bg-red-500/5 rounded-lg border border-red-500/20 space-y-2">
-              <p className="text-xs text-red-400 font-medium">Choose why this order is being cancelled. Purchased goods require admin review.</p>
+              <p className="text-xs text-red-400 font-medium">Choose why this {serviceType==="buy_for_me"?"shopping order":"parcel order"} is being cancelled.</p>
               <label className="block text-xs text-white">Reason<select value={reason} onChange={e=>setReason(e.target.value)} className="block w-full rounded bg-black/30 p-2">{["Service failure","Driver no-show","Customer requested cancellation","Duplicate test booking","Other"].map(value=><option key={value}>{value}</option>)}</select></label><label className="block text-xs text-white">Note<textarea value={note} maxLength={350} onChange={e=>setNote(e.target.value)} className="block w-full rounded bg-black/30 p-2"/></label>
+              <div role="status" className="rounded bg-black/20 p-2 text-sm text-white">
+                {previewError ? <><p>{previewError}</p><button type="button" className="underline" onClick={()=>setPreviewVersion(v=>v+1)}>Retry preview</button></>
+                  : !preview ? <p>Loading cancellation preview…</p>
+                  : !preview.canCancel ? <p>This order can no longer be cancelled.</p>
+                  : preview.review ? <p>{serviceType==="buy_for_me" ? "Purchased goods require admin review." : "This cancellation requires admin review."} No automatic refund will be issued.</p>
+                  : <><p>Customer cancellation fee: <strong>{money(preview.fee)}</strong></p><p>Estimated customer refund: <strong>{money(preview.refund)}</strong></p></>}
+              </div>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  disabled={cancelPending}
+                  disabled={cancelPending || !preview?.canCancel}
                   onClick={handleCancel}
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-semibold border border-red-500/20 hover:bg-red-500/20 transition-all disabled:opacity-50"
                 >
@@ -136,7 +160,7 @@ export function OrderActionsPanel({
           ) : (
             <button
               type="button"
-              onClick={() => setShowCancelConfirm(true)}
+              onClick={() => {setPreviewVersion(v=>v+1);setShowCancelConfirm(true)}}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--color-surface-container-high)] text-white rounded-lg text-sm border border-[var(--color-outline-variant)]/10 hover:bg-[var(--color-surface-container-highest)] transition-all"
             >
               <span className="material-symbols-outlined text-sm text-red-400">cancel</span>
