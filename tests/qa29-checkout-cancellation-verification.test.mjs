@@ -18,7 +18,7 @@ const strings = node => Array.isArray(node) ? node.flatMap(strings) :
 
 test('Review safety consent stays in the pinned footer and activating Pay without it focuses the checkbox', () => {
   const source = read('components/customer/NewDeliveryModal.tsx')
-  const footer = source.match(/<footer [^>]*data-review[^>]*>[\s\S]*?<\/footer>/)?.[0]
+  const footer = source.match(/<footer [^>]*>[\s\S]*?<\/footer>/g)?.find(part => part.includes('Confirm your item is legal and safe'))
   assert.ok(footer)
   assert.match(footer, /ref=\{safetyConfirmation\}[\s\S]*type="checkbox"[\s\S]*Confirm your item is legal and safe[\s\S]*<div className=\{styles.actions\}>/)
   assert.match(footer, /onClick=\{\(\) => confirmed \? void handleSubmit\(\) : showSafetyConfirmation\(\)\}/)
@@ -34,7 +34,7 @@ test('Review safety consent stays in the pinned footer and activating Pay withou
     } },
   })
   assert.deepEqual(calls, [['highlight', true], ['scroll'], ['focus']])
-  assert.match(read('components/customer/DeliverySteps.module.css'), /\.footer\[data-review=true\]\{max-height:none;overflow:visible\}/)
+  assert.match(read('components/customer/DeliverySteps.module.css'), /\.footer:has\(\.safetyConfirmation\)\{max-height:none;overflow:visible\}/)
 })
 
 test('Parcel cancellation displays the policy quote, with purchase copy reserved for shopping review', () => {

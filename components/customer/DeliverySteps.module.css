@@ -62,4 +62,4 @@
 .safetyConfirmation[data-highlighted=true],.safetyConfirmation:focus-within{outline:2px solid var(--brand-strong);outline-offset:2px}
 .actions>button[aria-disabled=true]{opacity:.55}
 
-.footer[data-review=true]{max-height:none;overflow:visible}
+.footer:has(.safetyConfirmation){max-height:none;overflow:visible}

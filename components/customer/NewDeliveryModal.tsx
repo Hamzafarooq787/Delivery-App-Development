@@ -944,10 +944,10 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
 
             <p className={styles.prohibited}>Do not send: {PROHIBITED_ITEMS.map(item => item.label.toLowerCase()).join(', ')}.</p>
             <p className={styles.prohibited}>By confirming below, you declare that your parcel contains no prohibited, illegal or dangerous items and accept responsibility for its contents.</p>
-            <CancellationPolicyNotice/>
           </div>}
         </div>
-        <footer className={styles.footer} data-review={step === 3}>
+        <footer className={styles.footer}>
+          {step === 3 && <CancellationPolicyNotice/>}
           {step === 3 && missingReason && <p role="status">{missingReason}</p>}
           {step === 3 && <label className={styles.safetyConfirmation} data-highlighted={safetyHighlighted}>
             <input ref={safetyConfirmation} type="checkbox" checked={confirmed} required
