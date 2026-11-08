@@ -285,7 +285,7 @@ export function DriversPanel({ drivers }: { drivers: DriverRow[] }) {
 
                 {vehicles.length > 0 && <div className="mb-4 text-xs text-gray-300">
                   <p className="mb-1 font-bold text-white">Registered vehicles</p>
-                  {vehicles.map(v => <p key={v.id}>{[v.registration_number, v.vehicle_type, v.colour, v.make, v.model].filter(Boolean).join(" · ")}</p>)}
+                  {vehicles.map(v => <p key={v.id}>{(v.vehicle_type==="bicycle" ? [v.vehicle_type,v.colour] : [v.registration_number,v.vehicle_type,v.colour,v.make,v.model]).filter(Boolean).join(" · ")}</p>)}
                 </div>}
                 {/* Documents */}
                 <div className="mb-5">

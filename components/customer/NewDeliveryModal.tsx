@@ -297,6 +297,13 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
   useEffect(()=>{let active=true;getBookingPricing().then(r=>{if(active)setParcelRates(r)}).catch(()=>{});return()=>{active=false}},[])
   const [packageSize, setPackageSize] = useState<PackageSize | null>(initialDraft?.packageSize ?? null)
   const [confirmed, setConfirmed] = useState(false)
+  const [safetyHighlighted, setSafetyHighlighted] = useState(false)
+  const safetyConfirmation = useRef<HTMLInputElement>(null)
+  function showSafetyConfirmation() {
+    setSafetyHighlighted(true)
+    safetyConfirmation.current?.scrollIntoView({ block: 'nearest' })
+    safetyConfirmation.current?.focus({ preventScroll: true })
+  }
   const [submitting, setSubmitting] = useState(false)
 
   // Wallet balance — must cover the delivery price before an order can be
@@ -579,7 +586,6 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
     !pickupCoords ? 'Select a pickup address from the suggestions list.'
     : (!deliveryCoords && !liveLocationActive) ? 'Select a delivery address from the suggestions list, or use live location.'
     : !packageSize ? 'Select a package size below to continue.'
-    : !confirmed ? 'Confirm your item is legal and safe to continue.'
     : quoteError ? quoteError
     : (!quote && !submitting) ? 'Calculating price…'
     : null
@@ -591,7 +597,7 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
     if (!isPreciseDeliveryAddress(deliveryValue)) { toast.error(PRECISE_DELIVERY_ADDRESS_ERROR); return }
     if (!packageSize) { toast.error('Select a package size.'); return }
     if (contact.error) { toast.error(contact.error); goTo(2); return }
-    if (!confirmed) { toast.error('Please confirm your item is legal and safe.'); return }
+    if (!confirmed) { showSafetyConfirmation(); return }
     if (quoteError) { toast.error(quoteError); return }
     if (!quote) { toast.error('Still calculating the price — please wait a moment.'); return }
     if (quote.expiresAt && quote.expiresAt <= Date.now()) { setQuoteRenewed(true); setConfirmed(false); setQuoteRefresh(n=>n+1); return }
@@ -937,27 +943,17 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
 
 
             <p className={styles.prohibited}>Do not send: {PROHIBITED_ITEMS.map(item => item.label.toLowerCase()).join(', ')}.</p>
-                      {/* Confirmation checkbox */}
-          <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-            confirmed ? 'border-green-500/40 bg-green-500/5' : 'border-[#494847]/20 bg-[#262626] hover:border-[#494847]/40'
-          }`}>
-            <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${
-              confirmed ? 'bg-green-500 border-green-500' : 'border-[#494847]/60'
-            }`}>
-              {confirmed && <span className="material-symbols-outlined text-white text-[12px]">check</span>}
-            </div>
-            <input type="checkbox" className="sr-only" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
-            <p className="text-[11px] text-[#adaaaa] leading-relaxed">
-              I confirm that my package does <span className="text-white font-bold">not</span> contain any prohibited, illegal, or dangerous items. I accept full responsibility for the contents.
-            </p>
-          </label>
-
-
+            <p className={styles.prohibited}>By confirming below, you declare that your parcel contains no prohibited, illegal or dangerous items and accept responsibility for its contents.</p>
           </div>}
         </div>
         <footer className={styles.footer}>
           {step === 3 && <CancellationPolicyNotice/>}
           {step === 3 && missingReason && <p role="status">{missingReason}</p>}
+          {step === 3 && <label className={styles.safetyConfirmation} data-highlighted={safetyHighlighted}>
+            <input ref={safetyConfirmation} type="checkbox" checked={confirmed} required
+              onChange={e => { setConfirmed(e.target.checked); setSafetyHighlighted(false) }} />
+            <span>Confirm your item is legal and safe</span>
+          </label>}
           <div className={styles.actions}>
             <button disabled={submitting || addingFunds} onClick={() => step === 1 ? onClose() : goTo(step - 1)}>{step === 1 ? 'Cancel' : 'Back'}</button>
             {step < 3 ? <button className={styles.continue} onClick={continueStep}>Continue</button> : <>          {insufficientFunds ? (
@@ -971,8 +967,9 @@ export default function NewDeliveryModal({ onClose, initialDraft, focusAddress, 
             </button>
           ) : (
             <button
-              onClick={handleSubmit}
-              disabled={submitting || !!missingReason || quoteLoading || uploadingPhotos}
+              onClick={() => confirmed ? void handleSubmit() : showSafetyConfirmation()}
+              aria-disabled={!confirmed || undefined}
+              disabled={submitting || uploadingPhotos || (confirmed && (!!missingReason || quoteLoading))}
               className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-fixed-dim)] transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{ boxShadow: confirmed ? '0 0 20px rgba(var(--brand-rgb),0.25)' : 'none' }}
             >

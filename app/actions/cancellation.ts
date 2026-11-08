@@ -8,7 +8,7 @@ import { boundedFetch } from "@/lib/short-request"
 import { getAdminActor, runAdminMutation } from "@/lib/admin-access"
 import { getStripe } from "@/lib/stripe/server"
 import { processOrderRefunds } from "@/lib/payments/direct"
-import { DEFAULT_CANCELLATION, validCancellationSettings, type CancellationSettings } from "@/lib/cancellation-policy"
+import { DEFAULT_CANCELLATION, matchesCancellationPreview, validCancellationSettings, type CancellationSettings, type CancellationPreview } from "@/lib/cancellation-policy"
 import { notifySupportUpdate, notifyUser } from "@/lib/notifications/internal"
 
 export async function getCancellationSettings(){
@@ -32,11 +32,12 @@ export async function getCancellationQuote(id:string,fault="customer"){
  const {data,error}=await createAdminClient(boundedFetch(5000)).rpc("cancellation_quote",{p_actor:user.id,p_id:id,p_fault:fault})
  return error?{error:"Cancellation details could not load."}:{data:data as {fee:number;driver:number;platform:number;refund:number;review:boolean;status:string;canCancel:boolean;method:string;graceSeconds:number;graceExpiresAt:string|null}}
 }
-export async function cancelByPolicy(id:string,fee:number,reason="Customer cancellation",fault="customer"){
+export async function cancelByPolicy(id:string,fee:number,reason="Customer cancellation",fault="customer",expected?:CancellationPreview){
  const db=await createClient(boundedFetch(5000));const {data:{user}}=await db.auth.getUser()
  if(!user)return {error:"Please sign in again."}
  const preview=await getCancellationQuote(id,fault)
  if(!preview.data)return {error:preview.error}
+ if(expected&&!matchesCancellationPreview(preview.data,expected))return {error:"The cancellation details changed. Review the updated preview before confirming."}
  if(Number(preview.data.fee)!==fee)return {error:"The cancellation fee changed. Review the current fee before confirming."}
  const admin=createAdminClient(boundedFetch(7000))
  const {data:order}=await admin.from("delivery_requests").select("company_card_reference,driver_id,customer_id,status").eq("id",id).maybeSingle()

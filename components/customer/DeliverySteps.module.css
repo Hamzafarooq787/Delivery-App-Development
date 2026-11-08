@@ -56,3 +56,10 @@
 .body[data-step="2"],.body[data-step="3"]{padding-bottom:calc(72px + env(safe-area-inset-bottom));scroll-padding-bottom:72px}.reviewStep>label:last-child{flex-shrink:0;scroll-margin-bottom:48px}.footer{max-height:48%;overflow-y:auto}.footer details p{max-height:20dvh;overflow-y:auto}
 
 .price>div{min-width:0;align-items:center}.price>div>span{min-width:0;flex:1}.price>div>strong{flex-shrink:0;white-space:nowrap;font-variant-numeric:tabular-nums}.price>p{font-size:12px;line-height:1.5}
+
+.safetyConfirmation{display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 8px;padding:6px 10px;border:1px solid var(--color-outline-variant);border-radius:10px;color:var(--color-on-surface,#fff);font-size:14px;font-weight:650;cursor:pointer}
+.safetyConfirmation input{width:20px;height:20px;flex:none;accent-color:var(--brand-strong)}
+.safetyConfirmation[data-highlighted=true],.safetyConfirmation:focus-within{outline:2px solid var(--brand-strong);outline-offset:2px}
+.actions>button[aria-disabled=true]{opacity:.55}
+
+.footer:has(.safetyConfirmation){max-height:none;overflow:visible}

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { recordDriverDocument, submitForReview } from "@/app/actions/documents"
 import type { DriverDocument } from "@/app/actions/documents"
 import type { DriverVehicle } from "@/app/actions/vehicles"
-import { driverComplianceReady, driverDispatchReadiness, driverDocumentValid, londonDate, requiredDriverDocuments } from "@/lib/driver-compliance"
+import { driverVerificationProgress, driverDispatchReadiness, driverDocumentComplete, driverDocumentValid, londonDate, requiredDriverDocuments } from "@/lib/driver-compliance"
 import { VehicleManager } from "@/components/driver/vehicle-manager"
 
 type DocType = "identity" | "insurance" | "vehicle_registration" | "selfie"
@@ -103,14 +103,11 @@ export function VerificationPanel({
   const fileInputRefs = useRef<Partial<Record<DocType, HTMLInputElement | null>>>({})
 
   const docMap = new Map(docs.map((d) => [d.document_type, d]))
-  const uploadedCount = configs.filter(c=>{const d=docMap.get(c.type);return !!d&&driverDocumentValid(d)&&(c.type!=="insurance"||!!d.expires_on)}).length
-  const dispatch = driverDispatchReadiness(vehicles, docs)
-  const hasVehicle = vehicles.length > 0
-  // Vehicle registration counts as one extra "step" alongside the 3 document types
-  const totalSteps = configs.length + 1
-  const completedSteps = uploadedCount + (hasVehicle ? 1 : 0)
-  const pct =
-    Math.round((completedSteps / totalSteps) * 100)
+  const today = londonDate()
+  const progress = driverVerificationProgress(vehicles, docs, today)
+  const dispatch = driverDispatchReadiness(vehicles, docs, today)
+  const { hasVehicle, totalSteps, completedSteps, percent: pct } = progress
+  const fullyCurrent = driverStatus === "approved" && progress.ready
 
   async function handleUpload(docType: DocType, file: File) {
     setUploadError(null)
@@ -170,7 +167,7 @@ export function VerificationPanel({
     })
   }
 
-  const canSubmit = driverComplianceReady(vehicles,docs) && !uploading && !submitted && driverStatus !== "approved"
+  const canSubmit = progress.ready && !uploading && !submitted && driverStatus !== "approved"
 
   return (
     <div className="pt-2 pb-12 px-2">
@@ -196,7 +193,7 @@ export function VerificationPanel({
         </div>
       )}
 
-      {driverStatus === "approved" && dispatch.message && <p role="status" className="mb-4 rounded-lg border border-white/15 p-3 text-sm text-white">{dispatch.message}</p>}
+      {driverStatus === "approved" && dispatch.message && <p role="status" className="mb-4 rounded-lg border border-white/15 p-3 text-sm text-white">{dispatch.message}{dispatch.eligible.length ? " You can still receive jobs for vehicles with current required documents." : " No vehicles are currently eligible for new jobs."}</p>}
 
       {(submitted || driverStatus === "approved") && driverStatus !== "rejected" && (
         <div className="mb-6 flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
@@ -212,7 +209,7 @@ export function VerificationPanel({
             <p className="text-xs font-semibold tracking-widest text-[var(--brand-soft)] uppercase mb-4">Overall Status</p>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl md:text-5xl font-black font-headline text-white">
-                {driverStatus === "approved" ? 100 : pct}%
+                {pct}%
               </span>
               <span className="text-[var(--color-on-surface-variant)]">Complete</span>
             </div>
@@ -222,13 +219,13 @@ export function VerificationPanel({
           <div className="mt-8 space-y-4">
             <div className="w-full h-1.5 bg-[var(--brand-panel)] rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${driverStatus === "approved" ? "bg-green-400" : "bg-[var(--brand-strong)]"}`}
-                style={{ width: `${driverStatus === "approved" ? 100 : pct}%`, boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
+                className={`h-full rounded-full transition-all duration-500 ${fullyCurrent ? "bg-green-400" : "bg-[var(--brand-strong)]"}`}
+                style={{ width: `${pct}%`, boxShadow: "0px 0px 15px rgba(var(--brand-rgb),0.2)" }}
               />
             </div>
             <p className="text-xs text-[var(--color-on-surface-variant)] italic">
-              {driverStatus === "approved"
-                ? "All documents verified. You are fully operational."
+              {fullyCurrent
+                ? "All required documents are current."
                 : driverStatus === "rejected"
                 ? "One or more documents require re-submission."
                 : completedSteps === 0
@@ -245,7 +242,7 @@ export function VerificationPanel({
                 <span className={hasVehicle ? "text-white" : "text-[var(--color-on-surface-variant)]"}>Vehicle registered</span>
               </div>
               {configs.map((c) => {
-                const uploaded = docMap.has(c.type)
+                const uploaded = progress.complete.includes(c.type)
                 return (
                   <div key={c.type} className="flex items-center gap-2 text-xs">
                     <span className={`material-symbols-outlined text-sm ${uploaded ? "text-green-400" : "text-[var(--color-outline-variant)]"}`}>
@@ -278,6 +275,7 @@ export function VerificationPanel({
 
           {configs.map((config) => {
             const existing = docMap.get(config.type)
+            const documentComplete = !!existing && driverDocumentComplete(existing,today)
             const isUploading = uploading === config.type
             const fileName = existing ? decodeURIComponent(existing.file_url.split("/").pop() ?? "").replace(/^\d+-/, "") : null
 
@@ -303,12 +301,9 @@ export function VerificationPanel({
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <h3 className="text-sm font-bold text-white">{config.label}</h3>
-                      {existing && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/10 text-green-400 rounded-full text-[10px] font-bold">
-                          <span className="material-symbols-outlined text-xs">check</span>
-                          Uploaded
-                        </span>
-                      )}
+                      {existing && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${documentComplete ? "bg-green-500/10 text-green-400" : "bg-amber-500/10 text-amber-200"}`}>
+                        {documentComplete ? "Uploaded" : existing.review_status==="rejected" ? "Needs replacement" : config.type==="insurance"&&!existing.expires_on ? "Expiry missing" : "Expired"}
+                      </span>}
                     </div>
                     <p className="text-[var(--color-on-surface-variant)] text-xs">{config.description}</p>
                     {config.type!=="selfie"&&<label className="mt-2 block text-xs text-white">Expiry date {config.type==="insurance"?"(required)":"(if applicable)"}<input type="date" min={londonDate()} value={expiry[config.type]??existing?.expires_on??""} onChange={e=>setExpiry(p=>({...p,[config.type]:e.target.value}))} className="ml-2 rounded bg-[var(--brand-bg)] p-2" /></label>}

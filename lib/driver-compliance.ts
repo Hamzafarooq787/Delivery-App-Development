@@ -1,4 +1,4 @@
-export type ComplianceDocument = { document_type: string; expires_on?: string | null }
+export type ComplianceDocument = { document_type: string; expires_on?: string | null; review_status?: string | null }
 export function requiredDriverDocuments(vehicles: { vehicle_type: string }[]) {
   return vehicles.some(v => v.vehicle_type !== 'bicycle')
     ? ['identity', 'selfie', 'insurance', 'vehicle_registration']
@@ -10,9 +10,22 @@ export function londonDate(now = new Date()) {
 export function driverDocumentValid(doc: ComplianceDocument, today = londonDate()) {
   return !doc.expires_on || doc.expires_on >= today
 }
+/** Keep this predicate aligned with the database driver_dispatch_sizes function. */
+export function driverDocumentComplete(doc: ComplianceDocument, today = londonDate()) {
+  return doc.review_status !== 'rejected' && driverDocumentValid(doc, today) &&
+    (doc.document_type !== 'insurance' || !!doc.expires_on)
+}
+
+export function driverVerificationProgress(vehicles: { vehicle_type: string }[], documents: ComplianceDocument[], today = londonDate()) {
+  const hasVehicle = vehicles.some(v => ['bicycle', 'motorcycle', 'car', 'van'].includes(v.vehicle_type))
+  const required = requiredDriverDocuments(vehicles)
+  const complete = required.filter(type => documents.some(d => d.document_type === type && driverDocumentComplete(d,today)))
+  const completedSteps = complete.length + Number(hasVehicle)
+  const totalSteps = required.length + 1
+  return { hasVehicle, complete, completedSteps, totalSteps, percent: Math.round(100 * completedSteps / totalSteps), ready: completedSteps === totalSteps }
+}
 export function driverComplianceReady(vehicles: { vehicle_type: string }[], documents: ComplianceDocument[], today = londonDate()) {
-  return vehicles.length > 0 && requiredDriverDocuments(vehicles).every(type => documents.some(d =>
-    d.document_type === type && driverDocumentValid(d, today) && (type !== 'insurance' || !!d.expires_on)))
+  return driverVerificationProgress(vehicles, documents, today).ready
 }
 
 const documentLabels: Record<string, string> = {
@@ -27,7 +40,7 @@ export function driverDispatchReadiness<T extends { vehicle_type: string }>(
   const problems = (vehicle: T) => requiredDriverDocuments([vehicle]).flatMap(type => {
     const matches = documents.filter(d => d.document_type === type && d.review_status !== 'rejected')
     const label = documentLabels[type]
-    if (matches.some(d => driverDocumentValid(d, today) && (type !== 'insurance' || !!d.expires_on))) return []
+    if (matches.some(d => driverDocumentComplete(d,today))) return []
     if (!matches.length) return [`Upload a valid ${label} document`]
     if (type === 'insurance' && matches.some(d => !d.expires_on)) return ['Add the expiry date for your motor insurance']
     return [`Replace your expired ${label} document`]
